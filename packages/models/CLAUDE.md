@@ -17,6 +17,8 @@ Shared infrastructure — do not duplicate it in a model file:
 
 One file per Firestore collection, **named after the collection but singular**: `v1_questions` → `src/v1_question.ts`, `v1_users` → `src/v1_user.ts`. The collection's own (plural) name lives in the file's `<NAME>_COLLECTION` constant — never hardcode it at a call site.
 
+A sub-collection follows the same rule, and keeps the `v1_` prefix as well as its parent's name: `v1_daily_questions/{date}/v1_daily_question_answers` → `src/v1_daily_question_answer.ts`. A collection group is global to the database and keyed by the last path segment alone, so a bare `answers` would collide with any other `answers` sub-collection added later, and could not be versioned on its own.
+
 `v1_question.ts` is the reference implementation — copy its shape. It follows the `customerConverter`-style pattern from planexplora-hub (`toFirestore` / `fromFirestore`, `<Name>FirebaseData` raw type, `<Name>Data` app type via `ModelData<...>`, a `<NAME>_COLLECTION` constant).
 
 `noUncheckedIndexedAccess` is on in this package: build a `Record<...>` field with `Object.entries(...).reduce(...)`, never by indexing into a possibly-missing key.

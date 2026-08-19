@@ -14,6 +14,13 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == user_id;
     }
 
+    // The day an answer is being written under. A day that was never scheduled
+    // has no document, so this expression fails and the write is denied — which
+    // is the point: nobody gets to seed answers on a day that doesn't exist.
+    function dailyQuestion(date) {
+      return get(/databases/$(database)/documents/v1_daily_questions/$(date)).data;
+    }
+
     // Admins (FireCMS backoffice) have full access. Every collection-level
     // rule below only needs to describe the mobile app's access.
     match /{document=**} {
@@ -29,6 +36,7 @@ service cloud.firestore {
       allow create: if isOwner(request.resource.data.author_id)
                     && request.resource.data.status == 'pending'
                     && request.resource.data.rejection_reason == null
+                    && request.resource.data.broadcast_at == null
                     && request.resource.data.options.size() >= 2
                     && request.resource.data.options.size() <= 6;
       allow update, delete: if false;
@@ -49,6 +57,67 @@ service cloud.firestore {
                     && request.resource.data.display_name.size() > 0
                     && request.resource.data.created_at == resource.data.created_at;
       allow delete: if false;
+    }
+
+    // One document per day, keyed by its `YYYY-MM-DD` date (docs/prd.md §6).
+    // Every signed-in user reads it: it carries the day's question and
+    // `answer_counts`, which the app turns into the StatOwrel card's stat bar
+    // and rarity (docs/prd.md §5.5). Nobody writes it from the app — the daily
+    // scheduler creates it and the answer trigger increments `answer_counts`,
+    // both admin-side through the wildcard above.
+    match /v1_daily_questions/{date} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+
+      // One answer per person per day, and the document id is that person's
+      // UID — so "already answered" is a property of the path, not a check to
+      // run. A second answer is a write to an existing document, so it is an
+      // `update`, denied below; the answer trigger can never double-count
+      // `answer_counts`.
+      //
+      // Any signed-in user reads them: the day screen lists the friends who
+      // answered and what they picked (docs/prd.md §4.5). Reading is scoped to
+      // one day at a time, which is the whole point of storing answers here
+      // rather than under the author — nobody gets a friend's full history.
+      //
+      // `date` is checked against the parent id and `late` against the day's
+      // own `closes_at`, so neither can be forged: a catch-up answer cannot be
+      // passed off as an on-time one to keep a streak alive (docs/prd.md §4.6),
+      // and the calendar's collection-group query can trust `date`.
+      //
+      // An answer is final: no update, no delete (docs/prd.md §4.2). Only the
+      // backend rewrites one, to anonymise it when an account is deleted.
+      match /v1_daily_question_answers/{user_id} {
+        allow read: if isAuthenticated();
+        allow create: if isOwner(user_id)
+                      && request.resource.data.user_id == user_id
+                      && request.resource.data.date == date
+                      && request.resource.data.option_id is string
+                      && request.resource.data.option_id.size() > 0
+                      && request.resource.data.answered_at is timestamp
+                      && request.time >= dailyQuestion(date).published_at
+                      && request.resource.data.late == (request.time > dailyQuestion(date).closes_at);
+        allow update, delete: if false;
+      }
+    }
+
+    // The Stats calendar reads a month of the current user's answers as a
+    // collection-group query (docs/prd.md §5.2). A nested match never applies
+    // to one — a collection group needs a recursive wildcard — so this block is
+    // what makes that query legal, on top of the per-day rule above.
+    //
+    // A collection group is keyed by the last path segment alone, which is why
+    // the sub-collection is named `v1_daily_question_answers` and not `answers`:
+    // this block would otherwise reach into every other `answers` sub-collection
+    // the model grows later.
+    //
+    // Scoped to the caller's own answers, and deliberately not to the document
+    // id: Firestore only accepts a query it can prove safe, and the calendar
+    // filters on the `user_id` field. Anything broader is rejected outright, so
+    // nobody can group-query their way into a friend's history — reading a
+    // friend's answer stays a per-day read.
+    match /{path=**}/v1_daily_question_answers/{user_id} {
+      allow read: if isOwner(resource.data.user_id);
     }
 
     // Add the other v1_* collection rules here as the data model is designed.

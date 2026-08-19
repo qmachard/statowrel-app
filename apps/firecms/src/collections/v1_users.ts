@@ -66,6 +66,24 @@ const usersCollection = buildCollection<UserEntity>({
       autoValue: 'on_update',
       readOnly: true,
     }),
+    streak_count: buildProperty({
+      dataType: 'number',
+      name: 'Streak',
+      description: 'Jours d\'affilée répondus à l\'heure. Tenu par le backend : le trigger de réponse l\'incrémente, le scheduler de minuit le remet à zéro.',
+      readOnly: true,
+    }),
+    streak_best: buildProperty({
+      dataType: 'number',
+      name: 'Meilleur streak',
+      description: 'Plus long streak jamais atteint.',
+      readOnly: true,
+    }),
+    streak_last_answered_on: buildProperty({
+      dataType: 'string',
+      name: 'Dernière réponse à l\'heure',
+      description: 'Jour au format AAAA-MM-JJ. Vide tant que l\'utilisateur n\'a jamais répondu à l\'heure.',
+      readOnly: true,
+    }),
   },
 });
 

@@ -1,5 +1,6 @@
 import { EntityCollectionsBuilder } from 'firecms';
 
+import dailyQuestionsCollection from './v1_daily_questions';
 import buildQuestionsCollection from './v1_questions';
 import usersCollection from './v1_users';
 
@@ -7,6 +8,7 @@ import usersCollection from './v1_users';
 // model is designed, then list it below. See CLAUDE.md for the pattern.
 const collections: EntityCollectionsBuilder = ({ user }) => [
   buildQuestionsCollection(user),
+  dailyQuestionsCollection,
   usersCollection,
 ];
 
