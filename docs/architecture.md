@@ -75,9 +75,9 @@ export const xConverter: FirestoreConverter<XData, XFirebaseData> = (TimestampCl
 
 Re-export every new model from `src/index.ts`.
 
-### `v1_questions` — first model
+### `v1_questions`
 
-`packages/models/src/v1_question.ts` — collections are plural, the model file that describes one document is singular. The pot of questions users propose and moderators approve — see `docs/prd.md` §4.7 and §5.
+`packages/models/src/v1_question.ts` — collections are plural, the model file that describes one document is singular. The pot of questions users propose and moderators approve — see `docs/prd.md` §4.7 and §6.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -88,6 +88,19 @@ Re-export every new model from `src/index.ts`.
 | `rejection_reason` | `string \| null` | sent back to the author; set only when `rejected` |
 | `created_at` | `UniversalTimestamp` | |
 
+### `v1_users`
+
+`packages/models/src/v1_user.ts` — the app user's profile. The document id is the **Firebase Auth UID**, not a ULID: it is the key `author_id`, `user_id` and friendships point at, and the one `firestore.rules` compares against `request.auth.uid`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `display_name` | `string` | pseudo, unique, chosen at first sign-in |
+| `photo_url` | `string \| null` | avatar; `null` until the user picks one |
+| `created_at` | `UniversalTimestamp` | |
+| `updated_at` | `UniversalTimestamp` | bumped on every profile write |
+
+Profile fields only for now — the PRD's `email`, `auth_providers`, `streak_count`, `streak_last_answered_on` and `invite_code` are still to be modelled.
+
 Two things to keep straight about the options:
 
 - **An option's identity is its `id`, never its position in the array.** An answer stores an `option_id`, and `v1_daily_questions.answer_counts` increments `answer_counts.{option_id}` via `FieldValue.increment()` on a fixed path — that map stays keyed by option id precisely so two simultaneous answers can't overwrite each other. Reordering or reformulating an option must leave its `id` alone; use `findQuestionOption()` to resolve one, never an index.
@@ -95,7 +108,7 @@ Two things to keep straight about the options:
 
 `options` is a plain array rather than a map keyed by id: the array order *is* the display order, which removes the `position` field and lets FireCMS's built-in repeat field handle reordering.
 
-There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §6).
+There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §7).
 
 ## `apps/functions` — domain structure
 
@@ -167,7 +180,7 @@ Two Firebase projects, aliased in `.firebaserc`:
 ## What's deliberately not here yet
 
 - No app screens beyond the placeholder route — nothing consumes `v1_questions` on mobile yet.
-- Only one of the PRD's five collections exists. `v1_users`, `v1_users/{id}/friends`, `v1_daily_questions` and its `answers` sub-collection are still to be modelled — see `docs/prd.md` §5.
+- Two of the PRD's five collections exist, and `v1_users` only carries its profile fields. `v1_users/{id}/friends`, `v1_daily_questions` and its `answers` sub-collection are still to be modelled — see `docs/prd.md` §6.
 - No design-system component primitives (buttons, cards, inputs) — the neobrutalism theme tokens exist in `tailwind.config.js`, the primitives are the next step. No dark-mode theming either.
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.
