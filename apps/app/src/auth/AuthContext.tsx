@@ -27,6 +27,17 @@ export interface AuthContextValue {
   needsOnboarding: boolean;
   /** Claims the chosen username and writes the profile, which is what opens the app up. */
   completeOnboarding: (username: string) => Promise<void>;
+  /**
+   * Re-reads `v1_users/{uid}`.
+   *
+   * The counters on it — streak, record, answered days — are moved by the
+   * answer trigger (docs/prd.md §4.6), so the copy held here goes stale the
+   * moment the user answers. The Stats screen refreshes on focus rather than
+   * subscribing: the profile changes once a day at most, and a snapshot
+   * listener open for the life of the app would cost a read every time the
+   * backend touches the document.
+   */
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -77,13 +88,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setNeedsOnboarding(false);
   }, [ user, profile ]);
 
+  const refreshProfile = useCallback(async () => {
+    if (!user) {
+      return;
+    }
+
+    try {
+      const synced = await syncUserProfile(user);
+
+      // A refresh never clears the profile: `syncUserProfile` returns null for a
+      // document that does not exist, and the stale copy beats no copy.
+      if (synced !== null) {
+        setProfile(synced);
+      }
+    } catch (error) {
+      // A refresh is a nicety — the screen keeps the copy it already has.
+      console.warn('[auth] could not refresh the user profile', error);
+    }
+  }, [ user ]);
+
   const value = useMemo<AuthContextValue>(() => ({
     user,
     profile,
     initializing,
     needsOnboarding,
     completeOnboarding,
-  }), [ user, profile, initializing, needsOnboarding, completeOnboarding ]);
+    refreshProfile,
+  }), [ user, profile, initializing, needsOnboarding, completeOnboarding, refreshProfile ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
