@@ -8,7 +8,7 @@ One screen exists: the Stats home (`app/index.tsx`, docs/prd.md §5.2) — strea
 
 ## Structure
 
-- `app/` — [Expo Router](https://docs.expo.dev/router/introduction/) file-based routes. `_layout.tsx` is the root layout (wraps the app in `SafeAreaProvider`, imports `global.css`). Add screens as `app/<route>.tsx` / `app/<route>/_layout.tsx`.
+- `app/` — [Expo Router](https://docs.expo.dev/router/introduction/) file-based routes. `_layout.tsx` is the root layout (imports `global.css`, holds the splash screen while the fonts load). It must render its navigator on the **first** render — returning `null` while resources load, or nesting a second `SafeAreaProvider` (expo-router's `ExpoRoot` already provides one, and a nested one renders `null` until the native insets arrive), leaves the NavigationContainer without a navigator and throws "Couldn't find a navigation context" on device. Add screens as `app/<route>.tsx` / `app/<route>/_layout.tsx`.
 - `src/components/` — screen-level building blocks (`StreakCard`, `StatTile`, `MonthCalendar`, `DayCell`), PascalCase, one component per file, styled with the `tailwind.config.js` tokens only.
 - `src/lib/` — framework-free helpers (`calendar.ts`: `YYYY-MM-DD` day keys and the month grid).
 - `src/data/` — placeholder datasets standing in for Firestore reads, typed against `@statowrel/models`. Delete a file here as soon as its screen is wired up for real.
