@@ -4,7 +4,7 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "deploy:rules": "firebase deploy --only firestore:rules",
     "deploy:indexes": "firebase deploy --only firestore:indexes",
     "deploy": "npm run deploy:rules && npm run deploy:indexes"
   },
