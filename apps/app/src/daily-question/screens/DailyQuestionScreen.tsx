@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   // `fitToContents`, so it measures this column and a stretched child would
   // make it measure the whole screen instead.
   safeArea: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.secondary,
   },
   content: {
     gap: spacing(5),
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.head,
     fontSize: fontSize.xl,
     textTransform: 'uppercase',
-    color: colors.foreground,
+    color: colors['secondary-foreground'],
   },
   // `fonts.head` at body size is this app's bold — Space Grotesk ships in a
   // single weight, so a `fontWeight` here would only ask for a face that isn't
@@ -74,21 +74,24 @@ const styles = StyleSheet.create({
   question: {
     fontFamily: fonts.head,
     fontSize: fontSize.base,
-    color: colors.foreground,
+    color: colors['secondary-foreground'],
   },
   options: {
     gap: spacing(4),
   },
+  // On the black sheet `muted-foreground` is unreadable, and the palette has no
+  // muted token for a dark surface: these two take the full foreground and stay
+  // secondary by size alone.
   message: {
     fontFamily: fonts.sans,
     fontSize: fontSize.base,
-    color: colors['muted-foreground'],
+    color: colors['secondary-foreground'],
   },
   credit: {
     textAlign: 'center',
     fontFamily: fonts.sans,
     fontSize: fontSize.xs,
-    color: colors['muted-foreground'],
+    color: colors['secondary-foreground'],
   },
 });
 

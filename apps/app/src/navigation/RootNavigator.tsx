@@ -44,6 +44,10 @@ export const RootNavigator = () => {
               presentation: 'formSheet',
               sheetAllowedDetents: 'fitToContents',
               sheetGrabberVisible: true,
+              // The sheet is the app's one black surface — overridden here
+              // rather than in the screen so nothing of the stack's cream shows
+              // through around the content.
+              contentStyle: { backgroundColor: colors.secondary },
             }}
           />
           <Stack.Screen name="Profile" component={ProfileScreen} />
