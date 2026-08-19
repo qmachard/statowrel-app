@@ -136,7 +136,7 @@ Top-level `functions/src/index.ts` uses namespace re-exports (`export * as healt
 - Styling via [Nativewind](https://www.nativewind.dev) (`className`), not `StyleSheet.create`, unless a style can't be expressed in Tailwind.
 - Firebase client SDK (`firebase` npm package), not `@react-native-firebase` — see `apps/app/src/lib/firebase.ts`. Same SDK the converters in `@statowrel/models` target on the client side.
 - Routing via [Expo Router](https://docs.expo.dev/router/introduction/) (file-based, `apps/app/app/`).
-- **Design system**: not installed yet. Planned direction is neobrutalism (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold colors, thick borders, hard offset shadows — as a separate, later install/config step. Don't add ad-hoc styling that assumes a specific palette until then.
+- **Design system**: neobrutalism (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold colors, thick borders, hard offset shadows, `radius: 0`. Theme tokens live in `apps/app/tailwind.config.js` (`font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`); fonts (Archivo Black, Space Grotesk) load via `expo-font` + `@expo-google-fonts/*`. The neobrutalism.com `shadcn` registry itself is web-only (Radix/Base UI need a DOM) — it does not apply to this React Native app; reusable component primitives are hand-built against these tokens as a later step.
 
 ## Testing
 
