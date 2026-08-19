@@ -2,17 +2,21 @@
 
 React Native + Expo (managed workflow) + EAS. iOS + Android. Styled with [Nativewind](https://www.nativewind.dev) (Tailwind CSS for React Native).
 
-The authentication flow exists (Google, Apple, email + password, and the `v1_users/{uid}` profile it creates); no product screen does yet. See root `docs/architecture.md` for the overall plan.
+The authentication flow (Google, Apple, email + password, and the `v1_users/{uid}` profile it creates) and the profile screen exist; the rest of the product screens do not yet. See root `docs/architecture.md` for the overall plan.
 
 **Design system**: neobrutalism visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold flat colors, thick borders, hard offset shadows, `radius: 0`. Theme tokens (palette, `font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`) live in `tailwind.config.js`. Headings use `font-head` (Archivo Black), body text uses `font-sans` (Space Grotesk) — both loaded via `expo-font` + `@expo-google-fonts/*` in `app/_layout.tsx`. The neobrutalism.com registry itself (`shadcn` CLI, Radix/Base UI components) targets the web DOM and does **not** work with React Native — component primitives are hand-built against these tokens instead. `src/components/Button.tsx` and `src/components/TextField.tsx` exist; the rest lands with the screens that need it.
 
 ## Structure
 
-- `app/` — [Expo Router](https://docs.expo.dev/router/introduction/) file-based routes. `_layout.tsx` is the root layout (`SafeAreaProvider` + `AuthProvider`, imports `global.css`, holds the splash screen until the persisted session resolves). `app/(auth)/` holds `sign-in` and `sign-up`; `app/index.tsx` is protected. Add screens as `app/<route>.tsx` / `app/<route>/_layout.tsx`.
-- `src/auth/` — everything authentication. `AuthContext.tsx` (`useAuth()`: `user`, `profile`, `initializing`), `providers.ts` (Google / Apple / email primitives + `signOut`), `profile.ts` (upserts `v1_users/{uid}` — **id = Firebase Auth UID**), `profileHints.ts`, `schemas.ts` (zod), `errors.ts` (French messages for `auth/*` codes), `SocialSignInButtons.tsx`.
-- `src/components/` — neobrutalism primitives (`Button`, `TextField`).
+- `app/` — [Expo Router](https://docs.expo.dev/router/introduction/) file-based routes. `_layout.tsx` is the root layout (`SafeAreaProvider` + `AuthProvider`, imports `global.css`, holds the splash screen until the persisted session resolves, and declares the stack's screens). `app/(auth)/` holds `sign-in` and `sign-up`; `app/index.tsx` is protected. Add screens as `app/<route>.tsx` / `app/<route>/_layout.tsx`.
+  - `app/profile/index.tsx` — profile: avatar, editable pseudo, friends list.
+  - `app/profile/avatar.tsx` — avatar picker, presented as a modal.
+- `src/auth/` — everything authentication. `AuthContext.tsx` (`useAuth()`: `user`, `profile`, `initializing`), `providers.ts` (Google / Apple / email primitives + `signOut`), `profile.ts` (upserts `v1_users/{uid}` — **id = Firebase Auth UID**), `profileHints.ts`, `schemas.ts` (zod, including the shared `displayName` field), `errors.ts` (French messages for `auth/*` codes), `SocialSignInButtons.tsx`.
+- `src/components/` — neobrutalism primitives (`Button`, `TextField`, `Avatar`).
+- `src/hooks/` — data hooks: `useUserProfile` (live `v1_users/{uid}` + profile writes) and `useFriends` (friends sub-collection, each entry resolved against its own profile).
+- `src/lib/avatars.ts` — the avatar catalogue, borrowed from CheckPack (`qmachard/checkpack-v3`) until StatOwrel has its own set.
 - `src/lib/firebase.ts` — Firebase client SDK (`firebase` npm package, not `@react-native-firebase`) init: `app`, `auth` (persisted via `@react-native-async-storage/async-storage`), `db`, plus the Auth and Firestore emulator hookups. Same client SDK the rest of the monorepo uses, so `@statowrel/models` converters work unchanged.
-- `src/lib/firestore.ts` — `getDocumentRef` / `getCollectionRef`, each wired with a `@statowrel/models` converter. Use these rather than calling `doc()`/`collection()` directly.
+- `src/lib/firestore.ts` — `getDocumentRef` / `getCollectionRef` / `getSubDocumentRef` / `getSubCollectionRef`, each wired with a `@statowrel/models` converter. Use these rather than calling `doc()`/`collection()` directly.
 - `tailwind.config.js` — Nativewind preset + neobrutalism theme tokens (palette, `font-head`/`font-sans`, `borderRadius: 0`, thick `borderWidth`, hard offset `boxShadow` scale).
 - `global.css` — Tailwind directives, imported once in `app/_layout.tsx`.
 - `app.config.ts` — dynamic Expo config. Reads `APP_VARIANT` (`development` | `preview` | `production`, set per EAS build profile in `eas.json`) to pick app name / bundle identifier / package name, so dev/preview/prod can be installed side-by-side on a device.
@@ -21,7 +25,8 @@ The authentication flow exists (Google, Apple, email + password, and the `v1_use
 ## Conventions
 
 - Use `className` (Nativewind) for styling, not `StyleSheet.create`, unless a style genuinely can't be expressed in Tailwind (complex platform-specific values) — in which case colocate it with `useMemo`/`StyleSheet.create` next to the component.
-- Firestore reads/writes ALWAYS go through a converter from `@statowrel/models` — use `getDocumentRef` / `getCollectionRef` from `src/lib/firestore.ts`, never read `snap.data()` untyped.
+- Firestore reads/writes ALWAYS go through a converter from `@statowrel/models` — use the ref helpers from `src/lib/firestore.ts`, never read `snap.data()` untyped.
+- Firestore writes made with `updateDoc` bypass the converter's `toFirestore`: pass `Timestamp.now()` explicitly for `updated_at`, never an ISO string.
 - Forms use `react-hook-form` + `zod` via `@hookform/resolvers/zod`, never raw `useState`.
 - Auth session state comes from `useAuth()`; never call `onAuthStateChanged` from a screen.
 - Public env vars (safe to embed in the client bundle) are prefixed `EXPO_PUBLIC_` and read via `process.env` — see `.env.example`. Never put a secret behind `EXPO_PUBLIC_*`.

@@ -1,5 +1,6 @@
 import {
   type DocumentData,
+  type DocumentReference,
   type FirestoreDataConverter,
   GeoPoint,
   Timestamp,
@@ -34,3 +35,16 @@ export const getCollectionRef = <TModelData extends DocumentData, TFirebaseData 
   collectionPath: string,
   converter: FirestoreConverter<TModelData, TFirebaseData>,
 ) => collection(db, collectionPath).withConverter(withConverter(converter));
+
+export const getSubCollectionRef = <TModelData extends DocumentData, TFirebaseData extends DocumentData = TModelData>(
+  parentRef: DocumentReference<DocumentData, DocumentData>,
+  subCollectionPath: string,
+  converter: FirestoreConverter<TModelData, TFirebaseData>,
+) => collection(parentRef, subCollectionPath).withConverter(withConverter(converter));
+
+export const getSubDocumentRef = <TModelData extends DocumentData, TFirebaseData extends DocumentData = TModelData>(
+  parentRef: DocumentReference<DocumentData, DocumentData>,
+  subCollectionPath: string,
+  identifier: string,
+  converter: FirestoreConverter<TModelData, TFirebaseData>,
+) => doc(parentRef, subCollectionPath, identifier).withConverter(withConverter(converter));

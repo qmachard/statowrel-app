@@ -126,6 +126,18 @@ service cloud.firestore {
       allow read: if isOwner(resource.data.user_id);
     }
 
+    // A friendship (docs/prd.md §4.1) is reciprocal and stored on both sides,
+    // keyed by the friend's UID. Only the owner reads their own list, and only
+    // the owner removes an entry — creating one is the backend's job, since an
+    // accepted invitation has to write the mirrored entry the client can't
+    // touch. Removing the mirror is the same backend's job; until the
+    // invitation flow exists, "supprimer" only drops the caller's own side.
+    match /v1_users/{user_id}/friends/{friend_id} {
+      allow read: if isOwner(user_id);
+      allow delete: if isOwner(user_id);
+      allow create, update: if false;
+    }
+
     // Add the other v1_* collection rules here as the data model is designed.
   }
 }

@@ -28,7 +28,16 @@ const RootNavigator = () => {
     return null;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="profile/index" />
+      <Stack.Screen
+        name="profile/avatar"
+        options={{ presentation: 'modal', headerShown: true, title: 'Avatar' }}
+      />
+    </Stack>
+  );
 };
 
 export default function RootLayout() {

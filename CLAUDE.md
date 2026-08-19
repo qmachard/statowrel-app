@@ -31,7 +31,7 @@ There is no shared React hooks package yet (no `@repo/firebase-react` equivalent
 
 ## Status
 
-Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus four domain models — `v1_questions`, `v1_daily_questions`, its `v1_daily_question_answers` sub-collection, and `v1_users` (profile, sign-in identities, streak stats) — all surfaced in `apps/firecms`. No backend owns them yet: no scheduler, no answer trigger. `apps/app` has its authentication flow (Google, Apple, email/password — `src/auth/`) and a placeholder home; **no product screens exist yet**. See `docs/architecture.md` for the intended shape going forward.
+Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus five domain models — `v1_questions`, `v1_daily_questions`, its `v1_daily_question_answers` sub-collection, `v1_users` (profile, sign-in identities, streak stats) and `v1_users/{id}/friends` — the first four surfaced in `apps/firecms`. No backend owns them yet: no scheduler, no answer trigger. `apps/app` has its authentication flow (Google, Apple, email/password — `src/auth/`), the profile screen (`app/profile/`) and a placeholder home linking to it. See `docs/architecture.md` for the intended shape going forward.
 
 ## Commands
 

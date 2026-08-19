@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Link, Redirect } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -43,6 +43,10 @@ export default function Index() {
           </Text>
           <Text className="font-sans text-xs text-muted-foreground">UID {user.uid}</Text>
         </View>
+
+        <Link href="/profile" asChild>
+          <Button label="Mon profil" />
+        </Link>
 
         <Button label="Se déconnecter" variant="secondary" onPress={() => signOut()} />
       </ScrollView>

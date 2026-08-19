@@ -1,6 +1,6 @@
 # StatOwrel — Architecture
 
-Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's five collections (`v1_questions`, `v1_daily_questions`, `v1_daily_question_answers`, `v1_users`) and their FireCMS collections exist, and the app has its sign-in flow; every other screen is still to come, as is the backend owning the daily cycle. The rest is added incrementally on top of this foundation.
+Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. All five of the PRD's collections (`v1_questions`, `v1_daily_questions`, `v1_daily_question_answers`, `v1_users`, `v1_users/{id}/friends`) are modelled, the first four with their FireCMS collections; the app has its sign-in flow and its profile screen, every other screen is still to come, as is the backend owning the daily cycle. The rest is added incrementally on top of this foundation.
 
 ## Stack
 
@@ -146,6 +146,19 @@ Two things to keep straight about the options:
 `options` is a plain array rather than a map keyed by id: the array order *is* the display order, which removes the `position` field and lets FireCMS's built-in repeat field handle reordering.
 
 There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §7).
+
+### `v1_users/{id}/friends`
+
+`packages/models/src/v1_friend.ts` — one document per friendship, under the owner's profile. The document id is the **friend's UID**, so a friendship is read and removed without a query.
+
+| Field | Type | Notes |
+|---|---|---|
+| `friend_id` | `string` | same value as the document id; kept as a field so collection-group queries can filter on it |
+| `created_at` | `UniversalTimestamp` | |
+
+Nothing about the friend is denormalised here — the profile screen resolves each `friend_id` against `v1_users`, so a pseudo or avatar change never leaves a stale copy behind, and `streak_count` comes from that same read once the list shows it (docs/prd.md §5.3).
+
+A friendship is **reciprocal**: accepting an invitation writes the entry on both sides (docs/prd.md §4.1). `firestore.rules` therefore lets the owner only *read* and *delete* their own entries — creating one, and deleting the mirrored one, is the backend's job. That backend ships with the invitation flow; until then, removing a friend from the profile screen drops the caller's own side only.
 
 ## `apps/functions` — domain structure
 
