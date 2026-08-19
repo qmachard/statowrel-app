@@ -72,6 +72,13 @@ const questionsCollection = buildCollection<QuestionEntity>({
       of: buildProperty({
         dataType: 'map',
         properties: {
+          id: buildProperty({
+            dataType: 'string',
+            name: 'ULID',
+            description: 'Généré à l\'enregistrement. Une réponse pointe dessus : il ne change jamais et n\'est jamais réutilisé.',
+            Field: () => null, // Hide the field in the backoffice, but keep it in the database.
+            Preview: () => null, // Hide the field in the backoffice, but keep it in the database.
+          }),
           label: buildProperty({
             dataType: 'string',
             name: 'Réponse affichée',
@@ -83,12 +90,6 @@ const questionsCollection = buildCollection<QuestionEntity>({
             description: 'Affichée comme « tu es un.e … »',
             validation: { required: true },
           }),
-          id: buildProperty({
-            dataType: 'string',
-            name: 'ULID',
-            description: 'Généré à l\'enregistrement. Une réponse pointe dessus : il ne change jamais et n\'est jamais réutilisé.',
-            readOnly: true,
-          }),
         },
         propertiesOrder: [ 'label', 'stat_label', 'id' ],
         previewProperties: [ 'label', 'stat_label' ],
@@ -97,7 +98,7 @@ const questionsCollection = buildCollection<QuestionEntity>({
     status: buildProperty({
       dataType: 'string',
       name: 'Statut',
-      defaultValue: 'pending',
+      defaultValue: 'approved',
       validation: { required: true },
       enumValues: {
         pending: 'En attente',
