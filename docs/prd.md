@@ -1,6 +1,6 @@
 # StatOwrel — PRD
 
-Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Quatre sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil), les §5.1–5.2 (l'écran Stats, branché sur Firestore), le §5.4 (la sheet question, dismissable au lieu d'être bloquante) et le §4.3 (le double tap, qui écrit la réponse et joue l'animation de succès mais ne bascule pas encore sur la carte StatOwrel du §5.5) — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
+Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Cinq sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil), les §5.1–5.2 (l'écran Stats, branché sur Firestore), le §5.4 (la sheet question, dismissable au lieu d'être bloquante, mais qui bascule bien sur la carte après validation), le §4.3 (le double tap, complet) et le §5.5 (la carte StatOwrel, sans son illustration, son bouton de partage ni les réponses des amis) — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
 
 ## 1. Vision
 
@@ -233,6 +233,8 @@ Anatomie de la carte, dans l'ordre vertical :
 - **Bouton « Partager »** sous la carte : génère l'image de la carte seule (sans les amis) — §4.4.
 - **Les amis, sous la carte** (§4.5) : hors du cadre, en liste simple — avatar, `@handle`, l'option choisie et l'heure. Les amis qui ont répondu comme moi sont regroupés en tête sous « Comme toi », les autres suivent, les non-répondants ferment la liste en `muted`.
 - Cette carte est **rejouable à volonté** : tap sur un jour répondu dans le calendrier (§5.2) la rouvre à l'identique, avec les stats à jour et les réponses des amis arrivées depuis.
+
+**État d'implémentation.** La carte existe et remplace le contenu de la sheet dès que la réponse est écrite — cadre double, bandeau `stat_label` + pourcentage, phrase « Comme x% des utilisateurs, tu es un.e … », encart question, barres de répartition et pied daté. La rareté est bien calculée à l'affichage depuis `answer_counts`, en trois paliers (`commune` sans mention, `rare` liseré doré, `ultra rare` liseré violet). Un jour déjà répondu, rouvert depuis le calendrier, ouvre directement la carte au lieu de la question. Restent à faire : l'**encart illustration** (le modèle d'option ne porte ni emoji ni visuel), le **numéro d'édition** « #142 » (rien ne compte les jours depuis le lancement), le **bouton Partager** et son image générée (§4.4), les **réponses des amis** sous la carte (§4.5, les amitiés ne sont pas modélisées) et le **fond holographique animé au tilt** de la carte ultra rare — le liseré tient sa place.
 
 ### 5.6 Ce qui n'existe pas
 

@@ -8,13 +8,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { SuccessCircle } from '@/components/animations';
 import { QuestionOption } from '@/daily-question/components/QuestionOption';
+import { StatOwrelCard } from '@/daily-question/components/StatOwrelCard';
 import { rememberAnswer } from '@/daily-question/data/answerStore';
 import { submitAnswer } from '@/daily-question/data/submitAnswer';
 import { type DailyQuestionStatus, useDailyQuestion } from '@/daily-question/data/useDailyQuestion';
+import { buildStatOwrel } from '@/daily-question/helpers/statowrel';
 import { useAuth } from '@/auth/AuthContext';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { hapticSelection, hapticValidation } from '@/lib/haptics';
-import { toDateKey } from '@/lib/dates';
+import { formatDayLabel, fromDateKey, toDateKey } from '@/lib/dates';
 import type { RootStackParamList } from '@/navigation/types';
 
 /** What a day that carries no answerable question has to say for itself. */
@@ -38,9 +40,9 @@ const VALIDATION_DELAY_MS = 150;
  *
  * Deliberately **not** a function of the answer. Flipping the whole sheet from
  * red to yellow under the success animation reads as a second event competing
- * with it, and the option that turns primary is already what says the answer
- * landed. The calendar cell behind still goes yellow — that is the calendar's
- * own story about the day, told once the sheet is gone.
+ * with it, and the content flipping to the StatOwrel card is already what says
+ * the answer landed. The calendar cell behind still goes yellow — that is the
+ * calendar's own story about the day, told once the sheet is gone.
  */
 type Surface = 'accent' | 'primary';
 
@@ -132,10 +134,13 @@ const Message = ({ children, surface }: { children: ReactNode; surface: Surface 
  * `v1_daily_questions/{date}/v1_daily_question_answers/{uid}` — document id =
  * the author's UID, which is what makes one answer per person per day a
  * property of the data. There is no « Valider » button; tapping another option
- * only moves the selection. The success animation plays over the sheet the
- * moment the write lands, and the options settle into their answered state
- * behind it. The StatOwrel card the sheet should then flip to (§5.5) is what
- * comes next.
+ * only moves the selection.
+ *
+ * **An answered day is the StatOwrel card of §5.5**, not a row of dimmed
+ * options: the sheet's content flips to it the moment the answer lands, with
+ * the success animation playing over it, and reopening the day from the
+ * calendar lands straight on it. The question moves inside the card then — it
+ * carries its own recap — so the sheet never shows it twice.
  */
 export const DailyQuestionScreen = () => {
   const navigation = useNavigation();
@@ -226,6 +231,13 @@ export const DailyQuestionScreen = () => {
   // taps — and so does a day still writing one.
   const answerable = status === 'ready' && user !== null && answer === null && !submitting;
 
+  // The reward of docs/prd.md §5.5, recomputed on every `answer_counts` the day
+  // subscription hands over: the card's rarity is that map's shape at display
+  // time, so it keeps moving while the day's answers come in.
+  const statOwrel = question === null || dailyQuestion === null || answer === null
+    ? null
+    : buildStatOwrel(question, dailyQuestion.answer_counts, answer.option_id);
+
   return (
     <SafeAreaView style={SURFACE[surface]} edges={[ 'bottom' ]}>
       <View style={styles.content}>
@@ -234,7 +246,7 @@ export const DailyQuestionScreen = () => {
             <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
           </View>
 
-          {question === null ? null : (
+          {question === null || answer !== null ? null : (
             <Text style={[ styles.question, FOREGROUND[surface] ]}>{question.label}</Text>
           )}
         </View>
@@ -243,15 +255,22 @@ export const DailyQuestionScreen = () => {
 
         {deadEnd ? <Message surface={surface}>{deadEnd}</Message> : null}
 
-        {question === null ? null : (
+        {statOwrel === null || question === null ? null : (
+          <StatOwrelCard
+            statOwrel={statOwrel}
+            questionLabel={question.label}
+            dateLabel={formatDayLabel(fromDateKey(date))}
+            authorName={authorName}
+          />
+        )}
+
+        {question === null || answer !== null ? null : (
           <View style={styles.options}>
             {question.options.map((option, index) => (
               <QuestionOption
                 key={option.id}
                 letter={letterOf(index)}
                 label={option.label}
-                picked={answer?.option_id === option.id}
-                dimmed={answer !== null && answer.option_id !== option.id}
                 selected={selectedId === option.id}
                 onPress={answerable ? () => pick(option.id) : undefined}
               />
@@ -261,7 +280,7 @@ export const DailyQuestionScreen = () => {
 
         {failure === null ? null : <Message surface={surface}>{failure}</Message>}
 
-        {authorName === null ? null : (
+        {authorName === null || answer !== null ? null : (
           <Text style={[ styles.credit, FOREGROUND[surface] ]}>proposée par @{authorName}</Text>
         )}
 

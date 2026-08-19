@@ -3,9 +3,6 @@ import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native'
 import { shadows } from '@/design/shadows';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 
-/** A dimmed option is one the user did not pick — present, but out of the way. */
-const DIMMED_OPACITY = 0.5;
-
 /** The letter badge is a square, so its side is a token rather than a padding. */
 const LETTER_SIZE = spacing(9);
 
@@ -21,11 +18,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(4),
   },
-  picked: {
+  selected: {
     backgroundColor: colors.primary,
-  },
-  dimmed: {
-    opacity: DIMMED_OPACITY,
   },
   // The quizz marker: a bordered square holding the option's letter, so the
   // options read as A / B / C the way a quizz card does.
@@ -37,11 +31,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     borderWidth,
     borderColor: colors.border,
-    // A cream square on the white card, a white one on the yellow of a picked
+    // A cream square on the white card, a white one on the yellow of a selected
     // option — the badge never melts into the surface behind it.
     backgroundColor: colors.background,
   },
-  pickedLetterBox: {
+  selectedLetterBox: {
     backgroundColor: colors.card,
   },
   letter: {
@@ -59,7 +53,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors['card-foreground'],
   },
-  pickedLabel: {
+  selectedLabel: {
     color: colors['primary-foreground'],
   },
   badge: {
@@ -85,17 +79,12 @@ export interface QuestionOptionProps {
   /** `A`, `B`, … — the option's rank in the question's fixed order (docs/prd.md §4.2). */
   letter: string;
   label: string;
-  /** The option this user picked. Their answer is final (docs/prd.md §4.2). */
-  picked?: boolean;
-  /** One of the options they did not pick — the day is answered, so it recedes. */
-  dimmed?: boolean;
   /**
    * First tap done, waiting for the second: the option is lifted and asks to be
-   * tapped again (docs/prd.md §4.3). Never true at the same time as `picked` —
-   * one is the state before the write, the other the state after it.
+   * tapped again (docs/prd.md §4.3).
    */
   selected?: boolean;
-  /** Absent once the day is answered — the choice is final, so the row stops taking taps. */
+  /** Absent while the answer is being written — the choice is final, so the row stops taking taps. */
   onPress?: () => void;
 }
 
@@ -105,21 +94,17 @@ export interface QuestionOptionProps {
  *
  * It carries the double tap of §4.3 without knowing it is a double tap: the
  * screen decides what each tap means and hands back `selected`, this row only
- * renders the three states — resting, selected and waiting for confirmation,
- * or picked once the answer is written. There is no « Valider » button by
- * design; the micro-text under a selected label is what says so.
+ * renders the two states — resting, or selected and waiting for confirmation.
+ * There is no « Valider » button by design; the micro-text under a selected
+ * label is what says so.
+ *
+ * It never renders an answered option: once the day is answered the sheet shows
+ * the StatOwrel card of §5.5 instead, and the card carries the picked option.
  */
-export const QuestionOption = ({
-  letter,
-  label,
-  picked = false,
-  dimmed = false,
-  selected = false,
-  onPress,
-}: QuestionOptionProps) => (
+export const QuestionOption = ({ letter, label, selected = false, onPress }: QuestionOptionProps) => (
   <Pressable
     accessibilityRole="button"
-    accessibilityState={{ selected: picked || selected, disabled: onPress === undefined }}
+    accessibilityState={{ selected, disabled: onPress === undefined }}
     accessibilityLabel={selected ? `${label}. Tape encore pour valider` : label}
     disabled={onPress === undefined}
     onPress={onPress}
@@ -128,19 +113,18 @@ export const QuestionOption = ({
       <View
         style={[
           styles.option,
-          picked || selected ? styles.picked : null,
-          dimmed ? styles.dimmed : selected ? shadows.lg : shadows.md,
+          selected ? styles.selected : null,
+          selected ? shadows.lg : shadows.md,
           pressed ? SUNK : selected ? LIFT : null,
         ]}
       >
-        <View style={[ styles.letterBox, picked || selected ? styles.pickedLetterBox : null ]}>
+        <View style={[ styles.letterBox, selected ? styles.selectedLetterBox : null ]}>
           <Text style={styles.letter}>{letter}</Text>
         </View>
 
         <View style={styles.body}>
-          <Text style={[ styles.label, picked || selected ? styles.pickedLabel : null ]}>{label}</Text>
+          <Text style={[ styles.label, selected ? styles.selectedLabel : null ]}>{label}</Text>
 
-          {picked ? <Text style={styles.badge}>Ta réponse</Text> : null}
           {selected ? <Text style={styles.badge}>Tape encore pour valider</Text> : null}
         </View>
       </View>
