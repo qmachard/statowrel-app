@@ -17,13 +17,14 @@ import { ANIMATION_SOURCES, type AnimationName } from './sources';
  * the imperative API — `play()`, `reset()`, `pause()`, `resume()` — when the
  * screen replays the animation without remounting it.
  */
-export type AnimationSize = 'sm' | 'md' | 'lg' | 'xl';
+export type AnimationSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 const SIZE = StyleSheet.create({
   sm: { width: spacing(12), height: spacing(12) },
   md: { width: spacing(20), height: spacing(20) },
   lg: { width: spacing(32), height: spacing(32) },
-  xl: { width: spacing(48), height: spacing(48) },
+  xl: { width: spacing(40), height: spacing(40) },
+  '2xl': { width: spacing(48), height: spacing(48) },
 }) satisfies Record<AnimationSize, ViewStyle>;
 
 export interface AnimationProps {

@@ -1,6 +1,7 @@
 import type { AnimationObject } from 'lottie-react-native';
 
 import star from '../../../assets/lottie/star.json';
+import starMuted from '../../../assets/lottie/star-muted.json';
 import successCheck from '../../../assets/lottie/success-check.json';
 import successCircle from '../../../assets/lottie/success-circle.json';
 
@@ -13,6 +14,7 @@ import successCircle from '../../../assets/lottie/success-circle.json';
  */
 export const ANIMATION_SOURCES = {
   star,
+  'star-muted': starMuted,
   'success-check': successCheck,
   'success-circle': successCircle,
 } satisfies Record<string, AnimationObject>;

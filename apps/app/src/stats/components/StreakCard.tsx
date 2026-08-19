@@ -1,7 +1,6 @@
-import { Flame } from 'lucide-react-native';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { Star } from '@/components/animations';
+import { Star, StarMuted } from '@/components/animations';
 import { Card, CardContent } from '@/components/Card';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
@@ -15,8 +14,6 @@ export interface StreakCardProps {
  * left is the peek of the next counter, which is what says the line scrolls.
  */
 const SCREEN_SHARE = 0.7;
-
-const FLAME_SIZE = 64;
 
 /** How long the star holds its last frame before running again. */
 const STAR_REPLAY_DELAY = 4000;
@@ -53,9 +50,9 @@ const styles = StyleSheet.create({
     // The composition keeps a fifth of its canvas empty around the sticker, so
     // it is sized past the card and pulled back through the card's own padding:
     // what is left is ten-odd pixels of air between the drawing and the border.
-    marginVertical: -spacing(12),
-    marginLeft: -spacing(9),
-    marginRight: -spacing(10),
+    marginVertical: -spacing(10),
+    marginLeft: -spacing(5),
+    marginRight: -spacing(8),
   },
   nudge: {
     fontFamily: fonts.sans,
@@ -87,15 +84,15 @@ export const StreakCard = ({ count }: StreakCardProps) => {
         </View>
 
         {/*
-          * The star runs again every few seconds — it celebrates a streak that
-          * is alive. A broken one keeps the extinguished flame: the muted
-          * surface and the nudge already say the series stopped, and a cheering
-          * star would say the opposite.
+          * A running streak gets the star again every few seconds. A broken one
+          * gets the same sticker drained of its colors and held still — the
+          * animation is what says the series is alive, so a stopped series has
+          * to stop it too.
           */}
         {alive ? (
           <Star size="xl" replayDelay={STAR_REPLAY_DELAY} style={styles.star} />
         ) : (
-          <Flame size={FLAME_SIZE} color={colors['muted-foreground']} />
+          <StarMuted size="xl" autoPlay={false} style={styles.star} />
         )}
       </CardContent>
     </Card>
