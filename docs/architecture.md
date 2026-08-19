@@ -126,7 +126,7 @@ The document id is the author's Auth UID, which makes "one answer per person per
 
 | Collection | Scope | Written by | Holds, per day |
 |---|---|---|---|
-| `v1_daily_question_months/{YYYY-MM}` | shared, one per month for everybody | the daily scheduler, in the same batch as the day | `question_id` and `label` — the question broadcast that day |
+| `v1_daily_question_months/{YYYY-MM}` | shared, one per month for everybody | the daily scheduler, in the same batch as the day, and `onDailyQuestionWritten` for every day that appears any other way | `question_id` and `label` — the question broadcast that day |
 | `v1_users/{uid}/v1_user_calendar_months/{YYYY-MM}` | private to one user | the answer trigger, in the transaction that bumps their counters | `option_id`, `stat_label`, `late` |
 
 The Stats screen's daily-question banner (docs/prd.md §5.2) rides on the same two documents: the `label` copied onto the month index is what it announces, and "already answered" is a day of the user's own month. A banner that would otherwise be two reads on every app opening — the day, then its question — comes free with the calendar.
@@ -134,6 +134,8 @@ The Stats screen's daily-question banner (docs/prd.md §5.2) rides on the same t
 **Why they exist.** Displaying one month of calendar from the answers alone costs, per month browsed: one read per answered day, plus two more for each of them (the day document, then its question) to resolve the `stat_label` the answered cell renders, plus a month of `v1_daily_questions` to tell a **missed** day from a day that never had a question — around ninety reads, and again on every chevron. Read from the two monthly documents it costs **two**, and one once the shared half is cached.
 
 **They are derived, never the truth.** The answers under `v1_daily_questions` stay the source; these are a projection, and rebuilding one from its answers must always be possible. Two consequences to keep in mind: the `stat_label` copy goes stale if a moderator edits the question behind it (the card of `docs/prd.md` §5.5 reads the real question, so only the calendar cell drifts), and the projection can only be as complete as the trigger that fills it — see "What's deliberately not here yet".
+
+**The shared half is indexed by a trigger, not only by the scheduler.** The calendar reads *only* this index to know a day happened, so a day the index doesn't carry is a day nobody can see or catch up on — whatever `v1_daily_questions` holds. The scheduler indexes the day it draws in its own batch, atomically; `onDailyQuestionWritten` covers every other way a day appears — a moderator filling one in the backoffice, a backfill, a scheduler run retried after its first attempt already committed the day — and drops it again when the day is deleted. It re-derives the entry and writes only when the two disagree, which keeps it idempotent and off the hot path: the answer trigger bumps `answer_counts` on that same day document at every answer, and each of those bumps lands there too. It also stamps the question's `broadcast_at`, since that is what `firestore.rules` gates reading a question on — an indexed day whose question stays unstamped opens on a dead end.
 
 Only the shared half is immutable: a month of `v1_daily_question_months` is frozen once the month is over, which is what makes it safe to cache on the client indefinitely. A user's own month is not — a catch-up answer (`docs/prd.md` §4.2) adds an entry to a month long closed.
 
