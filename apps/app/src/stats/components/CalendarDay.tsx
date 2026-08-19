@@ -38,7 +38,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: fontSize['2xs'],
     textTransform: 'uppercase',
-    color: colors['primary-foreground'],
   },
   missedGlyph: {
     fontFamily: fonts.head,
@@ -84,13 +83,24 @@ const LABEL = StyleSheet.create({
   idle: { fontFamily: fonts.sans, color: colors['muted-foreground'] },
 }) satisfies Record<CalendarDayState, TextStyle>;
 
+// The `stat_label` shows on both cells that can carry one, so it takes its
+// surface's own foreground — black on the yellow of a past answered day, white
+// on the accent of today. The two flat states never render it.
+const STAT_LABEL = StyleSheet.create({
+  answered: { color: colors['primary-foreground'] },
+  today: { color: colors['accent-foreground'] },
+  missed: {},
+  idle: {},
+}) satisfies Record<CalendarDayState, TextStyle>;
+
 export interface CalendarDayProps {
   date: Date;
   state: CalendarDayState;
   /**
-   * The `stat_label` earned that day, on an answered cell — docs/prd.md §5.2
+   * The `stat_label` earned that day, on a cell that has one — docs/prd.md §5.2
    * asks for it in micro-text, truncated. It comes copied on the calendar month
-   * itself, so rendering it costs no extra read.
+   * itself, so rendering it costs no extra read. Today carries it too once
+   * answered: it stays accent, but it is an answered day like the others.
    */
   statLabel?: string | null;
   /** Opens that day (docs/prd.md §5.2). An `idle` day stays inert whatever is passed. */
@@ -121,8 +131,8 @@ export const CalendarDay = ({ date, state, statLabel = null, onPress }: Calendar
         >
           {state === 'missed' ? <Hatch /> : null}
           <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
-          {state === 'answered' && statLabel ? (
-            <Text style={styles.statLabel} numberOfLines={1}>{statLabel}</Text>
+          {(state === 'answered' || state === 'today') && statLabel ? (
+            <Text style={[ styles.statLabel, STAT_LABEL[state] ]} numberOfLines={1}>{statLabel}</Text>
           ) : null}
           {state === 'missed' ? <Text style={styles.missedGlyph}>?</Text> : null}
         </View>

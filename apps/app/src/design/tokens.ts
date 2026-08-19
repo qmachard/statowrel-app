@@ -39,6 +39,16 @@ export const colors = {
   border: '#000000',
   input: '#ffffff',
   ring: '#000000',
+  /**
+   * The two rarity liserés of the StatOwrel card (docs/prd.md §5.5) — the only
+   * colours outside the identity palette, and they exist to say « this one is
+   * rarer than yours »: gold under 25%, holographic violet under 10%. They are
+   * frame and badge colours only, never a surface a screen is built on.
+   */
+  rare: '#e8a317',
+  'rare-foreground': '#000000',
+  ultra: '#6d4bd8',
+  'ultra-foreground': '#ffffff',
 };
 
 /**

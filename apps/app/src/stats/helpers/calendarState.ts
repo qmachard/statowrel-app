@@ -22,10 +22,16 @@ export interface CalendarDayStateInput {
  * publication incident — is inert rather than missed (docs/prd.md §5.2): there
  * is nothing there to catch up on. Which is also true of today before the 07:00
  * drop.
+ *
+ * **Today is `today` whatever happens to it**, answered or not: it is the one
+ * day the screen is about, and letting it turn yellow like any other answered
+ * day dissolved it into the month the moment one had played. It keeps the
+ * treatment of an answered cell — `stat_label` included — and only its colour
+ * differs (docs/prd.md §5.2).
  */
 export const getCalendarDayState = ({ day, today, registeredOn, published, answered }: CalendarDayStateInput): CalendarDayState => {
   if (answered) {
-    return 'answered';
+    return day === today ? 'today' : 'answered';
   }
 
   if (!published || day > today || day < registeredOn) {

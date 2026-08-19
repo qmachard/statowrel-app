@@ -1,6 +1,6 @@
 # StatOwrel — PRD
 
-Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Quatre sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil), les §5.1–5.2 (l'écran Stats, branché sur Firestore), le §5.4 (la sheet question, dismissable au lieu d'être bloquante) et le §4.3 (le double tap, qui écrit la réponse et joue l'animation de succès mais ne bascule pas encore sur la carte StatOwrel du §5.5) — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
+Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Cinq sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil), les §5.1–5.2 (l'écran Stats, branché sur Firestore), le §5.4 (la sheet question, dismissable au lieu d'être bloquante, mais qui bascule bien sur la carte après validation), le §4.3 (le double tap, complet) et le §5.5 (la carte StatOwrel, sans son illustration, son bouton de partage ni les réponses des amis) — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
 
 ## 1. Vision
 
@@ -173,7 +173,7 @@ La racine de l'app. De haut en bas :
 
 **1. En-tête.** La date du jour en micro-texte et la salutation (« Salut Lou ») en `font-head`, à gauche ; à droite les deux boutons-icônes de §5.1.
 
-**2. Bandeau question du jour.** Tant que la question du jour est ouverte et sans réponse, un bandeau `accent` pleine largeur — bordure noire, ombre dure, texte blanc — annonce son intitulé, précédé d'un pictogramme de bulle interrogative, et ouvre la modale question (§5.4). C'est le même token `accent` que la case « aujourd'hui, pas encore répondu » du calendrier : la journée à faire porte une seule couleur. Une fois la journée répondue, le bandeau disparaît — le calendrier suffit à en rendre compte.
+**2. Bandeau question du jour.** Tant que la question du jour est ouverte et sans réponse, un bandeau `accent` pleine largeur — bordure noire, ombre dure, texte blanc — annonce son intitulé, précédé d'un pictogramme de bulle interrogative, et ouvre la modale question (§5.4). C'est le même token `accent` que la case d'aujourd'hui dans le calendrier : la journée en cours porte une seule couleur. Une fois la journée répondue, le bandeau disparaît — le calendrier suffit à en rendre compte.
 
 **3. Ligne de stats.** Le streak et ses compteurs tiennent sur **une seule ligne**, à défilement horizontal, débordant jusqu'aux deux bords de l'écran. En tête, la carte streak, large de 70% de l'écran — ce qui dépasse est l'amorce de la tuile suivante, et c'est elle qui dit que la ligne défile : `primary` bordée, la même ombre dure que les tuiles qui la suivent, le libellé puis le nombre de jours en `font-head` et « jours d'affilée » à gauche, un grand pictogramme de flamme à droite. Quand le streak est à 0, elle passe en `muted` avec « Réponds aujourd'hui pour repartir ». Suivent deux tuiles `card` plus étroites, bordure noire, ombre dure : le meilleur streak jamais atteint (`streak_best`) et le nombre total de jours répondus depuis l'inscription. Les trois chiffres sont sur la même échelle typographique — le streak tient sa place par sa surface, sa couleur et sa largeur, pas par la taille de son chiffre — et la ligne rend sa hauteur au calendrier.
 
@@ -183,7 +183,7 @@ La racine de l'app. De haut en bas :
 |---|---|---|
 | **Répondu** | Case `primary`, ombre dure, le `stat_label` du jour en micro-texte (tronqué) | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
 | **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
-| **Aujourd'hui, pas encore répondu** | Case `accent` — le même traitement qu'un jour répondu, bordure et ombre dure comprises, seule la couleur change | Ouvre la modale question du jour (§5.4) |
+| **Aujourd'hui** | Case `accent` — le même traitement qu'un jour répondu, bordure, ombre dure et `stat_label` compris une fois la journée jouée : seule la couleur change. Aujourd'hui reste `accent` quoi qu'il arrive, répondu ou non — c'est le jour dont l'écran parle, et le voir virer au jaune comme les autres le dissolvait dans le mois | Ouvre la modale question du jour (§5.4), ou la carte StatOwrel (§5.5) une fois répondu |
 | **Futur, ou antérieur à l'inscription** | Case `muted`, sans bordure | Inerte |
 
 - Navigation mois par mois (chevrons gauche/droite), bornée à la date d'inscription d'un côté et au mois courant de l'autre.
@@ -233,6 +233,8 @@ Anatomie de la carte, dans l'ordre vertical :
 - **Bouton « Partager »** sous la carte : génère l'image de la carte seule (sans les amis) — §4.4.
 - **Les amis, sous la carte** (§4.5) : hors du cadre, en liste simple — avatar, `@handle`, l'option choisie et l'heure. Les amis qui ont répondu comme moi sont regroupés en tête sous « Comme toi », les autres suivent, les non-répondants ferment la liste en `muted`.
 - Cette carte est **rejouable à volonté** : tap sur un jour répondu dans le calendrier (§5.2) la rouvre à l'identique, avec les stats à jour et les réponses des amis arrivées depuis.
+
+**État d'implémentation.** La carte existe et remplace le contenu de la sheet dès que la réponse est écrite — cadre double, bandeau `stat_label` + pourcentage, phrase « Comme x% des utilisateurs, tu es un.e … », encart question, barres de répartition et pied daté. La rareté est bien calculée à l'affichage depuis `answer_counts`, en trois paliers (`commune` sans mention, `rare` liseré doré, `ultra rare` liseré violet). Un jour déjà répondu, rouvert depuis le calendrier, ouvre directement la carte au lieu de la question. Restent à faire : l'**encart illustration** (le modèle d'option ne porte ni emoji ni visuel), le **numéro d'édition** « #142 » (rien ne compte les jours depuis le lancement), le **bouton Partager** et son image générée (§4.4), les **réponses des amis** sous la carte (§4.5, les amitiés ne sont pas modélisées) et le **fond holographique animé au tilt** de la carte ultra rare — le liseré tient sa place.
 
 ### 5.6 Ce qui n'existe pas
 
