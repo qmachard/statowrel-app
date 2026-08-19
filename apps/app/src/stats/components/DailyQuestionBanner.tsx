@@ -7,7 +7,7 @@ import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/
 export interface DailyQuestionBannerProps {
   /** `QuestionData.label` — the question itself, the only thing worth reading here. */
   label: string;
-  /** Opens the question sheet (docs/prd.md §5.4). Inert until that sheet exists. */
+  /** Opens today's question sheet (docs/prd.md §5.4). */
   onPress?: () => void;
 }
 
@@ -50,8 +50,8 @@ const SUNK: ViewStyle = { transform: [ { translateX: spacing(1) }, { translateY:
 /**
  * The first thing on the screen when today's question is still unanswered
  * (docs/prd.md §5.2): an `accent` banner, the same token the calendar gives to
- * an unanswered today. It is the way in to the question sheet (§5.4) — until
- * that sheet exists, it announces the question and nothing more.
+ * an unanswered today, and the second way in to the question sheet (§5.4) — the
+ * first being the calendar cell it borrows its colour from.
  */
 export const DailyQuestionBanner = ({ label, onPress }: DailyQuestionBannerProps) => (
   <Pressable accessibilityRole="button" accessibilityLabel={`Question du jour : ${label}`} onPress={onPress}>

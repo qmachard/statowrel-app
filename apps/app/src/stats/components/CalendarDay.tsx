@@ -60,9 +60,11 @@ const SHADOW: Record<CalendarDayState, ViewStyle | undefined> = {
 // Pressed, a raised day drops its shadow and translates by the offset it just
 // dropped — the same sink as `src/components/Button.tsx`, at `sm`'s 2px. A flat
 // day has nothing to sink into, so it dims instead.
+const SUNK: ViewStyle = { transform: [ { translateX: SUNK_BY }, { translateY: SUNK_BY } ] };
+
 const PRESSED = StyleSheet.create({
-  answered: { transform: [ { translateX: SUNK_BY }, { translateY: SUNK_BY } ] },
-  today: { opacity: PRESSED_OPACITY },
+  answered: SUNK,
+  today: SUNK,
   missed: { opacity: PRESSED_OPACITY },
   idle: {},
 }) satisfies Record<CalendarDayState, ViewStyle>;
