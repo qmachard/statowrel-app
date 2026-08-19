@@ -1,6 +1,6 @@
 # StatOwrel — Architecture
 
-Status: **initial scaffold**. This document describes the monorepo as bootstrapped — tooling, structure, and conventions — not a finished product. No domain models, no screens, no admin collections exist yet; they are added incrementally on top of this foundation.
+Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. The first domain model (`v1_question`) and its FireCMS collection exist; there are still no app screens. The rest is added incrementally on top of this foundation.
 
 ## Stack
 
@@ -75,6 +75,21 @@ export const xConverter: FirestoreConverter<XData, XFirebaseData> = (TimestampCl
 
 Re-export every new model from `src/index.ts`.
 
+### `v1_question` — first model
+
+`packages/models/src/v1_question.ts`. A question shown in the app, with its possible answers.
+
+| Field | Type | Notes |
+|---|---|---|
+| `question` | `string` | e.g. "Aux toilettes, tu t'essuies..." |
+| `answers` | `Record<string, { label, title }>` | keyed by answer id — `label` is what's shown ("Assis"), `title` is what the user earns ("un.e Assis") |
+| `is_multiple` | `boolean` | several answers selectable at once |
+| `user_id` | `string` | author |
+| `created_at` | `UniversalTimestamp` | |
+| `submitted_at` | `UniversalTimestamp \| null` | `null` until the question is submitted |
+
+`answers` is a map rather than an array so an answer keeps a stable id across edits — future vote/result documents reference that id, and reordering or renaming an answer must not repoint existing data.
+
 ## `apps/functions` — domain structure
 
 Each domain under `src/domains/` is self-contained:
@@ -95,7 +110,12 @@ domains/{domain-name}/
 
 ## `apps/firecms` — backoffice
 
-FireCMS v2 SPA. `src/collections/index.ts` is the list of `EntityCollection` definitions (currently empty). Each collection is added as its own file once the corresponding model exists in `@statowrel/models`, using that model's converter and `*_COLLECTION` constant, then registered in the index. `src/authenticator/admin.ts` is the sign-in gate (currently: any authenticated user — tighten to an email allow-list, or a custom `admin` auth claim checked server-side, before shipping).
+FireCMS v2 SPA. `src/collections/index.ts` is the list of `EntityCollection` definitions. Each collection is added as its own file once the corresponding model exists in `@statowrel/models`, using that model's `*_COLLECTION` constant, then registered in the index. `src/collections/questions.ts` is the first one.
+
+Two things to know when writing a collection:
+
+- **FireCMS does not use our converters.** It reads Firestore through its own data source, which maps `Timestamp` → `Date`. So a collection is typed against a local variant of the model's `*Data` type with `Date` timestamps, not against `*Data` itself.
+- **Maps with dynamic keys are edited as key/value.** FireCMS v2 can only type a map's sub-properties when the keys are known up front, so `v1_question.answers` is declared `dataType: 'map'` + `keyValue: true`. Admins type the answer id as the key and a `{ label, title }` map as the value. It's loose; replace it with a custom field component if answer editing becomes a frequent task. `src/authenticator/admin.ts` is the sign-in gate (currently: any authenticated user — tighten to an email allow-list, or a custom `admin` auth claim checked server-side, before shipping).
 
 ## `apps/app` — mobile
 
@@ -119,7 +139,7 @@ Not installed yet. The intended direction is a **neobrutalism** visual style (re
 
 ## Firestore rules & indexes
 
-`packages/firestore-config/firestore.rules` establishes the pattern: a wildcard `isAdmin()` bypass at the top (for the FireCMS backoffice, via a custom `admin` auth claim) followed by explicit per-collection rules for the mobile app's own access — collections are never left world-readable/writable by omission. `firestore.indexes.json` is empty; add composite indexes as Firestore's emulator/console error messages require them (copy the definition from the error, don't hand-write it).
+`packages/firestore-config/firestore.rules` establishes the pattern: a wildcard `isAdmin()` bypass at the top (for the FireCMS backoffice, via a custom `admin` auth claim) followed by explicit per-collection rules for the mobile app's own access — collections are never left world-readable/writable by omission. A collection that only the backoffice may touch still gets a rule, spelled `allow read, write: if false` — rules are OR'ed, so the `isAdmin()` bypass still applies, and the intent is written down rather than left to omission. `v1_question` is the first such collection. `firestore.indexes.json` is empty; add composite indexes as Firestore's emulator/console error messages require them (copy the definition from the error, don't hand-write it).
 
 ## Environments
 
@@ -132,8 +152,9 @@ Two Firebase projects, aliased in `.firebaserc`:
 
 ## What's deliberately not here yet
 
-- No Firestore data models (`packages/models` only has `commons.ts`).
-- No FireCMS collections, no app screens beyond the placeholder route.
+- No app screens beyond the placeholder route — nothing consumes `v1_question` on mobile yet.
+- No `v1_user` model: `v1_question.user_id` is a bare Firebase Auth uid, not a reference to a document.
+- No vote/result model — that's what `answers`' stable ids are there for.
 - No design system / theme tokens for Nativewind.
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.
