@@ -69,6 +69,12 @@ export const borderWidth = 2;
  */
 export const spacing = (steps: number) => steps * 4;
 
+/**
+ * The horizontal padding of a screen — the gutter every full-width surface
+ * lines up on, and the one a full-bleed strip has to bleed back through.
+ */
+export const pagePadding = spacing(5);
+
 export const fonts = {
   head: 'ArchivoBlack_400Regular',
   sans: 'SpaceGrotesk_400Regular',
@@ -84,7 +90,6 @@ export const fontSize = {
   '2xl': 24,
   '3xl': 30,
   '4xl': 36,
-  '5xl': 48,
   '7xl': 72,
 };
 
