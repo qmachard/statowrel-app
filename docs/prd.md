@@ -232,13 +232,13 @@ Conventions : collections préfixées `v1_`, champs en `snake_case`, champs opti
 
 | Collection | Contenu |
 |---|---|
-| `v1_users` | `display_name`, `photo_url`, `created_at`, `updated_at`, `email`, `auth_providers[]` (`password` / `google.com` / `facebook.com` / `apple.com`), `streak_count`, `streak_last_answered_on`, `invite_code` |
+| `v1_users` | `display_name`, `photo_url`, `created_at`, `updated_at`, `email`, `auth_providers[]` (`password` / `google.com` / `facebook.com` / `apple.com`), `streak_count`, `streak_best` (meilleur streak, §5.3), `streak_last_answered_on`, `invite_code` |
 | `v1_users/{id}/friends` | une entrée par ami (écrite des deux côtés à l'acceptation) |
 | `v1_questions` | `label`, `options` (**tableau ordonné** de `{ id: ULID, label, stat_label }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason`, `broadcast_at` (jour + heure de diffusion, `null` tant que non programmée) |
-| `v1_daily_questions` | une par jour : `date`, `question_id`, `published_at`, `closes_at`, `answer_counts` (map `option_id` → total) |
-| `v1_daily_questions/{id}/answers` | une par utilisateur : `user_id`, `option_id`, `answered_at`, `late` (réponse de rattrapage, §4.2) |
+| `v1_daily_questions` | une par jour, **id de document = `date`** au format `AAAA-MM-JJ` (fuseau Europe/Paris), pas un ULID : `date`, `question_id`, `published_at`, `closes_at`, `answer_counts` (map `option_id` → total ; pas de total scalaire, il se somme depuis la map) |
+| `v1_daily_questions/{id}/answers` | une par utilisateur, **id de document = UID de l'auteur** (rend « une réponse par personne et par jour » structurel) : `user_id`, `date` (recopié du parent), `option_id`, `answered_at`, `late` (réponse de rattrapage, §4.2) |
 
-Le calendrier de l'écran Stats (§5.2) lit un mois de réponses **de l'utilisateur courant** : c'est une requête de groupe de collections sur `answers` filtrée par `user_id`, croisée avec les `v1_daily_questions` du mois. L'index composite correspondant est à prévoir dans `packages/firestore-config`.
+Le calendrier de l'écran Stats (§5.2) lit un mois de réponses **de l'utilisateur courant** : grâce au `date` recopié dans la réponse, c'est une seule requête de groupe de collections sur `answers` filtrée par `user_id` et `date`, sans croisement avec `v1_daily_questions`. L'index composite correspondant (`answers`, `user_id ASC, date ASC`, portée groupe de collections) existe désormais dans `packages/firestore-config`.
 
 ### Les options d'une question
 

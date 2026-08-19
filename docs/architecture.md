@@ -1,6 +1,6 @@
 # StatOwrel — Architecture
 
-Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. The first domain model (`v1_questions`) and its FireCMS collection exist; there are still no app screens. The rest is added incrementally on top of this foundation.
+Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's five collections (`v1_questions`, `v1_daily_questions`, `answers`, `v1_users`) and their FireCMS collections exist; there are still no app screens and no backend to own the daily cycle. The rest is added incrementally on top of this foundation.
 
 ## Stack
 
@@ -88,9 +88,39 @@ Re-export every new model from `src/index.ts`.
 | `rejection_reason` | `string \| null` | sent back to the author; set only when `rejected` |
 | `created_at` | `UniversalTimestamp` | |
 
+### `v1_daily_questions`
+
+`packages/models/src/v1_daily_question.ts` — one document per day: the question pushed to the app and the running tally of answers to it — see `docs/prd.md` §6.
+
+| Field | Type | Notes |
+|---|---|---|
+| `date` | `string` (`YYYY-MM-DD`) | same value as the document id, carried as a field so it can be ordered/filtered on |
+| `question_id` | `string` | document id in `v1_questions`; that question's `status` becomes `used` when drawn |
+| `published_at` | `UniversalTimestamp` | when the question was pushed to the app; the drop time varies day to day |
+| `closes_at` | `UniversalTimestamp` | Paris midnight — past it an answer is `late` and no longer counts for the streak |
+| `answer_counts` | `Record<option_id, number>` | incremented via `FieldValue.increment()` on the fixed path `answer_counts.{option_id}`, so two simultaneous answers can't overwrite each other; an option with no answer yet is absent, not `0` |
+
+The document id is the `YYYY-MM-DD` day key, not a ULID: the app reads today's question by building the id instead of querying for it, and the scheduler that draws tomorrow's question can `set()` the same day twice without ever creating it twice. Day keys are computed with `dailyQuestionDateKey()` (Europe/Paris), never `toISOString().slice(0, 10)` — that reads the UTC day, so anything between Paris midnight and 2am lands on the day before.
+
+### `answers`
+
+`packages/models/src/answer.ts` — sub-collection of `v1_daily_questions`, path `v1_daily_questions/{date}/answers/{user_id}`. Neither the collection nor the model file carries a `v1_` prefix: the prefix versions the top-level collection, and this sub-tree is versioned along with its parent.
+
+| Field | Type | Notes |
+|---|---|---|
+| `user_id` | `string` | Firebase Auth UID of the author, same value as the document id |
+| `date` | `string` (`YYYY-MM-DD`) | denormalized from the parent document's id |
+| `option_id` | `string` | the picked option's id, never its position in the array |
+| `answered_at` | `UniversalTimestamp` | |
+| `late` | `boolean` | true for a catch-up answer, given after the day closed |
+
+The document id is the author's Auth UID, which makes "one answer per person per day" a property of the path rather than a check: a second answer is a write to an existing document, so it's an `update`, and `firestore.rules` denies those — `answer_counts` can never be double-counted. `date` is denormalized from the parent id so the Stats calendar reads a month of the current user's answers as one collection-group query instead of a client-side join against that month's daily questions; a day's date never changes, so the copy never goes stale.
+
+**Why answers live under the day and not under the user.** `answer_counts` needs a parent document to increment on a fixed path — there's no such path if the answer lives under `v1_users`. The day screen also needs every friend's answer to one question in one query, which is only cheap when they share a parent. And the privacy boundary lands per day: reading a friend's answer never exposes their whole history, because a read is scoped to one `v1_daily_questions/{date}/answers` collection at a time.
+
 ### `v1_users`
 
-`packages/models/src/v1_user.ts` — the app user's profile. The document id is the **Firebase Auth UID**, not a ULID: it is the key `author_id`, `user_id` and friendships point at, and the one `firestore.rules` compares against `request.auth.uid`.
+`packages/models/src/v1_user.ts` — the app user's profile and answering stats. The document id is the **Firebase Auth UID**, not a ULID: it is the key `author_id`, `user_id` and friendships point at, and the one `firestore.rules` compares against `request.auth.uid`.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -98,8 +128,11 @@ Re-export every new model from `src/index.ts`.
 | `photo_url` | `string \| null` | avatar; `null` until the user picks one |
 | `created_at` | `UniversalTimestamp` | |
 | `updated_at` | `UniversalTimestamp` | bumped on every profile write |
+| `streak_count` | `number` | consecutive days answered on time; backend-owned — the answer trigger bumps it, the midnight scheduler resets it to 0 for whoever didn't answer, and a catch-up answer never restores it |
+| `streak_best` | `number` | longest `streak_count` ever reached |
+| `streak_last_answered_on` | `string \| null` (`YYYY-MM-DD`) | day of the last on-time answer; `null` until the first one |
 
-Profile fields only for now — the PRD's `email`, `auth_providers`, `streak_count`, `streak_last_answered_on` and `invite_code` are still to be modelled.
+Profile and answering stats now — the PRD's `email`, `auth_providers` and `invite_code` are still to be modelled.
 
 Two things to keep straight about the options:
 
@@ -135,7 +168,7 @@ FireCMS v2 SPA. `src/collections/index.ts` is an `EntityCollectionsBuilder` retu
 Two things to know when writing a collection:
 
 - **FireCMS does not use our converters.** It reads Firestore through its own data source, which maps `Timestamp` → `Date`. So a collection is typed against a local variant of the model's `*Data` type with `Date` timestamps, not against `*Data` itself.
-- **Document ids are ULIDs**, not Firestore auto-ids: wire `onIdUpdate: ulidEntityId` (from `src/collections/entityId.ts`) into every collection.
+- **Document ids are ULIDs**, not Firestore auto-ids: wire `onIdUpdate: ulidEntityId` (from `src/collections/entityId.ts`) into every collection. `src/collections/v1_daily_questions.ts` is the second collection keyed by something else — its id follows the `date` field instead — and the first real instance of a dynamic-keyed map: `answer_counts` is keyed by option ULIDs, so its local entity type widens FireCMS's `keyValue` map value type (`Record<string, CMSType>`) rather than dropping the field.
 - **Collection-level invariants live in `callbacks.onPreSave`.** The backoffice writes as an admin, and the wildcard `isAdmin()` rule lets those writes through unchecked — so the 2–6 options rule, "a rejected question needs a reason", and minting each option's ULID all happen there as well as in `firestore.rules`.
 
 `src/authenticator/admin.ts` is the sign-in gate: it refreshes the ID token and rejects anyone without the custom `admin` auth claim — the same claim `firestore.rules`' `isAdmin()` checks, so the backoffice UI and the rules agree on who is an admin. The claim itself is granted server-side; there is no client-side way to obtain it.
@@ -166,7 +199,9 @@ Still deferred: shared component primitives (buttons, cards, inputs) built again
 
 ## Firestore rules & indexes
 
-`packages/firestore-config/firestore.rules` establishes the pattern: a wildcard `isAdmin()` bypass at the top (for the FireCMS backoffice, via a custom `admin` auth claim) followed by explicit per-collection rules for the mobile app's own access — collections are never left world-readable/writable by omission. Rules are OR'ed, so a per-collection rule only ever *adds* to what the `isAdmin()` bypass already grants — `allow update, delete: if false` under it means "moderators only", not "nobody". `v1_questions` shows the shape: an author may create their own proposal (`status` forced to `pending`, 2–6 options) and read it back, and nothing else. `firestore.indexes.json` is empty; add composite indexes as Firestore's emulator/console error messages require them (copy the definition from the error, don't hand-write it).
+`packages/firestore-config/firestore.rules` establishes the pattern: a wildcard `isAdmin()` bypass at the top (for the FireCMS backoffice, via a custom `admin` auth claim) followed by explicit per-collection rules for the mobile app's own access — collections are never left world-readable/writable by omission. Rules are OR'ed, so a per-collection rule only ever *adds* to what the `isAdmin()` bypass already grants — `allow update, delete: if false` under it means "moderators only", not "nobody". `v1_questions` shows the shape: an author may create their own proposal (`status` forced to `pending`, 2–6 options) and read it back, and nothing else. `firestore.indexes.json` holds the repo's first composite index — collection group `answers`, `user_id ASC, date ASC`, `queryScope: COLLECTION_GROUP` — backing the Stats calendar's collection-group query; add further ones as Firestore's emulator/console error messages require them (copy the definition from the error, don't hand-write it).
+
+A collection-group query is never covered by a nested `match`: it needs its own recursive-wildcard block (`match /{path=**}/answers/{user_id}`), and that block scopes reads to `resource.data.user_id` rather than the document id, because Firestore only accepts a query it can prove safe and the calendar filters on that field. Worth remembering too: an answer's `date` and `late` are checked against the parent day document via a `get()` in the per-day rule, so neither can be forged.
 
 ## Environments
 
@@ -180,7 +215,8 @@ Two Firebase projects, aliased in `.firebaserc`:
 ## What's deliberately not here yet
 
 - No app screens beyond the placeholder route — nothing consumes `v1_questions` on mobile yet.
-- Two of the PRD's five collections exist, and `v1_users` only carries its profile fields. `v1_users/{id}/friends`, `v1_daily_questions` and its `answers` sub-collection are still to be modelled — see `docs/prd.md` §6.
+- Four of the PRD's five collections exist; only `v1_users/{id}/friends` is still to be modelled — see `docs/prd.md` §6.
+- No backend to own `v1_daily_questions`/`answers`: no daily scheduler, no answer trigger to increment `answer_counts` and bump streaks, no midnight closer (docs/prd.md §6 "Backend") — and no app screens consume any of it yet. The data model landed alone, on purpose.
 - No design-system component primitives (buttons, cards, inputs) — the neobrutalism theme tokens exist in `tailwind.config.js`, the primitives are the next step. No dark-mode theming either.
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.
