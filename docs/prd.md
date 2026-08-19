@@ -141,34 +141,35 @@ Conventions : collections préfixées `v1_`, champs en `snake_case`, champs opti
 |---|---|
 | `v1_users` | `display_name`, `avatar_url`, `email`, `auth_providers[]` (`password` / `google.com` / `facebook.com` / `apple.com`), `streak_count`, `streak_last_answered_on`, `invite_code` |
 | `v1_users/{id}/friends` | une entrée par ami (écrite des deux côtés à l'acceptation) |
-| `v1_questions` | `label`, `options` (**map** `ULID` → `{ label, stat_label, position }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason` |
+| `v1_questions` | `label`, `options` (**tableau ordonné** de `{ id: ULID, label, stat_label }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason` |
 | `v1_daily_questions` | une par jour : `date`, `question_id`, `published_at`, `closes_at`, `answer_counts` (map `option_id` → total) |
 | `v1_daily_questions/{id}/answers` | une par utilisateur : `user_id`, `option_id`, `answered_at` |
 
 ### Les options d'une question
 
-`options` est une **map** indexée par **ULID**, pas un tableau :
+`options` est un **tableau ordonné**, où chaque option porte son propre **ULID** :
 
 ```json
 {
   "label": "Ton dentifrice, tu le presses…",
-  "options": {
-    "01JBQZ8K3M4N5P6Q7R8S9T0V1W": { "label": "Par le bout",  "stat_label": "méthodique", "position": 0 },
-    "01JBQZ8K3M4N5P6Q7R8S9T0V2X": { "label": "Au milieu",    "stat_label": "sauvage",    "position": 1 },
-    "01JBQZ8K3M4N5P6Q7R8S9T0V3Y": { "label": "Je l'écrase",  "stat_label": "anarchiste", "position": 2 }
-  }
+  "options": [
+    { "id": "01JBQZ8K3M4N5P6Q7R8S9T0V1W", "label": "Par le bout", "stat_label": "méthodique" },
+    { "id": "01JBQZ8K3M4N5P6Q7R8S9T0V2X", "label": "Au milieu",   "stat_label": "sauvage" },
+    { "id": "01JBQZ8K3M4N5P6Q7R8S9T0V3Y", "label": "Je l'écrase", "stat_label": "anarchiste" }
+  ]
 }
 ```
 
-Pourquoi une map plutôt qu'un tableau :
+L'ordre du tableau **est** l'ordre d'affichage — le même pour tous les utilisateurs, c'est ce qui rend les captures d'écran comparables entre potes.
 
-- **Identité stable.** Une réponse pointe sur un `option_id`, pas sur un index. Un modérateur peut réordonner ou reformuler une option sans invalider les réponses déjà enregistrées ni fausser les compteurs.
-- **Écritures concurrentes sûres.** `answer_counts.{option_id}` s'incrémente par `FieldValue.increment()` sur un chemin fixe. Avec un tableau, incrémenter `answer_counts[2]` demanderait de réécrire tout le tableau — et deux réponses simultanées s'écraseraient.
-- **ULID plutôt qu'UUID** : triable lexicographiquement par date de création, plus court, lisible dans le backoffice.
+Pourquoi un `id` explicite plutôt qu'un simple index :
+
+- **Identité stable.** Une réponse pointe sur un `option_id`, jamais sur une position. Un modérateur peut réordonner ou reformuler une option sans invalider les réponses déjà enregistrées ni fausser les compteurs.
+- **ULID plutôt qu'UUID** : triable lexicographiquement par date de création, plus court, lisible dans le backoffice. Les ids de documents suivent la même convention.
 
 Les ULID sont **générés côté client** (app ou backoffice) au moment de la saisie de la question — c'est justement l'intérêt du format : pas d'aller-retour serveur pour obtenir un identifiant. Un ULID d'option n'est jamais réutilisé, et supprimer une option d'une question déjà diffusée est interdit — on rejette la question et on en crée une nouvelle.
 
-L'ordre d'affichage vient de `position` (entier, dense à partir de 0), pas de l'ordre des clés de la map, qui n'est pas garanti.
+`answer_counts`, lui, **reste une map** indexée par `option_id` : il s'incrémente par `FieldValue.increment()` sur `answer_counts.{option_id}`, un chemin fixe. Avec un tableau, incrémenter `answer_counts[2]` demanderait de réécrire tout le tableau, et deux réponses simultanées s'écraseraient. `options` n'a pas ce problème : seul un modérateur l'écrit, jamais deux à la fois.
 
 **Backend :**
 
