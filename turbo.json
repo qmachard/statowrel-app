@@ -1,0 +1,59 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "build": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", "lib/**", "!dist/**/*.map"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "deploy": {
+      "cache": false,
+      "dependsOn": []
+    },
+    "build:dev:ios": {
+      "cache": false,
+      "dependsOn": ["^build"]
+    },
+    "build:dev:android": {
+      "cache": false,
+      "dependsOn": ["^build"]
+    },
+    "build:preview:ios": {
+      "cache": false,
+      "dependsOn": ["^build"]
+    },
+    "build:preview:android": {
+      "cache": false,
+      "dependsOn": ["^build"]
+    },
+    "build:prod:ios": {
+      "cache": false,
+      "dependsOn": ["^build"]
+    },
+    "build:prod:android": {
+      "cache": false,
+      "dependsOn": ["^build"]
+    },
+    "submit:prod:ios": {
+      "cache": false,
+      "dependsOn": []
+    },
+    "submit:prod:android": {
+      "cache": false,
+      "dependsOn": []
+    }
+  },
+  "envMode": "loose"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@statowrel/firestore-config",
+  "version": "1.0.0",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "deploy:indexes": "firebase deploy --only firestore:indexes",
+    "deploy": "npm run deploy:rules && npm run deploy:indexes"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "description": "Firestore & Storage security rules and indexes for StatOwrel."
+}

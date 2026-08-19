@@ -1,0 +1,29 @@
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Native
+ios/
+android/
+
+# Metro
+.metro-health-check*
+
+# Env
+.env
+.env.local
+*.local
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+.DS_Store

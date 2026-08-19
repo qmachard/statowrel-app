@@ -1,0 +1,45 @@
+{
+  "name": "statowrel-app",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "build:models": "turbo build --filter=@statowrel/models",
+    "build:firecms": "turbo build --filter=@statowrel/firecms",
+    "build:functions": "turbo build --filter=@statowrel/functions",
+    "build:dev:ios": "turbo run build:dev:ios --filter=@statowrel/app",
+    "build:dev:android": "turbo run build:dev:android --filter=@statowrel/app",
+    "build:preview:ios": "turbo run build:preview:ios --filter=@statowrel/app",
+    "build:preview:android": "turbo run build:preview:android --filter=@statowrel/app",
+    "build:prod:ios": "turbo run build:prod:ios --filter=@statowrel/app",
+    "build:prod:android": "turbo run build:prod:android --filter=@statowrel/app",
+    "submit:prod:ios": "turbo run submit:prod:ios --filter=@statowrel/app",
+    "submit:prod:android": "turbo run submit:prod:android --filter=@statowrel/app",
+    "submit:prod": "npm run submit:prod:ios && npm run submit:prod:android",
+    "dev": "turbo dev",
+    "dev:app": "turbo dev --filter=@statowrel/app",
+    "dev:functions": "turbo dev --filter=@statowrel/functions",
+    "dev:firecms": "turbo dev --filter=@statowrel/firecms",
+    "typecheck": "turbo typecheck",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "deploy:functions": "firebase use default && turbo deploy --filter=@statowrel/functions",
+    "deploy:functions:production": "firebase use production && turbo deploy --filter=@statowrel/functions && firebase use default",
+    "deploy:firestore": "firebase use default && turbo deploy --filter=@statowrel/firestore-config",
+    "deploy:firestore:production": "firebase use production && turbo deploy --filter=@statowrel/firestore-config && firebase use default",
+    "deploy:firecms": "npm run build:firecms && firebase use default && firebase deploy --only hosting",
+    "deploy:firecms:production": "npm run build:firecms && firebase use production && firebase deploy --only hosting && firebase use default"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "turbo": "^2.0.12",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "npm@10.7.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

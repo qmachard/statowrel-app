@@ -1,0 +1,25 @@
+{
+  "name": "@statowrel/models",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "dev": "tsc -w"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "firebase": "^12.16.0",
+    "firebase-admin": "^14.0.0",
+    "typescript": "^5.4.5"
+  }
+}
