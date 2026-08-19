@@ -69,14 +69,39 @@ const RESTING: Record<ButtonVariant, ViewStyle | undefined> = {
 };
 
 /**
- * A raised variant sinks by exactly its shadow offset and drops the shadow; the
- * flat ones acknowledge the press with a tint instead.
+ * A raised variant sinks by exactly its shadow offset — 4px, the offset of
+ * `shadows.md`.
+ *
+ * A style rather than a `translate-x-1 translate-y-1` className, for a harder
+ * reason than the shadow above: Tailwind compiles a transform utility down to
+ * the CSS variables `--tw-translate-x` / `--tw-translate-y`, and a component
+ * that only *gains* a CSS variable after its first render makes Nativewind
+ * print an upgrade warning. That warning serialises the component's props by
+ * walking them recursively, which reaches React Navigation's context object,
+ * whose default value is made of getters that throw — so pressing the button
+ * crashed the render with "Couldn't find a navigation context".
+ *
+ * The style is also more faithful: `translate-x-1` resolves to 3.5px, since
+ * Nativewind's `rem` is 14, so the pressed surface never quite covered its own
+ * shadow.
  */
-const PRESSED: Record<ButtonVariant, string> = {
-  default: 'translate-x-1 translate-y-1',
-  secondary: 'translate-x-1 translate-y-1',
-  destructive: 'translate-x-1 translate-y-1',
-  outline: 'translate-x-1 translate-y-1',
+const SUNK: ViewStyle = { transform: [ { translateX: 4 }, { translateY: 4 } ] };
+
+const PRESSED: Record<ButtonVariant, ViewStyle | undefined> = {
+  default: SUNK,
+  secondary: SUNK,
+  destructive: SUNK,
+  outline: SUNK,
+  ghost: undefined,
+  link: undefined,
+};
+
+/** The flat variants have no shadow to sink into: they acknowledge the press with a tint. */
+const PRESSED_TINT: Record<ButtonVariant, string> = {
+  default: '',
+  secondary: '',
+  destructive: '',
+  outline: '',
   ghost: 'bg-accent',
   link: 'opacity-70',
 };
@@ -119,8 +144,8 @@ const isIconOnly = (size: ButtonSize) => size.startsWith('icon');
 /**
  * The neobrutalist button: thick border, slightly rounded corners and a hard
  * offset shadow it presses *into* — the press translates the surface by exactly
- * the shadow offset (`shadows.md` is 4px, `translate-*-1` is 4px) and drops the
- * shadow, so the button looks like it sinks flat against the page.
+ * the shadow offset (4px, see `SUNK`) and drops the shadow, so the button looks
+ * like it sinks flat against the page.
  */
 export const Button = ({
   label,
@@ -149,12 +174,12 @@ export const Button = ({
       {({ pressed }) => (
         <View
           // A pressed surface drops its shadow entirely — it has sunk into it.
-          style={pressed ? undefined : RESTING[variant]}
+          style={pressed ? PRESSED[variant] : RESTING[variant]}
           className={[
             'flex-row items-center justify-center gap-2 rounded',
             SURFACE[variant],
             SIZE[size],
-            pressed ? PRESSED[variant] : '',
+            pressed ? PRESSED_TINT[variant] : '',
             isDisabled ? 'opacity-60' : '',
           ].join(' ')}
         >
