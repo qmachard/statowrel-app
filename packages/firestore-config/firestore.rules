@@ -20,10 +20,18 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // v1_question is not public: only the FireCMS backoffice reaches it,
-    // through the isAdmin() rule above. The mobile app has no access.
-    match /v1_question/{question_id} {
-      allow read, write: if false;
+    // Questions are proposed by users and moderated in the backoffice
+    // (docs/prd.md §4.7). Nothing here is public: an author only ever reads
+    // back their own proposals, and only a moderator can change a question's
+    // status. The daily question reaches the app through v1_daily_questions.
+    match /v1_questions/{question_id} {
+      allow read: if isOwner(resource.data.author_id);
+      allow create: if isOwner(request.resource.data.author_id)
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.rejection_reason == null
+                    && request.resource.data.options.size() >= 2
+                    && request.resource.data.options.size() <= 6;
+      allow update, delete: if false;
     }
 
     // Add the other v1_* collection rules here as the data model is designed, e.g.:
