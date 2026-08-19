@@ -5,7 +5,7 @@ import { ProfileScreen } from '@/auth/screens/ProfileScreen';
 import { SignInScreen } from '@/auth/screens/SignInScreen';
 import { SignUpScreen } from '@/auth/screens/SignUpScreen';
 import { DailyQuestionScreen } from '@/daily-question/screens/DailyQuestionScreen';
-import { colors } from '@/design/tokens';
+import { colors, radius } from '@/design/tokens';
 import { StatsScreen } from '@/stats/screens/StatsScreen';
 
 import type { RootStackParamList } from './types';
@@ -28,15 +28,24 @@ export const RootNavigator = () => {
       {user ? (
         <>
           <Stack.Screen name="Stats" component={StatsScreen} options={{ animation: 'none' }} />
-          {/* The question is posed *over* Stats, never beside it (docs/prd.md §5.4).
-              A modal presentation is the closest the native stack gets to the
-              bottom sheet the PRD describes; it becomes one, and stops being
-              dismissable while today's question is unanswered, once answering
-              exists (§4.3). */}
+          {/* The question is posed *over* Stats, never beside it (docs/prd.md §5.4):
+              a form sheet whose single detent is its own content, so a two-line
+              question takes a short sheet and a six-option one a tall one, with
+              Stats still visible above it. The screen renders no scroll view for
+              that reason — `fitToContents` measures the content, and a nested
+              scroller has no height to measure.
+
+              Still dismissable, grabber included. Pinning it open while today's
+              question is unanswered, as §5.4 wants, comes with answering (§4.3). */}
           <Stack.Screen
             name="DailyQuestion"
             component={DailyQuestionScreen}
-            options={{ presentation: 'modal' }}
+            options={{
+              presentation: 'formSheet',
+              sheetAllowedDetents: 'fitToContents',
+              sheetGrabberVisible: true,
+              sheetCornerRadius: radius['2xl'],
+            }}
           />
           <Stack.Screen name="Profile" component={ProfileScreen} />
         </>

@@ -2,7 +2,7 @@ import { type RouteProp, useNavigation, useRoute } from '@react-navigation/nativ
 import { dailyQuestionDateKey } from '@statowrel/models';
 import { X } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -19,19 +19,22 @@ const DEAD_END: Partial<Record<DailyQuestionStatus, string>> = {
   error: 'Impossible de charger la question. Réessaie dans un instant.',
 };
 
+/** `A`, `B`, `C`… for the option at that rank — a question carries 2 to 6 (docs/prd.md §4.2). */
+const letterOf = (index: number) => String.fromCharCode('A'.charCodeAt(0) + index);
+
 const styles = StyleSheet.create({
+  // No `flex: 1` anywhere on the way down: the sheet's detent is
+  // `fitToContents`, so it measures this column and a stretched child would
+  // make it measure the whole screen instead.
   safeArea: {
-    flex: 1,
     backgroundColor: colors.background,
   },
-  // The title block is outside the ScrollView: past four options the list
-  // scrolls under a question that stays put (docs/prd.md §5.4).
-  head: {
+  content: {
     gap: spacing(6),
     padding: spacing(6),
-    paddingBottom: spacing(4),
+    paddingTop: spacing(4),
   },
-  headRow: {
+  head: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
@@ -50,8 +53,6 @@ const styles = StyleSheet.create({
   },
   options: {
     gap: spacing(4),
-    paddingHorizontal: spacing(6),
-    paddingBottom: spacing(8),
   },
   message: {
     fontFamily: fonts.sans,
@@ -59,7 +60,6 @@ const styles = StyleSheet.create({
     color: colors['muted-foreground'],
   },
   credit: {
-    paddingTop: spacing(2),
     textAlign: 'center',
     fontFamily: fonts.sans,
     fontSize: fontSize.xs,
@@ -74,7 +74,12 @@ const Message = ({ children }: { children: ReactNode }) => (
 /**
  * One day's question — today's by default, any past day when the route carries a
  * `date` (docs/prd.md §5.4): the date in micro-text, the question very large in
- * `fonts.head`, then the options in their fixed order.
+ * `fonts.head`, then the options in their fixed order, each behind its quizz
+ * letter.
+ *
+ * The sheet is sized by this content (see `RootNavigator`), which is why the
+ * options sit in a plain column rather than a scroll view: a short question
+ * gets a short sheet.
  *
  * Answering is not wired yet — the double tap of §4.3 and the StatOwrel card it
  * flips to (§5.5) come next. Until then the sheet is dismissable even for
@@ -94,9 +99,9 @@ export const DailyQuestionScreen = () => {
   const deadEnd = DEAD_END[status];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[ 'top', 'bottom' ]}>
-      <View style={styles.head}>
-        <View style={styles.headRow}>
+    <SafeAreaView style={styles.safeArea} edges={[ 'bottom' ]}>
+      <View style={styles.content}>
+        <View style={styles.head}>
           <Text style={styles.date}>
             {isToday ? 'Aujourd’hui' : formatDayLabel(fromDateKey(date))}
           </Text>
@@ -104,26 +109,29 @@ export const DailyQuestionScreen = () => {
         </View>
 
         {question === null ? null : <Text style={styles.question}>{question.label}</Text>}
-      </View>
 
-      <ScrollView contentContainerStyle={styles.options}>
         {status === 'loading' ? <ActivityIndicator size="large" /> : null}
 
         {deadEnd ? <Message>{deadEnd}</Message> : null}
 
-        {question?.options.map((option) => (
-          <QuestionOption
-            key={option.id}
-            label={option.label}
-            picked={answer?.option_id === option.id}
-            dimmed={answer !== null && answer.option_id !== option.id}
-          />
-        ))}
+        {question === null ? null : (
+          <View style={styles.options}>
+            {question.options.map((option, index) => (
+              <QuestionOption
+                key={option.id}
+                letter={letterOf(index)}
+                label={option.label}
+                picked={answer?.option_id === option.id}
+                dimmed={answer !== null && answer.option_id !== option.id}
+              />
+            ))}
+          </View>
+        )}
 
         {authorName === null ? null : (
           <Text style={styles.credit}>proposée par {authorName}</Text>
         )}
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
