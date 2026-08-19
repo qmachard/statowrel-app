@@ -144,7 +144,7 @@ L'app est en **neobrutalisme / sticker** : aplats de couleur francs, bordures no
 
 Quatre encres, pas une de plus : papier crème (`background`), jaune doré (`primary`), rose bubblegum (`pop`), noir pour tous les contours. Le rose ne décore pas : il marque ce qui n'est pas un jour comme les autres — la flamme du streak, le record, la case d'aujourd'hui, l'invitation.
 
-**Aucune icône de librairie, aucun emoji.** Les pictogrammes sont des **stickers** dessinés à la main : forme fermée, aplat de couleur, contour noir épais, copie noire décalée en guise d'ombre — comme toutes les autres surfaces. Un jeu d'icônes standard est tracé en traits fins uniformes : il disparaît à côté d'une bordure de 2px, et un emoji ne se colore pas et change de dessin sur chaque plateforme.
+**Aucune icône de librairie, aucun emoji.** Les pictogrammes sont des **stickers** dessinés à la main, en géométrie simple : aplat de couleur, contour noir épais, copie noire décalée en guise d'ombre — comme toutes les autres surfaces. Un jeu d'icônes standard est tracé en traits fins uniformes : il disparaît à côté d'une bordure de 2px, et un emoji ne se colore pas et change de dessin sur chaque plateforme.
 
 Les tokens sont dans `apps/app/src/theme/colors.js`, lu à la fois par `tailwind.config.js` et par l'app — aucun écran ne définit sa propre palette.
 

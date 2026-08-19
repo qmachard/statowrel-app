@@ -1,155 +1,306 @@
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import { View } from 'react-native';
 
 import colors from '@/theme/colors';
 
 /**
- * Hand-built sticker icons — flat fills inside a thick black outline, drawn on
- * a 24×24 grid.
+ * Hand-built sticker icons — flat fills inside a thick black outline.
  *
- * They are not an icon font and not a library: an off-the-shelf set is drawn as
- * thin uniform strokes, which disappears next to 2px borders and hard offset
- * shadows. Each shape here is closed and fillable so it can carry a colour and
- * a shadow copy (see `Sticker`), like every other surface on screen.
+ * Composed out of plain `View`s: rounded corners, rotations and borders, no
+ * SVG. `react-native-svg` is a native module, so adding it would force a dev
+ * client rebuild for what is, on this screen, a handful of geometric shapes.
+ * These reload like any other JS.
+ *
+ * The outline is not a border but a **black copy underneath**: a shape made of
+ * several overlapping views would otherwise show its internal seams wherever
+ * two bordered pieces meet. Each shape therefore draws itself twice — solid
+ * black at full size, then in colour, inset by the outline width.
  */
 export interface ShapeProps {
   size?: number;
   /** Flat fill of the shape. */
   fill?: string;
-  /** Outline colour — swapped to black for the shadow copy. */
+  /** Outline colour — swapped to black for the shadow copy in `Sticker`. */
   stroke?: string;
 }
 
 export type Shape = (props: ShapeProps) => React.ReactElement;
 
-const STROKE_WIDTH = 2;
+const OUTLINE = 2;
 
-function useShape({ size = 24, fill = colors.primary, stroke = colors.border }: ShapeProps) {
-  return {
-    size,
-    common: {
-      fill,
-      stroke,
-      strokeWidth: STROKE_WIDTH,
-      strokeLinejoin: 'round' as const,
-      strokeLinecap: 'round' as const,
-    },
-  };
+function useLayers({ size = 24, fill = colors.primary, stroke = colors.border }: ShapeProps) {
+  return { size, fill, stroke };
 }
 
-/** The streak's flame. */
+/**
+ * The streak's flame: a square with three rounded corners, turned 45° so the
+ * sharp one points up.
+ */
 export const FlameShape: Shape = (props) => {
-  const { size, common } = useShape(props);
+  const { size, fill, stroke } = useLayers(props);
+
+  const drop = (color: string, side: number) => (
+    <View
+      style={{
+        width: side,
+        height: side,
+        backgroundColor: color,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: side / 2,
+        borderBottomRightRadius: side / 2,
+        borderBottomLeftRadius: side / 2,
+        transform: [{ rotate: '45deg' }],
+      }}
+    />
+  );
+
+  // A 45°-turned square needs a box of side·√2 to fit; go the other way round.
+  const outer = size / Math.SQRT2;
+  const inner = outer * 0.44;
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path d="M12 1.6c4.3 4.8 6.9 7.9 6.9 11.6a6.9 6.9 0 0 1-13.8 0C5.1 9.5 7.7 6.4 12 1.6z" {...common} />
-      <Path
-        d="M12 11.6c1.8 1.9 2.8 3.2 2.8 4.7a2.8 2.8 0 0 1-5.6 0c0-1.5 1-2.8 2.8-4.7z"
-        {...common}
-        fill={colors.background}
-      />
-    </Svg>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      {drop(stroke, outer)}
+      <View style={{ position: 'absolute' }}>{drop(fill, outer - OUTLINE * 2)}</View>
+      <View style={{ position: 'absolute', bottom: size * 0.14 }}>{drop(colors.background, inner)}</View>
+    </View>
   );
 };
 
-/** The record — the best streak ever reached. */
+/** The record: an eight-pointed burst, two squares at 45° of each other. */
 export const StarShape: Shape = (props) => {
-  const { size, common } = useShape(props);
+  const { size, fill, stroke } = useLayers(props);
+
+  const burst = (color: string, side: number) => (
+    <View style={{ width: side, height: side, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', width: side, height: side, backgroundColor: color }} />
+      <View
+        style={{
+          position: 'absolute',
+          width: side,
+          height: side,
+          backgroundColor: color,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
+    </View>
+  );
+
+  // Both squares share a circumradius of side·√2/2, so this is what fits `size`.
+  const side = size / Math.SQRT2;
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path
-        d="M12 1.8l3 6.6 7.2.7-5.4 4.9 1.6 7.1L12 17.4 5.6 21.1l1.6-7.1L1.8 9.1l7.2-.7z"
-        {...common}
-      />
-    </Svg>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      {burst(stroke, side)}
+      <View style={{ position: 'absolute' }}>{burst(fill, side - OUTLINE * 2)}</View>
+    </View>
   );
 };
 
-/** The tally of answered days. */
+/** The tally of answered days: a calendar page with a tick. */
 export const CalendarShape: Shape = (props) => {
-  const { size, common } = useShape(props);
+  const { size, fill, stroke } = useLayers(props);
+
+  const legWidth = Math.max(2, size * 0.09);
+  const legHeight = size * 0.16;
+  const bodyTop = legHeight * 0.6;
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Rect x="2.2" y="4.2" width="19.6" height="17.6" {...common} />
-      <Path d="M2.2 9.4h19.6" {...common} fill="none" />
-      <Path d="M7.4 1.8v4.4M16.6 1.8v4.4" {...common} fill="none" />
-      <Path d="M8 15.4l2.6 2.6 5-5" {...common} fill="none" strokeWidth={2.6} />
-    </Svg>
-  );
-};
-
-/** The burst behind a day that is still open. */
-export const BurstShape: Shape = (props) => {
-  const { size, common } = useShape(props);
-
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path
-        d="M12 1.4l2.3 4.4 4.6-2-2 4.6 4.4 2.3-4.4 2.3 2 4.6-4.6-2L12 22.6l-2.3-4.4-4.6 2 2-4.6L2.7 13l4.4-2.3-2-4.6 4.6 2z"
-        {...common}
+    <View style={{ width: size, height: size }}>
+      {/* Two legs poking out of the top. */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: size * 0.24,
+          width: legWidth,
+          height: legHeight * 1.6,
+          backgroundColor: stroke,
+        }}
       />
-    </Svg>
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: size * 0.24,
+          width: legWidth,
+          height: legHeight * 1.6,
+          backgroundColor: stroke,
+        }}
+      />
+
+      <View
+        style={{
+          position: 'absolute',
+          top: bodyTop,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: stroke,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: bodyTop + OUTLINE,
+          left: OUTLINE,
+          right: OUTLINE,
+          bottom: OUTLINE,
+          backgroundColor: fill,
+        }}
+      />
+      {/* The header band, the part of a calendar you recognise it by. */}
+      <View
+        style={{
+          position: 'absolute',
+          top: bodyTop + size * 0.2,
+          left: OUTLINE,
+          right: OUTLINE,
+          height: OUTLINE,
+          backgroundColor: stroke,
+        }}
+      />
+
+      <View
+        style={{
+          position: 'absolute',
+          top: bodyTop + size * 0.28,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <CheckMark size={size * 0.46} color={stroke} />
+      </View>
+    </View>
   );
 };
+
+function CheckMark({ size, color }: { size: number; color: string }) {
+  const thickness = Math.max(2, size * 0.22);
+
+  return (
+    <View style={{ width: size, height: size * 0.7 }}>
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          bottom: thickness * 0.4,
+          width: size * 0.45,
+          height: thickness,
+          backgroundColor: color,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          right: 0,
+          bottom: thickness * 0.7,
+          width: size * 0.75,
+          height: thickness,
+          backgroundColor: color,
+          transform: [{ rotate: '-50deg' }],
+        }}
+      />
+    </View>
+  );
+}
 
 /** Add a friend. */
 export const PlusShape: Shape = (props) => {
-  const { size, common } = useShape(props);
+  const { size, fill } = useLayers(props);
+  const thickness = Math.max(2, size * 0.22);
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path d="M12 4.5v15M4.5 12h15" {...common} fill="none" strokeWidth={3.4} />
-    </Svg>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', width: size, height: thickness, backgroundColor: fill }} />
+      <View style={{ position: 'absolute', width: thickness, height: size, backgroundColor: fill }} />
+    </View>
   );
 };
 
 /** Edit the profile. */
 export const PencilShape: Shape = (props) => {
-  const { size, common } = useShape(props);
+  const { size, fill } = useLayers(props);
+  const body = size * 0.26;
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path d="M3.4 20.6l1.1-4.6L15.7 4.8l3.5 3.5L8 19.5z" {...common} />
-      <Path d="M14 6.5l3.5 3.5" {...common} fill="none" />
-    </Svg>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ transform: [{ rotate: '45deg' }], alignItems: 'center' }}>
+        {/* The tip: a triangle, which in React Native is a view with two
+            transparent borders meeting a solid one. */}
+        <View
+          style={{
+            width: 0,
+            height: 0,
+            borderLeftWidth: body / 2,
+            borderRightWidth: body / 2,
+            borderBottomWidth: body * 0.7,
+            borderLeftColor: 'transparent',
+            borderRightColor: 'transparent',
+            borderBottomColor: fill,
+            transform: [{ rotate: '180deg' }],
+          }}
+        />
+        <View style={{ width: body, height: size * 0.62, backgroundColor: fill }} />
+      </View>
+    </View>
   );
 };
 
-export const ArrowLeftShape: Shape = (props) => {
-  const { size, common } = useShape(props);
+function Arrow({ size, color, flip }: { size: number; color: string; flip: boolean }) {
+  const thickness = Math.max(2, size * 0.2);
+  const arm = size * 0.44;
+  // Each arm starts at the shaft's tip and leaves it at 45°, so its centre sits
+  // half an arm away along that diagonal.
+  const reach = (arm / 2) * Math.SQRT1_2;
+
+  const armStyle = (up: boolean) =>
+    ({
+      position: 'absolute' as const,
+      left: reach - arm / 2,
+      top: size / 2 + (up ? -reach : reach) - thickness / 2,
+      width: arm,
+      height: thickness,
+      backgroundColor: color,
+      transform: [{ rotate: up ? '-45deg' : '45deg' }],
+    });
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path d="M20 12H4.8M11 5.2L4.2 12l6.8 6.8" {...common} fill="none" strokeWidth={3.2} />
-    </Svg>
+    <View
+      style={{
+        width: size,
+        height: size,
+        justifyContent: 'center',
+        transform: [{ rotate: flip ? '180deg' : '0deg' }],
+      }}
+    >
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: size / 2 - thickness / 2,
+          width: size,
+          height: thickness,
+          backgroundColor: color,
+        }}
+      />
+      <View style={armStyle(true)} />
+      <View style={armStyle(false)} />
+    </View>
   );
+}
+
+export const ArrowLeftShape: Shape = (props) => {
+  const { size, fill } = useLayers(props);
+
+  return <Arrow size={size} color={fill} flip={false} />;
 };
 
 export const ArrowRightShape: Shape = (props) => {
-  const { size, common } = useShape(props);
+  const { size, fill } = useLayers(props);
 
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path d="M4 12h15.2M13 5.2l6.8 6.8-6.8 6.8" {...common} fill="none" strokeWidth={3.2} />
-    </Svg>
-  );
-};
-
-/** The question mark of a missed day. */
-export const QuestionShape: Shape = (props) => {
-  const { size, common } = useShape(props);
-
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path
-        d="M8 8.6a4 4 0 1 1 5.6 3.7c-1 .5-1.6 1.3-1.6 2.4v.6"
-        {...common}
-        fill="none"
-        strokeWidth={3}
-      />
-      <Circle cx="12" cy="19.4" r="1.7" {...common} strokeWidth={0} fill={common.stroke} />
-    </Svg>
-  );
+  return <Arrow size={size} color={fill} flip />;
 };
