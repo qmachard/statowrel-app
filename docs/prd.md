@@ -234,7 +234,7 @@ Conventions : collections préfixées `v1_`, champs en `snake_case`, champs opti
 |---|---|
 | `v1_users` | `display_name`, `photo_url`, `created_at`, `updated_at`, `email`, `auth_providers[]` (`password` / `google.com` / `facebook.com` / `apple.com`), `streak_count`, `streak_last_answered_on`, `invite_code` |
 | `v1_users/{id}/friends` | une entrée par ami (écrite des deux côtés à l'acceptation) |
-| `v1_questions` | `label`, `options` (**tableau ordonné** de `{ id: ULID, label, stat_label }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason` |
+| `v1_questions` | `label`, `options` (**tableau ordonné** de `{ id: ULID, label, stat_label }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason`, `broadcast_at` (jour + heure de diffusion, `null` tant que non programmée) |
 | `v1_daily_questions` | une par jour : `date`, `question_id`, `published_at`, `closes_at`, `answer_counts` (map `option_id` → total) |
 | `v1_daily_questions/{id}/answers` | une par utilisateur : `user_id`, `option_id`, `answered_at`, `late` (réponse de rattrapage, §4.2) |
 

@@ -15,7 +15,8 @@ import { ulidEntityId } from './entityId';
  * Firestore `Timestamp`s to `Date` — not through `questionConverter` (that one
  * is for `apps/app` and `apps/functions`, where timestamps become ISO strings).
  */
-type QuestionEntity = Omit<QuestionData, 'created_at'> & {
+type QuestionEntity = Omit<QuestionData, 'broadcast_at' | 'created_at'> & {
+  broadcast_at: Date | null;
   created_at: Date;
 };
 
@@ -54,7 +55,7 @@ const callbacks = buildEntityCallbacks<QuestionEntity>({
       throw new Error('Une question rejetée doit porter une raison de rejet, renvoyée à son auteur.');
     }
 
-    return { ...values, author_id, options };
+    return { ...values, author_id, options, broadcast_at: values.broadcast_at ?? null };
   },
 });
 
@@ -136,6 +137,12 @@ const buildQuestionsCollection = (user: User | null) => buildCollection<Question
       defaultValue: user?.uid,
       enumValues: authorEnumValues(user),
       validation: { required: true },
+    }),
+    broadcast_at: buildProperty({
+      dataType: 'date',
+      mode: 'date_time',
+      name: 'Diffusée le',
+      description: 'Jour et heure de diffusion. L\'heure varie d\'un jour à l\'autre, elle fait donc partie de la programmation. Vide tant que la question n\'est pas programmée.',
     }),
     created_at: buildProperty({
       dataType: 'date',
