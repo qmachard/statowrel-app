@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 import type { DailyQuestionAnswerData } from '@statowrel/models';
 import { useMemo, useState } from 'react';
 
@@ -18,6 +19,7 @@ export interface StatsCalendarProps {
  * the only way back to a past question or card.
  */
 export const StatsCalendar = ({ answers, registeredAt }: StatsCalendarProps) => {
+  const navigation = useNavigation();
   const today = useMemo(() => startOfDay(new Date()), []);
   const [ month, setMonth ] = useState(() => startOfMonth(today));
 
@@ -37,6 +39,10 @@ export const StatsCalendar = ({ answers, registeredAt }: StatsCalendarProps) => 
             <CalendarDay
               date={date}
               state={getCalendarDayState({ day: toDateKey(date), today: todayKey, registeredOn, answeredDays })}
+              // Every live day opens its own question — today's, a missed one in
+              // catch-up, or an answered one read-only. The card of §5.5 takes
+              // over for the answered case once it exists.
+              onPress={() => navigation.navigate('DailyQuestion', { date: toDateKey(date) })}
             />
           )}
         />

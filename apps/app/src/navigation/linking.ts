@@ -10,6 +10,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       SignIn: 'sign-in',
       SignUp: 'sign-up',
       Stats: '',
+      DailyQuestion: 'question/:date?',
       Profile: 'profile',
     },
   },

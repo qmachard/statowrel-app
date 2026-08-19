@@ -1,4 +1,4 @@
-import { StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
 
 import { shadows } from '@/design/shadows';
 import { borderWidth, colors, fontSize, fonts, radius } from '@/design/tokens';
@@ -9,7 +9,18 @@ import { Hatch } from './Hatch';
 /** The `?` on a missed day is an ornament, sized below the smallest scale step. */
 const MISSED_GLYPH_SIZE = 9;
 
+/** How far a raised day travels when pressed — the offset of the `sm` shadow it drops. */
+const SUNK_BY = 2;
+
+const PRESSED_OPACITY = 0.8;
+
 const styles = StyleSheet.create({
+  // The pressable wraps the cell, so it is the one that has to fill the square
+  // the calendar grid hands it.
+  slot: {
+    height: '100%',
+    width: '100%',
+  },
   cell: {
     height: '100%',
     width: '100%',
@@ -45,6 +56,16 @@ const SHADOW: Record<CalendarDayState, ViewStyle | undefined> = {
   idle: undefined,
 };
 
+// Pressed, a raised day drops its shadow and translates by the offset it just
+// dropped — the same sink as `src/components/Button.tsx`, at `sm`'s 2px. A flat
+// day has nothing to sink into, so it dims instead.
+const PRESSED = StyleSheet.create({
+  answered: { transform: [ { translateX: SUNK_BY }, { translateY: SUNK_BY } ] },
+  today: { opacity: PRESSED_OPACITY },
+  missed: { opacity: PRESSED_OPACITY },
+  idle: {},
+}) satisfies Record<CalendarDayState, ViewStyle>;
+
 const LABEL = StyleSheet.create({
   answered: { fontFamily: fonts.head, color: colors['primary-foreground'] },
   today: { fontFamily: fonts.head, color: colors['accent-foreground'] },
@@ -55,14 +76,36 @@ const LABEL = StyleSheet.create({
 export interface CalendarDayProps {
   date: Date;
   state: CalendarDayState;
+  /** Opens that day (docs/prd.md §5.2). An `idle` day stays inert whatever is passed. */
+  onPress?: () => void;
 }
 
-// Presentational only. The taps of docs/prd.md §5.2 — open the day's card, or
-// the question sheet in catch-up mode — land once those screens exist.
-export const CalendarDay = ({ date, state }: CalendarDayProps) => (
-  <View style={[ styles.cell, SURFACE[state], SHADOW[state] ]}>
-    {state === 'missed' ? <Hatch /> : null}
-    <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
-    {state === 'missed' ? <Text style={styles.missedGlyph}>?</Text> : null}
-  </View>
-);
+/**
+ * A day of the month calendar, and the way into that day's question
+ * (docs/prd.md §5.2). Every state but `idle` is tappable: `idle` is a future day
+ * or one before the account existed, and there is nothing behind it.
+ *
+ * A raised day sinks into its own shadow when pressed, like the buttons do —
+ * `shadows.sm` is a 2px offset, so that is exactly how far it travels.
+ */
+export const CalendarDay = ({ date, state, onPress }: CalendarDayProps) => {
+  const isInert = state === 'idle' || onPress === undefined;
+
+  return (
+    <Pressable style={styles.slot} accessibilityRole="button" disabled={isInert} onPress={onPress}>
+      {({ pressed }) => (
+        <View
+          style={[
+            styles.cell,
+            SURFACE[state],
+            pressed && !isInert ? PRESSED[state] : SHADOW[state],
+          ]}
+        >
+          {state === 'missed' ? <Hatch /> : null}
+          <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
+          {state === 'missed' ? <Text style={styles.missedGlyph}>?</Text> : null}
+        </View>
+      )}
+    </Pressable>
+  );
+};
