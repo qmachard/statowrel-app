@@ -1,0 +1,147 @@
+# StatOwrel — PRD
+
+Status: **draft initial**. Ce document décrit le produit visé. Aucune fonctionnalité décrite ici n'est encore implémentée — voir `docs/architecture.md` pour l'état technique réel.
+
+## 1. Vision
+
+StatOwrel est un réseau social entre amis, sans feed ni likes.
+
+Chaque jour, à une heure aléatoire entre 8h et 20h, **une seule question** est posée à tout le monde en même temps. Une question personnelle, absurde, que personne ne pense à poser. Tu réponds, et tu découvres deux choses :
+
+1. **Ta StatOwrel** — ta réponse replacée dans la statistique globale : _« Comme 68% des utilisateurs, tu es un.e efficace. »_
+2. **Les réponses de tes potes** — débloquées uniquement si tu as répondu toi-même.
+
+Le produit tient en une boucle quotidienne de moins de 30 secondes.
+
+### Exemples de questions
+
+| Question | Réponse A | Réponse B |
+|---|---|---|
+| Caca : moins de 2 min ou plus de 10 min ? | Tu es un.e **efficace** | Tu es un.e **résident.e** |
+| Tes plantes : tu les arroses ou tu les tues ? | Tu es un.e **arroseur.euse** | Tu es un.e **killer.euse** |
+
+Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une question réussie est une question qu'on a envie de screenshoter.
+
+## 2. Utilisateurs
+
+- **Le joueur** — 16-35 ans, déjà sur BeReal / Snap. Vient pour la vanne quotidienne et le classement implicite avec ses potes.
+- **L'auteur** — le même joueur, mais qui propose ses propres questions et veut voir la sienne tirée au sort.
+- **Le modérateur** — équipe StatOwrel, via le backoffice FireCMS. Valide ou rejette les questions proposées.
+
+## 3. Boucle produit
+
+```
+   Heure aléatoire (8h–20h)
+            │
+            ▼
+   Notification push « La question du jour est tombée »
+            │
+            ▼
+   Question + 2 réponses possibles ──► Je réponds
+            │                              │
+            │                              ▼
+            │                    Ma StatOwrel : « Comme x% des
+            │                    utilisateurs, tu es un.e ... »
+            │                              │
+            │                              ▼
+            │                    Les réponses de mes potes
+            │                    (débloquées car j'ai répondu)
+            ▼
+   Je ne réponds pas avant minuit ──► Streak remis à zéro
+```
+
+## 4. Fonctionnalités
+
+### 4.1 Compte & amis
+
+- Inscription par numéro de téléphone (Firebase Auth), pseudo + avatar.
+- **Pas de recherche publique d'utilisateurs.** On ajoute un ami par lien d'invitation ou par code à 6 caractères.
+- Une invitation acceptée crée une amitié **réciproque** (pas de follow asymétrique).
+- On peut retirer un ami ; l'amitié disparaît des deux côtés.
+
+**Règle :** un utilisateur ne voit jamais que les réponses de ses amis. Il n'y a aucun contenu public.
+
+### 4.2 Question du jour
+
+- **Une** question par jour, la même pour tous les utilisateurs.
+- Heure de publication tirée au hasard chaque jour entre **08:00 et 20:00** (fuseau de l'utilisateur, v1 : Europe/Paris pour tout le monde).
+- Push notification à la publication.
+- Format v1 : **choix binaire** (2 options). Pas de texte libre, pas de photo.
+- La question expire à **minuit**. Passé ce délai, on ne peut plus répondre — la journée est perdue.
+- Réponse **définitive** : pas de modification après validation (c'est ce qui rend la stat crédible).
+
+### 4.3 StatOwrel
+
+Immédiatement après avoir répondu :
+
+> **Comme 68% des utilisateurs, tu es un.e efficace.**
+
+- Le pourcentage porte sur **tous** les utilisateurs ayant répondu à cette question, pas seulement les amis.
+- Compteurs agrégés maintenus en temps réel côté backend (trigger Firestore à chaque réponse), pas de calcul à la lecture.
+- Écran partageable (image générée) — le principal levier d'acquisition.
+
+### 4.4 Réponses des amis
+
+- Accessibles **uniquement** après avoir répondu soi-même (mécanique BeReal).
+- Liste des amis : avatar, pseudo, réponse choisie, heure de réponse.
+- Les amis qui n'ont pas encore répondu apparaissent en attente (« n'a pas encore répondu »), sans notion de retard ou de temps de réaction en v1.
+
+### 4.5 Streak
+
+- +1 à chaque journée où l'on a répondu avant minuit.
+- **0** dès qu'une journée est manquée. Pas de joker, pas de rattrapage en v1.
+- Streak visible sur son profil et à côté de son nom dans la liste des amis.
+- Rappel push à 21h si la question du jour n'a pas été répondue et que le streak est en cours.
+
+### 4.6 Proposition de questions
+
+- N'importe quel utilisateur peut proposer une question : intitulé + 2 options + les 2 « tu es un.e ... » associés.
+- La question part en file de modération (statut `pending`).
+- Le modérateur valide, édite ou rejette depuis le backoffice FireCMS. Une raison de rejet est renvoyée à l'auteur.
+- Une question validée rejoint le **pot commun** et devient éligible au tirage au sort.
+- L'auteur est notifié quand sa question est validée, puis quand elle est effectivement tirée. Son pseudo est crédité sur l'écran de la question.
+- Une question déjà tirée ne peut pas ressortir (v1 : jamais de rediffusion).
+
+## 5. Modèle de données (esquisse)
+
+Conventions : collections préfixées `v1_`, champs en `snake_case`, champs optionnels toujours à `null`, timestamps en `UniversalTimestamp`. Voir `CLAUDE.md`.
+
+| Collection | Contenu |
+|---|---|
+| `v1_users` | `display_name`, `avatar_url`, `phone`, `streak_count`, `streak_last_answered_on`, `invite_code` |
+| `v1_users/{id}/friends` | une entrée par ami (écrite des deux côtés à l'acceptation) |
+| `v1_questions` | `label`, `options[]` (`{ key, label, stat_label }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason` |
+| `v1_daily_questions` | une par jour : `date`, `question_id`, `published_at`, `closes_at`, `answer_counts` (map option → total) |
+| `v1_daily_questions/{id}/answers` | une par utilisateur : `user_id`, `option_key`, `answered_at` |
+
+**Backend :**
+
+- Un scheduler quotidien tire la question du lendemain et son heure de publication, puis programme la publication (Cloud Tasks).
+- Un trigger sur création de réponse incrémente `answer_counts` et met à jour le streak de l'auteur.
+- Un scheduler à minuit clôture la journée et remet à zéro les streaks des utilisateurs sans réponse.
+
+## 6. Hors périmètre (v1)
+
+- Feed, likes, commentaires, messagerie.
+- Questions à texte libre, photo ou plus de 2 options.
+- Groupes / cercles d'amis multiples.
+- Historique des questions passées et de ses propres stats dans le temps.
+- Classements, badges, monétisation.
+- Multi-fuseau horaire (tout le monde sur Europe/Paris).
+
+## 7. Indicateurs de succès
+
+| Indicateur | Cible |
+|---|---|
+| Taux de réponse quotidien (DAU / utilisateurs actifs) | > 60% |
+| Streak médian à J+30 | > 7 jours |
+| Amis médians par utilisateur | > 5 |
+| Questions proposées / 100 utilisateurs / semaine | > 10 |
+| Partages de StatOwrel / réponse | > 5% |
+
+## 8. Questions ouvertes
+
+- Que se passe-t-il quand le pot commun de questions validées est vide ? (Réserve rédigée en interne, ou rediffusion d'une ancienne question ?)
+- Doit-on afficher la StatOwrel restreinte à ses amis en plus de la stat globale ?
+- Le rappel de 21h est-il perçu comme utile ou comme du harcèlement ? À tester.
+- Faut-il une modération automatique (LLM) en amont de la modération humaine pour absorber le volume ?
