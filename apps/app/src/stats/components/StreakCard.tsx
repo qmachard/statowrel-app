@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { Star, StarPeeled } from '@/components/animations';
+import { Star } from '@/components/animations';
+import { StarPeeled } from '@/components/illustrations';
 import { Card, CardContent } from '@/components/Card';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
@@ -17,6 +18,9 @@ const SCREEN_SHARE = 0.7;
 
 /** How long the star holds its last frame before running again. */
 const STAR_REPLAY_DELAY = 4000;
+
+/** `Animation`'s `xl` step, which the peeled mark has to match to line up. */
+const STAR_SIZE = spacing(40);
 
 const styles = StyleSheet.create({
   content: {
@@ -91,7 +95,7 @@ export const StreakCard = ({ count }: StreakCardProps) => {
         {alive ? (
           <Star size="xl" replayDelay={STAR_REPLAY_DELAY} style={styles.star} />
         ) : (
-          <StarPeeled size="xl" autoPlay={false} style={styles.star} />
+          <StarPeeled size={STAR_SIZE} style={styles.star} />
         )}
       </CardContent>
     </Card>
