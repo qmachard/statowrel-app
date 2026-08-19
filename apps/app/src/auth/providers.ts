@@ -1,12 +1,4 @@
 import {
-  GoogleSignin,
-  isErrorWithCode,
-  isSuccessResponse,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
-import * as AppleAuthentication from 'expo-apple-authentication';
-import * as Crypto from 'expo-crypto';
-import {
   GoogleAuthProvider,
   OAuthProvider,
   type UserCredential,
@@ -22,37 +14,51 @@ import { Platform } from 'react-native';
 import { auth } from '@/lib/firebase';
 
 import { SignInCancelledError, SignInUnavailableError } from './errors';
+import { loadAppleAuthentication, loadCrypto, loadGoogleSignIn } from './nativeModules';
 import { rememberProfileHints } from './profileHints';
+
+const MISSING_NATIVE_MODULE = 'Cette méthode de connexion manque à cette version de l\'app. Reconstruis le dev client.';
 
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 
-/** Hides the Google button on a build that ships without OAuth client ids. */
-export const isGoogleSignInConfigured = Boolean(GOOGLE_WEB_CLIENT_ID);
+/**
+ * Hides the Google button on a build that ships without OAuth client ids, or
+ * whose binary predates the native module.
+ */
+export const isGoogleSignInAvailable = (): boolean => (
+  Boolean(GOOGLE_WEB_CLIENT_ID) && loadGoogleSignIn() !== null
+);
 
 let googleConfigured = false;
 
-const configureGoogleSignIn = (): void => {
-  if (googleConfigured) {
-    return;
+const requireGoogleSignIn = () => {
+  const google = loadGoogleSignIn();
+
+  if (!google) {
+    throw new SignInUnavailableError(MISSING_NATIVE_MODULE);
   }
 
-  if (!GOOGLE_WEB_CLIENT_ID) {
-    throw new SignInUnavailableError('La connexion Google n\'est pas configurée sur cette version de l\'app.');
+  if (!googleConfigured) {
+    if (!GOOGLE_WEB_CLIENT_ID) {
+      throw new SignInUnavailableError('La connexion Google n\'est pas configurée sur cette version de l\'app.');
+    }
+
+    // Firebase only accepts an id token minted for the *web* client, even on
+    // native — hence webClientId here, whatever the platform.
+    google.GoogleSignin.configure({
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      ...(GOOGLE_IOS_CLIENT_ID ? { iosClientId: GOOGLE_IOS_CLIENT_ID } : {}),
+    });
+
+    googleConfigured = true;
   }
 
-  // Firebase only accepts an id token minted for the *web* client, even on
-  // native — hence webClientId here, whatever the platform.
-  GoogleSignin.configure({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    ...(GOOGLE_IOS_CLIENT_ID ? { iosClientId: GOOGLE_IOS_CLIENT_ID } : {}),
-  });
-
-  googleConfigured = true;
+  return google;
 };
 
 export const signInWithGoogle = async (): Promise<UserCredential> => {
-  configureGoogleSignIn();
+  const { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } = requireGoogleSignIn();
 
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -83,9 +89,15 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
   }
 };
 
-export const isAppleSignInAvailableAsync = async (): Promise<boolean> => (
-  Platform.OS === 'ios' && await AppleAuthentication.isAvailableAsync()
-);
+export const isAppleSignInAvailableAsync = async (): Promise<boolean> => {
+  if (Platform.OS !== 'ios') {
+    return false;
+  }
+
+  const apple = loadAppleAuthentication();
+
+  return apple ? apple.isAvailableAsync() : false;
+};
 
 const HEX = (byte: number) => byte.toString(16).padStart(2, '0');
 
@@ -95,21 +107,33 @@ const HEX = (byte: number) => byte.toString(16).padStart(2, '0');
  * replayed token pass.
  */
 const createNonce = async (): Promise<{ rawNonce: string; hashedNonce: string }> => {
-  const bytes = await Crypto.getRandomBytesAsync(32);
+  const crypto = loadCrypto();
+
+  if (!crypto) {
+    throw new SignInUnavailableError(MISSING_NATIVE_MODULE);
+  }
+
+  const bytes = await crypto.getRandomBytesAsync(32);
   const rawNonce = Array.from(bytes).map(HEX).join('');
-  const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+  const hashedNonce = await crypto.digestStringAsync(crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
 
   return { rawNonce, hashedNonce };
 };
 
 export const signInWithApple = async (): Promise<UserCredential> => {
+  const apple = loadAppleAuthentication();
+
+  if (!apple) {
+    throw new SignInUnavailableError(MISSING_NATIVE_MODULE);
+  }
+
   const { rawNonce, hashedNonce } = await createNonce();
 
   try {
-    const credential = await AppleAuthentication.signInAsync({
+    const credential = await apple.signInAsync({
       requestedScopes: [
-        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        apple.AppleAuthenticationScope.FULL_NAME,
+        apple.AppleAuthenticationScope.EMAIL,
       ],
       nonce: hashedNonce,
     });
@@ -174,7 +198,7 @@ export const signOut = async (): Promise<void> => {
   // Without this, Google's native SDK keeps the account selected and the next
   // sign-in skips the account picker entirely.
   if (googleConfigured) {
-    await GoogleSignin.signOut().catch(() => undefined);
+    await loadGoogleSignIn()?.GoogleSignin.signOut().catch(() => undefined);
   }
 
   await firebaseSignOut(auth);

@@ -1,12 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createAsyncStorage } from '@react-native-async-storage/async-storage';
 import { type FirebaseApp, getApps, initializeApp } from 'firebase/app';
 import { type Auth, connectAuthEmulator, getAuth, initializeAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, type Firestore, getFirestore } from 'firebase/firestore';
 
-// getReactNativePersistence exists in firebase/auth's React Native build
-// (used at runtime — see metro.config.js) but its package.json "exports"
-// map lists a "types" condition before "react-native", so tsc always
-// resolves the browser build's types instead, which don't declare it.
+// getReactNativePersistence only exists in firebase/auth's React Native build
+// (`@firebase/auth/dist/rn`), which is what Metro loads at runtime — see
+// metro.config.js. tsc, however, resolves `firebase/auth` through the umbrella
+// package's `typings` field, which points at the browser build's declarations,
+// so the export is invisible to the type checker.
 // https://github.com/firebase/firebase-js-sdk/issues/8353
 // @ts-expect-error - see comment above
 import { getReactNativePersistence } from 'firebase/auth';
@@ -22,14 +23,22 @@ const firebaseConfig = {
 
 export const app: FirebaseApp = getApps()[0] ?? initializeApp(firebaseConfig);
 
+// `@react-native-async-storage/async-storage` v3 replaced the implicit default
+// store with an explicitly named one; this is the form firebase/auth's own React
+// Native build documents for v3.
+const authStorage = createAsyncStorage('statowrel-auth');
+
 // initializeAuth() throws if called more than once for the same app (e.g. on
-// Fast Refresh) — fall back to the already-registered instance.
+// Fast Refresh) — fall back to the already-registered instance. Anything else
+// is a real wiring problem: log it, because getAuth()'s own failure below would
+// otherwise replace it with a far less useful message.
 let authInstance: Auth;
 try {
   authInstance = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
+    persistence: getReactNativePersistence(authStorage),
   });
-} catch {
+} catch (error) {
+  console.warn('[firebase] initializeAuth() failed, falling back to getAuth()', error);
   authInstance = getAuth(app);
 }
 

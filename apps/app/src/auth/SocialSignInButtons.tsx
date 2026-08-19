@@ -6,7 +6,7 @@ import { Button } from '@/components/Button';
 import { SignInCancelledError, authErrorMessage } from './errors';
 import {
   isAppleSignInAvailableAsync,
-  isGoogleSignInConfigured,
+  isGoogleSignInAvailable,
   signInWithApple,
   signInWithGoogle,
 } from './providers';
@@ -19,6 +19,7 @@ type Pending = 'google' | 'apple' | null;
  * requires it.
  */
 export const SocialSignInButtons = ({ disabled = false }: { disabled?: boolean }) => {
+  const [ googleAvailable ] = useState(isGoogleSignInAvailable);
   const [ appleAvailable, setAppleAvailable ] = useState(false);
   const [ pending, setPending ] = useState<Pending>(null);
   const [ error, setError ] = useState<string | null>(null);
@@ -56,13 +57,13 @@ export const SocialSignInButtons = ({ disabled = false }: { disabled?: boolean }
     }
   };
 
-  if (!isGoogleSignInConfigured && !appleAvailable) {
+  if (!googleAvailable && !appleAvailable) {
     return null;
   }
 
   return (
     <View className="gap-3">
-      {isGoogleSignInConfigured ? (
+      {googleAvailable ? (
         <Button
           label="Continuer avec Google"
           variant="outline"
