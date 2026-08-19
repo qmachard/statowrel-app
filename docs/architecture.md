@@ -216,7 +216,7 @@ Two Firebase projects, aliased in `.firebaserc`:
 
 ## What's deliberately not here yet
 
-- No app screens beyond the placeholder route — nothing consumes `v1_questions` on mobile yet.
+- Only the Stats home screen exists on mobile (`apps/app/app/index.tsx`), and it renders placeholder data from `apps/app/src/data/fakeStats.ts` — nothing consumes `v1_questions` or `v1_daily_question_answers` on mobile yet.
 - Four of the PRD's five collections exist; only `v1_users/{id}/friends` is still to be modelled — see `docs/prd.md` §6.
 - No backend to own `v1_daily_questions`/`v1_daily_question_answers`: no daily scheduler, no answer trigger to increment `answer_counts` and bump streaks, no midnight closer (docs/prd.md §6 "Backend") — and no app screens consume any of it yet. The data model landed alone, on purpose.
 - No design-system component primitives (buttons, cards, inputs) — the neobrutalism theme tokens exist in `tailwind.config.js`, the primitives are the next step. No dark-mode theming either.

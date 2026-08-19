@@ -2,13 +2,16 @@
 
 React Native + Expo (managed workflow) + EAS. iOS + Android. Styled with [Nativewind](https://www.nativewind.dev) (Tailwind CSS for React Native).
 
-No screens or domain models exist yet — this app is scaffolding only (routing shell, Firebase wiring, build/submit pipeline). See root `docs/architecture.md` for the overall plan.
+One screen exists: the Stats home (`app/index.tsx`, docs/prd.md §5.2) — streak block, record, month calendar — rendered from placeholder data in `src/data/fakeStats.ts`, typed against the real `@statowrel/models` shapes so the Firestore wiring is a source swap. Everything else is still scaffolding (routing shell, Firebase wiring, build/submit pipeline). See root `docs/architecture.md` for the overall plan.
 
 **Design system**: neobrutalism visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold flat colors, thick borders, hard offset shadows, `radius: 0`. Theme tokens (palette, `font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`) live in `tailwind.config.js`. Headings use `font-head` (Archivo Black), body text uses `font-sans` (Space Grotesk) — both loaded via `expo-font` + `@expo-google-fonts/*` in `app/_layout.tsx`. The neobrutalism.com registry itself (`shadcn` CLI, Radix/Base UI components) targets the web DOM and does **not** work with React Native — component primitives (Button, Card, Input, …) are hand-built against these tokens as a separate, later step.
 
 ## Structure
 
 - `app/` — [Expo Router](https://docs.expo.dev/router/introduction/) file-based routes. `_layout.tsx` is the root layout (wraps the app in `SafeAreaProvider`, imports `global.css`). Add screens as `app/<route>.tsx` / `app/<route>/_layout.tsx`.
+- `src/components/` — screen-level building blocks (`StreakCard`, `StatTile`, `MonthCalendar`, `DayCell`), PascalCase, one component per file, styled with the `tailwind.config.js` tokens only.
+- `src/lib/` — framework-free helpers (`calendar.ts`: `YYYY-MM-DD` day keys and the month grid).
+- `src/data/` — placeholder datasets standing in for Firestore reads, typed against `@statowrel/models`. Delete a file here as soon as its screen is wired up for real.
 - `src/lib/firebase.ts` — Firebase client SDK (`firebase` npm package, not `@react-native-firebase`) init: `app`, `auth` (persisted via `@react-native-async-storage/async-storage`), `db`. Same client SDK the rest of the monorepo uses, so `@statowrel/models` converters work unchanged.
 - `tailwind.config.js` — Nativewind preset + neobrutalism theme tokens (palette, `font-head`/`font-sans`, `borderRadius: 0`, thick `borderWidth`, hard offset `boxShadow` scale).
 - `global.css` — Tailwind directives, imported once in `app/_layout.tsx`.
