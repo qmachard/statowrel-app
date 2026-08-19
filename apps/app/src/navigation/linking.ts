@@ -9,12 +9,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       SignIn: 'sign-in',
       SignUp: 'sign-up',
-      Tabs: {
-        screens: {
-          Home: '',
-          Profile: 'profile',
-        },
-      },
+      Stats: '',
+      Profile: 'profile',
     },
   },
 };

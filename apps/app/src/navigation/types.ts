@@ -1,12 +1,6 @@
-import type { NavigatorScreenParams } from '@react-navigation/native';
-
-export type TabParamList = {
-  Home: undefined;
-  Profile: undefined;
-};
-
 export type RootStackParamList = {
-  Tabs: NavigatorScreenParams<TabParamList>;
+  Stats: undefined;
+  Profile: undefined;
   SignIn: undefined;
   SignUp: undefined;
 };

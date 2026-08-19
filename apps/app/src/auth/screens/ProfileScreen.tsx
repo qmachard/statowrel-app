@@ -1,3 +1,5 @@
+import { useNavigation } from '@react-navigation/native';
+import { ChevronLeft } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,6 +16,7 @@ const PROVIDER_LABELS: Record<string, string> = {
 };
 
 export const ProfileScreen = () => {
+  const navigation = useNavigation();
   const { user, profile } = useAuth();
 
   if (!user) {
@@ -22,7 +25,14 @@ export const ProfileScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={[ 'top' ]}>
-      <ScrollView contentContainerClassName="grow justify-center gap-8 p-6">
+      <ScrollView contentContainerClassName="grow gap-8 p-6">
+        {/* The stack has no header (and no tab bar since docs/prd.md §5.1), so the
+            way back to Stats has to live in the screen. */}
+        <View className="flex-row items-center gap-3">
+          <Button label="Retour" variant="outline" size="icon-sm" icon={ChevronLeft} onPress={() => navigation.goBack()} />
+          <Text className="font-head text-xl uppercase text-foreground">Profil</Text>
+        </View>
+
         <View style={shadows.md} className="gap-2 rounded-md border-2 border-border bg-card px-6 py-5">
           <Text className="font-head text-2xl uppercase text-card-foreground">
             {profile?.display_name ?? 'Profil en cours de création…'}
