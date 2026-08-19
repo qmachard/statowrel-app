@@ -58,7 +58,7 @@ export const StreakCard = ({ count }: StreakCardProps) => {
   const alive = count > 0;
 
   return (
-    <Card variant={alive ? 'primary' : 'muted'} shadow="lg" style={{ width: width * SCREEN_SHARE }}>
+    <Card variant={alive ? 'primary' : 'muted'} style={{ width: width * SCREEN_SHARE }}>
       <CardContent style={styles.content}>
         <View style={styles.copy}>
           <Text style={styles.label}>Série en cours</Text>
