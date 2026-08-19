@@ -37,6 +37,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...config.ios,
     bundleIdentifier: variant.iosBundleIdentifier,
     supportsTablet: true,
+    // Required capability for expo-apple-authentication (docs/prd.md §4.1 —
+    // Apple sign-in is mandatory on iOS once another social provider is offered).
+    usesAppleSignIn: true,
+    infoPlist: {
+      ...config.ios?.infoPlist,
+      ITSAppUsesNonExemptEncryption: false
+    },
   },
   android: {
     ...config.android,
