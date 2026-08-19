@@ -82,17 +82,18 @@ Re-export every new model from `src/index.ts`.
 | Field | Type | Notes |
 |---|---|---|
 | `label` | `string` | e.g. "Ton dentifrice, tu le presses…" |
-| `options` | `Record<ULID, { label, stat_label, position }>` | 2 to 6 entries — `label` is shown ("Par le bout"), `stat_label` is the StatOwrel earned ("méthodique") |
+| `options` | `{ id, label, stat_label }[]` | 2 to 6 entries, in display order — `label` is shown ("Par le bout"), `stat_label` is the StatOwrel earned ("méthodique") |
 | `status` | `'pending' \| 'approved' \| 'rejected' \| 'used'` | moderation lifecycle; `used` questions are never redrawn |
 | `author_id` | `string` | credited on the question screen once drawn |
 | `rejection_reason` | `string \| null` | sent back to the author; set only when `rejected` |
 | `created_at` | `UniversalTimestamp` | |
 
-Three decisions the PRD makes and the model enforces:
+Two things to keep straight about the options:
 
-- **`options` is a map keyed by ULID, not an array.** An answer stores an `option_id`, and `v1_daily_questions.answer_counts` increments `answer_counts.{option_id}` via `FieldValue.increment()` on a fixed path. With an array, a moderator reordering options would repoint recorded answers, and two concurrent answers incrementing `answer_counts[2]` would overwrite each other.
-- **Display order comes from `position`, never from key order**, which Firestore does not guarantee. `sortQuestionOptions()` is the only supported way to read the options in order — use it rather than iterating the map.
-- **ULIDs are minted client-side**, in the app or the backoffice, at the moment the option is typed in. No server round-trip for an id, and the ids sort by creation date.
+- **An option's identity is its `id`, never its position in the array.** An answer stores an `option_id`, and `v1_daily_questions.answer_counts` increments `answer_counts.{option_id}` via `FieldValue.increment()` on a fixed path — that map stays keyed by option id precisely so two simultaneous answers can't overwrite each other. Reordering or reformulating an option must leave its `id` alone; use `findQuestionOption()` to resolve one, never an index.
+- **Ids are ULIDs, minted client-side** — in the app as the author types, in the backoffice at save (`onPreSave`). No server round-trip for an id, and ids sort by creation date. FireCMS also uses ULIDs for the *document* ids of every collection, via the shared `ulidEntityId` callback.
+
+`options` is a plain array rather than a map keyed by id: the array order *is* the display order, which removes the `position` field and lets FireCMS's built-in repeat field handle reordering. `docs/prd.md` §5 still sketches it as a map — the implementation is the current reference.
 
 There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §6).
 
@@ -121,8 +122,8 @@ FireCMS v2 SPA. `src/collections/index.ts` is the list of `EntityCollection` def
 Two things to know when writing a collection:
 
 - **FireCMS does not use our converters.** It reads Firestore through its own data source, which maps `Timestamp` → `Date`. So a collection is typed against a local variant of the model's `*Data` type with `Date` timestamps, not against `*Data` itself.
-- **Maps with dynamic keys need a custom field.** FireCMS v2 can only type a map's sub-properties when the keys are known up front, and `v1_questions.options` is keyed by ULID. `src/collections/fields/QuestionOptionsField.tsx` renders the options as a reorderable list, mints a ULID on "add", and renumbers `position` densely on every change. The built-in key/value editor would have moderators typing ULIDs by hand.
-- **Collection-level invariants live in `callbacks.onPreSave`.** The backoffice writes as an admin, and the wildcard `isAdmin()` rule lets those writes through unchecked — so the 2–6 options rule and "a rejected question needs a reason" are enforced there as well as in `firestore.rules`.
+- **Document ids are ULIDs**, not Firestore auto-ids: wire `onIdUpdate: ulidEntityId` (from `src/collections/entityId.ts`) into every collection.
+- **Collection-level invariants live in `callbacks.onPreSave`.** The backoffice writes as an admin, and the wildcard `isAdmin()` rule lets those writes through unchecked — so the 2–6 options rule, "a rejected question needs a reason", and minting each option's ULID all happen there as well as in `firestore.rules`.
 
 `src/authenticator/admin.ts` is the sign-in gate (currently: any authenticated user — tighten to an email allow-list, or a custom `admin` auth claim checked server-side, before shipping).
 

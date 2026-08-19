@@ -21,25 +21,29 @@ export const QUESTION_STATUSES = [ 'pending', 'approved', 'rejected', 'used' ] a
 
 export type QuestionStatus = (typeof QUESTION_STATUSES)[number];
 
-/**
- * One option of a question, stored in the question's `options` map under its
- * own ULID. The ULID is generated client-side (app or backoffice) when the
- * option is typed in, and is never reused.
- */
 export interface QuestionOptionFirebaseData {
+  /**
+   * ULID, minted client-side (app or backoffice) when the option is typed in.
+   * An answer and `v1_daily_questions.answer_counts` both point at it, so it is
+   * never reused and never changes — reordering or reformulating an option must
+   * not repoint recorded answers.
+   */
+  id: string;
   /** Option shown to the user — e.g. "Par le bout". */
   label: string;
   /** StatOwrel earned by picking this option — e.g. "méthodique", rendered as "tu es un.e méthodique". */
   stat_label: string;
-  /** Display order. Dense, 0-based — map key order is not guaranteed. */
-  position: number;
 }
 
 export interface QuestionFirebaseData {
   /** Question text — e.g. "Ton dentifrice, tu le presses…". */
   label: string;
-  /** Options, keyed by ULID. Between QUESTION_MIN_OPTIONS and QUESTION_MAX_OPTIONS entries. */
-  options: Record<string, QuestionOptionFirebaseData>;
+  /**
+   * Options in display order — the array order is the order every user sees,
+   * which is what makes screenshots comparable between friends.
+   * Between QUESTION_MIN_OPTIONS and QUESTION_MAX_OPTIONS entries.
+   */
+  options: QuestionOptionFirebaseData[];
   status: QuestionStatus;
   /** Author of the question, credited on the question screen once it is drawn. */
   author_id: string;
@@ -52,47 +56,32 @@ export type QuestionOptionData = ModelData<QuestionOptionFirebaseData>;
 
 export type QuestionData = ModelData<QuestionFirebaseData>;
 
-/** A question's option with its ULID merged in, as returned by `sortQuestionOptions`. */
-export type QuestionOptionEntry = QuestionOptionData & { id: string };
-
-/**
- * Options in display order. Always go through this rather than iterating the
- * map: key order is not guaranteed, `position` is the source of truth.
- */
-export const sortQuestionOptions = (
-  options: Record<string, QuestionOptionData> | null | undefined,
-): QuestionOptionEntry[] => (
-  Object.entries(options ?? {})
-    .map(([ id, option ]) => ({ ...option, id }))
-    .sort((a, b) => a.position - b.position)
+/** Resolves the option an answer points at. Returns `null` for an option removed since. */
+export const findQuestionOption = (
+  options: QuestionOptionData[] | null | undefined,
+  optionId: string,
+): QuestionOptionData | null => (
+  options?.find((option) => option.id === optionId) ?? null
 );
 
 const parseOptions = (
-  options: Record<string, Partial<QuestionOptionFirebaseData>> | null | undefined,
-): Record<string, QuestionOptionData> => (
-  Object.entries(options ?? {}).reduce<Record<string, QuestionOptionData>>((acc, [ id, option ], index) => {
-    acc[id] = {
-      label: option?.label ?? '',
-      stat_label: option?.stat_label ?? '',
-      position: option?.position ?? index,
-    };
-
-    return acc;
-  }, {})
+  options: Partial<QuestionOptionFirebaseData>[] | null | undefined,
+): QuestionOptionData[] => (
+  (options ?? []).map((option) => ({
+    id: option?.id ?? '',
+    label: option?.label ?? '',
+    stat_label: option?.stat_label ?? '',
+  }))
 );
 
 export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebaseData> = (TimestampClass) => ({
   toFirestore: (data) => removeMissingFields({
     label: data.label,
-    options: Object.entries(data.options ?? {}).reduce<Record<string, QuestionOptionFirebaseData>>((acc, [ id, option ]) => {
-      acc[id] = {
-        label: option.label,
-        stat_label: option.stat_label,
-        position: option.position,
-      };
-
-      return acc;
-    }, {}),
+    options: (data.options ?? []).map((option) => ({
+      id: option.id,
+      label: option.label,
+      stat_label: option.stat_label,
+    })),
     status: data.status,
     author_id: data.author_id,
     rejection_reason: data.rejection_reason ?? null,

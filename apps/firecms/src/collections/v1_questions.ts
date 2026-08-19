@@ -1,15 +1,14 @@
 import { buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
+import { ulid } from 'ulid';
 
 import {
   QUESTION_COLLECTION,
   QUESTION_MAX_OPTIONS,
   QUESTION_MIN_OPTIONS,
   QuestionData,
-  QuestionOptionData,
-  sortQuestionOptions,
 } from '@statowrel/models';
 
-import QuestionOptionsField from './fields/QuestionOptionsField';
+import { ulidEntityId } from './entityId';
 
 /**
  * FireCMS reads Firestore documents through its own data source, which maps
@@ -21,19 +20,24 @@ type QuestionEntity = Omit<QuestionData, 'created_at'> & {
 };
 
 /**
- * The 2–6 options rule and the rejection-reason rule are enforced here as well
- * as in `firestore.rules`: the backoffice writes as an admin, and the wildcard
- * `isAdmin()` rule lets those writes through unchecked.
+ * Mints the ULID of any option that doesn't have one yet, and enforces the
+ * invariants `firestore.rules` cannot: the backoffice writes as an admin, and
+ * the wildcard `isAdmin()` rule lets those writes through unchecked.
  */
 const callbacks = buildEntityCallbacks<QuestionEntity>({
+  onIdUpdate: ulidEntityId,
   onPreSave: ({ values }) => {
-    const options = sortQuestionOptions(values.options);
+    const options = (values.options ?? []).map((option) => ({
+      ...option,
+      // Never regenerate an existing id: an answer points at it.
+      id: option.id || ulid(),
+    }));
 
     if (options.length < QUESTION_MIN_OPTIONS || options.length > QUESTION_MAX_OPTIONS) {
       throw new Error(`Une question compte entre ${QUESTION_MIN_OPTIONS} et ${QUESTION_MAX_OPTIONS} options (actuellement ${options.length}).`);
     }
 
-    if (options.some((option) => !option.label.trim() || !option.stat_label.trim())) {
+    if (options.some((option) => !option.label?.trim() || !option.stat_label?.trim())) {
       throw new Error('Chaque option doit avoir une réponse affichée et une StatOwrel.');
     }
 
@@ -41,7 +45,7 @@ const callbacks = buildEntityCallbacks<QuestionEntity>({
       throw new Error('Une question rejetée doit porter une raison de rejet, renvoyée à son auteur.');
     }
 
-    return values;
+    return { ...values, options };
   },
 });
 
@@ -60,16 +64,35 @@ const questionsCollection = buildCollection<QuestionEntity>({
       description: 'Ex. « Ton dentifrice, tu le presses… »',
       validation: { required: true },
     }),
-    options: buildProperty<Record<string, QuestionOptionData>>({
-      dataType: 'map',
+    options: buildProperty({
+      dataType: 'array',
       name: 'Options',
-      description: `De ${QUESTION_MIN_OPTIONS} à ${QUESTION_MAX_OPTIONS} options. L'ordre affiché est celui d'ici, identique pour tous les utilisateurs.`,
-      // Custom editor: the map is keyed by ULID, and FireCMS can only type a
-      // map's sub-properties when the keys are known up front. `keyValue` stays
-      // on so the collection table still previews the raw map.
-      keyValue: true,
-      Field: QuestionOptionsField,
+      description: `De ${QUESTION_MIN_OPTIONS} à ${QUESTION_MAX_OPTIONS} options. L'ordre d'affichage est celui d'ici, identique pour tous les utilisateurs.`,
       validation: { required: true },
+      of: buildProperty({
+        dataType: 'map',
+        properties: {
+          label: buildProperty({
+            dataType: 'string',
+            name: 'Réponse affichée',
+            validation: { required: true },
+          }),
+          stat_label: buildProperty({
+            dataType: 'string',
+            name: 'StatOwrel',
+            description: 'Affichée comme « tu es un.e … »',
+            validation: { required: true },
+          }),
+          id: buildProperty({
+            dataType: 'string',
+            name: 'ULID',
+            description: 'Généré à l\'enregistrement. Une réponse pointe dessus : il ne change jamais et n\'est jamais réutilisé.',
+            readOnly: true,
+          }),
+        },
+        propertiesOrder: [ 'label', 'stat_label', 'id' ],
+        previewProperties: [ 'label', 'stat_label' ],
+      }),
     }),
     status: buildProperty({
       dataType: 'string',
