@@ -1,27 +1,22 @@
 import { useNavigation } from '@react-navigation/native';
 import { CalendarCheck, Trophy } from 'lucide-react-native';
-import { useMemo } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAuth } from '@/auth/AuthContext';
 import { colors, pagePadding, spacing } from '@/design/tokens';
-import { startOfDay, toDateKey } from '@/lib/dates';
 import { DailyQuestionBanner } from '@/stats/components/DailyQuestionBanner';
-import { DevFixtureSwitch } from '@/stats/components/DevFixtureSwitch';
 import { StatTile } from '@/stats/components/StatTile';
 import { StatsCalendar } from '@/stats/components/StatsCalendar';
 import { StatsHeader } from '@/stats/components/StatsHeader';
 import { StatsStrip } from '@/stats/components/StatsStrip';
 import { StreakCard } from '@/stats/components/StreakCard';
 import { useStatsData } from '@/stats/data/useStatsData';
+import { resolveStreakCount } from '@/stats/helpers/streak';
 
 /**
  * The root of the app (docs/prd.md §5.1, §5.2), from top to bottom: the day's
  * question when it is still open, the streak and its counters on a scrolling
  * strip, then the calendar. The daily question sheet lands on top of it (§5.4).
- *
- * The stats are still fixtures — see `useStatsData`.
  */
 const styles = StyleSheet.create({
   safeArea: {
@@ -37,28 +32,25 @@ const styles = StyleSheet.create({
 
 export const StatsScreen = () => {
   const navigation = useNavigation();
-  const { profile } = useAuth();
-  const { user, answers, dailyQuestion, question, fixtures, fixtureId, selectFixture } = useStatsData();
+  const { profile, today, month, selectMonth, calendar, todayQuestion, answeredToday } = useStatsData();
 
-  // The signed-in username is the one piece of real data available today; the
-  // stats below it still come from the fixture. The greeting drops the `@` —
-  // it reads as a name there, and the handle is shown as one on the profile.
-  const displayName = profile?.username ?? user.username;
-
-  const answeredToday = useMemo(() => {
-    const todayKey = toDateKey(startOfDay(new Date()));
-
-    return answers.some((answer) => answer.date === todayKey);
-  }, [ answers ]);
+  // The profile is null while it loads, and stays null until the onboarding
+  // sheet has created it. Zeros and a calendar bounded to today: nothing
+  // invented, nothing crashing.
+  const streakCount = profile === null ? 0 : resolveStreakCount(profile, today);
+  const registeredAt = profile?.created_at ?? today.toISOString();
 
   // The banner announces a question that is still waiting: once the day is
   // answered it has nothing left to say, and the calendar carries the day.
-  const pendingQuestion = dailyQuestion && !answeredToday ? question : null;
+  const pendingQuestion = answeredToday ? null : todayQuestion;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[ 'top' ]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <StatsHeader displayName={displayName} onEditProfile={() => navigation.navigate('Profile')} />
+        <StatsHeader
+          displayName={profile?.username ?? ''}
+          onEditProfile={() => navigation.navigate('Profile')}
+        />
 
         {pendingQuestion ? (
           <DailyQuestionBanner
@@ -68,16 +60,22 @@ export const StatsScreen = () => {
         ) : null}
 
         <StatsStrip>
-          <StreakCard count={user.streak_count} />
-          <StatTile icon={Trophy} label="Record" value={user.streak_best} unit="jours d’affilée" />
-          <StatTile icon={CalendarCheck} label="Jours répondus" value={answers.length} unit="depuis l’inscription" />
+          <StreakCard count={streakCount} />
+          <StatTile icon={Trophy} label="Record" value={profile?.streak_best ?? 0} unit="jours d’affilée" />
+          <StatTile
+            icon={CalendarCheck}
+            label="Jours répondus"
+            value={profile?.answers_count ?? 0}
+            unit="depuis l’inscription"
+          />
         </StatsStrip>
 
-        <StatsCalendar answers={answers} registeredAt={user.created_at} />
-
-        {__DEV__ ? (
-          <DevFixtureSwitch fixtures={fixtures} active={fixtureId} onSelect={selectFixture} />
-        ) : null}
+        <StatsCalendar
+          month={month}
+          onMonthChange={selectMonth}
+          calendar={calendar}
+          registeredAt={registeredAt}
+        />
       </ScrollView>
     </SafeAreaView>
   );

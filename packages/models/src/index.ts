@@ -5,6 +5,8 @@ export * from './commons';
 // CLAUDE.md and in docs/architecture.md at the repo root.
 export * from './v1_daily_question';
 export * from './v1_daily_question_answer';
+export * from './v1_daily_question_month';
 export * from './v1_question';
 export * from './v1_user';
+export * from './v1_user_calendar_month';
 export * from './v1_username';

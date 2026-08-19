@@ -1,50 +1,67 @@
 import { useNavigation } from '@react-navigation/native';
-import type { DailyQuestionAnswerData } from '@statowrel/models';
-import { useMemo, useState } from 'react';
+import { monthDayKeyOf } from '@statowrel/models';
+import { useMemo } from 'react';
 
 import { Calendar } from '@/components/Calendar';
 import { Card, CardContent } from '@/components/Card';
 import { startOfDay, startOfMonth, toDateKey } from '@/lib/dates';
 import { CalendarDay } from '@/stats/components/CalendarDay';
+import type { CalendarMonth } from '@/stats/data/useStatsData';
 import { getCalendarDayState } from '@/stats/helpers/calendarState';
 
 export interface StatsCalendarProps {
-  answers: DailyQuestionAnswerData[];
+  /** Any date inside the displayed month — owned by the screen, since the data follows it. */
+  month: Date;
+  onMonthChange: (month: Date) => void;
+  /** The displayed month's two halves. Empty while it loads, which renders as an inert month. */
+  calendar: CalendarMonth;
   /** `UserData.created_at` — the calendar's lower bound, nothing before it ever existed. */
   registeredAt: string;
 }
 
 /**
- * The month calendar of docs/prd.md §5.2 — the app's whole history, and later
- * the only way back to a past question or card.
+ * The month calendar of docs/prd.md §5.2 — the app's whole history, and the way
+ * back to a past question or card.
  */
-export const StatsCalendar = ({ answers, registeredAt }: StatsCalendarProps) => {
+export const StatsCalendar = ({ month, onMonthChange, calendar, registeredAt }: StatsCalendarProps) => {
   const navigation = useNavigation();
   const today = useMemo(() => startOfDay(new Date()), []);
-  const [ month, setMonth ] = useState(() => startOfMonth(today));
 
   const todayKey = toDateKey(today);
   const registeredOn = useMemo(() => toDateKey(new Date(registeredAt)), [ registeredAt ]);
-  const answeredDays = useMemo(() => new Set(answers.map((answer) => answer.date)), [ answers ]);
 
   return (
     <Card>
       <CardContent>
         <Calendar
           month={month}
-          onMonthChange={setMonth}
+          onMonthChange={onMonthChange}
           minMonth={startOfMonth(new Date(registeredAt))}
           maxMonth={startOfMonth(today)}
-          renderDay={(date) => (
-            <CalendarDay
-              date={date}
-              state={getCalendarDayState({ day: toDateKey(date), today: todayKey, registeredOn, answeredDays })}
-              // Every live day opens its own question — today's, a missed one in
-              // catch-up, or an answered one read-only. The card of §5.5 takes
-              // over for the answered case once it exists.
-              onPress={() => navigation.navigate('DailyQuestion', { date: toDateKey(date) })}
-            />
-          )}
+          renderDay={(date) => {
+            const dayKey = toDateKey(date);
+            const monthDayKey = monthDayKeyOf(dayKey);
+            const answer = calendar.answered[monthDayKey];
+
+            return (
+              <CalendarDay
+                date={date}
+                statLabel={answer?.stat_label ?? null}
+                state={getCalendarDayState({
+                  day: dayKey,
+                  today: todayKey,
+                  registeredOn,
+                  published: calendar.published[monthDayKey] !== undefined,
+                  answered: answer !== undefined,
+                })}
+                // Every live day opens its own question — today's, a missed one
+                // in catch-up, or an answered one read-only. The card of §5.5
+                // takes over for the answered case once it exists. A day that
+                // never had a question is `idle`, so it stays inert here.
+                onPress={() => navigation.navigate('DailyQuestion', { date: dayKey })}
+              />
+            );
+          }}
         />
       </CardContent>
     </Card>

@@ -11,6 +11,7 @@ Backoffice for StatOwrel. React 18 + Vite (SPA) + FireCMS v2 + MUI. Deployed to 
 - `src/collections/v1_users.ts` — the `v1_users` collection; the exception to the ULID rule, its document id is the Firebase Auth UID.
 - `src/collections/v1_daily_questions.ts` — the `v1_daily_questions` collection; the other exception to the ULID rule, its document id follows the `date` field.
 - `src/collections/v1_daily_question_answers.ts` — the read-only `v1_daily_question_answers` sub-collection, wired into the one above via `subcollections`. A sub-collection gets its own file like any other.
+- `src/collections/v1_daily_question_months.ts` and `src/collections/v1_user_calendar_months.ts` — the calendar's two monthly read models, both read-only. They are projections of the answers, not sources of truth: editing one would make the app's calendar disagree with the data it is derived from without touching a single answer, so they are there to be inspected, not changed.
 - `src/collections/entityId.ts` — `ulidEntityId`, the `onIdUpdate` callback a collection wires in so its document ids are ULIDs.
 - `src/App.tsx` — mounts `<FirebaseCMSApp />`, wires the Firestore/Auth emulators when `VITE_FIREBASE_*_EMULATOR_HOST` env vars are set.
 

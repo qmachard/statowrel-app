@@ -1,5 +1,6 @@
 import { EntityCollectionsBuilder } from 'firecms';
 
+import dailyQuestionMonthsCollection from './v1_daily_question_months';
 import dailyQuestionsCollection from './v1_daily_questions';
 import buildQuestionsCollection from './v1_questions';
 import usersCollection from './v1_users';
@@ -9,6 +10,7 @@ import usersCollection from './v1_users';
 const collections: EntityCollectionsBuilder = ({ user }) => [
   buildQuestionsCollection(user),
   dailyQuestionsCollection,
+  dailyQuestionMonthsCollection,
   usersCollection,
 ];
 

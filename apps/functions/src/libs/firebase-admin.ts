@@ -7,12 +7,14 @@ import {
   Timestamp,
   type DocumentSnapshot,
   type DocumentReference,
+  type QueryDocumentSnapshot,
+  type Transaction,
   GeoPoint,
 } from 'firebase-admin/firestore';
 import { getStorage as getAdminStorage } from 'firebase-admin/storage';
 import { ulid } from 'ulid';
 
-import { type FirestoreConverter, Identifiable } from '@statowrel/models';
+import { type FirestoreConverter, Identifiable, type UniversalSnapshot } from '@statowrel/models';
 
 /**
  * The deployed runtime and the emulator both publish the project id and
@@ -56,6 +58,21 @@ export const getAdminStorageSignedUrl = async (path: string, filename?: string) 
   });
 
   return url;
+};
+
+/**
+ * Runs `updateFunction` inside a Firestore transaction — reads first, writes
+ * after, retried by the SDK on contention.
+ *
+ * A batch commits blindly; a transaction is what a trigger needs when the write
+ * depends on what is already there. Firestore triggers are delivered *at least*
+ * once, so anything that increments a counter has to read a marker and bail out
+ * before writing, atomically.
+ */
+export const runTransaction = <T>(updateFunction: (transaction: Transaction) => Promise<T>): Promise<T> => {
+  const app = initFirebase();
+
+  return getFirestore(app).runTransaction(updateFunction);
 };
 
 export const createWriteBatch = () => {
@@ -112,6 +129,21 @@ export const getDocumentUpsertRef = async <TModelData extends DocumentData, TFir
 
   return [ snapshot.docs[0].ref, true ];
 };
+
+/**
+ * Reads a trigger's event snapshot through a model converter.
+ *
+ * Firestore triggers hand over a raw snapshot — no `withConverter` on it — so
+ * this is the only way to keep the "never touch `snap.data()` untyped" rule on
+ * the trigger side. The cast is the same one every ref helper above makes: our
+ * converters are typed against `UniversalSnapshot`, which spans both SDKs.
+ */
+export const parseSnapshotData = <TModelData extends DocumentData, TFirebaseData extends DocumentData = TModelData>(
+  snapshot: QueryDocumentSnapshot,
+  converter: FirestoreConverter<TModelData, TFirebaseData>,
+): TModelData => (
+  converter(Timestamp, GeoPoint).fromFirestore(snapshot as unknown as UniversalSnapshot<Partial<TFirebaseData>>)
+);
 
 export const parseData = <TModelData>(document: DocumentSnapshot<TModelData>): Identifiable<TModelData> | null => {
   if (!document.exists) {

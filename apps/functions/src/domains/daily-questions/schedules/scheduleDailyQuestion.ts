@@ -3,10 +3,14 @@ import { logger } from 'firebase-functions/v2';
 import { Timestamp } from 'firebase-admin/firestore';
 import {
   DAILY_QUESTION_COLLECTION,
+  DAILY_QUESTION_MONTH_COLLECTION,
   DAILY_QUESTION_TIME_ZONE,
   type DailyQuestionData,
   dailyQuestionConverter,
   dailyQuestionDateKey,
+  dailyQuestionMonthConverter,
+  monthDayKeyOf,
+  monthKeyOf,
   QUESTION_COLLECTION,
   questionConverter,
 } from '@statowrel/models';
@@ -19,6 +23,10 @@ import { closingTimeOf, publicationTimeOf, PUBLICATION_HOUR } from '../helpers/p
 
 const dailyQuestionRefOf = (date: string) => (
   getDocumentRef(DAILY_QUESTION_COLLECTION, date, dailyQuestionConverter)
+);
+
+const dailyQuestionMonthRefOf = (date: string) => (
+  getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKeyOf(date), dailyQuestionMonthConverter)
 );
 
 /**
@@ -47,7 +55,9 @@ const drawDailyQuestion = async (date: string): Promise<DailyQuestionData | null
   };
 
   // One batch, so a question can never be marked `used` without the day that
-  // uses it existing — nor stay `approved` and be drawn again tomorrow.
+  // uses it existing — nor stay `approved` and be drawn again tomorrow. The
+  // month index is in it too: a day the calendar cannot see is a day nobody can
+  // catch up on (docs/prd.md §5.2).
   const batch = createWriteBatch();
 
   batch.set(dailyQuestionRefOf(date), dailyQuestion);
@@ -55,6 +65,13 @@ const drawDailyQuestion = async (date: string): Promise<DailyQuestionData | null
     status: 'used',
     broadcast_at: Timestamp.fromDate(publishedAt),
   });
+  // `merge` deep-merges maps, so this adds one entry to the month rather than
+  // replacing the days already in it.
+  batch.set(dailyQuestionMonthRefOf(date), {
+    month: monthKeyOf(date),
+    days: { [monthDayKeyOf(date)]: { question_id: question.id, label: question.label } },
+    updated_at: publishedAt.toISOString(),
+  }, { merge: true });
 
   await batch.commit();
 

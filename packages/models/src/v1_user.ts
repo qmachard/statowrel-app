@@ -68,6 +68,16 @@ export interface UserFirebaseData {
   streak_count: number;
   /** Longest `streak_count` ever reached, shown next to the current one on the Profile screen (docs/prd.md §5.3). */
   streak_best: number;
+  /**
+   * Total days answered since sign-up, shown as its own tile on the Stats
+   * screen (docs/prd.md §5.2). Catch-up answers count — the tile rewards the
+   * collection, not the regularity.
+   *
+   * Stored rather than counted at display time: the calendar only ever loads
+   * one month, so there is nothing client-side left to count. Maintained by
+   * the answer trigger, like the streak.
+   */
+  answers_count: number;
   /** `YYYY-MM-DD` of the last on-time answer, the value `streak_count` is computed against. Null until the first one. */
   streak_last_answered_on: string | null;
 }
@@ -90,6 +100,7 @@ export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (Ti
     updated_at: TimestampClass.fromDate(new Date(data.updated_at)),
     streak_count: data.streak_count,
     streak_best: data.streak_best,
+    answers_count: data.answers_count,
     streak_last_answered_on: data.streak_last_answered_on ?? null,
   }),
   fromFirestore: (snap) => {
@@ -104,6 +115,7 @@ export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (Ti
       updated_at: parseTimestamp(data.updated_at ?? null, 'now'),
       streak_count: data.streak_count ?? 0,
       streak_best: data.streak_best ?? 0,
+      answers_count: data.answers_count ?? 0,
       streak_last_answered_on: data.streak_last_answered_on ?? null,
     };
   },

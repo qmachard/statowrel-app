@@ -87,13 +87,51 @@ service cloud.firestore {
         ).data.user_id == user_id;
       }
 
+      // Streak, record and answered-days counters belong to the answer trigger
+      // (docs/prd.md §4.6). The app seeds them at sign-up and never touches
+      // them again, so an update that moves one is a forged score. Read
+      // through `get()` with a default rather than directly: a profile written
+      // before these fields existed has none, and a missing-field access
+      // denies the whole write.
+      function keepsBackendCounters() {
+        return request.resource.data.get('streak_count', 0) == resource.data.get('streak_count', 0)
+               && request.resource.data.get('streak_best', 0) == resource.data.get('streak_best', 0)
+               && request.resource.data.get('answers_count', 0) == resource.data.get('answers_count', 0)
+               && request.resource.data.get('streak_last_answered_on', null) == resource.data.get('streak_last_answered_on', null);
+      }
+
       allow read: if isAuthenticated();
       allow create: if isOwner(user_id) && isValidProfile() && ownsUsername();
       allow update: if isOwner(user_id)
                     && isValidProfile()
                     && ownsUsername()
+                    && keepsBackendCounters()
                     && request.resource.data.created_at == resource.data.created_at;
       allow delete: if false;
+
+      // The Stats calendar's own half of the month: the days this user
+      // answered, one document per month (docs/prd.md §5.2). Private — unlike
+      // the profile above, which any signed-in user reads for a friend list —
+      // and written only by the answer trigger, admin-side through the
+      // wildcard at the top. Reading it is what replaced a month-wide
+      // collection-group query over the answers.
+      match /v1_user_calendar_months/{month} {
+        allow read: if isOwner(user_id);
+        allow write: if false;
+      }
+    }
+
+    // The other half of the calendar: which days actually had a question, one
+    // document per month, the same one for everybody (docs/prd.md §5.2).
+    //
+    // Every signed-in user reads it — it holds nothing personal, only the
+    // question broadcast each day — and it is what lets the app tell a missed
+    // day from a day that never had a question, without reading a month of
+    // `v1_daily_questions`. Written by the daily scheduler, in the same batch
+    // as the day itself.
+    match /v1_daily_question_months/{month} {
+      allow read: if isAuthenticated();
+      allow write: if false;
     }
 
     // One document per taken username, keyed by the username itself
@@ -143,7 +181,8 @@ service cloud.firestore {
       // `date` is checked against the parent id and `late` against the day's
       // own `closes_at`, so neither can be forged: a catch-up answer cannot be
       // passed off as an on-time one to keep a streak alive (docs/prd.md §4.6),
-      // and the calendar's collection-group query can trust `date`.
+      // and the answer trigger can trust both when it projects the day into
+      // `v1_user_calendar_months` and moves the streak.
       //
       // An answer is final: no update, no delete (docs/prd.md §4.2). Only the
       // backend rewrites one, to anonymise it when an account is deleted.
@@ -161,10 +200,12 @@ service cloud.firestore {
       }
     }
 
-    // The Stats calendar reads a month of the current user's answers as a
-    // collection-group query (docs/prd.md §5.2). A nested match never applies
-    // to one — a collection group needs a recursive wildcard — so this block is
-    // what makes that query legal, on top of the per-day rule above.
+    // A user reading their own answers across days, as a collection-group
+    // query. The Stats calendar no longer runs one — it reads the two monthly
+    // documents instead — but this is the query the projection is derived
+    // from, and the one a rebuild or an export replays. A nested match never
+    // applies to a collection group — that needs a recursive wildcard — so
+    // this block is what makes it legal, on top of the per-day rule above.
     //
     // A collection group is keyed by the last path segment alone, which is why
     // the sub-collection is named `v1_daily_question_answers` and not `answers`:

@@ -150,12 +150,14 @@ export const createUserProfile = async (
     email: user.email ?? null,
     auth_providers: authProvidersOf(user),
     // Carried over when the document predates the username: `firestore.rules`
-    // refuses an update that moves `created_at`, and the streak belongs to the
-    // backend — the app only ever seeds it on a genuinely new profile.
+    // refuses an update that moves `created_at`, and it refuses one that moves
+    // a counter either — those belong to the answer trigger, and the app only
+    // ever seeds them on a genuinely new profile.
     created_at: current?.created_at ?? now,
     updated_at: now,
     streak_count: current?.streak_count ?? 0,
     streak_best: current?.streak_best ?? 0,
+    answers_count: current?.answers_count ?? 0,
     streak_last_answered_on: current?.streak_last_answered_on ?? null,
   };
 
