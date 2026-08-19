@@ -10,9 +10,10 @@ import {
   userCalendarMonthConverter,
 } from '@statowrel/models';
 import { getDoc } from 'firebase/firestore';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useAuth } from '@/auth/AuthContext';
+import { readAnswer, subscribeToAnswers } from '@/daily-question/data/answerStore';
 import { startOfDay, startOfMonth, toDateKey } from '@/lib/dates';
 import { getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
 
@@ -30,6 +31,50 @@ export interface CalendarMonth {
 }
 
 const emptyMonth = (key: string): CalendarMonth => ({ key, published: {}, answered: {} });
+
+const cacheKeyOf = (userId: string, monthKey: string) => `${userId}:${monthKey}`;
+
+/**
+ * Months whose read is stale and has to be paid for again.
+ *
+ * Module scope rather than a ref, because whoever invalidates a month is not
+ * the screen holding it: answering happens on the question sheet
+ * (`submitAnswer`), one route above the Stats screen that stays mounted
+ * underneath. The set is small — a month is dropped from it as soon as it is
+ * re-read — and it is keyed by user, so nothing of a signed-out account can be
+ * served to the next one.
+ */
+const stale = new Set<string>();
+
+// Bumped on every invalidation, and subscribed to below, so that a mounted
+// Stats screen re-runs its read: the month it is showing has not changed, and
+// nothing else would wake the effect that fetches it.
+let staleVersion = 0;
+const listeners = new Set<() => void>();
+
+const subscribeToStale = (listener: () => void): (() => void) => {
+  listeners.add(listener);
+
+  return () => {
+    listeners.delete(listener);
+  };
+};
+
+const readStaleVersion = () => staleVersion;
+
+/**
+ * Forgets a month of calendar, so the Stats screen reads it again.
+ *
+ * Call it after answering: the answer trigger projects the day into
+ * `v1_users/{uid}/v1_user_calendar_months/{YYYY-MM}` behind the app's back, and
+ * a cache built to make a chevron free would otherwise keep showing the month
+ * as it was before the answer, for as long as the screen lives.
+ */
+export const invalidateCalendarMonth = (userId: string, date: string): void => {
+  stale.add(cacheKeyOf(userId, monthKeyOf(date)));
+  staleVersion += 1;
+  listeners.forEach((listener) => listener());
+};
 
 /**
  * A month of calendar, in **two reads** — one shared document listing the days
@@ -67,9 +112,10 @@ const loadCalendarMonth = async (userId: string, monthKey: string): Promise<Cale
  * to one should not cost a read. Everything is keyed by user as well as by
  * month, so nothing of a signed-out account can be served to the next one.
  *
- * When the answer flow lands (docs/prd.md §5.4), answering a day — today's
- * question or a catch-up on an older one — has to drop that month from the
- * cache, since the trigger will have rewritten it behind the app's back.
+ * The one thing that drops a month from that cache is answering a day of it —
+ * today's question or a catch-up on an older one — through
+ * `invalidateCalendarMonth`, since the trigger rewrites the month behind the
+ * app's back.
  */
 export const useStatsData = () => {
   const { user, profile } = useAuth();
@@ -79,26 +125,55 @@ export const useStatsData = () => {
   const todayKey = toDateKey(today);
   const [ month, selectMonth ] = useState(() => startOfMonth(today));
   const monthKey = monthKeyOf(toDateKey(month));
-  const cacheKeyOf = (key: string) => `${userId ?? ''}:${key}`;
-  const cacheKey = cacheKeyOf(monthKey);
+  const cacheKey = cacheKeyOf(userId ?? '', monthKey);
 
   const [ months, setMonths ] = useState<Record<string, CalendarMonth>>({});
   // Months whose read has been started, so flipping back and forth between two
   // of them while the first is still in flight does not fetch it twice.
   const requested = useRef(new Set<string>());
 
+  // Answering does not change the displayed month, so the effect below has to
+  // be woken by something else — see `invalidateCalendarMonth`.
+  const version = useSyncExternalStore(subscribeToStale, readStaleVersion);
+  // And the banner has to fall the moment an answer is written, whether or not
+  // the month index behind it has caught up.
+  useSyncExternalStore(subscribeToAnswers, () => readAnswer(userId, toDateKey(today)));
+
+  // Guards the state update alone, and only against unmounting: a read that
+  // lands after the user has flipped to another month is still correct, since
+  // every result is filed under its own key.
+  const mounted = useRef(true);
+
   useEffect(() => {
-    if (userId === null || requested.current.has(cacheKey)) {
+    mounted.current = true;
+
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (userId === null) {
+      return;
+    }
+
+    // A month the user has just answered has to be paid for again. The stale
+    // copy stays on screen until the fresh one lands: one day of it is wrong,
+    // and blanking the calendar to say so would be worse.
+    if (stale.has(cacheKey)) {
+      stale.delete(cacheKey);
+      requested.current.delete(cacheKey);
+    }
+
+    if (requested.current.has(cacheKey)) {
       return;
     }
 
     requested.current.add(cacheKey);
 
-    let cancelled = false;
-
     loadCalendarMonth(userId, monthKey)
       .then((loaded) => {
-        if (!cancelled) {
+        if (mounted.current) {
           setMonths((current) => ({ ...current, [cacheKey]: loaded }));
         }
       })
@@ -109,17 +184,13 @@ export const useStatsData = () => {
         requested.current.delete(cacheKey);
         console.warn('[stats] could not load the calendar month', monthKey, error);
       });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ userId, monthKey, cacheKey ]);
+  }, [ userId, monthKey, cacheKey, version ]);
 
   // The banner reads the *current* month, not the displayed one — browsing back
   // to March must not make today's question disappear from the top of the
   // screen. It costs nothing: the screen opens on the current month, so that
   // document is already loaded and cached by the time anyone navigates away.
-  const currentMonth = months[cacheKeyOf(monthKeyOf(todayKey))];
+  const currentMonth = months[cacheKeyOf(userId ?? '', monthKeyOf(todayKey))];
   const todayMonthDayKey = monthDayKeyOf(todayKey);
 
   return {
@@ -135,7 +206,11 @@ export const useStatsData = () => {
     calendar: months[cacheKey] ?? emptyMonth(monthKey),
     /** Today's question, straight off the month index — `null` before the 07:00 drop. */
     todayQuestion: currentMonth?.published[todayMonthDayKey] ?? null,
-    answeredToday: currentMonth?.answered[todayMonthDayKey] !== undefined,
+    // The month index is written by the answer trigger, which has not
+    // necessarily run yet when the user comes back from the sheet — so an
+    // answer given during this session counts on its own.
+    answeredToday: currentMonth?.answered[todayMonthDayKey] !== undefined
+      || readAnswer(userId, todayKey) !== null,
     loading: userId !== null && months[cacheKey] === undefined,
   };
 };
