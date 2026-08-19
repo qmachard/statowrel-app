@@ -1,6 +1,7 @@
 import { Flame } from 'lucide-react-native';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import { Star } from '@/components/animations';
 import { Card, CardContent } from '@/components/Card';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
@@ -74,7 +75,17 @@ export const StreakCard = ({ count }: StreakCardProps) => {
           )}
         </View>
 
-        <Flame size={FLAME_SIZE} color={alive ? colors.foreground : colors['muted-foreground']} />
+        {/*
+          * The star plays once when the screen opens — it celebrates a streak
+          * that is running. A broken one keeps the extinguished flame: the
+          * muted surface and the nudge already say the series stopped, and a
+          * cheering star would say the opposite.
+          */}
+        {alive ? (
+          <Star size="md" />
+        ) : (
+          <Flame size={FLAME_SIZE} color={colors['muted-foreground']} />
+        )}
       </CardContent>
     </Card>
   );
