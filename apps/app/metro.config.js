@@ -1,3 +1,6 @@
+const crypto = require('crypto');
+const fs = require('fs');
+
 const { getDefaultConfig } = require('expo/metro-config');
 const { withNativeWind } = require('nativewind/metro');
 
@@ -31,5 +34,12 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 
   return context.resolveRequest(origin, moduleName, platform);
 };
+
+// Metro's cache key covers the serialisable parts of this config, but not a
+// `resolveRequest` function — so editing the resolver above would otherwise keep
+// serving a graph resolved by the previous one, and only `expo start -c` would
+// pick the change up. Keying the cache on this file's contents makes any change
+// here invalidate the cache on its own.
+config.cacheVersion = crypto.createHash('sha1').update(fs.readFileSync(__filename)).digest('hex').slice(0, 12);
 
 module.exports = withNativeWind(config, { input: './global.css' });
