@@ -60,7 +60,7 @@ const dailyQuestionsCollection = buildCollection<DailyQuestionEntity>({
   singularName: 'Question du jour',
   group: 'Contenu',
   icon: 'Today',
-  description: 'Une entrée par jour : la question diffusée et le décompte des réponses. Programmée par le backend ; à remplir à la main tant qu\'il n\'existe pas.',
+  description: 'Une entrée par jour : la question diffusée et le décompte des réponses. Programmée par le backend ; à remplir à la main tant qu\'il n\'existe pas — le backend indexe le jour dans le calendrier et marque la question comme diffusée dans la foulée.',
   callbacks,
   subcollections: [ dailyQuestionAnswersCollection ],
   properties: {

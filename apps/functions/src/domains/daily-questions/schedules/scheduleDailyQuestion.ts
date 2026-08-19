@@ -3,14 +3,10 @@ import { logger } from 'firebase-functions/v2';
 import { Timestamp } from 'firebase-admin/firestore';
 import {
   DAILY_QUESTION_COLLECTION,
-  DAILY_QUESTION_MONTH_COLLECTION,
   DAILY_QUESTION_TIME_ZONE,
   type DailyQuestionData,
   dailyQuestionConverter,
   dailyQuestionDateKey,
-  dailyQuestionMonthConverter,
-  monthDayKeyOf,
-  monthKeyOf,
   QUESTION_COLLECTION,
   questionConverter,
 } from '@statowrel/models';
@@ -18,15 +14,12 @@ import {
 import { createWriteBatch, getDocumentRef, parseData, REGION_CLOUD } from '@/libs/firebase-admin';
 
 import { drawApprovedQuestion } from '../helpers/drawQuestion';
+import { dailyQuestionMonthRefOf, monthIndexOf } from '../helpers/monthIndex';
 import { enqueueDailyQuestionNotification } from '../helpers/notificationQueue';
 import { closingTimeOf, publicationTimeOf, PUBLICATION_HOUR } from '../helpers/publicationTime';
 
 const dailyQuestionRefOf = (date: string) => (
   getDocumentRef(DAILY_QUESTION_COLLECTION, date, dailyQuestionConverter)
-);
-
-const dailyQuestionMonthRefOf = (date: string) => (
-  getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKeyOf(date), dailyQuestionMonthConverter)
 );
 
 /**
@@ -65,13 +58,14 @@ const drawDailyQuestion = async (date: string): Promise<DailyQuestionData | null
     status: 'used',
     broadcast_at: Timestamp.fromDate(publishedAt),
   });
-  // `merge` deep-merges maps, so this adds one entry to the month rather than
-  // replacing the days already in it.
-  batch.set(dailyQuestionMonthRefOf(date), {
-    month: monthKeyOf(date),
-    days: { [monthDayKeyOf(date)]: { question_id: question.id, label: question.label } },
-    updated_at: publishedAt.toISOString(),
-  }, { merge: true });
+  // `onDailyQuestionWritten` would index the day on its own a beat later — this
+  // is the same entry, written in the same batch, so the calendar is never
+  // right *eventually*: it is right the instant the day exists.
+  batch.set(
+    dailyQuestionMonthRefOf(date),
+    monthIndexOf(date, { question_id: question.id, label: question.label }, publishedAt.toISOString()),
+    { merge: true },
+  );
 
   await batch.commit();
 

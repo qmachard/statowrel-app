@@ -22,7 +22,8 @@ type DailyQuestionMonthEntity = Omit<DailyQuestionMonthData, 'updated_at' | 'day
 /**
  * Read-only index of the broadcast days, one document per month.
  *
- * Written by the daily scheduler in the same batch as the day itself, and read
+ * Written by the backend — the daily scheduler in the same batch as the day
+ * itself, and the day trigger for a day filled in by hand below — and read
  * by every app opening its calendar — it is what tells a missed day from a day
  * that never had a question (docs/prd.md §5.2). Editing it here would either
  * invent a day nobody can answer or hide one somebody already did: fix the
