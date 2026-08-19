@@ -15,7 +15,11 @@ Shared infrastructure — do not duplicate it in a model file:
 
 ## Models (`src/`)
 
-No domain models yet — this package currently only ships `commons.ts`. Add one file per Firestore collection as the data model is designed, e.g. `v1_user.ts`, `v1_workout.ts`, following the `customerConverter`-style pattern from planexplora-hub (`toFirestore` / `fromFirestore`, `<Name>Firebase Data` raw type, `<Name>Data` app type via `ModelData<...>`, a `<NAME>_COLLECTION` constant).
+One file per Firestore collection, **named after the collection but singular**: `v1_questions` → `src/v1_question.ts`, `v1_users` → `src/v1_user.ts`. The collection's own (plural) name lives in the file's `<NAME>_COLLECTION` constant — never hardcode it at a call site.
+
+`v1_question.ts` is the reference implementation — copy its shape. It follows the `customerConverter`-style pattern from planexplora-hub (`toFirestore` / `fromFirestore`, `<Name>FirebaseData` raw type, `<Name>Data` app type via `ModelData<...>`, a `<NAME>_COLLECTION` constant).
+
+`noUncheckedIndexedAccess` is on in this package: build a `Record<...>` field with `Object.entries(...).reduce(...)`, never by indexing into a possibly-missing key.
 
 Re-export every new model file from `src/index.ts`.
 

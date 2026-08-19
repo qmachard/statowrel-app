@@ -31,7 +31,7 @@ There is no shared React hooks package yet (no `@repo/firebase-react` equivalent
 
 ## Status
 
-This monorepo is freshly scaffolded: workspaces, build tooling, and the app skeletons are wired up, but **no domain models and no screens/views exist yet**. `packages/models` only ships its converter infrastructure (`commons.ts`); `apps/app` has a single placeholder route; `apps/firecms` has an empty collections list. See `docs/architecture.md` for the intended shape going forward.
+Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus the first domain model, `v1_questions`, surfaced in `apps/firecms` as the `Questions` collection. **No screens/views exist yet** — `apps/app` still has a single placeholder route. See `docs/architecture.md` for the intended shape going forward.
 
 ## Commands
 
@@ -80,14 +80,16 @@ npm run deploy:firecms:production
 
 - **Screens/components**: PascalCase.
 - **Hooks**: camelCase with `use` prefix (`useSessionTimer.ts`).
-- **Firestore fields**: `snake_case` (never camelCase). Collections prefixed `v1_` for active data.
+- **Firestore collections**: `snake_case`, prefixed `v1_` for active data, and **plural** — `v1_questions`, `v1_users`, `v1_daily_questions`.
+- **Firestore fields**: `snake_case` (never camelCase).
+- **Models**: named after their collection but **singular** — `v1_questions` is modelled in `packages/models/src/v1_question.ts`, exporting `QuestionFirebaseData` / `QuestionData` / `questionConverter` / `QUESTION_COLLECTION`.
 - **Functions API handlers**: `handle{Action}.ts` (e.g. `handlePing.ts`).
 
 ### Firestore Data Rules
 
 - Optional fields: ALWAYS `null`, NEVER `undefined`, NEVER omit the field.
 - Timestamps: Use `UniversalTimestamp` from `@statowrel/models`, never ISO strings, in the raw/Firebase-facing type.
-- New collections: ALWAYS use `v1_` prefix.
+- New collections: ALWAYS use `v1_` prefix, ALWAYS plural.
 
 ### Firestore Converters
 

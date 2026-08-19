@@ -1,6 +1,6 @@
 # StatOwrel — Architecture
 
-Status: **initial scaffold**. This document describes the monorepo as bootstrapped — tooling, structure, and conventions — not a finished product. No domain models, no screens, no admin collections exist yet; they are added incrementally on top of this foundation.
+Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. The first domain model (`v1_questions`) and its FireCMS collection exist; there are still no app screens. The rest is added incrementally on top of this foundation.
 
 ## Stack
 
@@ -75,6 +75,28 @@ export const xConverter: FirestoreConverter<XData, XFirebaseData> = (TimestampCl
 
 Re-export every new model from `src/index.ts`.
 
+### `v1_questions` — first model
+
+`packages/models/src/v1_question.ts` — collections are plural, the model file that describes one document is singular. The pot of questions users propose and moderators approve — see `docs/prd.md` §4.7 and §5.
+
+| Field | Type | Notes |
+|---|---|---|
+| `label` | `string` | e.g. "Ton dentifrice, tu le presses…" |
+| `options` | `{ id, label, stat_label }[]` | 2 to 6 entries, in display order — `label` is shown ("Par le bout"), `stat_label` is the StatOwrel earned ("méthodique") |
+| `status` | `'pending' \| 'approved' \| 'rejected' \| 'used'` | moderation lifecycle; `used` questions are never redrawn |
+| `author_id` | `string` | credited on the question screen once drawn |
+| `rejection_reason` | `string \| null` | sent back to the author; set only when `rejected` |
+| `created_at` | `UniversalTimestamp` | |
+
+Two things to keep straight about the options:
+
+- **An option's identity is its `id`, never its position in the array.** An answer stores an `option_id`, and `v1_daily_questions.answer_counts` increments `answer_counts.{option_id}` via `FieldValue.increment()` on a fixed path — that map stays keyed by option id precisely so two simultaneous answers can't overwrite each other. Reordering or reformulating an option must leave its `id` alone; use `findQuestionOption()` to resolve one, never an index.
+- **Ids are ULIDs, minted client-side** — in the app as the author types, in the backoffice at save (`onPreSave`). No server round-trip for an id, and ids sort by creation date. FireCMS also uses ULIDs for the *document* ids of every collection, via the shared `ulidEntityId` callback.
+
+`options` is a plain array rather than a map keyed by id: the array order *is* the display order, which removes the `position` field and lets FireCMS's built-in repeat field handle reordering.
+
+There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §6).
+
 ## `apps/functions` — domain structure
 
 Each domain under `src/domains/` is self-contained:
@@ -95,7 +117,15 @@ domains/{domain-name}/
 
 ## `apps/firecms` — backoffice
 
-FireCMS v2 SPA. `src/collections/index.ts` is the list of `EntityCollection` definitions (currently empty). Each collection is added as its own file once the corresponding model exists in `@statowrel/models`, using that model's converter and `*_COLLECTION` constant, then registered in the index. `src/authenticator/admin.ts` is the sign-in gate (currently: any authenticated user — tighten to an email allow-list, or a custom `admin` auth claim checked server-side, before shipping).
+FireCMS v2 SPA. `src/collections/index.ts` is the list of `EntityCollection` definitions. Each collection is added as its own file once the corresponding model exists in `@statowrel/models`, using that model's `*_COLLECTION` constant, then registered in the index. `src/collections/v1_questions.ts` is the first one; a collection file is named after the collection itself, plural.
+
+Two things to know when writing a collection:
+
+- **FireCMS does not use our converters.** It reads Firestore through its own data source, which maps `Timestamp` → `Date`. So a collection is typed against a local variant of the model's `*Data` type with `Date` timestamps, not against `*Data` itself.
+- **Document ids are ULIDs**, not Firestore auto-ids: wire `onIdUpdate: ulidEntityId` (from `src/collections/entityId.ts`) into every collection.
+- **Collection-level invariants live in `callbacks.onPreSave`.** The backoffice writes as an admin, and the wildcard `isAdmin()` rule lets those writes through unchecked — so the 2–6 options rule, "a rejected question needs a reason", and minting each option's ULID all happen there as well as in `firestore.rules`.
+
+`src/authenticator/admin.ts` is the sign-in gate (currently: any authenticated user — tighten to an email allow-list, or a custom `admin` auth claim checked server-side, before shipping).
 
 ## `apps/app` — mobile
 
@@ -123,7 +153,7 @@ Still deferred: shared component primitives (buttons, cards, inputs) built again
 
 ## Firestore rules & indexes
 
-`packages/firestore-config/firestore.rules` establishes the pattern: a wildcard `isAdmin()` bypass at the top (for the FireCMS backoffice, via a custom `admin` auth claim) followed by explicit per-collection rules for the mobile app's own access — collections are never left world-readable/writable by omission. `firestore.indexes.json` is empty; add composite indexes as Firestore's emulator/console error messages require them (copy the definition from the error, don't hand-write it).
+`packages/firestore-config/firestore.rules` establishes the pattern: a wildcard `isAdmin()` bypass at the top (for the FireCMS backoffice, via a custom `admin` auth claim) followed by explicit per-collection rules for the mobile app's own access — collections are never left world-readable/writable by omission. Rules are OR'ed, so a per-collection rule only ever *adds* to what the `isAdmin()` bypass already grants — `allow update, delete: if false` under it means "moderators only", not "nobody". `v1_questions` shows the shape: an author may create their own proposal (`status` forced to `pending`, 2–6 options) and read it back, and nothing else. `firestore.indexes.json` is empty; add composite indexes as Firestore's emulator/console error messages require them (copy the definition from the error, don't hand-write it).
 
 ## Environments
 
@@ -136,8 +166,8 @@ Two Firebase projects, aliased in `.firebaserc`:
 
 ## What's deliberately not here yet
 
-- No Firestore data models (`packages/models` only has `commons.ts`).
-- No FireCMS collections, no app screens beyond the placeholder route.
+- No app screens beyond the placeholder route — nothing consumes `v1_questions` on mobile yet.
+- Only one of the PRD's five collections exists. `v1_users`, `v1_users/{id}/friends`, `v1_daily_questions` and its `answers` sub-collection are still to be modelled — see `docs/prd.md` §5.
 - No design-system component primitives (buttons, cards, inputs) — the neobrutalism theme tokens exist in `tailwind.config.js`, the primitives are the next step. No dark-mode theming either.
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.
