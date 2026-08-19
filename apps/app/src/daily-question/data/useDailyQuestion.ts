@@ -1,5 +1,5 @@
 import { getDoc } from 'firebase/firestore';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
@@ -16,7 +16,6 @@ import {
 } from '@statowrel/models';
 
 import { useAuth } from '@/auth/AuthContext';
-import { readAnswer, subscribeToAnswers } from '@/daily-question/data/answerStore';
 import { getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
 
 /**
@@ -70,7 +69,8 @@ const readAuthorName = async (authorId: string): Promise<string | null> => {
 };
 
 /**
- * Everything one day's question screen needs, read from Firestore.
+ * Everything one day's question screen needs, read from Firestore — unlike the
+ * Stats screen, which is still on fixtures.
  *
  * Three documents, because the model deliberately doesn't denormalize the
  * question into the day (docs/architecture.md): the day
@@ -80,19 +80,10 @@ const readAuthorName = async (authorId: string): Promise<string | null> => {
  *
  * The question is only read once the day has dropped, matching the
  * `broadcast_at` gate `firestore.rules` puts on `v1_questions`.
- *
- * The answer has a second source: `answerStore`, which holds what this session
- * has just written and is what makes every screen showing the day flip to its
- * answered state at once.
  */
 export const useDailyQuestion = (date: string): DailyQuestionView => {
   const { user } = useAuth();
-  const userId = user?.uid ?? null;
   const [ view, setView ] = useState<DailyQuestionView>(EMPTY);
-
-  // An answer given during this session wins over the one the read found —
-  // which is `null` whenever the read happened before the answer was written.
-  const written = useSyncExternalStore(subscribeToAnswers, () => readAnswer(userId, date));
 
   useEffect(() => {
     let cancelled = false;
@@ -163,5 +154,5 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     };
   }, [ date, user ]);
 
-  return written === null ? view : { ...view, answer: written };
+  return view;
 };

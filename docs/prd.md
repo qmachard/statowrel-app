@@ -1,6 +1,6 @@
 # StatOwrel — PRD
 
-Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Quatre sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil), les §5.1–5.2 (l'écran Stats, branché sur Firestore), le §5.4 (la sheet question, dismissable au lieu d'être bloquante) et le §4.3 (le double tap, qui écrit la réponse et joue l'animation de succès mais ne bascule pas encore sur la carte StatOwrel du §5.5) — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
+Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Deux sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil) et les §5.1–5.2, dont l'écran Stats est en place mais branché sur des données factices — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
 
 ## 1. Vision
 

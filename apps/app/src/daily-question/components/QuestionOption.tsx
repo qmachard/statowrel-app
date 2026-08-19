@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { shadows } from '@/design/shadows';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
@@ -71,16 +71,6 @@ const styles = StyleSheet.create({
   },
 });
 
-/**
- * A selected option rides higher than the rest — the lift of docs/prd.md §4.3,
- * a bigger shadow plus the matching offset, so it looks raised off the sheet
- * rather than merely bigger.
- */
-const LIFT: ViewStyle = { transform: [ { translateX: -spacing(0.5) }, { translateY: -spacing(0.5) } ] };
-
-/** A pressed option sinks by exactly its shadow offset — 4px, the offset of `shadows.md`. */
-const SUNK: ViewStyle = { transform: [ { translateX: spacing(1) }, { translateY: spacing(1) } ] };
-
 export interface QuestionOptionProps {
   /** `A`, `B`, … — the option's rank in the question's fixed order (docs/prd.md §4.2). */
   letter: string;
@@ -89,61 +79,32 @@ export interface QuestionOptionProps {
   picked?: boolean;
   /** One of the options they did not pick — the day is answered, so it recedes. */
   dimmed?: boolean;
-  /**
-   * First tap done, waiting for the second: the option is lifted and asks to be
-   * tapped again (docs/prd.md §4.3). Never true at the same time as `picked` —
-   * one is the state before the write, the other the state after it.
-   */
-  selected?: boolean;
-  /** Absent once the day is answered — the choice is final, so the row stops taking taps. */
-  onPress?: () => void;
 }
 
 /**
  * One answer option of docs/prd.md §5.4: full width, `card` surface, thick
  * border, hard offset shadow, label in `font-sans` behind its quizz letter.
  *
- * It carries the double tap of §4.3 without knowing it is a double tap: the
- * screen decides what each tap means and hands back `selected`, this row only
- * renders the three states — resting, selected and waiting for confirmation,
- * or picked once the answer is written. There is no « Valider » button by
- * design; the micro-text under a selected label is what says so.
+ * Presentational only. Answering is the double tap of §4.3 — first tap selects,
+ * second validates — which needs the answer write and the StatOwrel card (§5.5)
+ * to land somewhere; until then the list shows the choices without taking one.
  */
-export const QuestionOption = ({
-  letter,
-  label,
-  picked = false,
-  dimmed = false,
-  selected = false,
-  onPress,
-}: QuestionOptionProps) => (
-  <Pressable
-    accessibilityRole="button"
-    accessibilityState={{ selected: picked || selected, disabled: onPress === undefined }}
-    accessibilityLabel={selected ? `${label}. Tape encore pour valider` : label}
-    disabled={onPress === undefined}
-    onPress={onPress}
+export const QuestionOption = ({ letter, label, picked = false, dimmed = false }: QuestionOptionProps) => (
+  <View
+    style={[
+      styles.option,
+      picked ? styles.picked : null,
+      dimmed ? styles.dimmed : shadows.md,
+    ]}
   >
-    {({ pressed }) => (
-      <View
-        style={[
-          styles.option,
-          picked || selected ? styles.picked : null,
-          dimmed ? styles.dimmed : selected ? shadows.lg : shadows.md,
-          pressed ? SUNK : selected ? LIFT : null,
-        ]}
-      >
-        <View style={[ styles.letterBox, picked || selected ? styles.pickedLetterBox : null ]}>
-          <Text style={styles.letter}>{letter}</Text>
-        </View>
+    <View style={[ styles.letterBox, picked ? styles.pickedLetterBox : null ]}>
+      <Text style={styles.letter}>{letter}</Text>
+    </View>
 
-        <View style={styles.body}>
-          <Text style={[ styles.label, picked || selected ? styles.pickedLabel : null ]}>{label}</Text>
+    <View style={styles.body}>
+      <Text style={[ styles.label, picked ? styles.pickedLabel : null ]}>{label}</Text>
 
-          {picked ? <Text style={styles.badge}>Ta réponse</Text> : null}
-          {selected ? <Text style={styles.badge}>Tape encore pour valider</Text> : null}
-        </View>
-      </View>
-    )}
-  </Pressable>
+      {picked ? <Text style={styles.badge}>Ta réponse</Text> : null}
+    </View>
+  </View>
 );
