@@ -1,5 +1,8 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { QuestionShape } from '@/components/icons/shapes';
+import colors from '@/theme/colors';
+
 /** The four states of a calendar cell (docs/prd.md §5.2). */
 export type DayState = 'answered' | 'missed' | 'today' | 'inert';
 
@@ -17,7 +20,7 @@ interface DayCellProps {
 const CONTAINER_BY_STATE: Record<DayState, string> = {
   answered: 'border-2 border-border bg-primary shadow-sm',
   missed: 'border-2 border-border bg-background',
-  today: 'border-4 border-border bg-accent shadow-sm',
+  today: 'border-4 border-border bg-pop shadow-sm',
   inert: 'bg-muted',
 };
 
@@ -53,7 +56,7 @@ export function DayCell({ day, state, statLabel, late, onPress }: DayCellProps) 
           <Text className="font-sans text-[7px] text-muted-foreground">retard</Text>
         ) : null}
 
-        {state === 'missed' ? <Text className="font-head text-xs text-muted-foreground">?</Text> : null}
+        {state === 'missed' ? <QuestionShape size={13} fill={colors['muted-foreground']} /> : null}
       </View>
     </Pressable>
   );

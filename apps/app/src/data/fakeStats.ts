@@ -7,21 +7,14 @@ import { toDayKey } from '@/lib/calendar';
  *
  * Typed against the real `@statowrel/models` shapes so wiring the screen to
  * Firestore later is a swap of the source, not a rewrite of the components.
- * Everything here is generated relative to today so the screen keeps showing a
- * live-looking streak whatever day it is run.
+ * Everything is generated relative to today, so the screen keeps showing a
+ * live-looking history whatever day it is run.
  */
-
-const CURRENT_STREAK = 12;
-const BEST_STREAK = 47;
-
-/** Days before today that have no answer — the "raté" cells of the grid. */
-const MISSED_OFFSETS = new Set([13, 14, 21, 27, 28, 34, 41, 55, 56, 57, 70]);
-
-/** Days answered after their day closed — completed, but they never restored the streak. */
-const LATE_OFFSETS = new Set([19, 33, 48, 62]);
 
 /** How far back the fake history goes — the account's sign-up date. */
 const HISTORY_DAYS = 88;
+
+const BEST_STREAK = 47;
 
 const FAKE_USER_ID = 'fake-user';
 
@@ -36,6 +29,15 @@ const STAT_LABELS = [
   'Le camp du oui',
 ];
 
+export interface StatsScenario {
+  user: UserData;
+  answers: DailyQuestionAnswerData[];
+  /** `stat_label` per answered day — belongs to the day's card, faked here until that model exists. */
+  statLabels: Record<string, string>;
+  answeredCount: number;
+  signUpDate: Date;
+}
+
 function daysAgo(offset: number): Date {
   const date = new Date();
   date.setHours(12, 0, 0, 0);
@@ -44,47 +46,69 @@ function daysAgo(offset: number): Date {
   return date;
 }
 
-export const fakeSignUpDate: Date = daysAgo(HISTORY_DAYS);
-
-export const fakeUser: UserData = {
-  display_name: 'Quentin',
-  photo_url: null,
-  created_at: fakeSignUpDate.toISOString(),
-  updated_at: new Date().toISOString(),
-  streak_count: CURRENT_STREAK,
-  streak_best: BEST_STREAK,
-  // Today is not answered yet, so the streak is anchored on yesterday.
-  streak_last_answered_on: toDayKey(daysAgo(1)),
-};
-
 /**
- * One answer per day over the fake history, minus the missed offsets. Offset 0
- * (today) is deliberately absent: the screen must show the "à répondre" state.
+ * Builds a scenario from the days that were missed.
+ *
+ * Offset 0 (today) is never answered — the screen must always show the
+ * "à répondre" state — so the current streak is simply the run of answered days
+ * ending yesterday.
  */
-export const fakeAnswers: DailyQuestionAnswerData[] = Array.from(
-  { length: HISTORY_DAYS },
-  (_, index) => index + 1,
-)
-  .filter((offset) => !MISSED_OFFSETS.has(offset))
-  .map((offset) => {
-    const date = daysAgo(offset);
+function buildScenario(missedOffsets: Set<number>, lateOffsets: Set<number>): StatsScenario {
+  const signUpDate = daysAgo(HISTORY_DAYS);
 
-    return {
-      user_id: FAKE_USER_ID,
-      date: toDayKey(date),
-      option_id: `option-${offset % 3}`,
-      answered_at: date.toISOString(),
-      late: LATE_OFFSETS.has(offset),
-    };
-  });
+  const answers: DailyQuestionAnswerData[] = Array.from(
+    { length: HISTORY_DAYS },
+    (_, index) => index + 1,
+  )
+    .filter((offset) => !missedOffsets.has(offset))
+    .map((offset) => {
+      const date = daysAgo(offset);
 
-/**
- * `stat_label` shown inside an answered cell (docs/prd.md §5.2). Belongs to the
- * day's card, not to the answer — faked here until the card model exists.
- */
-export const fakeStatLabels: Record<string, string> = Object.fromEntries(
-  fakeAnswers.map((answer, index) => [answer.date, STAT_LABELS[index % STAT_LABELS.length]]),
+      return {
+        user_id: FAKE_USER_ID,
+        date: toDayKey(date),
+        option_id: `option-${offset % 3}`,
+        answered_at: date.toISOString(),
+        late: lateOffsets.has(offset),
+      };
+    });
+
+  let streakCount = 0;
+  while (!missedOffsets.has(streakCount + 1) && streakCount < HISTORY_DAYS) {
+    streakCount += 1;
+  }
+
+  // A late answer completes the calendar but never restores the streak
+  // (docs/prd.md §4.6), so the streak's anchor is the last on-time answer.
+  const lastOnTime = answers.find((answer) => !answer.late) ?? null;
+
+  return {
+    user: {
+      display_name: 'Quentin',
+      photo_url: null,
+      created_at: signUpDate.toISOString(),
+      updated_at: new Date().toISOString(),
+      streak_count: streakCount,
+      streak_best: BEST_STREAK,
+      streak_last_answered_on: lastOnTime?.date ?? null,
+    },
+    answers,
+    statLabels: Object.fromEntries(
+      answers.map((answer, index) => [answer.date, STAT_LABELS[index % STAT_LABELS.length]]),
+    ),
+    answeredCount: answers.length,
+    signUpDate,
+  };
+}
+
+/** The nominal case: twelve days in a row, today still to answer. */
+export const runningStreakScenario: StatsScenario = buildScenario(
+  new Set([13, 14, 21, 27, 28, 34, 41, 55, 56, 57, 70]),
+  new Set([19, 33, 48, 62]),
 );
 
-/** Total answered days, shown next to the streaks. */
-export const fakeAnsweredCount: number = fakeAnswers.length;
+/** The broken case: the last three days were missed, so the streak is back to 0. */
+export const brokenStreakScenario: StatsScenario = buildScenario(
+  new Set([1, 2, 3, 11, 12, 19, 25, 26, 32, 39, 53, 54, 68]),
+  new Set([4, 17, 31, 46, 60]),
+);

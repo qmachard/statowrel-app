@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { DayCell, type DayState } from '@/components/DayCell';
+import { StickerButton } from '@/components/StickerButton';
+import { ArrowLeftShape, ArrowRightShape } from '@/components/icons/shapes';
 import {
   addMonths,
   buildMonthGrid,
@@ -12,6 +14,7 @@ import {
   toMonthCursor,
   WEEKDAY_LABELS,
 } from '@/lib/calendar';
+import colors from '@/theme/colors';
 
 interface MonthCalendarProps {
   /** `YYYY-MM-DD` keys of the days the user answered. */
@@ -72,14 +75,20 @@ export function MonthCalendar({
   return (
     <View className="w-full border-2 border-border bg-card p-4 shadow-lg">
       <View className="flex-row items-center justify-between">
-        <MonthArrow
-          direction="prev"
+        <StickerButton
+          shape={ArrowLeftShape}
+          label="Mois précédent"
+          fill={colors.primary}
+          size={40}
           disabled={!canGoBack}
           onPress={() => setCursor(addMonths(cursor, -1))}
         />
         <Text className="font-head text-lg text-card-foreground">{formatMonthLabel(cursor)}</Text>
-        <MonthArrow
-          direction="next"
+        <StickerButton
+          shape={ArrowRightShape}
+          label="Mois suivant"
+          fill={colors.primary}
+          size={40}
           disabled={!canGoForward}
           onPress={() => setCursor(addMonths(cursor, 1))}
         />
@@ -119,27 +128,5 @@ export function MonthCalendar({
         ))}
       </View>
     </View>
-  );
-}
-
-function MonthArrow({
-  direction,
-  disabled,
-  onPress,
-}: {
-  direction: 'prev' | 'next';
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      disabled={disabled}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={direction === 'prev' ? 'Mois précédent' : 'Mois suivant'}
-      className={`h-10 w-10 items-center justify-center border-2 border-border ${disabled ? 'bg-muted opacity-40' : 'bg-primary shadow-sm'}`}
-    >
-      <Text className="font-head text-xl text-foreground">{direction === 'prev' ? '‹' : '›'}</Text>
-    </Pressable>
   );
 }

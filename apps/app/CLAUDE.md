@@ -9,17 +9,19 @@ One screen exists: the Stats home (`app/index.tsx`, docs/prd.md §5.2) — strea
 ## Structure
 
 - `app/` — [Expo Router](https://docs.expo.dev/router/introduction/) file-based routes. `_layout.tsx` is the root layout (imports `global.css`, holds the splash screen while the fonts load). It must render its navigator on the **first** render — returning `null` while resources load, or nesting a second `SafeAreaProvider` (expo-router's `ExpoRoot` already provides one, and a nested one renders `null` until the native insets arrive), leaves the NavigationContainer without a navigator and throws "Couldn't find a navigation context" on device. Add screens as `app/<route>.tsx` / `app/<route>/_layout.tsx`.
-- `src/components/` — screen-level building blocks (`StreakCard`, `StatTile`, `MonthCalendar`, `DayCell`), PascalCase, one component per file, styled with the `tailwind.config.js` tokens only.
+- `src/components/` — screen-level building blocks (`StatsHeader`, `StreakCard`, `StatTile`, `MonthCalendar`, `DayCell`) plus the `StickerButton` primitive and the `icons/` sticker set, PascalCase, one component per file, styled with the `tailwind.config.js` tokens only.
+- `src/theme/colors.js` — the palette (cream, golden yellow, bubblegum pink, black), in plain CommonJS so both `tailwind.config.js` (loaded by Node, outside Babel) and the app runtime read the same values. Sticker icons take a fill string rather than a class, so they need the palette at runtime; `colors.d.ts` types it.
 - `src/lib/` — framework-free helpers (`calendar.ts`: `YYYY-MM-DD` day keys and the month grid).
 - `src/data/` — placeholder datasets standing in for Firestore reads, typed against `@statowrel/models`. Delete a file here as soon as its screen is wired up for real.
 - `src/lib/firebase.ts` — Firebase client SDK (`firebase` npm package, not `@react-native-firebase`) init: `app`, `auth` (persisted via `@react-native-async-storage/async-storage`), `db`. Same client SDK the rest of the monorepo uses, so `@statowrel/models` converters work unchanged.
-- `tailwind.config.js` — Nativewind preset + neobrutalism theme tokens (palette, `font-head`/`font-sans`, `borderRadius: 0`, thick `borderWidth`, hard offset `boxShadow` scale).
+- `tailwind.config.js` — Nativewind preset + neobrutalism theme tokens (`font-head`/`font-sans`, `borderRadius: 0`, thick `borderWidth`, hard offset `boxShadow` scale). The palette itself comes from `src/theme/colors.js`.
 - `global.css` — Tailwind directives, imported once in `app/_layout.tsx`.
 - `app.config.ts` — dynamic Expo config. Reads `APP_VARIANT` (`development` | `preview` | `production`, set per EAS build profile in `eas.json`) to pick app name / bundle identifier / package name, so dev/preview/prod can be installed side-by-side on a device.
 - `eas.json` — EAS Build & Submit profiles: `development` (dev client, internal), `preview` (internal), `production` (store-ready, auto-incremented build number).
 
 ## Conventions
 
+- Icons are hand-built SVG stickers in `src/components/icons/shapes.tsx` (backed by `react-native-svg`) — never emoji, and no icon library: an off-the-shelf set is drawn as thin uniform strokes, which disappears next to 2px borders and hard offset shadows. Each shape is closed and takes a `fill` from `@/theme/colors`. Wrap it in `<Sticker>` for the offset shadow copy, or in `<StickerButton>` for the round disc button.
 - Use `className` (Nativewind) for styling, not `StyleSheet.create`, unless a style genuinely can't be expressed in Tailwind (complex platform-specific values) — in which case colocate it with `useMemo`/`StyleSheet.create` next to the component.
 - Firestore reads/writes ALWAYS go through a converter from `@statowrel/models` (`getDoc(doc(db, ...).withConverter(converter(Timestamp, GeoPoint)))`) — never read `snap.data()` untyped.
 - Public env vars (safe to embed in the client bundle) are prefixed `EXPO_PUBLIC_` and read via `process.env` — see `.env.example`. Never put a secret behind `EXPO_PUBLIC_*`.

@@ -1,29 +1,16 @@
+const colors = require('./src/theme/colors');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // Single-theme app (docs/prd.md §5) — no `dark:` variant is ever used.
+  // 'media' would let the browser's own colour-scheme preference reach
+  // NativeWind's observer, which then throws rather than ignoring it.
+  darkMode: 'class',
   content: ['./app/**/*.{js,jsx,ts,tsx}', './src/**/*.{js,jsx,ts,tsx}'],
   presets: [require('nativewind/preset')],
   theme: {
     extend: {
-      colors: {
-        background: '#fff7e8',
-        foreground: '#000000',
-        card: '#ffffff',
-        'card-foreground': '#000000',
-        primary: '#ffdc58',
-        'primary-hover': '#ffd12e',
-        'primary-foreground': '#000000',
-        secondary: '#000000',
-        'secondary-foreground': '#ffffff',
-        muted: '#efe7d6',
-        'muted-foreground': '#6b6355',
-        accent: '#ffe7a3',
-        'accent-foreground': '#000000',
-        destructive: '#e63946',
-        'destructive-foreground': '#ffffff',
-        border: '#000000',
-        input: '#ffffff',
-        ring: '#000000',
-      },
+      colors,
       fontFamily: {
         head: ['ArchivoBlack_400Regular'],
         sans: ['SpaceGrotesk_400Regular'],

@@ -140,43 +140,50 @@ Immédiatement après avoir répondu :
 
 ## 5. Navigation & écrans
 
-L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), `radius: 0` partout, titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Les tokens sont déjà dans `apps/app/tailwind.config.js` — aucun écran ne définit sa propre palette.
+L'app est en **neobrutalisme / sticker** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), `radius: 0` partout, titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk).
 
-Toute l'app tient en **deux onglets, une modale et une carte**. Il n'y a pas de troisième niveau de navigation.
+Quatre encres, pas une de plus : papier crème (`background`), jaune doré (`primary`), rose bubblegum (`pop`), noir pour tous les contours. Le rose ne décore pas : il marque ce qui n'est pas un jour comme les autres — la flamme du streak, le record, la case d'aujourd'hui, l'invitation.
 
-### 5.1 Tabbar
+**Aucune icône de librairie, aucun emoji.** Les pictogrammes sont des **stickers** dessinés à la main : forme fermée, aplat de couleur, contour noir épais, copie noire décalée en guise d'ombre — comme toutes les autres surfaces. Un jeu d'icônes standard est tracé en traits fins uniformes : il disparaît à côté d'une bordure de 2px, et un emoji ne se colore pas et change de dessin sur chaque plateforme.
 
-Deux onglets, et deux seulement :
+Les tokens sont dans `apps/app/src/theme/colors.js`, lu à la fois par `tailwind.config.js` et par l'app — aucun écran ne définit sa propre palette.
 
-| Onglet | Rôle |
-|---|---|
-| **Stats** (par défaut) | Le streak, le calendrier, l'accès à la question du jour et aux jours passés |
-| **Profil** | Son identité, ses amis, ses propositions de questions, ses réglages |
+Toute l'app tient en **un écran d'accueil, un écran Profil, une modale et une carte**. Il n'y a pas de troisième niveau de navigation.
 
-- Barre fixe en bas, fond `card`, **bordure haute noire épaisse**, pas d'ombre interne, pas de flou de fond.
-- Onglet actif : pastille `primary` pleine sous l'icône + label, bordure noire et ombre dure décalée (`shadow-sm`) — l'onglet actif « sort » de la barre. Onglet inactif : `muted-foreground`, sans bordure.
+### 5.1 Navigation
+
+**Pas de tabbar.** L'écran Stats (§5.2) est la racine de l'app : on y arrive au lancement et on y revient toujours. Une barre d'onglets pour deux écrans dont un seul se consulte quotidiennement coûterait une bande permanente en bas de l'écran pour rien.
+
+L'accès au Profil se fait par **deux boutons-icônes en haut à droite** de l'écran Stats, alignés sur la ligne de salutation : disque plein, bordure noire épaisse, ombre dure décalée, glyphe noir au centre.
+
+| Bouton | Pastille | Destination |
+|---|---|---|
+| **Inviter un pote** | `pop` (rose), glyphe « + » | Le partage du lien + code à 6 caractères (§4.1) |
+| **Modifier le profil** | `primary` (jaune), glyphe crayon | L'écran Profil (§5.3) |
+
+- L'invitation a son propre bouton plutôt que d'être enterrée dans le Profil : c'est l'action qui fait vivre le produit (§4.1), elle ne doit jamais être à deux taps.
 - Pas de badge numérique ; l'état « question du jour non répondue » se signale par la modale (§5.4), pas par une pastille.
 
 ### 5.2 Écran Stats
 
 L'écran d'accueil. De haut en bas :
 
-**1. Bloc streak.** Une carte `primary` bordée, ombre `lg`, occupant toute la largeur : le nombre de jours en très gros (`font-head`), le mot « jours d'affilée » en dessous, et un pictogramme de flamme. Quand le streak est à 0, la carte passe en `muted` avec « Réponds aujourd'hui pour repartir ».
+**1. En-tête.** À gauche, « Salut {pseudo} » en `font-head` et une ligne de sous-titre en `font-sans`. À droite, les deux boutons-icônes de §5.1.
 
-**2. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, `radius: 0`, séparées par une gouttière régulière. Quatre états :
+**2. Bloc streak.** Une carte `primary` bordée, ombre `lg`, occupant toute la largeur : le nombre de jours en très gros (`font-head`), le mot « jours d'affilée » en dessous, et un sticker flamme `pop`. Quand le streak est à 0, la carte passe en `muted` et la flamme s'éteint (aplat `muted`), avec « Réponds aujourd'hui pour repartir ».
+
+**3. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, `radius: 0`, séparées par une gouttière régulière. Quatre états :
 
 | État | Rendu | Tap |
 |---|---|---|
 | **Répondu** | Case `primary`, ombre dure, le `stat_label` du jour en micro-texte (tronqué) | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
-| **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
-| **Aujourd'hui, pas encore répondu** | Case `accent`, bordure doublée, légère pulsation | Ouvre la modale question du jour (§5.4) |
+| **Raté** (jour passé sans réponse) | Case `background`, bordure noire, petit sticker « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
+| **Aujourd'hui, pas encore répondu** | Case `pop` (rose), bordure doublée, légère pulsation | Ouvre la modale question du jour (§5.4) |
 | **Futur, ou antérieur à l'inscription** | Case `muted`, sans bordure | Inerte |
 
 - Navigation mois par mois (chevrons gauche/droite), bornée à la date d'inscription d'un côté et au mois courant de l'autre.
 - Le calendrier **est** l'historique : c'est le seul endroit où l'on retrouve les questions passées et ses propres cartes.
 - Un jour sans question diffusée (avant le lancement, ou incident de publication) est rendu comme « futur » : inerte, non rattrapable.
-
-**3. Rappel du jour.** Si la question du jour n'est pas encore tombée, un encart en bas : « La question tombe entre 8h et 20h ». Pas de compte à rebours (l'heure est aléatoire — un compte à rebours mentirait).
 
 ### 5.3 Écran Profil
 
@@ -187,7 +194,7 @@ L'écran d'accueil. De haut en bas :
 
 ### 5.4 Modale question (bottom sheet)
 
-La question ne vit **jamais** dans un onglet : c'est toujours une **bottom sheet** posée par-dessus l'écran Stats.
+La question n'a **jamais** son propre écran : c'est toujours une **bottom sheet** posée par-dessus l'écran Stats.
 
 - **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins droits (`radius: 0`), bordure haute noire épaisse, ombre dure vers le haut.
 - **Rattrapage depuis le calendrier** → même sheet, mais **fermable** (poignée + tap sur le fond) : on a le droit de regarder une vieille question et de repartir sans répondre.
@@ -224,7 +231,7 @@ Anatomie de la carte, dans l'ordre vertical :
 
 ### 5.6 Ce qui n'existe pas
 
-Pas de feed, pas d'onglet « amis » séparé, pas d'écran de recherche, pas de menu latéral, pas de réglages sur l'écran Stats. Deux onglets, une modale, une carte.
+Pas de feed, pas d'écran « amis » séparé, pas d'écran de recherche, pas de menu latéral, pas de tabbar, pas de réglages sur l'écran Stats. Pas non plus d'encart « la question tombe entre 8h et 20h » : l'heure est aléatoire (§4.2), un rappel permanent de cette fenêtre n'apprend rien et encombre l'accueil. Un accueil, un Profil, une modale, une carte.
 
 ## 6. Modèle de données (esquisse)
 

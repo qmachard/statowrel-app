@@ -9,7 +9,7 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Monorepo | Turborepo + npm workspaces | npm only — never yarn/pnpm/bun |
 | Language | TypeScript 5.4+ | Strict mode everywhere |
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
-| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `tailwind.config.js`; component primitives added later |
+| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism/sticker design tokens; palette in `src/theme/colors.js`, the rest in `tailwind.config.js` |
 | Mobile routing | Expo Router | File-based, `apps/app/app/` |
 | Backoffice | React 18 + Vite (SPA) + FireCMS v2 + MUI | Firebase-Hosting-deployed admin UI |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
@@ -193,7 +193,7 @@ Three build profiles in `eas.json`, mapped to root-level npm scripts:
 
 ### Design system
 
-**Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur. Tokens live in `apps/app/tailwind.config.js`: color palette (`background`/`foreground`/`card`/`primary`/`primary-hover`/`secondary`/`muted`/`accent`/`destructive`/`border`/`input`/`ring`), `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), `borderRadius` collapsed to `0` (except `full`), a thicker default `borderWidth` (2px), and a hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/app/_layout.tsx`, with the splash screen held until `useFonts` resolves.
+**Neobrutalism / sticker** visual style — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur, and pictograms drawn as hand-built SVG stickers rather than taken from an icon library (see `apps/app/src/components/icons/`). The palette lives in `apps/app/src/theme/colors.js` — plain CommonJS, required by both `tailwind.config.js` and the app runtime, since a sticker takes a fill string rather than a class: cream `background`, golden `primary`, bubblegum `pop`, black `border`, plus `foreground`/`card`/`primary-hover`/`secondary`/`muted`/`accent`/`destructive`/`input`/`ring`. The remaining tokens live in `apps/app/tailwind.config.js`: `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), `borderRadius` collapsed to `0` (except `full`), a thicker default `borderWidth` (2px), and a hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/app/_layout.tsx`, with the splash screen held until `useFonts` resolves.
 
 neobrutalism.com's own registry ships components through the `shadcn` CLI (`npx shadcn add https://neobrutalism.com/r/...`), but those are web-only, built on Radix UI / Base UI — both need a DOM and can't run in React Native. Hence the hand-written token setup here rather than a CLI install.
 
@@ -219,6 +219,6 @@ Two Firebase projects, aliased in `.firebaserc`:
 - Only the Stats home screen exists on mobile (`apps/app/app/index.tsx`), and it renders placeholder data from `apps/app/src/data/fakeStats.ts` — nothing consumes `v1_questions` or `v1_daily_question_answers` on mobile yet.
 - Four of the PRD's five collections exist; only `v1_users/{id}/friends` is still to be modelled — see `docs/prd.md` §6.
 - No backend to own `v1_daily_questions`/`v1_daily_question_answers`: no daily scheduler, no answer trigger to increment `answer_counts` and bump streaks, no midnight closer (docs/prd.md §6 "Backend") — and no app screens consume any of it yet. The data model landed alone, on purpose.
-- No design-system component primitives (buttons, cards, inputs) — the neobrutalism theme tokens exist in `tailwind.config.js`, the primitives are the next step. No dark-mode theming either.
+- Barely any design-system component primitives — `StickerButton` and the `icons/` shapes exist, buttons/cards/inputs are the next step. No dark-mode theming either: the app is single-theme (`userInterfaceStyle: 'light'`, Tailwind `darkMode: 'class'` with no `dark:` variant in use).
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.

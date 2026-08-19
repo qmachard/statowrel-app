@@ -32,7 +32,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: 'statowrel',
   version: '1.0.0',
   orientation: 'portrait',
-  userInterfaceStyle: 'automatic',
+  // The palette has exactly one theme (docs/prd.md §5): there is no dark
+  // variant to switch to. Leaving this on 'automatic' makes the OS push a
+  // dark colour scheme the styles never answer — and on web it throws out of
+  // NativeWind's color-scheme observer, which only accepts a scheme change
+  // when Tailwind's darkMode is 'class'.
+  userInterfaceStyle: 'light',
   ios: {
     ...config.ios,
     bundleIdentifier: variant.iosBundleIdentifier,
