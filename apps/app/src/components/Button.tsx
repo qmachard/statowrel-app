@@ -39,7 +39,7 @@ const LABEL: Record<ButtonVariant, string> = {
   secondary: 'text-secondary-foreground',
   destructive: 'text-destructive-foreground',
   outline: 'text-foreground',
-  ghost: 'text-accent-foreground',
+  ghost: 'text-foreground',
   link: 'text-foreground underline',
 };
 
@@ -49,7 +49,7 @@ const FOREGROUND: Record<ButtonVariant, string> = {
   secondary: colors['secondary-foreground'],
   destructive: colors['destructive-foreground'],
   outline: colors.foreground,
-  ghost: colors['accent-foreground'],
+  ghost: colors.foreground,
   link: colors.foreground,
 };
 
@@ -96,13 +96,18 @@ const PRESSED: Record<ButtonVariant, ViewStyle | undefined> = {
   link: undefined,
 };
 
-/** The flat variants have no shadow to sink into: they acknowledge the press with a tint. */
+/**
+ * The flat variants have no shadow to sink into: they acknowledge the press
+ * with a tint. `muted` rather than `accent` — accent is a saturated red now,
+ * far too loud for a ghost button, and its white foreground would have been
+ * invisible on the page the rest of the time.
+ */
 const PRESSED_TINT: Record<ButtonVariant, string> = {
   default: '',
   secondary: '',
   destructive: '',
   outline: '',
-  ghost: 'bg-accent',
+  ghost: 'bg-muted',
   link: 'opacity-70',
 };
 
@@ -142,7 +147,7 @@ const ICON_SIZE: Record<ButtonSize, number> = {
 const isIconOnly = (size: ButtonSize) => size.startsWith('icon');
 
 /**
- * The neobrutalist button: thick border, slightly rounded corners and a hard
+ * The neobrutalist button: thick border, rounded corners (`sm`) and a hard
  * offset shadow it presses *into* — the press translates the surface by exactly
  * the shadow offset (4px, see `SUNK`) and drops the shadow, so the button looks
  * like it sinks flat against the page.
@@ -176,7 +181,7 @@ export const Button = ({
           // A pressed surface drops its shadow entirely — it has sunk into it.
           style={pressed ? PRESSED[variant] : RESTING[variant]}
           className={[
-            'flex-row items-center justify-center gap-2 rounded',
+            'flex-row items-center justify-center gap-2 rounded-sm',
             SURFACE[variant],
             SIZE[size],
             pressed ? PRESSED_TINT[variant] : '',

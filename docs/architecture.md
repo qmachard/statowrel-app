@@ -10,7 +10,7 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Language | TypeScript 5.4+ | Strict mode everywhere |
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
 | Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `src/design/tokens.js`; `Button` / `TextField` primitives in `src/components/`, the rest added as screens need them |
-| Mobile routing | React Navigation 7 | Native stack + bottom tabs, declared in `apps/app/src/navigation/` |
+| Mobile routing | React Navigation 7 | Native stack only — no tab bar, Stats is the root (docs/prd.md §5.1) — declared in `apps/app/src/navigation/` |
 | Backoffice | React 18 + Vite (SPA) + FireCMS v2 + MUI | Firebase-Hosting-deployed admin UI |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
 | Database | Firebase Firestore | NoSQL, event-sourcing-friendly, `v1_` collection prefix |
@@ -258,7 +258,7 @@ Deliberately deferred: Facebook (PRD §4.1, no button yet), identity linking via
 
 ### Design system
 
-**Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur. The palette lives in `apps/app/src/design/tokens.js` — CommonJS, so `tailwind.config.js` can `require()` it while TypeScript imports the same values for the parts React Navigation paints itself (container theme, tab bar, stack `contentStyle`). That module also owns the `borderRadius` scale (corners are *slightly* rounded rather than square — `rounded` is 4px, matching the neobrutalism.com recipe, with `sm`/`md`/`lg` at 2/6/8px and `full` still available) and the hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). `apps/app/tailwind.config.js` holds the rest: color palette (`background`/`foreground`/`card`/`primary`/`primary-hover`/`secondary`/`secondary-hover`/`muted`/`accent`/`destructive`/`border`/`input`/`ring`), `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), and a thicker default `borderWidth` (2px).
+**Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur. The palette lives in `apps/app/src/design/tokens.js` — CommonJS, so `tailwind.config.js` can `require()` it while TypeScript imports the same values for the parts React Navigation paints itself (container theme, tab bar, stack `contentStyle`). That module also owns the `borderRadius` scale (corners are rounded rather than square — the border and the shadow carry the brutalism, so the ladder runs 8/12/16/20/24/32px from `sm` to `2xl`, `full` still available) and the hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). `apps/app/tailwind.config.js` holds the rest: color palette (`background`/`foreground`/`card`/`primary`/`primary-hover`/`secondary`/`secondary-hover`/`muted`/`accent`/`accent-hover`/`destructive`/`border`/`input`/`ring`) — four tokens carry the identity, black text on a cream `background`, a yellow `primary` for the main action and a saturated red `accent` for the accentuated one, which is why `accent` is the only surface taking white text, `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), and a thicker default `borderWidth` (2px).
 
 Components apply the shadows through `apps/app/src/design/shadows.ts` rather than Nativewind's `shadow-*` classNames. Those compile down to the *legacy* iOS shadow props (`shadowOffset` / `shadowRadius` / `shadowOpacity`, plus `elevation` on Android), which stop reproducing a CSS box-shadow faithfully once a surface has a corner radius — the edge softens, which defeats the point of a neobrutalist shadow. `shadows.ts` hands React Native the CSS `boxShadow` string (RN 0.76+) instead, so a `0` blur radius stays a `0` blur radius. Same token strings feed both. Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/src/App.tsx`, with the splash screen held until `useFonts` resolves.
 
@@ -285,9 +285,9 @@ The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=�
 
 ## What's deliberately not here yet
 
-- No app screens beyond sign-in and a placeholder home — nothing consumes `v1_questions` on mobile yet.
+- The Stats screen (docs/prd.md §5.2) renders from fixtures, not Firestore — `apps/app/src/stats/data/` holds two fake data sets and the `__DEV__` switch between them. Nothing consumes `v1_questions` on mobile yet, and the calendar's cells are not tappable: the question sheet (§5.4) and the StatOwrel card (§5.5) they open do not exist.
 - Four of the PRD's five collections exist; only `v1_users/{id}/friends` is still to be modelled — see `docs/prd.md` §6.
 - The daily cycle's back half: no answer trigger to increment `answer_counts` and bump streaks, no midnight closer resetting the streaks of whoever didn't answer (docs/prd.md §6 "Backend"). The push `dailyQuestions-notifyDailyQuestion` sends is a stub too — the task fires at the right instant, it just doesn't notify anyone yet. And no app screen consumes any of it.
-- Only two design-system primitives (`Button`, `TextField`), built for the auth forms — cards, chips and the rest come with the screens that need them. No dark-mode theming either.
+- Design-system primitives are added as screens need them — `Button`, `TextField`, `Card`, `IconButton`, `Calendar` so far. No dark-mode theming either (light only).
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.
