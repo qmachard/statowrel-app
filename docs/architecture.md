@@ -77,7 +77,7 @@ Re-export every new model from `src/index.ts`.
 
 ### `v1_questions` — first model
 
-`packages/models/src/v1_questions.ts`. The pot of questions users propose and moderators approve — see `docs/prd.md` §4.7 and §5.
+`packages/models/src/v1_question.ts` — collections are plural, the model file that describes one document is singular. The pot of questions users propose and moderators approve — see `docs/prd.md` §4.7 and §5.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -116,7 +116,7 @@ domains/{domain-name}/
 
 ## `apps/firecms` — backoffice
 
-FireCMS v2 SPA. `src/collections/index.ts` is the list of `EntityCollection` definitions. Each collection is added as its own file once the corresponding model exists in `@statowrel/models`, using that model's `*_COLLECTION` constant, then registered in the index. `src/collections/questions.ts` is the first one.
+FireCMS v2 SPA. `src/collections/index.ts` is the list of `EntityCollection` definitions. Each collection is added as its own file once the corresponding model exists in `@statowrel/models`, using that model's `*_COLLECTION` constant, then registered in the index. `src/collections/v1_questions.ts` is the first one; a collection file is named after the collection itself, plural.
 
 Two things to know when writing a collection:
 
