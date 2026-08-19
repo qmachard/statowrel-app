@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { Star, StarMuted } from '@/components/animations';
+import { Star, StarPeeled } from '@/components/animations';
 import { Card, CardContent } from '@/components/Card';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
@@ -85,14 +85,13 @@ export const StreakCard = ({ count }: StreakCardProps) => {
 
         {/*
           * A running streak gets the star again every few seconds. A broken one
-          * gets the same sticker drained of its colors and held still — the
-          * animation is what says the series is alive, so a stopped series has
-          * to stop it too.
+          * gets the outline the sticker left when it came off — same box, same
+          * place, nothing inside it.
           */}
         {alive ? (
           <Star size="xl" replayDelay={STAR_REPLAY_DELAY} style={styles.star} />
         ) : (
-          <StarMuted size="xl" autoPlay={false} style={styles.star} />
+          <StarPeeled size="xl" autoPlay={false} style={styles.star} />
         )}
       </CardContent>
     </Card>
