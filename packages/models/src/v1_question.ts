@@ -50,9 +50,8 @@ export interface QuestionFirebaseData {
   /** Reason sent back to the author. Null unless `status` is `rejected`. */
   rejection_reason: string | null;
   /**
-   * Day and time the question is broadcast as the daily question. The drop
-   * time varies from one day to the next, so this carries the hour too, not
-   * just the date. Null until the question is scheduled.
+   * Instant the question is broadcast as the daily question — the day it was
+   * drawn, at the 07:00 Paris drop time. Null until the question is drawn.
    */
   broadcast_at: UniversalTimestamp | null;
   created_at: UniversalTimestamp;

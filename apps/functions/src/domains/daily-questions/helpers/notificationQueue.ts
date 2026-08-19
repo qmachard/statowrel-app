@@ -19,7 +19,12 @@ export interface NotifyDailyQuestionPayload {
 }
 
 /**
- * Schedules the publication notification for a day's question.
+ * Queues the publication notification for a day's question, for immediate
+ * dispatch — the question drops the moment the scheduler draws it (docs/prd.md §4.2).
+ *
+ * It still goes through Cloud Tasks rather than being sent inline: the fan-out
+ * to every user gets its own retries and its own rate limit, and a failing push
+ * never makes the scheduler re-draw the day.
  *
  * The task id is derived from the day, which is what makes the whole scheduler
  * run idempotent: a retry re-enqueues the same id, Cloud Tasks rejects it, and
@@ -28,18 +33,17 @@ export interface NotifyDailyQuestionPayload {
  */
 export const enqueueDailyQuestionNotification = async (
   payload: NotifyDailyQuestionPayload,
-  scheduleTime: Date,
 ): Promise<void> => {
   const queue = getFunctions(initFirebase())
     .taskQueue<NotifyDailyQuestionPayload>(`locations/${REGION_CLOUD}/functions/${NOTIFY_DAILY_QUESTION_FUNCTION}`);
 
   try {
-    await queue.enqueue(payload, { scheduleTime, id: `daily-question-${payload.date}` });
+    await queue.enqueue(payload, { id: `daily-question-${payload.date}` });
   } catch (error) {
     if ((error as { code?: string }).code !== TASK_ALREADY_EXISTS) {
       throw error;
     }
 
-    logger.info('Notification already scheduled for this day, nothing to do', { date: payload.date });
+    logger.info('Notification already queued for this day, nothing to do', { date: payload.date });
   }
 };

@@ -15,16 +15,15 @@ import { createWriteBatch, getDocumentRef, parseData, REGION_CLOUD } from '@/lib
 
 import { drawApprovedQuestion } from '../helpers/drawQuestion';
 import { enqueueDailyQuestionNotification } from '../helpers/notificationQueue';
-import { nextDateKey } from '../helpers/parisTime';
-import { closingTimeOf, pickPublishedAt } from '../helpers/publicationTime';
+import { closingTimeOf, publicationTimeOf, PUBLICATION_HOUR } from '../helpers/publicationTime';
 
 const dailyQuestionRefOf = (date: string) => (
   getDocumentRef(DAILY_QUESTION_COLLECTION, date, dailyQuestionConverter)
 );
 
 /**
- * Draws one approved question for `date`, picks the time it drops, and commits
- * both halves of that decision: the day document and the question turning `used`.
+ * Draws one approved question for `date` and commits both halves of that
+ * decision: the day document and the question turning `used`.
  *
  * Returns `null` when the approved pot is empty — that day gets no question at
  * all, which the app already renders as an inert day (docs/prd.md §5.2).
@@ -38,7 +37,7 @@ const drawDailyQuestion = async (date: string): Promise<DailyQuestionData | null
     return null;
   }
 
-  const publishedAt = pickPublishedAt(date);
+  const publishedAt = publicationTimeOf(date);
   const dailyQuestion: DailyQuestionData = {
     date,
     question_id: question.id,
@@ -63,20 +62,19 @@ const drawDailyQuestion = async (date: string): Promise<DailyQuestionData | null
 };
 
 /**
- * Draws tomorrow's question, picks the time it drops, and schedules the
- * notification for that time — docs/prd.md §6, "Backend".
+ * Draws today's question at 07:00 Paris and pushes it to everyone right away —
+ * docs/prd.md §6, "Backend".
  *
- * It runs a day ahead so the drop time can be anywhere in the 08:00–20:00
- * window, the earliest slot included. Writing `v1_daily_questions/{date}` early
- * leaks nothing: `firestore.rules` refuses an answer before `published_at`, and
- * the app reads a day by its date key, which is still in the future.
+ * One question, one drop time, the same for all users: the day is drawn and
+ * published in the same run, and stays open until Paris midnight, so everyone
+ * has the whole day to answer (docs/prd.md §4.2).
  */
 export const scheduleDailyQuestion = onSchedule({
   region: REGION_CLOUD,
-  schedule: '0 2 * * *',
+  schedule: `0 ${PUBLICATION_HOUR} * * *`,
   timeZone: DAILY_QUESTION_TIME_ZONE,
 }, async () => {
-  const date = nextDateKey(dailyQuestionDateKey(new Date()));
+  const date = dailyQuestionDateKey(new Date());
 
   // A day is drawn once and only once: a retried run reuses what the previous
   // attempt already committed instead of burning a second question.
@@ -86,12 +84,9 @@ export const scheduleDailyQuestion = onSchedule({
     return;
   }
 
-  await enqueueDailyQuestionNotification(
-    { date, question_id: scheduled.question_id },
-    new Date(scheduled.published_at),
-  );
+  await enqueueDailyQuestionNotification({ date, question_id: scheduled.question_id });
 
-  logger.info('Daily question scheduled', {
+  logger.info('Daily question published', {
     date,
     question_id: scheduled.question_id,
     published_at: scheduled.published_at,

@@ -54,12 +54,3 @@ export const parisTimeToInstant = (dateKey: string, hour: number, minute = 0): D
 
   return new Date(naive - parisOffsetMs(firstGuess));
 };
-
-/** The `YYYY-MM-DD` key of the day after `dateKey`. */
-export const nextDateKey = (dateKey: string): string => {
-  const [ year, month, day ] = dateKey.split('-').map(Number);
-
-  // Calendar arithmetic on the day key itself, never `+ 24h` on an instant:
-  // a DST day is 23 or 25 hours long and would land on the wrong date.
-  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
-};
