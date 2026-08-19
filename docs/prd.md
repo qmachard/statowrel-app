@@ -141,14 +141,39 @@ Conventions : collections préfixées `v1_`, champs en `snake_case`, champs opti
 |---|---|
 | `v1_users` | `display_name`, `avatar_url`, `email`, `auth_providers[]` (`password` / `google.com` / `facebook.com` / `apple.com`), `streak_count`, `streak_last_answered_on`, `invite_code` |
 | `v1_users/{id}/friends` | une entrée par ami (écrite des deux côtés à l'acceptation) |
-| `v1_questions` | `label`, `options[]` (`{ key, label, stat_label }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason` |
-| `v1_daily_questions` | une par jour : `date`, `question_id`, `published_at`, `closes_at`, `answer_counts` (map option → total) |
-| `v1_daily_questions/{id}/answers` | une par utilisateur : `user_id`, `option_key`, `answered_at` |
+| `v1_questions` | `label`, `options` (**map** `ULID` → `{ label, stat_label, position }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason` |
+| `v1_daily_questions` | une par jour : `date`, `question_id`, `published_at`, `closes_at`, `answer_counts` (map `option_id` → total) |
+| `v1_daily_questions/{id}/answers` | une par utilisateur : `user_id`, `option_id`, `answered_at` |
+
+### Les options d'une question
+
+`options` est une **map** indexée par **ULID**, pas un tableau :
+
+```json
+{
+  "label": "Ton dentifrice, tu le presses…",
+  "options": {
+    "01JBQZ8K3M4N5P6Q7R8S9T0V1W": { "label": "Par le bout",  "stat_label": "méthodique", "position": 0 },
+    "01JBQZ8K3M4N5P6Q7R8S9T0V2X": { "label": "Au milieu",    "stat_label": "sauvage",    "position": 1 },
+    "01JBQZ8K3M4N5P6Q7R8S9T0V3Y": { "label": "Je l'écrase",  "stat_label": "anarchiste", "position": 2 }
+  }
+}
+```
+
+Pourquoi une map plutôt qu'un tableau :
+
+- **Identité stable.** Une réponse pointe sur un `option_id`, pas sur un index. Un modérateur peut réordonner ou reformuler une option sans invalider les réponses déjà enregistrées ni fausser les compteurs.
+- **Écritures concurrentes sûres.** `answer_counts.{option_id}` s'incrémente par `FieldValue.increment()` sur un chemin fixe. Avec un tableau, incrémenter `answer_counts[2]` demanderait de réécrire tout le tableau — et deux réponses simultanées s'écraseraient.
+- **ULID plutôt qu'UUID** : triable lexicographiquement par date de création, plus court, lisible dans le backoffice.
+
+Un ULID d'option est **généré côté serveur** à la validation de la question et n'est jamais réutilisé. Supprimer une option d'une question déjà diffusée est interdit — on rejette la question et on en crée une nouvelle.
+
+L'ordre d'affichage vient de `position` (entier, dense à partir de 0), pas de l'ordre des clés de la map, qui n'est pas garanti.
 
 **Backend :**
 
 - Un scheduler quotidien tire la question du lendemain et son heure de publication, puis programme la publication (Cloud Tasks).
-- Un trigger sur création de réponse incrémente `answer_counts` et met à jour le streak de l'auteur.
+- Un trigger sur création de réponse incrémente `answer_counts.{option_id}` (`FieldValue.increment(1)`) et met à jour le streak de l'auteur.
 - Un scheduler à minuit clôture la journée et remet à zéro les streaks des utilisateurs sans réponse.
 
 ## 6. Hors périmètre (v1)
