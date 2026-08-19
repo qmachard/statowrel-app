@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    function isOwner(user_id) {
+      return isAuthenticated() && request.auth.uid == user_id;
+    }
+
+    // Admins (FireCMS backoffice) have full access. Every collection-level
+    // rule below only needs to describe the mobile app's access.
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Add v1_* collection rules here as the data model is designed, e.g.:
+    //
+    // match /v1_users/{user_id} {
+    //   allow read, update: if isOwner(user_id);
+    //   allow create: if isAuthenticated();
+    // }
+  }
+}

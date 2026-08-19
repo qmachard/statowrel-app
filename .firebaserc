@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "statowrel-dev",
+    "production": "statowrel-prod"
+  }
+}

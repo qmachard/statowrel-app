@@ -1,0 +1,51 @@
+{
+  "name": "@statowrel/app",
+  "private": true,
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "dev:ios": "expo start --ios",
+    "dev:android": "expo start --android",
+    "prebuild": "expo prebuild",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "build:dev:ios": "eas build --profile development --platform ios",
+    "build:dev:android": "eas build --profile development --platform android",
+    "build:preview:ios": "eas build --profile preview --platform ios",
+    "build:preview:android": "eas build --profile preview --platform android",
+    "build:prod:ios": "eas build --profile production --platform ios",
+    "build:prod:android": "eas build --profile production --platform android",
+    "submit:prod:ios": "eas submit --profile production --platform ios",
+    "submit:prod:android": "eas submit --profile production --platform android",
+    "submit:prod": "npm run submit:prod:ios && npm run submit:prod:android"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "~3.1.1",
+    "@statowrel/models": "*",
+    "expo": "~57.0.14",
+    "expo-constants": "~57.0.12",
+    "expo-linking": "~57.0.6",
+    "expo-router": "~57.0.14",
+    "expo-splash-screen": "~57.0.7",
+    "expo-status-bar": "~57.0.1",
+    "firebase": "^12.17.1",
+    "nativewind": "^4.2.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-native": "0.86.2",
+    "react-native-gesture-handler": "~3.2.1",
+    "react-native-reanimated": "~4.5.3",
+    "react-native-safe-area-context": "~5.9.1",
+    "react-native-screens": "~4.27.0",
+    "react-native-web": "~0.21.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0",
+    "@types/react": "~19.2.18",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.1",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.4.5"
+  }
+}
