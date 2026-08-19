@@ -2,19 +2,23 @@
 
 React Native + Expo (managed workflow) + EAS. iOS + Android. Styled with [Nativewind](https://www.nativewind.dev) (Tailwind CSS for React Native).
 
-The authentication flow exists (Google, Apple, email + password, and the `v1_users/{uid}` profile it creates); no product screen does yet. See root `docs/architecture.md` for the overall plan.
+The authentication flow exists (Google, Apple, email + password, and the `v1_users/{uid}` profile it creates), behind it a two-tab navigator with a placeholder home and a profile screen; no product screen does yet. See root `docs/architecture.md` for the overall plan.
 
-**Design system**: neobrutalism visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold flat colors, thick borders, hard offset shadows, `radius: 0`. Theme tokens (palette, `font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`) live in `tailwind.config.js`. Headings use `font-head` (Archivo Black), body text uses `font-sans` (Space Grotesk) — both loaded via `expo-font` + `@expo-google-fonts/*` in `app/_layout.tsx`. The neobrutalism.com registry itself (`shadcn` CLI, Radix/Base UI components) targets the web DOM and does **not** work with React Native — component primitives are hand-built against these tokens instead. `src/components/Button.tsx` and `src/components/TextField.tsx` exist; the rest lands with the screens that need it.
+**Design system**: neobrutalism visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold flat colors, thick borders, hard offset shadows, `radius: 0`. The palette lives in `src/design/tokens.js` and the remaining tokens (`font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`) in `tailwind.config.js`. Headings use `font-head` (Archivo Black), body text uses `font-sans` (Space Grotesk) — both loaded via `expo-font` + `@expo-google-fonts/*` in `src/App.tsx`. The neobrutalism.com registry itself (`shadcn` CLI, Radix/Base UI components) targets the web DOM and does **not** work with React Native — component primitives are hand-built against these tokens instead. `src/components/Button.tsx` and `src/components/TextField.tsx` exist; the rest lands with the screens that need it.
 
 ## Structure
 
-- `app/` — [Expo Router](https://docs.expo.dev/router/introduction/) file-based routes. `_layout.tsx` is the root layout (`SafeAreaProvider` + `AuthProvider`, imports `global.css`, holds the splash screen until the persisted session resolves). `app/(auth)/` holds `sign-in` and `sign-up`; `app/index.tsx` is protected. Add screens as `app/<route>.tsx` / `app/<route>/_layout.tsx`.
-- `src/auth/` — everything authentication. `AuthContext.tsx` (`useAuth()`: `user`, `profile`, `initializing`), `providers.ts` (Google / Apple / email primitives + `signOut`), `profile.ts` (upserts `v1_users/{uid}` — **id = Firebase Auth UID**), `profileHints.ts`, `schemas.ts` (zod), `errors.ts` (French messages for `auth/*` codes), `SocialSignInButtons.tsx`.
+- `index.js` — entry point: `registerRootComponent(App)`.
+- `src/App.tsx` — root component. Imports `global.css`, loads the fonts, then `SafeAreaProvider` → `GestureHandlerRootView` → `NavigationContainer` (ref, theme, deep links) → `AuthProvider` → `RootNavigator`, holding the splash screen until the persisted session resolves.
+- `src/navigation/` — [React Navigation 7](https://reactnavigation.org), same layout as `qmachard/checkpack-v3`. `RootNavigator.tsx` is a native stack that registers **only** the half of the app the session can reach (`SignIn`/`SignUp` signed out, `Tabs` signed in), `TabNavigator.tsx` the bottom tabs (`Home`, `Profile`), `types.ts` the param lists (also registered globally as `ReactNavigation.RootParamList`), `linking.ts` the deep-link map, `navigationRef.ts` the imperative ref, `theme.ts` the container theme built from the design tokens.
+- `src/design/tokens.js` — the neobrutalism palette, in CommonJS so `tailwind.config.js` can `require()` it while TypeScript imports the same values for the navigator chrome. One source, no drift.
+- `src/auth/` — everything authentication. `AuthContext.tsx` (`useAuth()`: `user`, `profile`, `initializing`), `providers.ts` (Google / Apple / email primitives + `signOut`), `profile.ts` (upserts `v1_users/{uid}` — **id = Firebase Auth UID**), `profileHints.ts`, `schemas.ts` (zod), `errors.ts` (French messages for `auth/*` codes), `SocialSignInButtons.tsx`, `screens/` (`SignInScreen`, `SignUpScreen`, `ProfileScreen`).
+- `src/home/screens/` — `HomeScreen`, the placeholder the daily question will replace.
 - `src/components/` — neobrutalism primitives (`Button`, `TextField`).
 - `src/lib/firebase.ts` — Firebase client SDK (`firebase` npm package, not `@react-native-firebase`) init: `app`, `auth` (persisted via `@react-native-async-storage/async-storage`), `db`, plus the Auth and Firestore emulator hookups. Same client SDK the rest of the monorepo uses, so `@statowrel/models` converters work unchanged.
 - `src/lib/firestore.ts` — `getDocumentRef` / `getCollectionRef`, each wired with a `@statowrel/models` converter. Use these rather than calling `doc()`/`collection()` directly.
-- `tailwind.config.js` — Nativewind preset + neobrutalism theme tokens (palette, `font-head`/`font-sans`, `borderRadius: 0`, thick `borderWidth`, hard offset `boxShadow` scale).
-- `global.css` — Tailwind directives, imported once in `app/_layout.tsx`.
+- `tailwind.config.js` — Nativewind preset + neobrutalism theme tokens: the palette from `src/design/tokens.js`, plus `font-head`/`font-sans`, `borderRadius: 0`, thick `borderWidth`, hard offset `boxShadow` scale.
+- `src/global.css` — Tailwind directives, imported once in `src/App.tsx`.
 - `app.config.ts` — dynamic Expo config. Reads `APP_VARIANT` (`development` | `preview` | `production`, set per EAS build profile in `eas.json`) to pick app name / bundle identifier / package name, so dev/preview/prod can be installed side-by-side on a device.
 - `eas.json` — EAS Build & Submit profiles: `development` (dev client, internal), `preview` (internal), `production` (store-ready, auto-incremented build number).
 
@@ -25,7 +29,8 @@ The authentication flow exists (Google, Apple, email + password, and the `v1_use
 - Forms use `react-hook-form` + `zod` via `@hookform/resolvers/zod`, never raw `useState`.
 - Auth session state comes from `useAuth()`; never call `onAuthStateChanged` from a screen.
 - Public env vars (safe to embed in the client bundle) are prefixed `EXPO_PUBLIC_` and read via `process.env` — see `.env.example`. Never put a secret behind `EXPO_PUBLIC_*`.
-- `expo-router` typed routes are enabled (`experiments.typedRoutes` in `app.config.ts`) — prefer `Href` types over raw strings when navigating.
+- A screen is a named export in `src/<domain>/screens/<Name>Screen.tsx`, registered in `src/navigation/`. Navigate with `useNavigation<NativeStackNavigationProp<RootStackParamList>>()`; add the route to `RootStackParamList` / `TabParamList` first, so the call is type-checked.
+- Every dependency Expo manages must stay on the version its SDK bundles (`npx expo install --check`) — a newer major of a native module is a broken native build, not an upgrade.
 
 ## Local development
 

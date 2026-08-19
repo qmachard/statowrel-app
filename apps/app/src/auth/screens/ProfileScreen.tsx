@@ -1,4 +1,3 @@
-import { Redirect } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,26 +12,16 @@ const PROVIDER_LABELS: Record<string, string> = {
   'facebook.com': 'Facebook',
 };
 
-// Placeholder home screen — it exists to prove the session and the profile
-// document are wired end to end. Real screens land with the daily question.
-export default function Index() {
-  const { user, profile, initializing } = useAuth();
+export const ProfileScreen = () => {
+  const { user, profile } = useAuth();
 
-  if (initializing) {
+  if (!user) {
     return null;
   }
 
-  if (!user) {
-    return <Redirect href="/sign-in" />;
-  }
-
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={[ 'top' ]}>
       <ScrollView contentContainerClassName="grow justify-center gap-8 p-6">
-        <View className="border-2 border-border bg-primary px-6 py-4 shadow-md">
-          <Text className="font-head text-xl uppercase text-primary-foreground">StatOwrel</Text>
-        </View>
-
         <View className="gap-2 border-2 border-border bg-card px-6 py-5 shadow-md">
           <Text className="font-head text-2xl uppercase text-card-foreground">
             {profile?.display_name ?? 'Profil en cours de création…'}
@@ -48,4 +37,4 @@ export default function Index() {
       </ScrollView>
     </SafeAreaView>
   );
-}
+};

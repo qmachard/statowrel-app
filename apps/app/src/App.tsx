@@ -1,19 +1,24 @@
-import '../global.css';
+import './global.css';
 
 import { ArchivoBlack_400Regular } from '@expo-google-fonts/archivo-black';
 import { SpaceGrotesk_400Regular } from '@expo-google-fonts/space-grotesk';
+import { NavigationContainer } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
+import { RootNavigator } from '@/navigation/RootNavigator';
+import { linking } from '@/navigation/linking';
+import { navigationRef } from '@/navigation/navigationRef';
+import { navigationTheme } from '@/navigation/theme';
 
 SplashScreen.preventAutoHideAsync();
 
-const RootNavigator = () => {
+const SessionGate = () => {
   const { initializing } = useAuth();
 
   useEffect(() => {
@@ -28,11 +33,11 @@ const RootNavigator = () => {
     return null;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return <RootNavigator />;
 };
 
-export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+export default function App() {
+  const [ fontsLoaded ] = useFonts({
     ArchivoBlack_400Regular,
     SpaceGrotesk_400Regular,
   });
@@ -43,10 +48,14 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="auto" />
-      <AuthProvider>
-        <RootNavigator />
-      </AuthProvider>
+      <GestureHandlerRootView className="flex-1">
+        <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking}>
+          <StatusBar style="auto" />
+          <AuthProvider>
+            <SessionGate />
+          </AuthProvider>
+        </NavigationContainer>
+      </GestureHandlerRootView>
     </SafeAreaProvider>
   );
 }

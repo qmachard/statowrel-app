@@ -9,8 +9,8 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Monorepo | Turborepo + npm workspaces | npm only — never yarn/pnpm/bun |
 | Language | TypeScript 5.4+ | Strict mode everywhere |
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
-| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `tailwind.config.js`; `Button` / `TextField` primitives in `src/components/`, the rest added as screens need them |
-| Mobile routing | Expo Router | File-based, `apps/app/app/` |
+| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `src/design/tokens.js`; `Button` / `TextField` primitives in `src/components/`, the rest added as screens need them |
+| Mobile routing | React Navigation 7 | Native stack + bottom tabs, declared in `apps/app/src/navigation/` |
 | Backoffice | React 18 + Vite (SPA) + FireCMS v2 + MUI | Firebase-Hosting-deployed admin UI |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
 | Database | Firebase Firestore | NoSQL, event-sourcing-friendly, `v1_` collection prefix |
@@ -198,7 +198,7 @@ Two things to know when writing a collection:
 
 ## `apps/app` — mobile
 
-Expo managed workflow, Expo Router for navigation, Nativewind for styling. `app.config.ts` is a dynamic config keyed off `APP_VARIANT` (`development` | `preview` | `production`) so the three EAS build profiles produce distinct app names / bundle identifiers / package names — dev, preview, and production builds can be installed side-by-side on the same device.
+Expo managed workflow, React Navigation for navigation, Nativewind for styling. `app.config.ts` is a dynamic config keyed off `APP_VARIANT` (`development` | `preview` | `production`) so the three EAS build profiles produce distinct app names / bundle identifiers / package names — dev, preview, and production builds can be installed side-by-side on the same device.
 
 ### EAS build/submit pipeline
 
@@ -250,7 +250,7 @@ Deliberately deferred: Facebook (PRD §4.1, no button yet), identity linking via
 
 ### Design system
 
-**Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur. Tokens live in `apps/app/tailwind.config.js`: color palette (`background`/`foreground`/`card`/`primary`/`primary-hover`/`secondary`/`muted`/`accent`/`destructive`/`border`/`input`/`ring`), `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), `borderRadius` collapsed to `0` (except `full`), a thicker default `borderWidth` (2px), and a hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/app/_layout.tsx`, with the splash screen held until `useFonts` resolves.
+**Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur. The palette lives in `apps/app/src/design/tokens.js` — CommonJS, so `tailwind.config.js` can `require()` it while TypeScript imports the same values for the parts React Navigation paints itself (container theme, tab bar, stack `contentStyle`). `apps/app/tailwind.config.js` holds the rest: color palette (`background`/`foreground`/`card`/`primary`/`primary-hover`/`secondary`/`muted`/`accent`/`destructive`/`border`/`input`/`ring`), `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), `borderRadius` collapsed to `0` (except `full`), a thicker default `borderWidth` (2px), and a hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/src/App.tsx`, with the splash screen held until `useFonts` resolves.
 
 neobrutalism.com's own registry ships components through the `shadcn` CLI (`npx shadcn add https://neobrutalism.com/r/...`), but those are web-only, built on Radix UI / Base UI — both need a DOM and can't run in React Native. Hence the hand-written token setup here rather than a CLI install.
 
