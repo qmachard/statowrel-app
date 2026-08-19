@@ -80,6 +80,37 @@ npm run deploy:functions              # repo root, targets the `default` Firebas
 npm run deploy:functions:production   # repo root, targets `production`
 ```
 
+### First Firestore trigger in a project
+
+A Firestore trigger is not a plain function: it is an **Eventarc** trigger, created in the
+database's own location (`eur3` for our multi-region European database) and pointed at a
+function running in `europe-west1`. The first one deployed to a given Firebase project
+fails, once:
+
+```
+Validation failed for trigger .../locations/eur3/triggers/...:
+Invalid resource state for "": Permission denied while using the Eventarc Service Agent.
+```
+
+Nothing is wrong with the code. Deploying the trigger is what makes Google Cloud create the
+project's Eventarc service agent, and the deploy races the propagation of that agent's own
+IAM grant. **Wait a few minutes and run the same deploy again** — the CLI says as much, and
+the second run goes through.
+
+If it still fails after two retries, the grant genuinely did not land. Check it in the IAM
+console with "Include Google-provided role grants" turned on, or restore it:
+
+```bash
+PROJECT_NUMBER=$(gcloud projects describe <project-id> --format='value(projectNumber)')
+gcloud projects add-iam-policy-binding <project-id> \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com" \
+  --role="roles/eventarc.serviceAgent"
+```
+
+Only ever grant a service-agent role to the service agent it belongs to. Both projects pay
+this toll separately — `statowrel-prod` will hit it on its own first trigger deploy, long
+after `statowrel-dev` has forgotten about it.
+
 ## Validation
 
 Always run before considering a change complete:

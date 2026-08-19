@@ -317,6 +317,8 @@ Two Firebase projects, aliased in `.firebaserc`:
 
 `npm run deploy:*` scripts switch project via `firebase use` before deploying and switch back to `default` afterward for the `:production` variants, mirroring planexplora-hub's convention.
 
+One toll each project pays once: the first **Firestore trigger** deployed to it is an Eventarc trigger, and creating it is also what creates the project's Eventarc service agent — the deploy races that agent's own IAM grant and fails with `Permission denied while using the Eventarc Service Agent`. Retrying a few minutes later goes through. `apps/functions/CLAUDE.md` carries the details and the manual grant, for the day retrying is not enough.
+
 The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=…`) rather than through turbo. A deploy asks questions — enabling an API, setting an Artifact Registry cleanup policy — and turbo does not forward stdin to the tasks it runs, so those prompts hang unanswered. Turbo has an `interactive` task flag, but it only works under the full-screen `tui` renderer, which is not worth imposing on every `dev` and `build` run for this. It buys nothing here either: the deploy tasks were uncached and dependency-free, and `deploy:firecms` already called the CLI directly.
 
 ## What's deliberately not here yet
