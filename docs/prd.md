@@ -181,7 +181,7 @@ La racine de l'app. De haut en bas :
 |---|---|---|
 | **Répondu** | Case `primary`, ombre dure, le `stat_label` du jour en micro-texte (tronqué) | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
 | **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
-| **Aujourd'hui, pas encore répondu** | Case `accent`, bordure doublée, légère pulsation | Ouvre la modale question du jour (§5.4) |
+| **Aujourd'hui, pas encore répondu** | Case `accent`, bordure doublée | Ouvre la modale question du jour (§5.4) |
 | **Futur, ou antérieur à l'inscription** | Case `muted`, sans bordure | Inerte |
 
 - Navigation mois par mois (chevrons gauche/droite), bornée à la date d'inscription d'un côté et au mois courant de l'autre.
