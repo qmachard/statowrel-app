@@ -15,10 +15,14 @@ Le produit tient en une boucle quotidienne de moins de 30 secondes.
 
 ### Exemples de questions
 
-| Question | Réponse A | Réponse B |
+| Question | Options | StatOwrel associées |
 |---|---|---|
-| Caca : moins de 2 min ou plus de 10 min ? | Tu es un.e **efficace** | Tu es un.e **résident.e** |
-| Tes plantes : tu les arroses ou tu les tues ? | Tu es un.e **arroseur.euse** | Tu es un.e **killer.euse** |
+| Caca : combien de temps ? | Moins de 2 min / Plus de 10 min | **efficace** / **résident.e** |
+| Tes plantes ? | Je les arrose / Je les tue | **arroseur.euse** / **killer.euse** |
+| Ton dentifrice, tu le presses… | Par le bout / Au milieu / Je l'écrase n'importe comment | **méthodique** / **sauvage** / **anarchiste** |
+| Ta serviette après la douche ? | Sur le radiateur / Sur la porte / Par terre / Je n'en ai qu'une, partout | **rangé.e** / **pragmatique** / **libre** / **survivaliste** |
+
+Chaque option porte sa propre StatOwrel : deux options pour une question binaire, jusqu'à six pour un QCM.
 
 Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une question réussie est une question qu'on a envie de screenshoter.
 
@@ -73,7 +77,9 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 - **Une** question par jour, la même pour tous les utilisateurs.
 - Heure de publication tirée au hasard chaque jour entre **08:00 et 20:00** (fuseau de l'utilisateur, v1 : Europe/Paris pour tout le monde).
 - Push notification à la publication.
-- Format v1 : **choix binaire** (2 options). Pas de texte libre, pas de photo.
+- Format v1 : **choix unique parmi N options** — de **2 à 6** options selon la question. Une question peut donc être binaire (« moins de 2 min / plus de 10 min ») ou à choix multiple (« par le bout / au milieu / je l'écrase »).
+- L'utilisateur ne choisit **qu'une seule** option, quel que soit le nombre proposé. Pas de réponses multiples, pas de texte libre, pas de photo.
+- L'ordre des options est **fixe** (celui défini à la création), identique pour tous — c'est ce qui rend les captures d'écran comparables entre potes.
 - La question expire à **minuit**. Passé ce délai, on ne peut plus répondre — la journée est perdue.
 - Réponse **définitive** : pas de modification après validation (c'est ce qui rend la stat crédible).
 
@@ -102,7 +108,7 @@ Immédiatement après avoir répondu :
 
 ### 4.6 Proposition de questions
 
-- N'importe quel utilisateur peut proposer une question : intitulé + 2 options + les 2 « tu es un.e ... » associés.
+- N'importe quel utilisateur peut proposer une question : intitulé + **2 à 6** options, chacune avec son « tu es un.e ... ».
 - La question part en file de modération (statut `pending`).
 - Le modérateur valide, édite ou rejette depuis le backoffice FireCMS. Une raison de rejet est renvoyée à l'auteur.
 - Une question validée rejoint le **pot commun** et devient éligible au tirage au sort.
@@ -130,7 +136,7 @@ Conventions : collections préfixées `v1_`, champs en `snake_case`, champs opti
 ## 6. Hors périmètre (v1)
 
 - Feed, likes, commentaires, messagerie.
-- Questions à texte libre, photo ou plus de 2 options.
+- Questions à texte libre, à photo, à réponses multiples (cocher plusieurs options), ou à plus de 6 options.
 - Groupes / cercles d'amis multiples.
 - Historique des questions passées et de ses propres stats dans le temps.
 - Classements, badges, monétisation.
