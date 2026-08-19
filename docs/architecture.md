@@ -130,7 +130,7 @@ domains/{domain-name}/
 
 ## `apps/firecms` — backoffice
 
-FireCMS v2 SPA. `src/collections/index.ts` is the list of `EntityCollection` definitions. Each collection is added as its own file once the corresponding model exists in `@statowrel/models`, using that model's `*_COLLECTION` constant, then registered in the index. `src/collections/v1_questions.ts` is the first one; a collection file is named after the collection itself, plural.
+FireCMS v2 SPA. `src/collections/index.ts` is an `EntityCollectionsBuilder` returning the `EntityCollection` definitions for the logged-in user. Each collection is added as its own file once the corresponding model exists in `@statowrel/models`, using that model's `*_COLLECTION` constant, then registered in the index. `src/collections/v1_questions.ts` is the first one; a collection file is named after the collection itself, plural.
 
 Two things to know when writing a collection:
 

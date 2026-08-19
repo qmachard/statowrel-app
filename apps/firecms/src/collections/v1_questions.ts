@@ -1,4 +1,4 @@
-import { buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
+import { EnumValues, User, buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
 import { ulid } from 'ulid';
 
 import {
@@ -20,13 +20,22 @@ type QuestionEntity = Omit<QuestionData, 'created_at'> & {
 };
 
 /**
- * Mints the ULID of any option that doesn't have one yet, and enforces the
- * invariants `firestore.rules` cannot: the backoffice writes as an admin, and
- * the wildcard `isAdmin()` rule lets those writes through unchecked.
+ * Stamps the author, mints the ULID of any option that doesn't have one yet,
+ * and enforces the invariants `firestore.rules` cannot: the backoffice writes
+ * as an admin, and the wildcard `isAdmin()` rule lets those writes through
+ * unchecked.
  */
 const callbacks = buildEntityCallbacks<QuestionEntity>({
   onIdUpdate: ulidEntityId,
-  onPreSave: ({ values }) => {
+  onPreSave: ({ values, context }) => {
+    // A question proposed from the backoffice is authored by the logged-in
+    // admin; one created in the app keeps the author it already carries.
+    const author_id = values.author_id || context.authController.user?.uid;
+
+    if (!author_id) {
+      throw new Error('Aucun utilisateur connecté : impossible d\'attribuer un auteur à la question.');
+    }
+
     const options = (values.options ?? []).map((option) => ({
       ...option,
       // Never regenerate an existing id: an answer points at it.
@@ -45,11 +54,19 @@ const callbacks = buildEntityCallbacks<QuestionEntity>({
       throw new Error('Une question rejetée doit porter une raison de rejet, renvoyée à son auteur.');
     }
 
-    return { ...values, options };
+    return { ...values, author_id, options };
   },
 });
 
-const questionsCollection = buildCollection<QuestionEntity>({
+/**
+ * The authors a moderator can pick from. Only the logged-in admin for now —
+ * the real authors, proposing from the app, come later.
+ */
+const authorEnumValues = (user: User | null): EnumValues => (
+  user ? { [user.uid]: 'Moi' } : {}
+);
+
+const buildQuestionsCollection = (user: User | null) => buildCollection<QuestionEntity>({
   path: QUESTION_COLLECTION,
   name: 'Questions',
   singularName: 'Question',
@@ -115,7 +132,9 @@ const questionsCollection = buildCollection<QuestionEntity>({
     }),
     author_id: buildProperty({
       dataType: 'string',
-      name: 'Auteur (user id)',
+      name: 'Auteur',
+      defaultValue: user?.uid,
+      enumValues: authorEnumValues(user),
       validation: { required: true },
     }),
     created_at: buildProperty({
@@ -127,4 +146,4 @@ const questionsCollection = buildCollection<QuestionEntity>({
   },
 });
 
-export default questionsCollection;
+export default buildQuestionsCollection;
