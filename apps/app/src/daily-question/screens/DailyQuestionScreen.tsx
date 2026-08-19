@@ -22,6 +22,23 @@ const DEAD_END: Partial<Record<DailyQuestionStatus, string>> = {
 /** `A`, `B`, `C`… for the option at that rank — a question carries 2 to 6 (docs/prd.md §4.2). */
 const letterOf = (index: number) => String.fromCharCode('A'.charCodeAt(0) + index);
 
+/**
+ * « Stat du jour », or « Stat du mardi 12 août » on a past day — the sheet's own
+ * heading, which is why the day no longer needs a line of its own above it.
+ *
+ * `formatDayLabel` capitalises its first letter for a standalone label; here it
+ * runs on inside a sentence.
+ */
+const headingOf = (date: string, isToday: boolean): string => {
+  if (isToday) {
+    return 'Stat du jour';
+  }
+
+  const day = formatDayLabel(fromDateKey(date));
+
+  return `Stat du ${day.charAt(0).toLowerCase()}${day.slice(1)}`;
+};
+
 const styles = StyleSheet.create({
   // No `flex: 1` anywhere on the way down: the sheet's detent is
   // `fitToContents`, so it measures this column and a stretched child would
@@ -30,25 +47,33 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    gap: spacing(6),
+    gap: spacing(5),
     padding: spacing(6),
     paddingTop: spacing(4),
   },
+  // Heading and question read as one block, set apart from the options below.
+  prompt: {
+    gap: spacing(3),
+  },
   head: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing(4),
   },
-  date: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.xs,
+  heading: {
+    flex: 1,
+    fontFamily: fonts.head,
+    fontSize: fontSize.xl,
     textTransform: 'uppercase',
-    color: colors['muted-foreground'],
+    color: colors.foreground,
   },
+  // `fonts.head` at body size is this app's bold — Space Grotesk ships in a
+  // single weight, so a `fontWeight` here would only ask for a face that isn't
+  // loaded.
   question: {
     fontFamily: fonts.head,
-    fontSize: fontSize['3xl'],
+    fontSize: fontSize.base,
     color: colors.foreground,
   },
   options: {
@@ -73,9 +98,9 @@ const Message = ({ children }: { children: ReactNode }) => (
 
 /**
  * One day's question — today's by default, any past day when the route carries a
- * `date` (docs/prd.md §5.4): the date in micro-text, the question very large in
- * `fonts.head`, then the options in their fixed order, each behind its quizz
- * letter.
+ * `date` (docs/prd.md §5.4): « Stat du jour » as the heading — « Stat du mardi
+ * 12 août » on a past day — the question under it, then the options in their
+ * fixed order, each behind its quizz letter.
  *
  * The sheet is sized by this content (see `RootNavigator`), which is why the
  * options sit in a plain column rather than a scroll view: a short question
@@ -101,14 +126,14 @@ export const DailyQuestionScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={[ 'bottom' ]}>
       <View style={styles.content}>
-        <View style={styles.head}>
-          <Text style={styles.date}>
-            {isToday ? 'Aujourd’hui' : formatDayLabel(fromDateKey(date))}
-          </Text>
-          <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
-        </View>
+        <View style={styles.prompt}>
+          <View style={styles.head}>
+            <Text style={styles.heading}>{headingOf(date, isToday)}</Text>
+            <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
+          </View>
 
-        {question === null ? null : <Text style={styles.question}>{question.label}</Text>}
+          {question === null ? null : <Text style={styles.question}>{question.label}</Text>}
+        </View>
 
         {status === 'loading' ? <ActivityIndicator size="large" /> : null}
 
