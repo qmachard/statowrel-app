@@ -34,3 +34,22 @@ export const getCollectionRef = <TModelData extends DocumentData, TFirebaseData 
   collectionPath: string,
   converter: FirestoreConverter<TModelData, TFirebaseData>,
 ) => collection(db, collectionPath).withConverter(withConverter(converter));
+
+/**
+ * A document inside a sub-collection —
+ * `getSubDocumentRef('v1_daily_questions', date, 'v1_daily_question_answers', uid, converter)`.
+ *
+ * The path segments are passed flat rather than as a parent ref: a parent built
+ * by `getDocumentRef` already carries its own converter, and handing that
+ * typed ref to `collection()` would only mean casting it back to `DocumentData`.
+ */
+export const getSubDocumentRef = <TModelData extends DocumentData, TFirebaseData extends DocumentData = TModelData>(
+  collectionPath: string,
+  identifier: string,
+  subCollectionPath: string,
+  subIdentifier: string,
+  converter: FirestoreConverter<TModelData, TFirebaseData>,
+) => (
+  doc(db, collectionPath, identifier, subCollectionPath, subIdentifier)
+    .withConverter(withConverter(converter))
+);

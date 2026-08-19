@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { ProfileScreen } from '@/auth/screens/ProfileScreen';
 import { SignInScreen } from '@/auth/screens/SignInScreen';
 import { SignUpScreen } from '@/auth/screens/SignUpScreen';
+import { DailyQuestionScreen } from '@/daily-question/screens/DailyQuestionScreen';
 import { colors } from '@/design/tokens';
 import { StatsScreen } from '@/stats/screens/StatsScreen';
 
@@ -27,6 +28,16 @@ export const RootNavigator = () => {
       {user ? (
         <>
           <Stack.Screen name="Stats" component={StatsScreen} options={{ animation: 'none' }} />
+          {/* The question is posed *over* Stats, never beside it (docs/prd.md §5.4).
+              A modal presentation is the closest the native stack gets to the
+              bottom sheet the PRD describes; it becomes one, and stops being
+              dismissable while today's question is unanswered, once answering
+              exists (§4.3). */}
+          <Stack.Screen
+            name="DailyQuestion"
+            component={DailyQuestionScreen}
+            options={{ presentation: 'modal' }}
+          />
           <Stack.Screen name="Profile" component={ProfileScreen} />
         </>
       ) : (

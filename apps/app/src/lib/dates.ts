@@ -31,6 +31,17 @@ export const toDateKey = (date: Date): DateKey => (
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 );
 
+/**
+ * The `Date` a `YYYY-MM-DD` key stands for, at local midnight — the inverse of
+ * `toDateKey`. Built from parts, never `new Date(key)`: that parses the string
+ * as UTC midnight, which is the day before anywhere west of Greenwich.
+ */
+export const fromDateKey = (key: DateKey): Date => {
+  const [ year, month, day ] = key.split('-').map(Number);
+
+  return new Date(year, month - 1, day);
+};
+
 /** Midnight on that day — the anchor every relative date on the screen is built from. */
 export const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 

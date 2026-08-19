@@ -1,5 +1,7 @@
 export type RootStackParamList = {
   Stats: undefined;
+  /** One day's question — omit `date` for today's (docs/prd.md §5.4). */
+  DailyQuestion: { date?: string } | undefined;
   Profile: undefined;
   SignIn: undefined;
   SignUp: undefined;
