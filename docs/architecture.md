@@ -199,7 +199,7 @@ Firebase Auth, three methods offered at the same level (`docs/prd.md` §4.1). Th
 
 | Provider | How the credential is obtained |
 |---|---|
-| Email / password | `createUserWithEmailAndPassword` + `sendEmailVerification` — the address must be verified before the app opens |
+| Email / password | `createUserWithEmailAndPassword` — the address is not verified, on purpose (`docs/prd.md` §4.1) |
 | Google | `@react-native-google-signin/google-signin` → `idToken` → `GoogleAuthProvider.credential()` |
 | Apple | `expo-apple-authentication` → `identityToken` → `new OAuthProvider('apple.com').credential()` |
 
@@ -212,8 +212,7 @@ apps/app/
 ├── app/
 │   ├── _layout.tsx          # AuthProvider + splash held until the session resolves
 │   ├── (auth)/              # sign-in, sign-up — redirects to / as soon as a session exists
-│   ├── verify-email.tsx     # email/password accounts only
-│   └── index.tsx            # protected; redirects to /sign-in or /verify-email
+│   └── index.tsx            # protected; redirects to /sign-in without a session
 └── src/
     ├── auth/                # AuthContext, providers, profile, schemas, errors
     ├── components/          # Button, TextField — the first neobrutalism primitives

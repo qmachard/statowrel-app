@@ -3,7 +3,6 @@ import {
   OAuthProvider,
   type UserCredential,
   createUserWithEmailAndPassword,
-  sendEmailVerification,
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -191,20 +190,8 @@ export const signUpWithEmail = async (
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
   await updateProfile(userCredential.user, { displayName });
-  // docs/prd.md §4.1 — an email account must be verified before reaching the app.
-  await sendEmailVerification(userCredential.user);
 
   return userCredential;
-};
-
-export const resendVerificationEmail = async (): Promise<void> => {
-  const { currentUser } = auth;
-
-  if (!currentUser) {
-    throw new SignInUnavailableError('Aucune session en cours.');
-  }
-
-  await sendEmailVerification(currentUser);
 };
 
 export const signOut = async (): Promise<void> => {

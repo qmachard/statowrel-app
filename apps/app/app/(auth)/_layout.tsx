@@ -9,8 +9,6 @@ export default function AuthLayout() {
     return null;
   }
 
-  // Any signed-in account leaves the auth group; `/` then routes an unverified
-  // email account on to `/verify-email`.
   if (user) {
     return <Redirect href="/" />;
   }

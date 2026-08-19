@@ -16,7 +16,7 @@ const PROVIDER_LABELS: Record<string, string> = {
 // Placeholder home screen — it exists to prove the session and the profile
 // document are wired end to end. Real screens land with the daily question.
 export default function Index() {
-  const { user, profile, initializing, requiresEmailVerification } = useAuth();
+  const { user, profile, initializing } = useAuth();
 
   if (initializing) {
     return null;
@@ -24,10 +24,6 @@ export default function Index() {
 
   if (!user) {
     return <Redirect href="/sign-in" />;
-  }
-
-  if (requiresEmailVerification) {
-    return <Redirect href="/verify-email" />;
   }
 
   return (
