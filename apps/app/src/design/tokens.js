@@ -8,21 +8,32 @@
  * `contentStyle`. Keeping one copy stops the Tailwind theme and the navigator
  * chrome from drifting apart.
  */
+/**
+ * Four tokens carry the identity — everything else is scaffolding around them:
+ * `foreground` for text, `primary` for the main action, `accent` for the
+ * accentuated one (today's date, docs/prd.md §5.2) and `background`.
+ *
+ * `accent` is a saturated red, so it takes white text where `primary` takes
+ * black — both land at a 4.58 contrast ratio against their own surface.
+ */
 const colors = {
-  background: '#fff7e8',
+  background: '#f7f0d4',
   foreground: '#000000',
   card: '#ffffff',
   'card-foreground': '#000000',
-  primary: '#ffdc58',
+  primary: '#ffdc59',
   'primary-hover': '#ffd12e',
   'primary-foreground': '#000000',
   secondary: '#000000',
   'secondary-hover': '#1a1a1a',
   'secondary-foreground': '#ffffff',
-  muted: '#efe7d6',
+  // One step down from `background`, the same step the pair had before the
+  // palette changed — a recessed surface, not a second background.
+  muted: '#eae1bd',
   'muted-foreground': '#6b6355',
-  accent: '#ffe7a3',
-  'accent-foreground': '#000000',
+  accent: '#d04060',
+  'accent-hover': '#b8354f',
+  'accent-foreground': '#ffffff',
   destructive: '#e63946',
   'destructive-foreground': '#ffffff',
   border: '#000000',
