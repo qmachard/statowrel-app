@@ -19,6 +19,7 @@
     "dev:app": "turbo dev --filter=@statowrel/app",
     "dev:functions": "turbo dev --filter=@statowrel/functions",
     "dev:firecms": "turbo dev --filter=@statowrel/firecms",
+    "set-admin": "node apps/functions/scripts/set-admin.mjs",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

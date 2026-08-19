@@ -1,6 +1,6 @@
 {
   "projects": {
-    "default": "statowrel-dev",
-    "production": "statowrel-prod"
+    "default": "statowrel-app",
+    "production": "statowrel-app"
   }
 }

@@ -11,6 +11,7 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions -f",
     "logs": "firebase functions:log",
+    "set-admin": "node scripts/set-admin.mjs",
     "dev": "NODE_ENV=development concurrently --kill-others \"npm run start:emulators\" \"npm run build:watch\""
   },
   "engines": {

@@ -37,11 +37,34 @@ Every ref helper takes a `FirestoreConverter` from `@statowrel/models` — never
 ## Local development
 
 ```bash
+cp apps/functions/.env.example apps/functions/.env.local   # emulator params
 npm run dev            # emulators (functions, firestore, auth, storage) + tsc --watch
 npm run dev:functions   # same, run from the repo root via turbo
 ```
 
 Emulator state persists to `.firebase-emulator/` across runs (`--export-on-exit` / `--import`).
+
+## Env params
+
+`src/libs/firebase-admin.ts` declares three `defineString()` params: `CUSTOM_FIREBASE_PROJECT_ID`, `CUSTOM_FIREBASE_CLIENT_EMAIL`, `CUSTOM_FIREBASE_PRIVATE_KEY` (base64 of the service account's PEM `private_key`). The Firebase CLI resolves them from, in order: `.env`, `.env.<projectId>` (`.env.statowrel-dev`, `.env.statowrel-prod`), and `.env.local` for the emulator.
+
+All of those are gitignored — only `.env.example` is tracked, because a filled-in copy holds a real credential.
+
+Outside the emulator, `initFirebase()` only reaches for the explicit `cert()` — deployed functions could instead rely on the runtime's default service account and drop those params entirely.
+
+## Ops scripts (`scripts/`)
+
+Plain `.mjs`, run directly with node — outside `src/`, so `tsc` ignores them and they are excluded from the deploy bundle (`firebase.json` → `functions.ignore`).
+
+```bash
+npm run set-admin -- <email>                  # grant the `admin` claim, default project
+npm run set-admin -- <email> --production
+npm run set-admin -- <email> --revoke
+```
+
+`admin` is a Firebase Auth **custom claim** — what `isAdmin()` in `packages/firestore-config/firestore.rules` tests. The Firebase CLI has no command for custom claims; they only exist through the Admin SDK. The script reads project ids from `.firebaserc`, merges the claim into the user's existing ones (`setCustomUserClaims` replaces the whole object), and revokes their refresh tokens so the change applies at next sign-in instead of up to an hour later.
+
+Authenticates with Application Default Credentials (`gcloud auth application-default login`), or hits the emulator when `FIREBASE_AUTH_EMULATOR_HOST` is set.
 
 ## Deploy
 

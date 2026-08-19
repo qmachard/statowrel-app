@@ -4,3 +4,9 @@ node_modules
 *.local
 firebase-debug.log
 firebase-debug.*.log
+
+# Firebase Functions env files — they hold the service account private key.
+# Only the template is tracked.
+.env
+.env.*
+!.env.example
