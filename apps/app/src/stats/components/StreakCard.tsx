@@ -33,8 +33,8 @@ const styles = StyleSheet.create({
   },
   count: {
     fontFamily: fonts.head,
-    fontSize: fontSize['4xl'],
-    lineHeight: fontSize['4xl'],
+    fontSize: fontSize['5xl'],
+    lineHeight: fontSize['5xl'],
     color: colors.foreground,
   },
   unit: {
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   },
 });
 
-/** The left half of the stats block: the streak, on the same type scale as the counters beside it. */
+/** The left half of the stats block: the streak, and the biggest number on it. */
 export const StreakCard = ({ count }: StreakCardProps) => {
   const alive = count > 0;
 

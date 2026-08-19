@@ -28,8 +28,10 @@ const styles = StyleSheet.create({
   },
   value: {
     fontFamily: fonts.head,
-    fontSize: fontSize['4xl'],
-    lineHeight: fontSize['4xl'],
+    // Two steps under the streak's own count: these are the figures that put it
+    // in perspective, never the ones read first (docs/prd.md §5.2).
+    fontSize: fontSize['2xl'],
+    lineHeight: fontSize['2xl'],
     color: colors.foreground,
   },
   unit: {
