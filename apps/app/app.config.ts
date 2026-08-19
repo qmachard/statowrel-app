@@ -7,18 +7,18 @@ const APP_VARIANT = (process.env.APP_VARIANT as Variant | undefined) ?? 'develop
 const VARIANT_CONFIG: Record<Variant, { name: string; iosBundleIdentifier: string; androidPackage: string }> = {
   development: {
     name: 'StatOwrel (Dev)',
-    iosBundleIdentifier: 'com.statowrel.app.dev',
-    androidPackage: 'com.statowrel.app.dev',
+    iosBundleIdentifier: 'fr.quentinmachard.statowrel.dev',
+    androidPackage: 'fr.quentinmachard.statowrel.dev',
   },
   preview: {
     name: 'StatOwrel (Preview)',
-    iosBundleIdentifier: 'com.statowrel.app.preview',
-    androidPackage: 'com.statowrel.app.preview',
+    iosBundleIdentifier: 'fr.quentinmachard.statowrel.preview',
+    androidPackage: 'fr.quentinmachard.statowrel.preview',
   },
   production: {
     name: 'StatOwrel',
-    iosBundleIdentifier: 'com.statowrel.app',
-    androidPackage: 'com.statowrel.app',
+    iosBundleIdentifier: 'fr.quentinmachard.statowrel',
+    androidPackage: 'fr.quentinmachard.statowrel',
   },
 };
 
@@ -27,7 +27,8 @@ const variant = VARIANT_CONFIG[APP_VARIANT];
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: variant.name,
-  slug: 'statowrel',
+  slug: 'statowrel-app',
+  owner: 'qmachard',
   scheme: 'statowrel',
   version: '1.0.0',
   orientation: 'portrait',
@@ -53,7 +54,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     ...config.extra,
     eas: {
-      projectId: process.env.EAS_PROJECT_ID,
+      projectId: 'f042ef39-34fb-4783-9013-04074ce87987',
     },
   },
 });

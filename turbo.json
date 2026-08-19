@@ -21,38 +21,6 @@
     "deploy": {
       "cache": false,
       "dependsOn": []
-    },
-    "build:dev:ios": {
-      "cache": false,
-      "dependsOn": ["^build"]
-    },
-    "build:dev:android": {
-      "cache": false,
-      "dependsOn": ["^build"]
-    },
-    "build:preview:ios": {
-      "cache": false,
-      "dependsOn": ["^build"]
-    },
-    "build:preview:android": {
-      "cache": false,
-      "dependsOn": ["^build"]
-    },
-    "build:prod:ios": {
-      "cache": false,
-      "dependsOn": ["^build"]
-    },
-    "build:prod:android": {
-      "cache": false,
-      "dependsOn": ["^build"]
-    },
-    "submit:prod:ios": {
-      "cache": false,
-      "dependsOn": []
-    },
-    "submit:prod:android": {
-      "cache": false,
-      "dependsOn": []
     }
   },
   "envMode": "loose"

@@ -34,7 +34,7 @@ Requires a dev client build (`npm run build:dev:ios` / `build:dev:android`) to r
 
 ## EAS Build & Submit
 
-Requires `eas login` once, and an EAS project linked (`eas init`) with `EAS_PROJECT_ID` set in `apps/app/.env.local` / EAS secrets.
+Requires `eas login` once. The EAS project is already linked — `@qmachard/statowrel-app`, its `projectId` is hardcoded in `app.config.ts` under `extra.eas.projectId` (a public identifier, not a secret; the dynamic config means EAS can't write it there itself). The `slug` must stay `statowrel-app` to match that project.
 
 ```bash
 npm run build:dev:ios       # eas build --profile development --platform ios
@@ -46,7 +46,7 @@ npm run build:prod:android
 npm run submit:prod         # submit:prod:ios + submit:prod:android
 ```
 
-All of the above are also exposed as root-level `npm run <script>` commands via Turbo (see root `package.json`).
+All of the above are also exposed as root-level `npm run <script>` commands (see root `package.json`). They deliberately bypass Turbo and call the workspace script directly (chained after `build:models`, since `@statowrel/models` resolves to `dist/`): `eas build` / `eas submit` are interactive, and Turbo only forwards stdin to a task under its full-screen TUI.
 
 ## Validation
 
