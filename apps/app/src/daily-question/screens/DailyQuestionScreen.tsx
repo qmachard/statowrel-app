@@ -14,7 +14,7 @@ import { type DailyQuestionStatus, useDailyQuestion } from '@/daily-question/dat
 import { useAuth } from '@/auth/AuthContext';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { hapticSelection, hapticValidation } from '@/lib/haptics';
-import { formatDayLabel, fromDateKey, toDateKey } from '@/lib/dates';
+import { toDateKey } from '@/lib/dates';
 import type { RootStackParamList } from '@/navigation/types';
 import { invalidateCalendarMonth } from '@/stats/data/useStatsData';
 
@@ -34,31 +34,19 @@ const DEAD_END: Partial<Record<DailyQuestionStatus, string>> = {
 const VALIDATION_DELAY_MS = 150;
 
 /**
- * The sheet wears the colour of the calendar cell that opens it (docs/prd.md
- * §5.2): the accent red of an unanswered today, the primary yellow of a day
- * already answered.
+ * The sheet wears the colour of the day it shows: the accent red of today, the
+ * primary yellow of a past one.
+ *
+ * Deliberately **not** a function of the answer. Flipping the whole sheet from
+ * red to yellow under the success animation reads as a second event competing
+ * with it, and the option that turns primary is already what says the answer
+ * landed. The calendar cell behind still goes yellow — that is the calendar's
+ * own story about the day, told once the sheet is gone.
  */
 type Surface = 'accent' | 'primary';
 
 /** `A`, `B`, `C`… for the option at that rank — a question carries 2 to 6 (docs/prd.md §4.2). */
 const letterOf = (index: number) => String.fromCharCode('A'.charCodeAt(0) + index);
-
-/**
- * « Stat du jour », or « Stat du mardi 12 août » on a past day — the sheet's own
- * heading, which is why the day no longer needs a line of its own above it.
- *
- * `formatDayLabel` capitalises its first letter for a standalone label; here it
- * runs on inside a sentence.
- */
-const headingOf = (date: string, isToday: boolean): string => {
-  if (isToday) {
-    return 'Stat du jour';
-  }
-
-  const day = formatDayLabel(fromDateKey(date));
-
-  return `Stat du ${day.charAt(0).toLowerCase()}${day.slice(1)}`;
-};
 
 const styles = StyleSheet.create({
   // No `flex: 1` anywhere on the way down: the sheet's detent is
@@ -69,28 +57,24 @@ const styles = StyleSheet.create({
     padding: spacing(6),
     paddingTop: spacing(4),
   },
-  // Heading and question read as one block, set apart from the options below.
+  // The question and the way out read as one block, set apart from the options
+  // below. `alignItems: flex-start` rather than `center`: a question long enough
+  // to wrap would otherwise drag the close button down to its middle.
   prompt: {
-    gap: spacing(3),
-  },
-  head: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    // `flex-end` rather than `space-between`: the question already takes the
+    // row through its own `flex: 1`, and on a day with no question to show the
+    // close button has to stay on the right rather than slide over to the left.
+    justifyContent: 'flex-end',
     gap: spacing(4),
   },
-  heading: {
+  // The question *is* the sheet's title — there is nothing else worth reading
+  // at the top of it, and no label above it saying what one already sees.
+  question: {
     flex: 1,
     fontFamily: fonts.head,
-    fontSize: fontSize.xl,
-    textTransform: 'uppercase',
-  },
-  // `fonts.head` at body size is this app's bold — Space Grotesk ships in a
-  // single weight, so a `fontWeight` here would only ask for a face that isn't
-  // loaded.
-  question: {
-    fontFamily: fonts.head,
-    fontSize: fontSize.base,
+    fontSize: fontSize['2xl'],
   },
   options: {
     gap: spacing(4),
@@ -136,14 +120,14 @@ const Message = ({ children, surface }: { children: ReactNode; surface: Surface 
 
 /**
  * One day's question — today's by default, any past day when the route carries a
- * `date` (docs/prd.md §5.4): « Stat du jour » as the heading — « Stat du mardi
- * 12 août » on a past day — the question under it, then the options in their
- * fixed order, each behind its quizz letter.
+ * `date` (docs/prd.md §5.4): the question itself as the sheet's title, then the
+ * options in their fixed order, each behind its quizz letter. No label above
+ * the question saying it is one.
  *
  * The sheet is sized by this content (see `RootNavigator`), which is why the
  * options sit in a plain column rather than a scroll view: a short question
- * gets a short sheet. It also wears the colour of the calendar cell that opens
- * it — accent while today is unanswered, primary once it is answered.
+ * gets a short sheet. It wears accent for today and primary for a past day, and
+ * keeps that colour through the answer.
  *
  * **Answering is the double tap of docs/prd.md §4.3**: the first tap selects,
  * the second one on the same option writes
@@ -182,9 +166,7 @@ export const DailyQuestionScreen = () => {
   const isToday = date === toDateKey(new Date());
   const deadEnd = DEAD_END[status];
 
-  // Red only while today is still open — the moment it is answered it turns
-  // yellow, exactly as its calendar cell does.
-  const surface: Surface = isToday && answer === null ? 'accent' : 'primary';
+  const surface: Surface = isToday ? 'accent' : 'primary';
 
   // The sheet's own background, behind the content this screen lays out. Set
   // here rather than in `RootNavigator` because the navigator has no way of
@@ -252,14 +234,11 @@ export const DailyQuestionScreen = () => {
     <SafeAreaView style={SURFACE[surface]} edges={[ 'bottom' ]}>
       <View style={styles.content}>
         <View style={styles.prompt}>
-          <View style={styles.head}>
-            <Text style={[ styles.heading, FOREGROUND[surface] ]}>{headingOf(date, isToday)}</Text>
-            <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
-          </View>
-
           {question === null ? null : (
             <Text style={[ styles.question, FOREGROUND[surface] ]}>{question.label}</Text>
           )}
+
+          <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
         </View>
 
         {status === 'loading' ? <ActivityIndicator size="large" /> : null}
