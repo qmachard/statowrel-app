@@ -38,6 +38,7 @@
     "expo-splash-screen": "~57.0.7",
     "expo-status-bar": "~57.0.1",
     "firebase": "^12.17.1",
+    "lucide-react-native": "^1.32.0",
     "nativewind": "^4.2.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -47,6 +48,7 @@
     "react-native-reanimated": "~4.5.3",
     "react-native-safe-area-context": "~5.9.1",
     "react-native-screens": "~4.27.0",
+    "react-native-svg": "~15.15.5",
     "react-native-web": "~0.21.2",
     "zod": "^3.23.8"
   },
