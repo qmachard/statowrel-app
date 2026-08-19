@@ -85,8 +85,8 @@ export const StreakCard = ({ count }: StreakCardProps) => {
 
         {/*
           * A running streak gets the star again every few seconds. A broken one
-          * gets the outline the sticker left when it came off — same box, same
-          * place, nothing inside it.
+          * gets the mark the sticker left when it came off — same box, same
+          * place, the shape without the sticker.
           */}
         {alive ? (
           <Star size="xl" replayDelay={STAR_REPLAY_DELAY} style={styles.star} />
