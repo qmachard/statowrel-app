@@ -84,7 +84,7 @@ export const ProfileScreen = () => {
 
         <View style={[ styles.card, shadows.md ]}>
           <Text style={styles.name}>
-            {profile?.display_name ?? 'Profil en cours de création…'}
+            {profile ? `@${profile.username}` : 'Profil en cours de création…'}
           </Text>
           <Text style={styles.detail}>{profile?.email ?? user.email ?? '—'}</Text>
           <Text style={styles.detail}>

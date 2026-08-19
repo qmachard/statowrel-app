@@ -19,6 +19,10 @@ export const RootNavigator = () => {
   // user has no route into the app, a signed-in one no route back to the sign-in
   // screens, and signing in or out swaps the whole stack instead of navigating.
   //
+  // An account that hasn't chosen its username yet lands here all the same —
+  // the onboarding sheet (`src/auth/OnboardingSheet.tsx`) is rendered beside
+  // this navigator and covers the app until it has.
+  //
   // There is no tab bar (docs/prd.md §5.1): Stats is the root, and the profile
   // opens from the header button on top of it.
   return (

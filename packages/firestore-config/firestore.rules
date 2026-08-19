@@ -2,6 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Mirrors USERNAME_PATTERN in packages/models/src/v1_username.ts — rules
+    // cannot import JavaScript, so the two are changed together: lowercase
+    // letters, digits, dot and underscore, 3 to 20 characters, opening and
+    // closing on an alphanumeric.
+    function USERNAME_PATTERN() {
+      return '^[a-z0-9][a-z0-9._]{1,18}[a-z0-9]$';
+    }
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -63,17 +71,51 @@ service cloud.firestore {
     // they are only ever written by their own owner, at sign-in.
     match /v1_users/{user_id} {
       function isValidProfile() {
-        return request.resource.data.display_name is string
-               && request.resource.data.display_name.size() > 0
+        return request.resource.data.username is string
+               && request.resource.data.username.matches(USERNAME_PATTERN())
                && (request.resource.data.email == null || request.resource.data.email is string)
                && request.resource.data.auth_providers is list;
       }
 
+      // The reservation below is the authority on who holds a username, so the
+      // copy carried here has to agree with it. A username that was never
+      // reserved has no document, so this expression errors and the write is
+      // denied — which is the point: the profile field can't be forged.
+      function ownsUsername() {
+        return get(
+          /databases/$(database)/documents/v1_usernames/$(request.resource.data.username)
+        ).data.user_id == user_id;
+      }
+
       allow read: if isAuthenticated();
-      allow create: if isOwner(user_id) && isValidProfile();
+      allow create: if isOwner(user_id) && isValidProfile() && ownsUsername();
       allow update: if isOwner(user_id)
                     && isValidProfile()
+                    && ownsUsername()
                     && request.resource.data.created_at == resource.data.created_at;
+      allow delete: if false;
+    }
+
+    // One document per taken username, keyed by the username itself
+    // (docs/prd.md §4.1). Uniqueness is a property of the path rather than a
+    // check to run: Firestore denies a `create` on a document that already
+    // exists, so two people racing for the same handle cannot both win — no
+    // query, no transaction, no race.
+    //
+    // `get` is open to any signed-in user, because that is how a handle
+    // resolves to an account when a friend is added by username; `list` is not,
+    // so nobody browses the directory (docs/prd.md §4.1 forbids public user
+    // search — knowing the exact handle stays the price of entry).
+    match /v1_usernames/{username} {
+      allow get: if isAuthenticated();
+      allow list: if false;
+      allow create: if isOwner(request.resource.data.user_id)
+                    && username.matches(USERNAME_PATTERN());
+      // The owner rewrites their own reservation — a retry after a failed
+      // profile write — but a reservation never changes hands.
+      allow update: if isOwner(resource.data.user_id)
+                    && request.resource.data.user_id == resource.data.user_id;
+      // Freeing a username is the backend's job, alongside account deletion.
       allow delete: if false;
     }
 

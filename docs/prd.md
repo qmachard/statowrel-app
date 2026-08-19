@@ -67,21 +67,23 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
   - **Google**
   - **Facebook**
   - **Apple** (obligatoire sur iOS dès qu'un autre provider social est proposé — règle App Store)
-- Après la première connexion, quel que soit le provider : choix du **pseudo** (unique) et d'un **avatar**. Le pseudo et l'avatar sont pré-remplis depuis le provider quand il les fournit.
+- Après la première connexion, quel que soit le provider : choix du **nom d'utilisateur** et d'un **avatar**, sur une **bottom sheet bloquante** posée par-dessus l'app — même vocabulaire visuel que la sheet question (§5.4), mais sans poignée ni fond cliquable : on n'entre pas dans l'app sans nom. Le nom d'utilisateur n'est jamais pré-rempli — ni depuis Google ou Apple, ni depuis l'adresse e-mail : il n'appartient qu'à l'utilisateur. L'avatar, lui, est repris du provider quand il en fournit un.
+- Le nom d'utilisateur est un **handle à la Instagram** : minuscules, lettres, chiffres, point et tiret bas, 3 à 20 caractères, commençant et finissant par une lettre ou un chiffre. Il est **unique** dans toute l'app — une collection de réservation `v1_usernames` porte cette unicité, le document ayant le handle pour identifiant. Il s'affiche précédé d'un `@` partout où il désigne quelqu'un.
 - Un même email ne crée qu'un seul compte : si un utilisateur inscrit par email se connecte ensuite via Google avec la même adresse, les identités sont **liées** au même compte (`linkWithCredential`), pas dupliquées.
 - Suppression de compte disponible dans les réglages (exigée par les stores) : supprime le profil, les amitiés et anonymise les réponses passées (elles restent dans les compteurs agrégés).
-- **Pas de recherche publique d'utilisateurs.** On ajoute un ami par lien d'invitation ou par code à 6 caractères.
+- **Pas de recherche publique d'utilisateurs**, mais un handle se résout : on ajoute un ami par lien d'invitation, par code à 6 caractères, ou en tapant son **nom d'utilisateur exact**. Il n'y a ni recherche approchante, ni annuaire, ni suggestion — connaître le handle reste le prix d'entrée.
 - Une invitation acceptée crée une amitié **réciproque** (pas de follow asymétrique).
 - On peut retirer un ami ; l'amitié disparaît des deux côtés.
 
 **Règle :** un utilisateur ne voit jamais que les réponses de ses amis. Il n'y a aucun contenu public.
 
-**État d'implémentation.** Les trois méthodes de connexion Google, Apple et e-mail + mot de passe sont en place, et le profil `v1_users/{uid}` est créé à l'inscription. Restent à faire, dans l'ordre où le produit en aura besoin :
+**État d'implémentation.** Les trois méthodes de connexion Google, Apple et e-mail + mot de passe sont en place, et le profil `v1_users/{uid}` est créé à la validation de la sheet de choix du nom d'utilisateur — tant qu'il n'a pas été choisi, l'app n'est pas accessible. Le handle est unique, garanti par la réservation `v1_usernames`. Restent à faire, dans l'ordre où le produit en aura besoin :
 
 - **Facebook** — décrit ci-dessus, pas encore branché.
 - **Liaison d'identités** (`linkWithCredential`) — un même e-mail arrivant par deux providers crée aujourd'hui deux comptes distincts ; l'app affiche un message expliquant quelle méthode utiliser au lieu de lier.
-- **Écran de choix du pseudo et de l'avatar** — le pseudo est pour l'instant pré-rempli automatiquement (provider, puis prénom Apple, puis partie locale de l'e-mail) sans écran dédié.
-- **Unicité du pseudo** — non vérifiée : elle demande une collection de réservation ou un contrôle côté backend.
+- **Choix de l'avatar** — la sheet d'onboarding ne demande que le nom d'utilisateur ; l'avatar reste celui du provider, sans moyen d'en changer.
+- **Changement de nom d'utilisateur** — impossible aujourd'hui : libérer une réservation demande un passage côté backend, comme la suppression de compte.
+- **Ajout d'ami par handle** — la résolution `@handle` → compte est en place côté données ; il n'y a encore ni amitiés, ni écran pour s'en servir.
 - **Suppression de compte** — non implémentée.
 
 ### 4.2 Question du jour
@@ -127,7 +129,7 @@ Immédiatement après avoir répondu :
 ### 4.5 Réponses des amis
 
 - Accessibles **uniquement** après avoir répondu soi-même (mécanique BeReal).
-- Liste des amis : avatar, pseudo, réponse choisie, heure de réponse.
+- Liste des amis : avatar, nom d'utilisateur, réponse choisie, heure de réponse.
 - Les amis qui n'ont pas encore répondu apparaissent en attente (« n'a pas encore répondu »), sans notion de retard ou de temps de réaction en v1.
 
 ### 4.6 Streak
@@ -143,7 +145,7 @@ Immédiatement après avoir répondu :
 - La question part en file de modération (statut `pending`).
 - Le modérateur valide, édite ou rejette depuis le backoffice FireCMS. Une raison de rejet est renvoyée à l'auteur.
 - Une question validée rejoint le **pot commun** et devient éligible au tirage au sort.
-- L'auteur est notifié quand sa question est validée, puis quand elle est effectivement tirée. Son pseudo est crédité sur l'écran de la question.
+- L'auteur est notifié quand sa question est validée, puis quand elle est effectivement tirée. Son nom d'utilisateur est crédité sur l'écran de la question.
 - Une question déjà tirée ne peut pas ressortir (v1 : jamais de rediffusion).
 
 ## 5. Navigation & écrans
@@ -190,8 +192,8 @@ La racine de l'app. De haut en bas :
 
 ### 5.3 Écran Profil
 
-- **En-tête carte** : avatar (cadre noir épais, ombre dure), pseudo en `font-head`, streak courant et meilleur streak.
-- **Mes amis** : liste avatar + pseudo + streak, avec l'action « Retirer ». En tête de liste, un bouton plein `primary` « Inviter un pote » (partage du lien + code à 6 caractères, §4.1). Si la liste est vide, l'état vide occupe la place de la liste : « Sans potes, StatOwrel c'est juste des chiffres. »
+- **En-tête carte** : avatar (cadre noir épais, ombre dure), `@handle` en `font-head`, streak courant et meilleur streak.
+- **Mes amis** : liste avatar + `@handle` + streak, avec l'action « Retirer ». En tête de liste, un bouton plein `primary` « Inviter un pote » (partage du lien + code à 6 caractères, §4.1). Si la liste est vide, l'état vide occupe la place de la liste : « Sans potes, StatOwrel c'est juste des chiffres. »
 - **Mes questions** : proposer une question (§4.7) et suivre le statut de celles déjà envoyées (`en attente` / `validée` / `rejetée` + raison / `tirée le JJ/MM`).
 - **Réglages** : notifications, déconnexion, suppression de compte.
 
@@ -207,7 +209,7 @@ Contenu, de haut en bas :
 1. La **date** en micro-texte (« Aujourd'hui » ou « Mardi 12 août »).
 2. Le **titre de la question**, très gros, en `font-head`, cadré à gauche sur 2 à 4 lignes — c'est l'élément dominant de l'écran, façon carton de quizz.
 3. Les **options**, empilées verticalement, une par ligne, pleine largeur : carte `card`, bordure noire, ombre dure, label en `font-sans` gras. De 2 à 6 selon la question, dans leur ordre fixe (§4.2). Au-delà de 4 options, la liste défile — le titre reste épinglé en haut.
-4. Le **crédit auteur** en bas (« proposée par @pseudo ») quand la question vient d'un utilisateur.
+4. Le **crédit auteur** en bas (« proposée par @handle ») quand la question vient d'un utilisateur.
 
 L'interaction est le **double tap** décrit en §4.3 : premier tap = sélection (l'option se soulève, les autres s'estompent), deuxième tap = validation. Après validation, la sheet ne se ferme pas : son contenu **bascule** sur la carte StatOwrel (§5.5), sans changement d'écran ni retour au calendrier.
 
@@ -225,11 +227,11 @@ Anatomie de la carte, dans l'ordre vertical :
 | **Phrase** | « Comme **68%** des utilisateurs, tu es un.e **efficace**. » | Corps de texte de la carte |
 | **Encart question** | La question du jour + l'option choisie, sur fond `muted` | L'équivalent du bloc « attaque » |
 | **Barre de stats** | La répartition complète des options en barres horizontales bordées, la sienne mise en avant | Le bas de carte, chiffré |
-| **Pied** | Date, numéro du jour (« #142 »), pseudo de l'auteur de la question | Le pied d'une carte : édition + illustrateur |
+| **Pied** | Date, numéro du jour (« #142 »), nom d'utilisateur de l'auteur de la question | Le pied d'une carte : édition + illustrateur |
 
 - **Rareté.** Plus l'option choisie est minoritaire, plus la carte est rare : au-delà de 50% la carte est `common` (aplat `primary`), sous 25% elle passe `rare` (liseré doré), sous 10% `ultra rare` (fond holographique animé au tilt de l'appareil). C'est ce qui rend intéressant de répondre honnêtement plutôt que comme tout le monde. La rareté est calculée à l'affichage depuis `answer_counts`, elle n'est pas figée : elle bouge tant que les réponses arrivent, et se stabilise à la clôture.
 - **Bouton « Partager »** sous la carte : génère l'image de la carte seule (sans les amis) — §4.4.
-- **Les amis, sous la carte** (§4.5) : hors du cadre, en liste simple — avatar, pseudo, l'option choisie et l'heure. Les amis qui ont répondu comme moi sont regroupés en tête sous « Comme toi », les autres suivent, les non-répondants ferment la liste en `muted`.
+- **Les amis, sous la carte** (§4.5) : hors du cadre, en liste simple — avatar, `@handle`, l'option choisie et l'heure. Les amis qui ont répondu comme moi sont regroupés en tête sous « Comme toi », les autres suivent, les non-répondants ferment la liste en `muted`.
 - Cette carte est **rejouable à volonté** : tap sur un jour répondu dans le calendrier (§5.2) la rouvre à l'identique, avec les stats à jour et les réponses des amis arrivées depuis.
 
 ### 5.6 Ce qui n'existe pas
@@ -242,7 +244,8 @@ Conventions : collections préfixées `v1_`, champs en `snake_case`, champs opti
 
 | Collection | Contenu |
 |---|---|
-| `v1_users` | `display_name`, `photo_url`, `created_at`, `updated_at`, `email`, `auth_providers[]` (`password` / `google.com` / `facebook.com` / `apple.com`), `streak_count`, `streak_best` (meilleur streak, §5.3), `streak_last_answered_on`, `invite_code` |
+| `v1_users` | `username`, `photo_url`, `created_at`, `updated_at`, `email`, `auth_providers[]` (`password` / `google.com` / `facebook.com` / `apple.com`), `streak_count`, `streak_best` (meilleur streak, §5.3), `streak_last_answered_on`, `invite_code` |
+| `v1_usernames` | une par nom d'utilisateur pris, **id de document = le handle lui-même** : `user_id`, `created_at`. C'est cette collection qui porte l'unicité (§4.1) et qui résout un `@handle` vers un compte |
 | `v1_users/{id}/friends` | une entrée par ami (écrite des deux côtés à l'acceptation) |
 | `v1_questions` | `label`, `options` (**tableau ordonné** de `{ id: ULID, label, stat_label }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason`, `broadcast_at` (jour + heure de diffusion, `null` tant que non programmée) |
 | `v1_daily_questions` | une par jour, **id de document = `date`** au format `AAAA-MM-JJ` (fuseau Europe/Paris), pas un ULID : `date`, `question_id`, `published_at`, `closes_at`, `answer_counts` (map `option_id` → total ; pas de total scalaire, il se somme depuis la map) |

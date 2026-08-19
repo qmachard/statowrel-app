@@ -103,4 +103,6 @@ export const shadows = {
   lg: '6px 6px 0 0 #000',
   xl: '10px 10px 0 1px #000',
   '2xl': '16px 16px 0 1px #000',
+  /** Cast upwards, for a surface that comes from the bottom of the screen — the sheets of docs/prd.md §5.4. */
+  up: '0 -6px 0 0 #000',
 };
