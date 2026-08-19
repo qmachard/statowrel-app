@@ -1,6 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { shadows } from '@/design/shadows';
+import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 
 import type { StatsFixture, StatsFixtureId } from '@/stats/data/fixtures';
 
@@ -15,10 +16,51 @@ export interface DevFixtureSwitchProps {
  * it exists so both streak states can be reviewed without editing code, and it
  * disappears with the fixtures themselves.
  */
+const styles = StyleSheet.create({
+  root: {
+    gap: spacing(3),
+    borderRadius: radius.md,
+    borderWidth,
+    borderStyle: 'dashed',
+    borderColor: colors['muted-foreground'],
+    backgroundColor: colors.muted,
+    padding: spacing(4),
+  },
+  caption: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize['2xs'],
+    textTransform: 'uppercase',
+    color: colors['muted-foreground'],
+  },
+  row: {
+    flexDirection: 'row',
+    gap: spacing(3),
+  },
+  option: {
+    flex: 1,
+    borderRadius: radius.sm,
+    borderWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2),
+  },
+  optionSelected: {
+    backgroundColor: colors.primary,
+  },
+  optionLabel: {
+    textAlign: 'center',
+    fontFamily: fonts.sans,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+    color: colors.foreground,
+  },
+});
+
 export const DevFixtureSwitch = ({ fixtures, active, onSelect }: DevFixtureSwitchProps) => (
-  <View className="gap-3 rounded-md border-2 border-dashed border-muted-foreground bg-muted p-4">
-    <Text className="font-sans text-[10px] uppercase text-muted-foreground">Dev — jeu de données</Text>
-    <View className="flex-row gap-3">
+  <View style={styles.root}>
+    <Text style={styles.caption}>Dev — jeu de données</Text>
+    <View style={styles.row}>
       {fixtures.map((fixture) => {
         const selected = fixture.id === active;
 
@@ -27,11 +69,10 @@ export const DevFixtureSwitch = ({ fixtures, active, onSelect }: DevFixtureSwitc
             key={fixture.id}
             accessibilityRole="button"
             accessibilityState={{ selected }}
-            style={selected ? shadows.sm : undefined}
-            className={`flex-1 rounded-sm border-2 border-border px-3 py-2 ${selected ? 'bg-primary' : 'bg-card'}`}
+            style={[ styles.option, selected ? styles.optionSelected : null, selected ? shadows.sm : null ]}
             onPress={() => onSelect(fixture.id)}
           >
-            <Text className="text-center font-sans text-xs uppercase text-foreground">{fixture.label}</Text>
+            <Text style={styles.optionLabel}>{fixture.label}</Text>
           </Pressable>
         );
       })}

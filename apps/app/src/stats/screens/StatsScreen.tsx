@@ -1,9 +1,10 @@
 import { useNavigation } from '@react-navigation/native';
 import { CalendarCheck, Trophy } from 'lucide-react-native';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/AuthContext';
+import { colors, spacing } from '@/design/tokens';
 import { DevFixtureSwitch } from '@/stats/components/DevFixtureSwitch';
 import { StatTile } from '@/stats/components/StatTile';
 import { StatsCalendar } from '@/stats/components/StatsCalendar';
@@ -17,6 +18,22 @@ import { useStatsData } from '@/stats/data/useStatsData';
  *
  * The stats are still fixtures — see `useStatsData`.
  */
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    gap: spacing(6),
+    padding: spacing(5),
+    paddingBottom: spacing(12),
+  },
+  tiles: {
+    flexDirection: 'row',
+    gap: spacing(5),
+  },
+});
+
 export const StatsScreen = () => {
   const navigation = useNavigation();
   const { profile } = useAuth();
@@ -27,13 +44,13 @@ export const StatsScreen = () => {
   const displayName = profile?.display_name ?? user.display_name;
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={[ 'top' ]}>
-      <ScrollView contentContainerClassName="gap-6 p-5 pb-12">
+    <SafeAreaView style={styles.safeArea} edges={[ 'top' ]}>
+      <ScrollView contentContainerStyle={styles.content}>
         <StatsHeader displayName={displayName} onEditProfile={() => navigation.navigate('Profile')} />
 
         <StreakCard count={user.streak_count} />
 
-        <View className="flex-row gap-5">
+        <View style={styles.tiles}>
           <StatTile icon={Trophy} label="Record" value={user.streak_best} unit="jours d’affilée" />
           <StatTile icon={CalendarCheck} label="Jours répondus" value={answers.length} unit="depuis l’inscription" />
         </View>

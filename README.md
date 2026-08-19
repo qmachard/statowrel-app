@@ -6,7 +6,7 @@ See [`CLAUDE.md`](./CLAUDE.md) for conventions and [`docs/architecture.md`](./do
 
 ## Structure
 
-- `apps/app` — mobile app (iOS + Android), React Native + Expo + Nativewind
+- `apps/app` — mobile app (iOS + Android), React Native + Expo
 - `apps/firecms` — admin backoffice, React + Vite + FireCMS
 - `apps/functions` — backend, Firebase Cloud Functions + Express
 - `packages/models` — `@statowrel/models`, shared TypeScript models + Firestore converters

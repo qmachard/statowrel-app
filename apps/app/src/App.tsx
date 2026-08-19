@@ -1,5 +1,3 @@
-import './global.css';
-
 import { ArchivoBlack_400Regular } from '@expo-google-fonts/archivo-black';
 import { SpaceGrotesk_400Regular } from '@expo-google-fonts/space-grotesk';
 import { NavigationContainer } from '@react-navigation/native';
@@ -7,6 +5,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -17,6 +16,12 @@ import { navigationRef } from '@/navigation/navigationRef';
 import { navigationTheme } from '@/navigation/theme';
 
 SplashScreen.preventAutoHideAsync();
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});
 
 const SessionGate = () => {
   const { initializing } = useAuth();
@@ -48,7 +53,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <GestureHandlerRootView className="flex-1">
+      <GestureHandlerRootView style={styles.root}>
         <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking}>
           <StatusBar style="auto" />
           <AuthProvider>

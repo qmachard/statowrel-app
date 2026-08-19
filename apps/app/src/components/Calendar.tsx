@@ -1,8 +1,9 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { WEEKDAY_INITIALS, addMonths, compareMonths, formatMonthLabel, getMonthWeeks } from '@/lib/dates';
 
 /**
@@ -25,6 +26,42 @@ export interface CalendarProps {
   renderDay: (date: Date) => ReactNode;
 }
 
+const styles = StyleSheet.create({
+  root: {
+    gap: spacing(4),
+  },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  monthLabel: {
+    fontFamily: fonts.head,
+    fontSize: fontSize.base,
+    textTransform: 'uppercase',
+    color: colors.foreground,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: spacing(2),
+  },
+  weekdayInitial: {
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: fonts.sans,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+    color: colors['muted-foreground'],
+  },
+  weeks: {
+    gap: spacing(2),
+  },
+  cell: {
+    flex: 1,
+    aspectRatio: 1,
+  },
+});
+
 export const Calendar = ({ month, onMonthChange, minMonth = null, maxMonth = null, renderDay }: CalendarProps) => {
   const previousMonth = addMonths(month, -1);
   const nextMonth = addMonths(month, 1);
@@ -32,8 +69,8 @@ export const Calendar = ({ month, onMonthChange, minMonth = null, maxMonth = nul
   const canGoForward = maxMonth === null || compareMonths(nextMonth, maxMonth) <= 0;
 
   return (
-    <View className="gap-4">
-      <View className="flex-row items-center justify-between">
+    <View style={styles.root}>
+      <View style={styles.head}>
         <Button
           label="Mois précédent"
           icon={ChevronLeft}
@@ -42,7 +79,7 @@ export const Calendar = ({ month, onMonthChange, minMonth = null, maxMonth = nul
           disabled={!canGoBack}
           onPress={() => onMonthChange(previousMonth)}
         />
-        <Text className="font-head text-base uppercase text-foreground">{formatMonthLabel(month)}</Text>
+        <Text style={styles.monthLabel}>{formatMonthLabel(month)}</Text>
         <Button
           label="Mois suivant"
           icon={ChevronRight}
@@ -53,22 +90,19 @@ export const Calendar = ({ month, onMonthChange, minMonth = null, maxMonth = nul
         />
       </View>
 
-      <View className="flex-row gap-2">
+      <View style={styles.row}>
         {WEEKDAY_INITIALS.map((initial, index) => (
-          <Text
-            key={index}
-            className="flex-1 text-center font-sans text-xs uppercase text-muted-foreground"
-          >
+          <Text key={index} style={styles.weekdayInitial}>
             {initial}
           </Text>
         ))}
       </View>
 
-      <View className="gap-2">
+      <View style={styles.weeks}>
         {getMonthWeeks(month).map((week, weekIndex) => (
-          <View key={weekIndex} className="flex-row gap-2">
+          <View key={weekIndex} style={styles.row}>
             {week.map((date, dayIndex) => (
-              <View key={dayIndex} className="aspect-square flex-1">
+              <View key={dayIndex} style={styles.cell}>
                 {date === null ? null : renderDay(date)}
               </View>
             ))}

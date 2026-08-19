@@ -1,15 +1,15 @@
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Svg, { Defs, Line, Pattern, Rect } from 'react-native-svg';
 
 import { colors } from '@/design/tokens';
 
 /**
  * Diagonal hatching, filling its parent. The missed-day cell of docs/prd.md §5.2
- * is the only place that needs it, and it is the one fill Tailwind can't express
- * — a repeating pattern, not a color.
+ * is the only place that needs it, and it is the one fill a plain background
+ * colour can't express — a repeating pattern.
  */
 export const Hatch = () => (
-  <View className="absolute inset-0" pointerEvents="none">
+  <View style={StyleSheet.absoluteFill} pointerEvents="none">
     <Svg width="100%" height="100%">
       <Defs>
         <Pattern id="hatch" width={7} height={7} patternUnits="userSpaceOnUse">

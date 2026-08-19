@@ -1,8 +1,17 @@
 import type { ComponentType } from 'react';
-import { ActivityIndicator, Pressable, type PressableProps, Text, View, type ViewStyle } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  type PressableProps,
+  StyleSheet,
+  Text,
+  type TextStyle,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { shadows } from '@/design/shadows';
-import { colors } from '@/design/tokens';
+import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 
 export type ButtonVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
 
@@ -25,23 +34,40 @@ export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> 
   loading?: boolean;
 }
 
-const SURFACE: Record<ButtonVariant, string> = {
-  default: 'border-2 border-border bg-primary',
-  secondary: 'border-2 border-border bg-secondary',
-  destructive: 'border-2 border-border bg-destructive',
-  outline: 'border-2 border-border bg-card',
-  ghost: 'bg-transparent',
-  link: 'bg-transparent',
-};
+const styles = StyleSheet.create({
+  surface: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing(2),
+    borderRadius: radius.sm,
+  },
+  label: {
+    fontFamily: fonts.head,
+    textTransform: 'uppercase',
+  },
+  disabled: {
+    opacity: 0.6,
+  },
+});
 
-const LABEL: Record<ButtonVariant, string> = {
-  default: 'text-primary-foreground',
-  secondary: 'text-secondary-foreground',
-  destructive: 'text-destructive-foreground',
-  outline: 'text-foreground',
-  ghost: 'text-foreground',
-  link: 'text-foreground underline',
-};
+const SURFACE = StyleSheet.create({
+  default: { borderWidth, borderColor: colors.border, backgroundColor: colors.primary },
+  secondary: { borderWidth, borderColor: colors.border, backgroundColor: colors.secondary },
+  destructive: { borderWidth, borderColor: colors.border, backgroundColor: colors.destructive },
+  outline: { borderWidth, borderColor: colors.border, backgroundColor: colors.card },
+  ghost: { backgroundColor: 'transparent' },
+  link: { backgroundColor: 'transparent' },
+}) satisfies Record<ButtonVariant, ViewStyle>;
+
+const LABEL = StyleSheet.create({
+  default: { color: colors['primary-foreground'] },
+  secondary: { color: colors['secondary-foreground'] },
+  destructive: { color: colors['destructive-foreground'] },
+  outline: { color: colors.foreground },
+  ghost: { color: colors.foreground },
+  link: { color: colors.foreground, textDecorationLine: 'underline' },
+}) satisfies Record<ButtonVariant, TextStyle>;
 
 /** The color icons and the spinner take, mirroring `LABEL`. */
 const FOREGROUND: Record<ButtonVariant, string> = {
@@ -55,9 +81,7 @@ const FOREGROUND: Record<ButtonVariant, string> = {
 
 /**
  * The raised variants carry the hard offset shadow at rest; `ghost` and `link`
- * are flat, so they have nothing to sink into. It's a style rather than a
- * `shadow-md` className because Nativewind's version blurs the edge — see
- * `src/design/shadows.ts`.
+ * are flat, so they have nothing to sink into.
  */
 const RESTING: Record<ButtonVariant, ViewStyle | undefined> = {
   default: shadows.md,
@@ -68,24 +92,8 @@ const RESTING: Record<ButtonVariant, ViewStyle | undefined> = {
   link: undefined,
 };
 
-/**
- * A raised variant sinks by exactly its shadow offset — 4px, the offset of
- * `shadows.md`.
- *
- * A style rather than a `translate-x-1 translate-y-1` className, for a harder
- * reason than the shadow above: Tailwind compiles a transform utility down to
- * the CSS variables `--tw-translate-x` / `--tw-translate-y`, and a component
- * that only *gains* a CSS variable after its first render makes Nativewind
- * print an upgrade warning. That warning serialises the component's props by
- * walking them recursively, which reaches React Navigation's context object,
- * whose default value is made of getters that throw — so pressing the button
- * crashed the render with "Couldn't find a navigation context".
- *
- * The style is also more faithful: `translate-x-1` resolves to 3.5px, since
- * Nativewind's `rem` is 14, so the pressed surface never quite covered its own
- * shadow.
- */
-const SUNK: ViewStyle = { transform: [ { translateX: 4 }, { translateY: 4 } ] };
+/** A raised variant sinks by exactly its shadow offset — 4px, the offset of `shadows.md`. */
+const SUNK: ViewStyle = { transform: [ { translateX: spacing(1) }, { translateY: spacing(1) } ] };
 
 const PRESSED: Record<ButtonVariant, ViewStyle | undefined> = {
   default: SUNK,
@@ -102,36 +110,36 @@ const PRESSED: Record<ButtonVariant, ViewStyle | undefined> = {
  * far too loud for a ghost button, and its white foreground would have been
  * invisible on the page the rest of the time.
  */
-const PRESSED_TINT: Record<ButtonVariant, string> = {
-  default: '',
-  secondary: '',
-  destructive: '',
-  outline: '',
-  ghost: 'bg-muted',
-  link: 'opacity-70',
-};
+const PRESSED_TINT = StyleSheet.create({
+  default: {},
+  secondary: {},
+  destructive: {},
+  outline: {},
+  ghost: { backgroundColor: colors.muted },
+  link: { opacity: 0.7 },
+}) satisfies Record<ButtonVariant, ViewStyle>;
 
-const SIZE: Record<ButtonSize, string> = {
-  default: 'px-4 py-3',
-  xs: 'px-2 py-1',
-  sm: 'px-3 py-2',
-  lg: 'px-6 py-4',
-  'icon': 'p-3',
-  'icon-xs': 'p-1.5',
-  'icon-sm': 'p-2',
-  'icon-lg': 'p-4',
-};
+const SIZE = StyleSheet.create({
+  default: { paddingHorizontal: spacing(4), paddingVertical: spacing(3) },
+  xs: { paddingHorizontal: spacing(2), paddingVertical: spacing(1) },
+  sm: { paddingHorizontal: spacing(3), paddingVertical: spacing(2) },
+  lg: { paddingHorizontal: spacing(6), paddingVertical: spacing(4) },
+  'icon': { padding: spacing(3) },
+  'icon-xs': { padding: spacing(1.5) },
+  'icon-sm': { padding: spacing(2) },
+  'icon-lg': { padding: spacing(4) },
+}) satisfies Record<ButtonSize, ViewStyle>;
 
-const TEXT_SIZE: Record<ButtonSize, string> = {
-  default: 'text-base',
-  xs: 'text-xs',
-  sm: 'text-sm',
-  lg: 'text-lg',
-  'icon': 'text-base',
-  'icon-xs': 'text-xs',
-  'icon-sm': 'text-sm',
-  'icon-lg': 'text-lg',
-};
+const TEXT_SIZE = StyleSheet.create({
+  default: { fontSize: fontSize.base },
+  xs: { fontSize: fontSize.xs },
+  sm: { fontSize: fontSize.sm },
+  lg: { fontSize: fontSize.lg },
+  'icon': { fontSize: fontSize.base },
+  'icon-xs': { fontSize: fontSize.xs },
+  'icon-sm': { fontSize: fontSize.sm },
+  'icon-lg': { fontSize: fontSize.lg },
+}) satisfies Record<ButtonSize, TextStyle>;
 
 const ICON_SIZE: Record<ButtonSize, number> = {
   default: 18,
@@ -178,24 +186,22 @@ export const Button = ({
     >
       {({ pressed }) => (
         <View
-          // A pressed surface drops its shadow entirely — it has sunk into it.
-          style={pressed ? PRESSED[variant] : RESTING[variant]}
-          className={[
-            'flex-row items-center justify-center gap-2 rounded-sm',
+          style={[
+            styles.surface,
             SURFACE[variant],
             SIZE[size],
-            pressed ? PRESSED_TINT[variant] : '',
-            isDisabled ? 'opacity-60' : '',
-          ].join(' ')}
+            // A pressed surface drops its shadow entirely — it has sunk into it.
+            pressed ? PRESSED[variant] : RESTING[variant],
+            pressed ? PRESSED_TINT[variant] : null,
+            isDisabled ? styles.disabled : null,
+          ]}
         >
           {loading ? (
             <ActivityIndicator color={foreground} size="small" />
           ) : (
             <>
               {iconPosition === 'start' ? renderIcon() : null}
-              {iconOnly ? null : (
-                <Text className={`font-head uppercase ${TEXT_SIZE[size]} ${LABEL[variant]}`}>{label}</Text>
-              )}
+              {iconOnly ? null : <Text style={[ styles.label, TEXT_SIZE[size], LABEL[variant] ]}>{label}</Text>}
               {iconPosition === 'end' ? renderIcon() : null}
             </>
           )}

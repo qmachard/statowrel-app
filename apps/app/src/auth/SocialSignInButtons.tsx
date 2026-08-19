@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
 import { SignInCancelledError, authErrorMessage } from './errors';
 import {
@@ -12,6 +13,17 @@ import {
 } from './providers';
 
 type Pending = 'google' | 'apple' | null;
+
+const styles = StyleSheet.create({
+  root: {
+    gap: spacing(3),
+  },
+  error: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.sm,
+    color: colors.destructive,
+  },
+});
 
 /**
  * The three sign-in methods sit at the same level (docs/prd.md §4.1). Apple is
@@ -62,7 +74,7 @@ export const SocialSignInButtons = ({ disabled = false }: { disabled?: boolean }
   }
 
   return (
-    <View className="gap-3">
+    <View style={styles.root}>
       {googleAvailable ? (
         <Button
           label="Continuer avec Google"
@@ -83,7 +95,7 @@ export const SocialSignInButtons = ({ disabled = false }: { disabled?: boolean }
         />
       ) : null}
 
-      {error ? <Text className="font-sans text-sm text-destructive">{error}</Text> : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 };
