@@ -16,11 +16,12 @@ One file per `v1_*` Firestore collection under `src/collections/`, following Fir
 ## Local development
 
 ```bash
+cp apps/firecms/.env.example apps/firecms/.env.local   # fill in Firebase web app config
 npm run dev            # Vite dev server on :3002
 npm run dev:firecms    # same, run from the repo root via turbo
 ```
 
-Point `VITE_FIREBASE_*_EMULATOR_HOST`/`_PORT` env vars at the Functions emulator suite (`apps/functions`) to develop against local data.
+Point `VITE_FIREBASE_*_EMULATOR_HOST`/`_PORT` env vars at the Functions emulator suite (`apps/functions`) to develop against local data — `localhost:8080` for Firestore, `localhost:9099` for Auth (ports from `firebase.json`).
 
 ## Validation
 
