@@ -1,4 +1,4 @@
-import { getDoc } from 'firebase/firestore';
+import { getDoc, onSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 
 import {
@@ -42,12 +42,53 @@ export interface DailyQuestionView {
   authorName: string | null;
 }
 
-const EMPTY: DailyQuestionView = {
-  status: 'loading',
-  dailyQuestion: null,
-  question: null,
-  answer: null,
-  authorName: null,
+/**
+ * Each slice of state carries the key it describes — the day key, the question
+ * id — so a slice belonging to the previous one is simply not current, rather
+ * than something an effect has to reset on the way in. Which is also what keeps
+ * a stale day from showing for one render after the route's `date` changes.
+ */
+interface DayState {
+  date: string;
+  dailyQuestion: DailyQuestionData | null;
+  /** Whether the 07:00 drop time has come — decided in the subscription, where the clock is worth reading. */
+  published: boolean;
+  failed: boolean;
+}
+
+interface QuestionState {
+  questionId: string;
+  question: QuestionData | null;
+  authorName: string | null;
+  failed: boolean;
+}
+
+const statusOf = (day: DayState | null, question: QuestionState | null): DailyQuestionStatus => {
+  if (day === null) {
+    return 'loading';
+  }
+
+  if (day.failed) {
+    return 'error';
+  }
+
+  if (day.dailyQuestion === null) {
+    return 'missing';
+  }
+
+  if (!day.published) {
+    return 'unpublished';
+  }
+
+  if (question === null) {
+    return 'loading';
+  }
+
+  if (question.failed) {
+    return 'error';
+  }
+
+  return question.question === null ? 'missing' : 'ready';
 };
 
 /**
@@ -69,90 +110,118 @@ const readAuthorName = async (authorId: string): Promise<string | null> => {
 };
 
 /**
- * Everything one day's question screen needs, read from Firestore — unlike the
- * Stats screen, which is still on fixtures.
+ * Everything one day's question screen needs, from Firestore.
  *
  * Three documents, because the model deliberately doesn't denormalize the
  * question into the day (docs/architecture.md): the day
  * (`v1_daily_questions/{date}`), the question it points at, and the current
  * user's answer — whose document id *is* their UID, so "already answered" is a
- * single `get()` rather than a query.
+ * single document rather than a query.
  *
- * The question is only read once the day has dropped, matching the
- * `broadcast_at` gate `firestore.rules` puts on `v1_questions`.
+ * Two of the three are **subscribed to**, the third is read once:
+ *
+ * - **The day**, because `answer_counts` moves every time anybody answers, and
+ *   the StatOwrel card's rarity is that map's shape at display time
+ *   (docs/prd.md §5.5). It also makes the 07:00 drop land on a screen that is
+ *   already open, instead of on the next time it is opened.
+ * - **The answer**, because it is what flips the sheet to its answered state.
+ *   Firestore hands a local write to its own listeners before the round trip,
+ *   so the flip happens on the tap rather than on the server.
+ * - **The question** is read once: `firestore.rules` lets nobody but a
+ *   moderator write one, and a question that has been broadcast is settled —
+ *   there is nothing to wait for.
  */
 export const useDailyQuestion = (date: string): DailyQuestionView => {
   const { user } = useAuth();
-  const [ view, setView ] = useState<DailyQuestionView>(EMPTY);
+  const userId = user?.uid ?? null;
+
+  const [ dayState, setDayState ] = useState<DayState | null>(null);
+  const [ questionState, setQuestionState ] = useState<QuestionState | null>(null);
+  const [ answerState, setAnswerState ] = useState<{ key: string; answer: DailyQuestionAnswerData | null } | null>(null);
+
+  useEffect(() => onSnapshot(
+    getDocumentRef(DAILY_QUESTION_COLLECTION, date, dailyQuestionConverter),
+    (snapshot) => {
+      const dailyQuestion = snapshot.data() ?? null;
+
+      setDayState({
+        date,
+        dailyQuestion,
+        published: dailyQuestion !== null && new Date(dailyQuestion.published_at) <= new Date(),
+        failed: false,
+      });
+    },
+    (error) => {
+      console.warn('[daily-question] lost the day subscription', date, error);
+      setDayState({ date, dailyQuestion: null, published: false, failed: true });
+    },
+  ), [ date ]);
+
+  const day = dayState?.date === date ? dayState : null;
+  const questionId = day?.published === true ? day.dailyQuestion?.question_id ?? null : null;
 
   useEffect(() => {
+    if (questionId === null) {
+      return undefined;
+    }
+
     let cancelled = false;
 
-    const publish = (next: DailyQuestionView) => {
-      if (!cancelled) {
-        setView(next);
-      }
-    };
+    // Read once — see this hook's own doc: a broadcast question is settled.
+    getDoc(getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter))
+      .then(async (snapshot) => {
+        const question = snapshot.data() ?? null;
+        const authorName = question === null ? null : await readAuthorName(question.author_id);
 
-    const load = async () => {
-      publish(EMPTY);
-
-      try {
-        const daySnapshot = await getDoc(getDocumentRef(DAILY_QUESTION_COLLECTION, date, dailyQuestionConverter));
-        const dailyQuestion = daySnapshot.data() ?? null;
-
-        if (dailyQuestion === null) {
-          publish({ ...EMPTY, status: 'missing' });
-
-          return;
+        if (!cancelled) {
+          setQuestionState({ questionId, question, authorName, failed: false });
         }
+      })
+      .catch((error: unknown) => {
+        console.warn('[daily-question] could not load the question', questionId, error);
 
-        if (new Date(dailyQuestion.published_at) > new Date()) {
-          publish({ ...EMPTY, status: 'unpublished', dailyQuestion });
-
-          return;
+        if (!cancelled) {
+          setQuestionState({ questionId, question: null, authorName: null, failed: true });
         }
-
-        const [ questionSnapshot, answerSnapshot ] = await Promise.all([
-          getDoc(getDocumentRef(QUESTION_COLLECTION, dailyQuestion.question_id, questionConverter)),
-          user === null
-            ? null
-            : getDoc(getSubDocumentRef(
-              DAILY_QUESTION_COLLECTION,
-              date,
-              DAILY_QUESTION_ANSWER_COLLECTION,
-              user.uid,
-              dailyQuestionAnswerConverter,
-            )),
-        ]);
-
-        const question = questionSnapshot.data() ?? null;
-
-        if (question === null) {
-          publish({ ...EMPTY, status: 'missing', dailyQuestion });
-
-          return;
-        }
-
-        publish({
-          status: 'ready',
-          dailyQuestion,
-          question,
-          answer: answerSnapshot?.data() ?? null,
-          authorName: await readAuthorName(question.author_id),
-        });
-      } catch (error) {
-        console.warn('[daily-question] could not load the day', date, error);
-        publish({ ...EMPTY, status: 'error' });
-      }
-    };
-
-    void load();
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [ date, user ]);
+  }, [ questionId ]);
 
-  return view;
+  const answerKey = `${date}:${userId ?? ''}`;
+
+  useEffect(() => {
+    if (userId === null) {
+      return undefined;
+    }
+
+    return onSnapshot(
+      getSubDocumentRef(
+        DAILY_QUESTION_COLLECTION,
+        date,
+        DAILY_QUESTION_ANSWER_COLLECTION,
+        userId,
+        dailyQuestionAnswerConverter,
+      ),
+      (snapshot) => setAnswerState({ key: answerKey, answer: snapshot.data() ?? null }),
+      (error) => {
+        // The day itself still renders: not knowing whether it was answered is
+        // worth an unanswered-looking sheet, not an error screen — a second
+        // answer would be refused by the rules anyway.
+        console.warn('[daily-question] lost the answer subscription', date, error);
+      },
+    );
+  }, [ date, userId, answerKey ]);
+
+  const question = questionState?.questionId === questionId ? questionState : null;
+
+  return {
+    status: statusOf(day, question),
+    dailyQuestion: day?.dailyQuestion ?? null,
+    question: question?.question ?? null,
+    answer: answerState?.key === answerKey ? answerState.answer : null,
+    authorName: question?.authorName ?? null,
+  };
 };
