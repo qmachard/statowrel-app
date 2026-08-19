@@ -37,6 +37,10 @@ const usersCollection = buildCollection<UserEntity>({
   icon: 'Person',
   description: 'Profils des comptes de l\'app. L\'identifiant du document est l\'UID Firebase Auth.',
   callbacks,
+  permissions: {
+    create: false,
+    edit: false,
+  },
   properties: {
     display_name: buildProperty({
       dataType: 'string',
