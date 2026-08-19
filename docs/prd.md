@@ -1,6 +1,6 @@
 # StatOwrel — PRD
 
-Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Seul le §4.1 est partiellement implémenté (connexion Google / Apple / e-mail + mot de passe et création du profil) ; tout le reste est à faire — voir `docs/architecture.md` pour l'état technique réel.
+Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Deux sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil) et les §5.1–5.2, dont l'écran Stats est en place mais branché sur des données factices — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
 
 ## 1. Vision
 
@@ -150,28 +150,32 @@ Immédiatement après avoir répondu :
 
 L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), coins **légèrement** arrondis (`rounded` = 4px — ni carrés, ni pilule), titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Les tokens sont déjà dans `apps/app/src/design/tokens.js` (palette + rayon) et `apps/app/tailwind.config.js` (typo, bordures, ombres) — aucun écran ne définit sa propre palette.
 
-Toute l'app tient en **deux onglets, une modale et une carte**. Il n'y a pas de troisième niveau de navigation.
+Toute l'app tient en **un écran, une modale et une carte**, plus le Profil qui s'ouvre par-dessus. Il n'y a ni barre d'onglets, ni menu, ni troisième niveau de navigation.
 
-### 5.1 Tabbar
+### 5.1 Racine de l'app
 
-Deux onglets, et deux seulement :
+Pas de tabbar. L'écran **Stats** (§5.2) *est* l'app : il s'ouvre au lancement, et rien ne se pose à côté de lui. Ce qui n'y tient pas s'ouvre **par-dessus**, depuis les deux boutons-icônes de son en-tête, en haut à droite :
 
-| Onglet | Rôle |
+| Bouton | Ouvre |
 |---|---|
-| **Stats** (par défaut) | Le streak, le calendrier, l'accès à la question du jour et aux jours passés |
-| **Profil** | Son identité, ses amis, ses propositions de questions, ses réglages |
+| **Inviter un pote** | Le partage du lien d'invitation et du code à 6 caractères (§4.1) |
+| **Modifier le profil** | L'écran Profil (§5.3) — identité, amis, questions proposées, réglages |
 
-- Barre fixe en bas, fond `card`, **bordure haute noire épaisse**, pas d'ombre interne, pas de flou de fond.
-- Onglet actif : pastille `primary` pleine sous l'icône + label, bordure noire et ombre dure décalée (`shadow-sm`) — l'onglet actif « sort » de la barre. Onglet inactif : `muted-foreground`, sans bordure.
+- Les deux boutons sont carrés, bordure noire épaisse, ombre dure décalée. Le bouton d'invitation est plein `primary`, celui du profil sur fond `card` : inviter est l'action qu'on veut voir en premier.
+- Le Profil se pose **en pile** au-dessus de Stats et porte son propre bouton retour. On n'y navigue jamais latéralement : on l'ouvre, on le referme.
 - Pas de badge numérique ; l'état « question du jour non répondue » se signale par la modale (§5.4), pas par une pastille.
 
 ### 5.2 Écran Stats
 
-L'écran d'accueil. De haut en bas :
+La racine de l'app. De haut en bas :
 
-**1. Bloc streak.** Une carte `primary` bordée, ombre `lg`, occupant toute la largeur : le nombre de jours en très gros (`font-head`), le mot « jours d'affilée » en dessous, et un pictogramme de flamme. Quand le streak est à 0, la carte passe en `muted` avec « Réponds aujourd'hui pour repartir ».
+**1. En-tête.** La date du jour en micro-texte et la salutation (« Salut Lou ») en `font-head`, à gauche ; à droite les deux boutons-icônes de §5.1.
 
-**2. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, coins légèrement arrondis (`rounded`), séparées par une gouttière régulière. Quatre états :
+**2. Bloc streak.** Une carte `primary` bordée, ombre `lg`, occupant toute la largeur : le nombre de jours en très gros (`font-head`), le mot « jours d'affilée » en dessous, et un pictogramme de flamme. Quand le streak est à 0, la carte passe en `muted` avec « Réponds aujourd'hui pour repartir ».
+
+**3. Record et jours répondus.** Deux tuiles côte à côte sous le bloc streak, fond `card`, bordure noire, ombre dure : le meilleur streak jamais atteint (`streak_best`) et le nombre total de jours répondus depuis l'inscription. Elles remettent le streak courant en perspective sans lui voler la vedette.
+
+**4. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, coins légèrement arrondis (`rounded`), séparées par une gouttière régulière. Quatre états :
 
 | État | Rendu | Tap |
 |---|---|---|
@@ -184,8 +188,6 @@ L'écran d'accueil. De haut en bas :
 - Le calendrier **est** l'historique : c'est le seul endroit où l'on retrouve les questions passées et ses propres cartes.
 - Un jour sans question diffusée (avant le lancement, ou incident de publication) est rendu comme « futur » : inerte, non rattrapable.
 
-**3. Rappel du jour.** Si la question du jour n'est pas encore tombée, un encart en bas : « La question tombe entre 8h et 20h ». Pas de compte à rebours (l'heure est aléatoire — un compte à rebours mentirait).
-
 ### 5.3 Écran Profil
 
 - **En-tête carte** : avatar (cadre noir épais, ombre dure), pseudo en `font-head`, streak courant et meilleur streak.
@@ -195,7 +197,7 @@ L'écran d'accueil. De haut en bas :
 
 ### 5.4 Modale question (bottom sheet)
 
-La question ne vit **jamais** dans un onglet : c'est toujours une **bottom sheet** posée par-dessus l'écran Stats.
+La question ne vit **jamais** dans un écran à elle : c'est toujours une **bottom sheet** posée par-dessus l'écran Stats.
 
 - **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins supérieurs légèrement arrondis (`rounded`), bordure haute noire épaisse, ombre dure vers le haut.
 - **Rattrapage depuis le calendrier** → même sheet, mais **fermable** (poignée + tap sur le fond) : on a le droit de regarder une vieille question et de repartir sans répondre.
@@ -232,7 +234,7 @@ Anatomie de la carte, dans l'ordre vertical :
 
 ### 5.6 Ce qui n'existe pas
 
-Pas de feed, pas d'onglet « amis » séparé, pas d'écran de recherche, pas de menu latéral, pas de réglages sur l'écran Stats. Deux onglets, une modale, une carte.
+Pas de feed, pas de tabbar, pas d'onglet « amis » séparé, pas d'écran de recherche, pas de menu latéral, pas de réglages sur l'écran Stats. Un écran racine, deux boutons-icônes, une modale, une carte.
 
 ## 6. Modèle de données (esquisse)
 

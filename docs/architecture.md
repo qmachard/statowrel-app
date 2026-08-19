@@ -10,7 +10,7 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Language | TypeScript 5.4+ | Strict mode everywhere |
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
 | Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `src/design/tokens.js`; `Button` / `TextField` primitives in `src/components/`, the rest added as screens need them |
-| Mobile routing | React Navigation 7 | Native stack + bottom tabs, declared in `apps/app/src/navigation/` |
+| Mobile routing | React Navigation 7 | Native stack only — no tab bar, Stats is the root (docs/prd.md §5.1) — declared in `apps/app/src/navigation/` |
 | Backoffice | React 18 + Vite (SPA) + FireCMS v2 + MUI | Firebase-Hosting-deployed admin UI |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
 | Database | Firebase Firestore | NoSQL, event-sourcing-friendly, `v1_` collection prefix |
@@ -285,9 +285,9 @@ The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=�
 
 ## What's deliberately not here yet
 
-- No app screens beyond sign-in and a placeholder home — nothing consumes `v1_questions` on mobile yet.
+- The Stats screen (docs/prd.md §5.2) renders from fixtures, not Firestore — `apps/app/src/stats/data/` holds two fake data sets and the `__DEV__` switch between them. Nothing consumes `v1_questions` on mobile yet, and the calendar's cells are not tappable: the question sheet (§5.4) and the StatOwrel card (§5.5) they open do not exist.
 - Four of the PRD's five collections exist; only `v1_users/{id}/friends` is still to be modelled — see `docs/prd.md` §6.
 - The daily cycle's back half: no answer trigger to increment `answer_counts` and bump streaks, no midnight closer resetting the streaks of whoever didn't answer (docs/prd.md §6 "Backend"). The push `dailyQuestions-notifyDailyQuestion` sends is a stub too — the task fires at the right instant, it just doesn't notify anyone yet. And no app screen consumes any of it.
-- Only two design-system primitives (`Button`, `TextField`), built for the auth forms — cards, chips and the rest come with the screens that need them. No dark-mode theming either.
+- Design-system primitives are added as screens need them — `Button`, `TextField`, `Card`, `IconButton`, `Calendar` so far. No dark-mode theming either (light only).
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.
