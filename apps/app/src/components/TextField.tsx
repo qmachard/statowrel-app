@@ -7,6 +7,8 @@ import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/
 export interface TextFieldProps extends TextInputProps {
   label: string;
   error?: string;
+  /** Fixed marker sitting inside the field, ahead of the value — the `@` of a handle. */
+  prefix?: string;
 }
 
 /**
@@ -42,7 +44,9 @@ const styles = StyleSheet.create({
   ringFocused: {
     borderColor: colors.primary,
   },
-  input: {
+  field: {
+    flexDirection: 'row',
+    alignItems: 'center',
     height: 48,
     width: '100%',
     borderRadius: radius.DEFAULT,
@@ -50,15 +54,24 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.input,
     paddingHorizontal: spacing(3),
+  },
+  fieldInvalid: {
+    borderColor: colors.destructive,
+  },
+  fieldDisabled: {
+    opacity: 0.5,
+  },
+  prefix: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.base,
+    color: colors['muted-foreground'],
+  },
+  input: {
+    flex: 1,
+    height: '100%',
     fontFamily: fonts.sans,
     fontSize: fontSize.base,
     color: colors.foreground,
-  },
-  inputInvalid: {
-    borderColor: colors.destructive,
-  },
-  inputDisabled: {
-    opacity: 0.5,
   },
   error: {
     fontFamily: fonts.sans,
@@ -67,7 +80,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export const TextField = ({ label, error, editable = true, style, onFocus, onBlur, ...props }: TextFieldProps) => {
+export const TextField = ({ label, error, prefix, editable = true, style, onFocus, onBlur, ...props }: TextFieldProps) => {
   const [ focused, setFocused ] = useState(false);
 
   return (
@@ -75,27 +88,32 @@ export const TextField = ({ label, error, editable = true, style, onFocus, onBlu
       <Text style={styles.label}>{label}</Text>
 
       <View style={[ styles.ring, focused ? styles.ringFocused : null ]}>
-        <TextInput
-          accessibilityLabel={label}
-          placeholderTextColor={colors['muted-foreground']}
-          editable={editable}
+        <View
           style={[
-            styles.input,
+            styles.field,
             shadows.sm,
-            error ? styles.inputInvalid : null,
-            editable ? null : styles.inputDisabled,
-            style,
+            error ? styles.fieldInvalid : null,
+            editable ? null : styles.fieldDisabled,
           ]}
-          onFocus={(event) => {
-            setFocused(true);
-            onFocus?.(event);
-          }}
-          onBlur={(event) => {
-            setFocused(false);
-            onBlur?.(event);
-          }}
-          {...props}
-        />
+        >
+          {prefix ? <Text style={styles.prefix}>{prefix}</Text> : null}
+
+          <TextInput
+            accessibilityLabel={label}
+            placeholderTextColor={colors['muted-foreground']}
+            editable={editable}
+            style={[ styles.input, style ]}
+            onFocus={(event) => {
+              setFocused(true);
+              onFocus?.(event);
+            }}
+            onBlur={(event) => {
+              setFocused(false);
+              onBlur?.(event);
+            }}
+            {...props}
+          />
+        </View>
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}

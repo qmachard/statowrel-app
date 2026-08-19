@@ -25,19 +25,11 @@ const styles = StyleSheet.create({
     padding: spacing(6),
     paddingTop: spacing(8),
   },
-  header: {
-    gap: spacing(2),
-  },
   title: {
     fontFamily: fonts.head,
     fontSize: fontSize['3xl'],
     textTransform: 'uppercase',
     color: colors.foreground,
-  },
-  subtitle: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.base,
-    color: colors['muted-foreground'],
   },
   form: {
     gap: spacing(4),
@@ -107,13 +99,7 @@ export const OnboardingSheet = () => {
     <BottomSheet visible={Boolean(user) && needsOnboarding} label="Choisis ton nom d'utilisateur">
       <KeyboardAvoidingView style={styles.keyboardAvoider} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
-            <Text style={styles.title}>Choisis ton nom</Text>
-            <Text style={styles.subtitle}>
-              Unique, c&apos;est ce que tes potes verront à côté de tes réponses — et ce qu&apos;ils taperont
-              pour t&apos;ajouter.
-            </Text>
-          </View>
+          <Text style={styles.title}>Choisis ton nom</Text>
 
           <View style={styles.form}>
             <Controller
@@ -122,6 +108,7 @@ export const OnboardingSheet = () => {
               render={({ field: { onChange, onBlur, value } }) => (
                 <TextField
                   label="Nom d'utilisateur"
+                  prefix="@"
                   placeholder="lou.martin"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -129,7 +116,11 @@ export const OnboardingSheet = () => {
                   returnKeyType="done"
                   value={value}
                   onBlur={onBlur}
-                  onChangeText={onChange}
+                  // Lowercased as it is typed, not only on submit: a handle only
+                  // exists in one form, and the field has to show the one that
+                  // will be claimed. `autoCapitalize` alone leaves the keyboard's
+                  // own shift key free to break that.
+                  onChangeText={(next) => onChange(next.toLowerCase())}
                   onSubmitEditing={onSubmit}
                   error={errors.username?.message}
                 />
