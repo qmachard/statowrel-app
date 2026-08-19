@@ -34,11 +34,23 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Add the other v1_* collection rules here as the data model is designed, e.g.:
-    //
-    // match /v1_users/{user_id} {
-    //   allow read, update: if isOwner(user_id);
-    //   allow create: if isAuthenticated();
-    // }
+    // A profile document is keyed by the account's Firebase Auth UID
+    // (docs/prd.md §2). Any signed-in user reads any profile: a friend list
+    // shows pseudos and avatars. Only the owner writes their own, and only the
+    // backend (admin) deletes one, so account deletion also anonymises the
+    // answers and drops the friendships in one pass.
+    match /v1_users/{user_id} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(user_id)
+                    && request.resource.data.display_name is string
+                    && request.resource.data.display_name.size() > 0;
+      allow update: if isOwner(user_id)
+                    && request.resource.data.display_name is string
+                    && request.resource.data.display_name.size() > 0
+                    && request.resource.data.created_at == resource.data.created_at;
+      allow delete: if false;
+    }
+
+    // Add the other v1_* collection rules here as the data model is designed.
   }
 }

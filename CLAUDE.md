@@ -31,7 +31,7 @@ There is no shared React hooks package yet (no `@repo/firebase-react` equivalent
 
 ## Status
 
-Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus the first domain model, `v1_questions`, surfaced in `apps/firecms` as the `Questions` collection. **No screens/views exist yet** — `apps/app` still has a single placeholder route. See `docs/architecture.md` for the intended shape going forward.
+Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus two domain models, `v1_questions` and `v1_users` (profile fields only), both surfaced in `apps/firecms`. **No screens/views exist yet** — `apps/app` still has a single placeholder route. See `docs/architecture.md` for the intended shape going forward.
 
 ## Commands
 
