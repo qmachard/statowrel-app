@@ -1,6 +1,7 @@
-import { Flame } from 'lucide-react-native';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import { Star } from '@/components/animations';
+import { StarPeeled } from '@/components/illustrations';
 import { Card, CardContent } from '@/components/Card';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
@@ -15,7 +16,11 @@ export interface StreakCardProps {
  */
 const SCREEN_SHARE = 0.7;
 
-const FLAME_SIZE = 64;
+/** How long the star holds its last frame before running again. */
+const STAR_REPLAY_DELAY = 4000;
+
+/** `Animation`'s `xl` step, which the peeled mark has to match to line up. */
+const STAR_SIZE = spacing(40);
 
 const styles = StyleSheet.create({
   content: {
@@ -45,10 +50,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.foreground,
   },
-  nudge: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.xs,
-    color: colors['muted-foreground'],
+  star: {
+    // The composition keeps a fifth of its canvas empty around the sticker, so
+    // it is sized past the card and pulled back through the card's own padding:
+    // what is left is ten-odd pixels of air between the drawing and the border.
+    marginVertical: -spacing(10),
+    marginLeft: -spacing(5),
+    marginRight: -spacing(8),
   },
 });
 
@@ -66,15 +74,18 @@ export const StreakCard = ({ count }: StreakCardProps) => {
           <Text style={styles.unit}>
             {count === 1 ? 'jour d’affilée' : 'jours d’affilée'}
           </Text>
-
-          {alive ? null : (
-            <Text style={styles.nudge}>
-              Réponds aujourd’hui pour repartir.
-            </Text>
-          )}
         </View>
 
-        <Flame size={FLAME_SIZE} color={alive ? colors.foreground : colors['muted-foreground']} />
+        {/*
+          * A running streak gets the star again every few seconds. A broken one
+          * gets the mark the sticker left when it came off — same box, same
+          * place, the shape without the sticker.
+          */}
+        {alive ? (
+          <Star size="xl" replayDelay={STAR_REPLAY_DELAY} style={styles.star} />
+        ) : (
+          <StarPeeled size={STAR_SIZE} style={styles.star} />
+        )}
       </CardContent>
     </Card>
   );
