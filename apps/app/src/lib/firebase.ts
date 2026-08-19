@@ -1,4 +1,4 @@
-import { createAsyncStorage } from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type FirebaseApp, getApps, initializeApp } from 'firebase/app';
 import { type Auth, connectAuthEmulator, getAuth, initializeAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, type Firestore, getFirestore } from 'firebase/firestore';
@@ -23,11 +23,6 @@ const firebaseConfig = {
 
 export const app: FirebaseApp = getApps()[0] ?? initializeApp(firebaseConfig);
 
-// `@react-native-async-storage/async-storage` v3 replaced the implicit default
-// store with an explicitly named one; this is the form firebase/auth's own React
-// Native build documents for v3.
-const authStorage = createAsyncStorage('statowrel-auth');
-
 // initializeAuth() throws if called more than once for the same app (e.g. on
 // Fast Refresh) — fall back to the already-registered instance. Anything else
 // is a real wiring problem: log it, because getAuth()'s own failure below would
@@ -35,7 +30,7 @@ const authStorage = createAsyncStorage('statowrel-auth');
 let authInstance: Auth;
 try {
   authInstance = initializeAuth(app, {
-    persistence: getReactNativePersistence(authStorage),
+    persistence: getReactNativePersistence(AsyncStorage),
   });
 } catch (error) {
   console.warn('[firebase] initializeAuth() failed, falling back to getAuth()', error);

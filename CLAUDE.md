@@ -31,7 +31,7 @@ There is no shared React hooks package yet (no `@repo/firebase-react` equivalent
 
 ## Status
 
-Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus four domain models — `v1_questions`, `v1_daily_questions`, its `v1_daily_question_answers` sub-collection, and `v1_users` (profile, sign-in identities, streak stats) — all surfaced in `apps/firecms`. `apps/functions` owns its first real domain, `daily-questions`: the daily scheduler draws tomorrow's question, picks its 08:00-20:00 drop time and enqueues the publication notification (whose sending is still a stub). No answer trigger, no midnight closer yet. `apps/app` has its authentication flow (Google, Apple, email/password — `src/auth/`) and a placeholder home; **no product screens exist yet**. See `docs/architecture.md` for the intended shape going forward.
+Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus four domain models — `v1_questions`, `v1_daily_questions`, its `v1_daily_question_answers` sub-collection, and `v1_users` (profile, sign-in identities, streak stats) — all surfaced in `apps/firecms`. `apps/functions` owns its first real domain, `daily-questions`: the daily scheduler draws tomorrow's question, picks its 08:00-20:00 drop time and enqueues the publication notification (whose sending is still a stub). No answer trigger, no midnight closer yet. `apps/app` has its authentication flow (Google, Apple, email/password — `src/auth/`) and a placeholder home + profile behind a two-tab navigator; **no product screens exist yet**. See `docs/architecture.md` for the intended shape going forward.
 
 ## Commands
 
@@ -144,8 +144,8 @@ Top-level `functions/src/index.ts` uses namespace re-exports (`export * as healt
 
 - Styling via [Nativewind](https://www.nativewind.dev) (`className`), not `StyleSheet.create`, unless a style can't be expressed in Tailwind.
 - Firebase client SDK (`firebase` npm package), not `@react-native-firebase` — see `apps/app/src/lib/firebase.ts`. Same SDK the converters in `@statowrel/models` target on the client side.
-- Routing via [Expo Router](https://docs.expo.dev/router/introduction/) (file-based, `apps/app/app/`).
-- **Design system**: neobrutalism (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold colors, thick borders, hard offset shadows, `radius: 0`. Theme tokens live in `apps/app/tailwind.config.js` (`font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`); fonts (Archivo Black, Space Grotesk) load via `expo-font` + `@expo-google-fonts/*`. The neobrutalism.com `shadcn` registry itself is web-only (Radix/Base UI need a DOM) — it does not apply to this React Native app; reusable component primitives are hand-built against these tokens (`apps/app/src/components/`).
+- Navigation via [React Navigation 7](https://reactnavigation.org) — native stack + bottom tabs declared in `apps/app/src/navigation/`, entry point `apps/app/index.js` → `src/App.tsx`. Routes are typed through `RootStackParamList` / `TabParamList`, never route strings.
+- **Design system**: neobrutalism (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold colors, thick borders, hard offset shadows, `radius: 0`. The palette lives in `apps/app/src/design/tokens.js` (read by both `tailwind.config.js` and the navigation theme); the rest of the tokens (`font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`) live in `apps/app/tailwind.config.js`; fonts (Archivo Black, Space Grotesk) load via `expo-font` + `@expo-google-fonts/*`. The neobrutalism.com `shadcn` registry itself is web-only (Radix/Base UI need a DOM) — it does not apply to this React Native app; reusable component primitives are hand-built against these tokens (`apps/app/src/components/`).
 
 ## Testing
 

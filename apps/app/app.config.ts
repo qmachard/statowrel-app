@@ -41,7 +41,6 @@ if (!googleIosUrlScheme) {
 }
 
 const plugins: NonNullable<ExpoConfig['plugins']> = [
-  'expo-router',
   'expo-apple-authentication',
 ];
 
@@ -78,9 +77,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   plugins,
-  experiments: {
-    typedRoutes: true,
-  },
   extra: {
     ...config.extra,
     eas: {
