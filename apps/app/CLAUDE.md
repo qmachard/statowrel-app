@@ -30,7 +30,7 @@ cp apps/app/.env.example apps/app/.env.local   # fill in Firebase web app config
 npm run dev:app          # or: npm run dev --workspace=@statowrel/app
 ```
 
-Requires the Expo Go app or a dev client build (`npm run build:dev:ios` / `build:dev:android`) to run on a device/simulator — Firebase Auth's native persistence and most Firebase features work in Expo Go too since this app uses the JS `firebase` SDK, not native modules.
+Requires a dev client build (`npm run build:dev:ios` / `build:dev:android`) to run on a device/simulator — `expo-dev-client` is installed, so Expo Go is no longer the supported target. Firebase itself needs no native linking (this app uses the JS `firebase` SDK), so the dev client only needs rebuilding when a native dependency changes.
 
 ## EAS Build & Submit
 
