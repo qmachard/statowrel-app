@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
+import { dailyQuestionDateKey } from '@statowrel/models';
 import { CalendarCheck, Trophy } from 'lucide-react-native';
 import { ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,7 +38,13 @@ export const StatsScreen = () => {
   // The profile is null while it loads, and stays null until the onboarding
   // sheet has created it. Zeros and a calendar bounded to today: nothing
   // invented, nothing crashing.
-  const streakCount = profile === null ? 0 : resolveStreakCount(profile, today);
+  //
+  // The day is read off the clock here, at every render, and in Paris — the
+  // timezone `streak_last_answered_on` is keyed in (docs/prd.md §7). A value
+  // captured when the screen mounted would freeze the app's notion of today,
+  // and the streak would read as broken on the first answer given after
+  // midnight on a session that stayed open.
+  const streakCount = profile === null ? 0 : resolveStreakCount(profile, dailyQuestionDateKey(new Date()));
   const registeredAt = profile?.created_at ?? today.toISOString();
 
   // The banner announces a question that is still waiting: once the day is

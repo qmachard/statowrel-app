@@ -2,10 +2,16 @@
  * Local-calendar date helpers, shared by the Stats calendar and its fixtures.
  *
  * Everything is computed on the device's local calendar and keyed by the
- * `YYYY-MM-DD` strings the data model already speaks — `DailyQuestionAnswerData.date`,
- * `UserFirebaseData.streak_last_answered_on`. No UTC round-trip anywhere: a `Date`
- * built from local parts and read back with `getFullYear()` and friends stays on
- * the same day, `toISOString()` would not. v1 is single-timezone (docs/prd.md §7).
+ * `YYYY-MM-DD` strings the data model already speaks. No UTC round-trip anywhere:
+ * a `Date` built from local parts and read back with `getFullYear()` and friends
+ * stays on the same day, `toISOString()` would not. v1 is single-timezone
+ * (docs/prd.md §7).
+ *
+ * **Laying a calendar out, not deciding what day it is.** A value the backend
+ * keyed in Paris — `DailyQuestionAnswerData.date`,
+ * `UserFirebaseData.streak_last_answered_on` — is compared against
+ * `dailyQuestionDateKey(new Date())`, never against `toDateKey`: the device's
+ * own calendar is one answer away from reading a live streak as broken.
  */
 
 /** `YYYY-MM-DD` day key, the format every date field of the model uses. */

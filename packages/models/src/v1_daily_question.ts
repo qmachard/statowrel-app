@@ -24,6 +24,23 @@ export const dailyQuestionDateKey = (date: Date): string => (
 );
 
 /**
+ * The `YYYY-MM-DD` key of the day before another one.
+ *
+ * Computed in UTC on purpose, even though the keys are Paris days: a date-only
+ * key carries no time, so UTC arithmetic can never be shifted by a daylight
+ * saving change the way a local `Date` would be. `2026-03-30` minus one day is
+ * `2026-03-29` in every timezone — and subtracting 24 hours from an instant
+ * would not be, on the two days a year the offset moves.
+ */
+export const previousDayKey = (dateKey: string): string => {
+  // Read as strings and converted one by one: `noUncheckedIndexedAccess` is on
+  // in this package, and `Number` takes what destructuring hands over anyway.
+  const [ year, month, day ] = dateKey.split('-');
+
+  return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day) - 1)).toISOString().slice(0, 10);
+};
+
+/**
  * One document per day — see docs/prd.md §6.
  *
  * The document id is the `YYYY-MM-DD` day key, not a ULID: the app reads today's

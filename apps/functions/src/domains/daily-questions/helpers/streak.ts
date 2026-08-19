@@ -1,21 +1,7 @@
-import type { UserData } from '@statowrel/models';
+import { type UserData, previousDayKey } from '@statowrel/models';
 
 /** The streak fields of a profile — the only ones the answer trigger moves. */
 export type StreakState = Pick<UserData, 'streak_count' | 'streak_best' | 'streak_last_answered_on'>;
-
-/**
- * The `YYYY-MM-DD` key of the day before another one.
- *
- * Computed in UTC on purpose, even though the keys are Paris days: a date-only
- * key carries no time, so UTC arithmetic can never be shifted by a daylight
- * saving change the way a local `Date` would be. `2026-03-30` minus one day is
- * `2026-03-29` in every timezone.
- */
-export const previousDayKey = (dateKey: string): string => {
-  const [ year, month, day ] = dateKey.split('-').map(Number);
-
-  return new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
-};
 
 /**
  * The streak a profile reaches by answering `dateKey` on time — docs/prd.md §4.6.
