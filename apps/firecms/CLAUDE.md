@@ -19,7 +19,7 @@ Two gotchas, both visible in `v1_questions.ts`:
 
 - **Do not type the collection with the model's `*Data` type directly.** FireCMS reads Firestore with its own data source (`Timestamp` → `Date`), not with the model's converter (`Timestamp` → ISO `string`). Declare a local type that overrides the timestamp fields with `Date`.
 - **Document ids are ULIDs.** Set `callbacks.onIdUpdate: ulidEntityId` on every collection. FireCMS pre-fills a Firestore auto-id for a new entity and re-runs `onIdUpdate` on every form change; the helper swaps that auto-id for a ULID once, then returns it unchanged — a callback that regenerated on each keystroke would move the document being written.
-- **Invariants the backoffice must respect go in `callbacks.onPreSave`**, throwing an `Error` with the message to show. Firestore rules do not catch them: the backoffice writes as an admin, and the wildcard `isAdmin()` rule accepts anything. It is also where derived values are filled in — `v1_questions` mints the ULID of any option that doesn't have one yet.
+- **Invariants the backoffice must respect go in `callbacks.onPreSave`**, throwing an `Error` with the message to show. Firestore rules do not catch them: the backoffice writes as an admin, and the wildcard `isAdmin()` rule accepts anything. It is also where derived values are filled in — `v1_questions` renumbers each option's `position` from the list order.
 
 A list of sub-objects is a plain `dataType: 'array'` of `dataType: 'map'`, which gives drag-to-reorder, add and delete for free. Reach for a custom `Field` component only when the built-in bindings genuinely can't express the shape — a map with dynamic keys, for instance, which FireCMS can only type when the keys are known up front.
 

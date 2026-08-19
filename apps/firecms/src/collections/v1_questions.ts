@@ -1,5 +1,4 @@
 import { buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
-import { ulid } from 'ulid';
 
 import {
   QUESTION_COLLECTION,
@@ -20,17 +19,17 @@ type QuestionEntity = Omit<QuestionData, 'created_at'> & {
 };
 
 /**
- * Mints the ULID of any option that doesn't have one yet, and enforces the
- * invariants `firestore.rules` cannot: the backoffice writes as an admin, and
- * the wildcard `isAdmin()` rule lets those writes through unchecked.
+ * Renumbers `position` from the list order, and enforces the invariants
+ * `firestore.rules` cannot: the backoffice writes as an admin, and the wildcard
+ * `isAdmin()` rule lets those writes through unchecked.
  */
 const callbacks = buildEntityCallbacks<QuestionEntity>({
   onIdUpdate: ulidEntityId,
   onPreSave: ({ values }) => {
-    const options = (values.options ?? []).map((option) => ({
+    // The moderator reorders by dragging; `position` follows the list order.
+    const options = (values.options ?? []).map((option, position) => ({
       ...option,
-      // Never regenerate an existing id: an answer points at it.
-      id: option.id || ulid(),
+      position,
     }));
 
     if (options.length < QUESTION_MIN_OPTIONS || options.length > QUESTION_MAX_OPTIONS) {
@@ -83,14 +82,14 @@ const questionsCollection = buildCollection<QuestionEntity>({
             description: 'Affichée comme « tu es un.e … »',
             validation: { required: true },
           }),
-          id: buildProperty({
-            dataType: 'string',
-            name: 'ULID',
-            description: 'Généré à l\'enregistrement. Une réponse pointe dessus : il ne change jamais et n\'est jamais réutilisé.',
+          position: buildProperty({
+            dataType: 'number',
+            name: 'Position',
+            description: 'Renumérotée à l\'enregistrement d\'après l\'ordre de la liste. Une réponse référence ce numéro : il ne bouge plus une fois la question diffusée.',
             readOnly: true,
           }),
         },
-        propertiesOrder: [ 'label', 'stat_label', 'id' ],
+        propertiesOrder: [ 'label', 'stat_label', 'position' ],
         previewProperties: [ 'label', 'stat_label' ],
       }),
     }),

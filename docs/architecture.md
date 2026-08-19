@@ -82,18 +82,15 @@ Re-export every new model from `src/index.ts`.
 | Field | Type | Notes |
 |---|---|---|
 | `label` | `string` | e.g. "Ton dentifrice, tu le presses…" |
-| `options` | `{ id, label, stat_label }[]` | 2 to 6 entries, in display order — `label` is shown ("Par le bout"), `stat_label` is the StatOwrel earned ("méthodique") |
+| `options` | `{ label, stat_label, position }[]` | 2 to 6 entries — `label` is shown ("Par le bout"), `stat_label` is the StatOwrel earned ("méthodique") |
 | `status` | `'pending' \| 'approved' \| 'rejected' \| 'used'` | moderation lifecycle; `used` questions are never redrawn |
 | `author_id` | `string` | credited on the question screen once drawn |
 | `rejection_reason` | `string \| null` | sent back to the author; set only when `rejected` |
 | `created_at` | `UniversalTimestamp` | |
 
-Two things to keep straight about the options:
+`options` is a plain array, and an option is identified by its `position` — a dense, 0-based integer that is the same for every user. An answer references that number, and `v1_daily_questions.answer_counts` increments `answer_counts.{position}` via `FieldValue.increment()` on a fixed path, so two simultaneous answers can't overwrite each other. `findQuestionOption()` resolves a position to its option; the converter sorts on read and the backoffice renumbers on save, but nothing else may renumber a question once it has been drawn — a reorder at that point would repoint every recorded answer.
 
-- **An option's identity is its `id`, never its position in the array.** An answer stores an `option_id`, and `v1_daily_questions.answer_counts` increments `answer_counts.{option_id}` via `FieldValue.increment()` on a fixed path — that map stays keyed by option id precisely so two simultaneous answers can't overwrite each other. Reordering or reformulating an option must leave its `id` alone; use `findQuestionOption()` to resolve one, never an index.
-- **Ids are ULIDs, minted client-side** — in the app as the author types, in the backoffice at save (`onPreSave`). No server round-trip for an id, and ids sort by creation date. FireCMS also uses ULIDs for the *document* ids of every collection, via the shared `ulidEntityId` callback.
-
-`options` is a plain array rather than a map keyed by id: the array order *is* the display order, which removes the `position` field and lets FireCMS's built-in repeat field handle reordering.
+Options carry no id of their own. FireCMS still names *documents* with ULIDs rather than Firestore auto-ids, via the shared `ulidEntityId` callback.
 
 There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §6).
 
@@ -123,7 +120,7 @@ Two things to know when writing a collection:
 
 - **FireCMS does not use our converters.** It reads Firestore through its own data source, which maps `Timestamp` → `Date`. So a collection is typed against a local variant of the model's `*Data` type with `Date` timestamps, not against `*Data` itself.
 - **Document ids are ULIDs**, not Firestore auto-ids: wire `onIdUpdate: ulidEntityId` (from `src/collections/entityId.ts`) into every collection.
-- **Collection-level invariants live in `callbacks.onPreSave`.** The backoffice writes as an admin, and the wildcard `isAdmin()` rule lets those writes through unchecked — so the 2–6 options rule, "a rejected question needs a reason", and minting each option's ULID all happen there as well as in `firestore.rules`.
+- **Collection-level invariants live in `callbacks.onPreSave`.** The backoffice writes as an admin, and the wildcard `isAdmin()` rule lets those writes through unchecked — so the 2–6 options rule, "a rejected question needs a reason", and renumbering `position` from the list order all happen there as well as in `firestore.rules`.
 
 `src/authenticator/admin.ts` is the sign-in gate (currently: any authenticated user — tighten to an email allow-list, or a custom `admin` auth claim checked server-side, before shipping).
 

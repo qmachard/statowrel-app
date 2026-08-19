@@ -22,27 +22,22 @@ export const QUESTION_STATUSES = [ 'pending', 'approved', 'rejected', 'used' ] a
 export type QuestionStatus = (typeof QUESTION_STATUSES)[number];
 
 export interface QuestionOptionFirebaseData {
-  /**
-   * ULID, minted client-side (app or backoffice) when the option is typed in.
-   * An answer and `v1_daily_questions.answer_counts` both point at it, so it is
-   * never reused and never changes — reordering or reformulating an option must
-   * not repoint recorded answers.
-   */
-  id: string;
   /** Option shown to the user — e.g. "Par le bout". */
   label: string;
   /** StatOwrel earned by picking this option — e.g. "méthodique", rendered as "tu es un.e méthodique". */
   stat_label: string;
+  /**
+   * Display order. Dense, 0-based, and identical for every user — that's what
+   * makes screenshots comparable between friends. An answer references an
+   * option by this number, so it must not change once the question is drawn.
+   */
+  position: number;
 }
 
 export interface QuestionFirebaseData {
   /** Question text — e.g. "Ton dentifrice, tu le presses…". */
   label: string;
-  /**
-   * Options in display order — the array order is the order every user sees,
-   * which is what makes screenshots comparable between friends.
-   * Between QUESTION_MIN_OPTIONS and QUESTION_MAX_OPTIONS entries.
-   */
+  /** Between QUESTION_MIN_OPTIONS and QUESTION_MAX_OPTIONS options, ordered by `position`. */
   options: QuestionOptionFirebaseData[];
   status: QuestionStatus;
   /** Author of the question, credited on the question screen once it is drawn. */
@@ -56,31 +51,33 @@ export type QuestionOptionData = ModelData<QuestionOptionFirebaseData>;
 
 export type QuestionData = ModelData<QuestionFirebaseData>;
 
-/** Resolves the option an answer points at. Returns `null` for an option removed since. */
+/** Resolves the option an answer references. Returns `null` for an unknown position. */
 export const findQuestionOption = (
   options: QuestionOptionData[] | null | undefined,
-  optionId: string,
+  position: number,
 ): QuestionOptionData | null => (
-  options?.find((option) => option.id === optionId) ?? null
+  options?.find((option) => option.position === position) ?? null
 );
 
 const parseOptions = (
   options: Partial<QuestionOptionFirebaseData>[] | null | undefined,
 ): QuestionOptionData[] => (
-  (options ?? []).map((option) => ({
-    id: option?.id ?? '',
-    label: option?.label ?? '',
-    stat_label: option?.stat_label ?? '',
-  }))
+  (options ?? [])
+    .map((option, index) => ({
+      label: option?.label ?? '',
+      stat_label: option?.stat_label ?? '',
+      position: option?.position ?? index,
+    }))
+    .sort((a, b) => a.position - b.position)
 );
 
 export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebaseData> = (TimestampClass) => ({
   toFirestore: (data) => removeMissingFields({
     label: data.label,
     options: (data.options ?? []).map((option) => ({
-      id: option.id,
       label: option.label,
       stat_label: option.stat_label,
+      position: option.position,
     })),
     status: data.status,
     author_id: data.author_id,
