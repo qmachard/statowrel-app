@@ -173,9 +173,9 @@ La racine de l'app. De haut en bas :
 
 **1. En-tête.** La date du jour en micro-texte et la salutation (« Salut Lou ») en `font-head`, à gauche ; à droite les deux boutons-icônes de §5.1.
 
-**2. Bloc streak.** Une carte `primary` bordée, ombre `lg`, occupant toute la largeur : le nombre de jours en très gros (`font-head`), le mot « jours d'affilée » en dessous, et un pictogramme de flamme. Quand le streak est à 0, la carte passe en `muted` avec « Réponds aujourd'hui pour repartir ».
+**2. Bandeau question du jour.** Tant que la question du jour est ouverte et sans réponse, un bandeau `accent` pleine largeur — bordure noire, ombre dure, texte blanc — annonce son intitulé et ouvre la modale question (§5.4). C'est le même token `accent` que la case « aujourd'hui, pas encore répondu » du calendrier : la journée à faire porte une seule couleur. Une fois la journée répondue, le bandeau disparaît — le calendrier suffit à en rendre compte.
 
-**3. Record et jours répondus.** Deux tuiles côte à côte sous le bloc streak, fond `card`, bordure noire, ombre dure : le meilleur streak jamais atteint (`streak_best`) et le nombre total de jours répondus depuis l'inscription. Elles remettent le streak courant en perspective sans lui voler la vedette.
+**3. Ligne de stats.** Le streak et ses compteurs tiennent sur **une seule ligne**, à défilement horizontal, débordant jusqu'aux deux bords de l'écran. En tête, la carte streak : `primary` bordée, ombre `lg`, la flamme et le libellé en haut, le nombre de jours en très gros (`font-head`) puis « jours d'affilée ». Quand le streak est à 0, elle passe en `muted` avec « Réponds aujourd'hui pour repartir ». Suivent deux tuiles `card` plus étroites, bordure noire, ombre dure : le meilleur streak jamais atteint (`streak_best`) et le nombre total de jours répondus depuis l'inscription. Elles remettent le streak courant en perspective sans lui voler la vedette, et la ligne rend sa hauteur au calendrier.
 
 **4. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, coins arrondis (`rounded`), séparées par une gouttière régulière. Quatre états :
 
