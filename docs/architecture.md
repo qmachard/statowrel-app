@@ -93,7 +93,7 @@ Two things to keep straight about the options:
 - **An option's identity is its `id`, never its position in the array.** An answer stores an `option_id`, and `v1_daily_questions.answer_counts` increments `answer_counts.{option_id}` via `FieldValue.increment()` on a fixed path — that map stays keyed by option id precisely so two simultaneous answers can't overwrite each other. Reordering or reformulating an option must leave its `id` alone; use `findQuestionOption()` to resolve one, never an index.
 - **Ids are ULIDs, minted client-side** — in the app as the author types, in the backoffice at save (`onPreSave`). No server round-trip for an id, and ids sort by creation date. FireCMS also uses ULIDs for the *document* ids of every collection, via the shared `ulidEntityId` callback.
 
-`options` is a plain array rather than a map keyed by id: the array order *is* the display order, which removes the `position` field and lets FireCMS's built-in repeat field handle reordering. `docs/prd.md` §5 still sketches it as a map — the implementation is the current reference.
+`options` is a plain array rather than a map keyed by id: the array order *is* the display order, which removes the `position` field and lets FireCMS's built-in repeat field handle reordering.
 
 There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §6).
 
