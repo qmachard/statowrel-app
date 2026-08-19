@@ -1,26 +1,18 @@
 import { parisTimeToInstant } from './parisTime';
 
-/** The daily question drops at a random time between 08:00 and 20:00 Paris — docs/prd.md §4.2. */
-export const PUBLICATION_WINDOW_START_HOUR = 8;
-export const PUBLICATION_WINDOW_END_HOUR = 20;
+/** The daily question drops at 07:00 Paris, the same hour for everyone — docs/prd.md §4.2. */
+export const PUBLICATION_HOUR = 7;
 
 /**
- * Picks the instant a day's question drops: a uniformly random minute inside the
- * publication window, in Europe/Paris.
+ * The instant a day's question drops: 07:00 Europe/Paris, every day.
  *
- * Randomness is the product decision, not an implementation detail — the app
- * shows no countdown precisely because the drop time is unpredictable
- * (docs/prd.md §5.2).
+ * Derived from the day key rather than read off the clock so a retried
+ * scheduler run recomputes the exact same value, and so a run delayed by a
+ * few seconds still stamps the round hour it was meant to publish at.
  */
-export const pickPublishedAt = (dateKey: string): Date => {
-  const windowMinutes = (PUBLICATION_WINDOW_END_HOUR - PUBLICATION_WINDOW_START_HOUR) * 60;
-
-  return parisTimeToInstant(
-    dateKey,
-    PUBLICATION_WINDOW_START_HOUR,
-    Math.floor(Math.random() * windowMinutes),
-  );
-};
+export const publicationTimeOf = (dateKey: string): Date => (
+  parisTimeToInstant(dateKey, PUBLICATION_HOUR)
+);
 
 /**
  * Paris midnight closing a day — past it an answer no longer counts for the
