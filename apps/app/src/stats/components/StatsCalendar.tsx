@@ -54,10 +54,11 @@ export const StatsCalendar = ({ month, onMonthChange, calendar, registeredAt }: 
                   published: calendar.published[monthDayKey] !== undefined,
                   answered: answer !== undefined,
                 })}
-                // Every live day opens its own question — today's, a missed one
-                // in catch-up, or an answered one read-only. The card of §5.5
-                // takes over for the answered case once it exists. A day that
-                // never had a question is `idle`, so it stays inert here.
+                // Every live day opens its own day: the question when it is
+                // still open — today's, or a missed one in catch-up — and the
+                // StatOwrel card of §5.5 when it is answered, the sheet itself
+                // forking on that. A day that never had a question is `idle`,
+                // so it stays inert here.
                 onPress={() => navigation.navigate('DailyQuestion', { date: dayKey })}
               />
             );
