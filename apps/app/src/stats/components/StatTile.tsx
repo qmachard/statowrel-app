@@ -13,7 +13,9 @@ export interface StatTileProps {
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
+    // A fixed width, not `flex: 1`: the tile lives on a horizontally scrolling
+    // strip now, where a flexed child would collapse to its content.
+    width: spacing(40),
   },
   content: {
     gap: spacing(2),
@@ -42,7 +44,7 @@ const styles = StyleSheet.create({
   },
 });
 
-/** Secondary counter sitting under the streak block — record, days answered. */
+/** Secondary counter trailing the streak on the stats strip — record, days answered. */
 export const StatTile = ({ icon: Icon, label, value, unit }: StatTileProps) => (
   <Card style={styles.card}>
     <CardContent style={styles.content}>

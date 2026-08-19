@@ -1,4 +1,4 @@
-import type { DailyQuestionAnswerData, UserData } from '@statowrel/models';
+import type { DailyQuestionAnswerData, DailyQuestionData, QuestionData, UserData } from '@statowrel/models';
 
 import { addDays, startOfDay, toDateKey } from '@/lib/dates';
 
@@ -11,16 +11,21 @@ import { addDays, startOfDay, toDateKey } from '@/lib/dates';
  * `v1_daily_question_answers` (docs/prd.md §6). Wiring the real source in
  * replaces this file and `useStatsData`, and nothing else.
  *
- * Two sets, because the streak block and the calendar look nothing alike at 12
- * days and at 0 (docs/prd.md §4.6) — `DevFixtureSwitch` flips between them.
+ * Three sets, because the screen looks nothing alike with the day's question
+ * still open, with it answered, and with the streak lost (docs/prd.md §4.6) —
+ * `DevFixtureSwitch` flips between them.
  */
-export type StatsFixtureId = 'streak-ongoing' | 'streak-lost';
+export type StatsFixtureId = 'question-open' | 'day-answered' | 'streak-lost';
 
 export interface StatsFixture {
   id: StatsFixtureId;
   label: string;
   user: UserData;
   answers: DailyQuestionAnswerData[];
+  /** The question broadcast today, `null` on a day without one (docs/prd.md §5.2). */
+  dailyQuestion: DailyQuestionData | null;
+  /** The `v1_questions` document `dailyQuestion` points at — its label is what the banner announces. */
+  question: QuestionData | null;
 }
 
 const USER_ID = 'fixture-user';
@@ -70,23 +75,72 @@ const buildUser = (user: UserFixtureInput): UserData => ({
   ...user,
 });
 
+// 12 unbroken days up to yesterday: the streak is alive and today's question is
+// still waiting — the state the app opens on most mornings.
+const PENDING_OFFSETS = [ ...range(1, 13), ...historyOffsets(14, HISTORY_DAYS) ];
+
 // 12 unbroken days up to today, then a two-day hole, then the older history.
-const ONGOING_OFFSETS = [ ...range(0, 12), ...historyOffsets(13, HISTORY_DAYS) ];
+const ANSWERED_OFFSETS = [ ...range(0, 12), ...historyOffsets(13, HISTORY_DAYS) ];
 
 // Same history, but the last three days are missed — the streak is dead.
 const LOST_OFFSETS = [ ...range(3, 12), ...historyOffsets(13, HISTORY_DAYS) ];
 
+/** The question of the example in docs/prd.md §6 — the one the accent banner announces. */
+const QUESTION_ID = 'fixture-question';
+
+const TODAY_QUESTION: QuestionData = {
+  label: 'Ton dentifrice, tu le presses…',
+  options: [
+    { id: OPTION_IDS[0], label: 'Par le bout', stat_label: 'méthodique' },
+    { id: OPTION_IDS[1], label: 'Au milieu', stat_label: 'sauvage' },
+    { id: OPTION_IDS[2], label: 'Je l’écrase n’importe comment', stat_label: 'anarchiste' },
+  ],
+  status: 'used',
+  author_id: USER_ID,
+  rejection_reason: null,
+  broadcast_at: new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate(), 7, 0).toISOString(),
+  created_at: addDays(TODAY, -HISTORY_DAYS).toISOString(),
+};
+
+// Published at 07:00 and closing at Paris midnight — the window of docs/prd.md §4.2.
+const TODAY_DAILY_QUESTION: DailyQuestionData = {
+  date: toDateKey(TODAY),
+  question_id: QUESTION_ID,
+  published_at: new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate(), 7, 0).toISOString(),
+  closes_at: addDays(TODAY, 1).toISOString(),
+  answer_counts: {
+    [OPTION_IDS[0]]: 412,
+    [OPTION_IDS[1]]: 189,
+    [OPTION_IDS[2]]: 57,
+  },
+};
+
 export const STATS_FIXTURES: StatsFixture[] = [
   {
-    id: 'streak-ongoing',
-    label: 'Streak en cours',
+    id: 'question-open',
+    label: 'Question ouverte',
     user: buildUser({
       username: 'lou',
       streak_count: 12,
       streak_best: 34,
+      streak_last_answered_on: toDateKey(addDays(TODAY, -1)),
+    }),
+    answers: PENDING_OFFSETS.map(buildAnswer),
+    dailyQuestion: TODAY_DAILY_QUESTION,
+    question: TODAY_QUESTION,
+  },
+  {
+    id: 'day-answered',
+    label: 'Journée répondue',
+    user: buildUser({
+      username: 'lou',
+      streak_count: 13,
+      streak_best: 34,
       streak_last_answered_on: toDateKey(TODAY),
     }),
-    answers: ONGOING_OFFSETS.map(buildAnswer),
+    answers: ANSWERED_OFFSETS.map(buildAnswer),
+    dailyQuestion: TODAY_DAILY_QUESTION,
+    question: TODAY_QUESTION,
   },
   {
     id: 'streak-lost',
@@ -98,5 +152,7 @@ export const STATS_FIXTURES: StatsFixture[] = [
       streak_last_answered_on: toDateKey(addDays(TODAY, -3)),
     }),
     answers: LOST_OFFSETS.map(buildAnswer),
+    dailyQuestion: TODAY_DAILY_QUESTION,
+    question: TODAY_QUESTION,
   },
 ];
