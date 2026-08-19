@@ -41,7 +41,8 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
    Notification push « La question du jour est tombée »
             │
             ▼
-   Question + 2 réponses possibles ──► Je réponds
+   Question + ses options ──► Double tap sur mon choix
+            │                (tap = sélection, tap = validation)
             │                              │
             │                              ▼
             │                    Ma StatOwrel : « Comme x% des
@@ -83,7 +84,24 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 - La question expire à **minuit**. Passé ce délai, on ne peut plus répondre — la journée est perdue.
 - Réponse **définitive** : pas de modification après validation (c'est ce qui rend la stat crédible).
 
-### 4.3 StatOwrel
+### 4.3 Le double tap
+
+La micro-interaction signature de l'app : **répondre se fait en deux taps sur la même option**.
+
+1. **Premier tap** — l'option est *sélectionnée*. Elle se soulève (ombre portée nette, style neobrutalism), les autres options s'estompent. Retour haptique **léger** (`ImpactFeedbackStyle.Light`).
+2. **Deuxième tap sur la même option** — la réponse est *validée* et envoyée. L'option s'enfonce, puis l'écran bascule sur la StatOwrel. Retour haptique **franc et satisfaisant** (`ImpactFeedbackStyle.Heavy`, suivi de `NotificationFeedbackType.Success`).
+
+Règles :
+
+- Taper une **autre** option pendant l'état sélectionné déplace simplement la sélection (haptique léger de nouveau) — on ne valide jamais par erreur en changeant d'avis.
+- Il n'y a **aucun bouton « Valider »**. Le deuxième tap *est* le bouton. Le libellé de l'option affiche « Tape encore pour valider » en micro-texte tant qu'elle est sélectionnée.
+- Le deuxième tap n'est accepté qu'après un court délai (~150 ms) pour éviter qu'un double tap involontaire ne verrouille une réponse. La réponse étant définitive (§4.2), ce garde-fou est essentiel.
+- L'état sélectionné n'expire pas : on peut rester dessus aussi longtemps qu'on veut avant de valider.
+- Si l'haptique est désactivé au niveau système, la validation reste possible — le retour est alors purement visuel.
+
+Le double tap est ce qui rend l'app satisfaisante à utiliser tous les jours. Il doit être soigné avant tout le reste de l'UI.
+
+### 4.4 StatOwrel
 
 Immédiatement après avoir répondu :
 
@@ -93,20 +111,20 @@ Immédiatement après avoir répondu :
 - Compteurs agrégés maintenus en temps réel côté backend (trigger Firestore à chaque réponse), pas de calcul à la lecture.
 - Écran partageable (image générée) — le principal levier d'acquisition.
 
-### 4.4 Réponses des amis
+### 4.5 Réponses des amis
 
 - Accessibles **uniquement** après avoir répondu soi-même (mécanique BeReal).
 - Liste des amis : avatar, pseudo, réponse choisie, heure de réponse.
 - Les amis qui n'ont pas encore répondu apparaissent en attente (« n'a pas encore répondu »), sans notion de retard ou de temps de réaction en v1.
 
-### 4.5 Streak
+### 4.6 Streak
 
 - +1 à chaque journée où l'on a répondu avant minuit.
 - **0** dès qu'une journée est manquée. Pas de joker, pas de rattrapage en v1.
 - Streak visible sur son profil et à côté de son nom dans la liste des amis.
 - Rappel push à 21h si la question du jour n'a pas été répondue et que le streak est en cours.
 
-### 4.6 Proposition de questions
+### 4.7 Proposition de questions
 
 - N'importe quel utilisateur peut proposer une question : intitulé + **2 à 6** options, chacune avec son « tu es un.e ... ».
 - La question part en file de modération (statut `pending`).
