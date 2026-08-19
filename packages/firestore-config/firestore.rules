@@ -46,15 +46,21 @@ service cloud.firestore {
     // (docs/prd.md §2). Any signed-in user reads any profile: a friend list
     // shows pseudos and avatars. Only the owner writes their own, and only the
     // backend (admin) deletes one, so account deletion also anonymises the
-    // answers and drops the friendships in one pass.
+    // answers and drops the friendships in one pass. `email` and
+    // `auth_providers` mirror Firebase Auth, which stays the source of truth:
+    // they are only ever written by their own owner, at sign-in.
     match /v1_users/{user_id} {
+      function isValidProfile() {
+        return request.resource.data.display_name is string
+               && request.resource.data.display_name.size() > 0
+               && (request.resource.data.email == null || request.resource.data.email is string)
+               && request.resource.data.auth_providers is list;
+      }
+
       allow read: if isAuthenticated();
-      allow create: if isOwner(user_id)
-                    && request.resource.data.display_name is string
-                    && request.resource.data.display_name.size() > 0;
+      allow create: if isOwner(user_id) && isValidProfile();
       allow update: if isOwner(user_id)
-                    && request.resource.data.display_name is string
-                    && request.resource.data.display_name.size() > 0
+                    && isValidProfile()
                     && request.resource.data.created_at == resource.data.created_at;
       allow delete: if false;
     }

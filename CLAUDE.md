@@ -31,7 +31,7 @@ There is no shared React hooks package yet (no `@repo/firebase-react` equivalent
 
 ## Status
 
-Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus four domain models — `v1_questions`, `v1_daily_questions`, its `v1_daily_question_answers` sub-collection, and `v1_users` (profile + streak stats) — all surfaced in `apps/firecms`. No backend owns them yet: no scheduler, no answer trigger. **No screens/views exist yet** — `apps/app` still has a single placeholder route. See `docs/architecture.md` for the intended shape going forward.
+Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus four domain models — `v1_questions`, `v1_daily_questions`, its `v1_daily_question_answers` sub-collection, and `v1_users` (profile, sign-in identities, streak stats) — all surfaced in `apps/firecms`. No backend owns them yet: no scheduler, no answer trigger. `apps/app` has its authentication flow (Google, Apple, email/password — `src/auth/`) and a placeholder home; **no product screens exist yet**. See `docs/architecture.md` for the intended shape going forward.
 
 ## Commands
 
@@ -73,7 +73,7 @@ npm run deploy:firecms:production
 ### Code Style
 
 - **Imports**: Use `@/*` path alias for intra-app imports (maps to `./src/*`). Use `@statowrel/models` for the shared package.
-- **Forms**: use `react-hook-form` + `zod` once forms exist. NEVER use raw `useState` for form state.
+- **Forms**: use `react-hook-form` + `zod` (`@hookform/resolvers/zod`) — see `apps/app/src/auth/schemas.ts`. NEVER use raw `useState` for form state.
 - **Functions API handlers**: validate request bodies with a `zod` schema using `.safeParse()`. NEVER use `.parse()` (throw-based) or `as` type assertions for untrusted input.
 
 ### Naming
@@ -90,6 +90,13 @@ npm run deploy:firecms:production
 - Optional fields: ALWAYS `null`, NEVER `undefined`, NEVER omit the field.
 - Timestamps: Use `UniversalTimestamp` from `@statowrel/models`, never ISO strings, in the raw/Firebase-facing type.
 - New collections: ALWAYS use `v1_` prefix, ALWAYS plural.
+
+### Auth (`apps/app`)
+
+- Session and profile go through `src/auth/AuthContext.tsx` (`useAuth()`) — never call `onAuthStateChanged` from a screen.
+- A signed-in account ALWAYS has its `v1_users/{uid}` document upserted by `src/auth/profile.ts`. **The document id is the Firebase Auth UID** — never a ULID, never a generated id.
+- Firebase error codes are translated in `src/auth/errors.ts`. NEVER surface a raw `auth/*` code to the user.
+- Firestore refs in the app go through `src/lib/firestore.ts` (`getDocumentRef` / `getCollectionRef`), which wires the `@statowrel/models` converter — the client-side twin of `apps/functions/src/libs/firebase-admin.ts`.
 
 ### Firestore Converters
 
@@ -138,7 +145,7 @@ Top-level `functions/src/index.ts` uses namespace re-exports (`export * as healt
 - Styling via [Nativewind](https://www.nativewind.dev) (`className`), not `StyleSheet.create`, unless a style can't be expressed in Tailwind.
 - Firebase client SDK (`firebase` npm package), not `@react-native-firebase` — see `apps/app/src/lib/firebase.ts`. Same SDK the converters in `@statowrel/models` target on the client side.
 - Routing via [Expo Router](https://docs.expo.dev/router/introduction/) (file-based, `apps/app/app/`).
-- **Design system**: neobrutalism (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold colors, thick borders, hard offset shadows, `radius: 0`. Theme tokens live in `apps/app/tailwind.config.js` (`font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`); fonts (Archivo Black, Space Grotesk) load via `expo-font` + `@expo-google-fonts/*`. The neobrutalism.com `shadcn` registry itself is web-only (Radix/Base UI need a DOM) — it does not apply to this React Native app; reusable component primitives are hand-built against these tokens as a later step.
+- **Design system**: neobrutalism (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold colors, thick borders, hard offset shadows, `radius: 0`. Theme tokens live in `apps/app/tailwind.config.js` (`font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`); fonts (Archivo Black, Space Grotesk) load via `expo-font` + `@expo-google-fonts/*`. The neobrutalism.com `shadcn` registry itself is web-only (Radix/Base UI need a DOM) — it does not apply to this React Native app; reusable component primitives are hand-built against these tokens (`apps/app/src/components/`).
 
 ## Testing
 

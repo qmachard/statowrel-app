@@ -23,10 +23,14 @@
   "dependencies": {
     "@expo-google-fonts/archivo-black": "^0.4.1",
     "@expo-google-fonts/space-grotesk": "^0.4.1",
+    "@hookform/resolvers": "^5.9.1",
     "@react-native-async-storage/async-storage": "~3.1.1",
+    "@react-native-google-signin/google-signin": "^16.1.4",
     "@statowrel/models": "*",
     "expo": "~57.0.14",
+    "expo-apple-authentication": "~57.0.1",
     "expo-constants": "~57.0.12",
+    "expo-crypto": "~57.0.1",
     "expo-dev-client": "~57.0.13",
     "expo-font": "~57.0.1",
     "expo-linking": "~57.0.6",
@@ -37,12 +41,14 @@
     "nativewind": "^4.2.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-hook-form": "^7.85.0",
     "react-native": "0.86.2",
     "react-native-gesture-handler": "~3.2.1",
     "react-native-reanimated": "~4.5.3",
     "react-native-safe-area-context": "~5.9.1",
     "react-native-screens": "~4.27.0",
-    "react-native-web": "~0.21.2"
+    "react-native-web": "~0.21.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

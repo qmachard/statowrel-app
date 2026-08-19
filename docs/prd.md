@@ -1,6 +1,6 @@
 # StatOwrel — PRD
 
-Status: **draft initial**. Ce document décrit le produit visé. Aucune fonctionnalité décrite ici n'est encore implémentée — voir `docs/architecture.md` pour l'état technique réel.
+Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Seul le §4.1 est partiellement implémenté (connexion Google / Apple / e-mail + mot de passe et création du profil) ; tout le reste est à faire — voir `docs/architecture.md` pour l'état technique réel.
 
 ## 1. Vision
 
@@ -63,7 +63,7 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 ### 4.1 Compte & amis
 
 - Inscription et connexion via **Firebase Auth**, avec quatre méthodes proposées au même niveau :
-  - **Email + mot de passe** (email vérifié obligatoire avant d'accéder à l'app)
+  - **Email + mot de passe** (pas de vérification de l'adresse : elle ajoutait une étape avant même que l'app ait quoi que ce soit à montrer)
   - **Google**
   - **Facebook**
   - **Apple** (obligatoire sur iOS dès qu'un autre provider social est proposé — règle App Store)
@@ -75,6 +75,14 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 - On peut retirer un ami ; l'amitié disparaît des deux côtés.
 
 **Règle :** un utilisateur ne voit jamais que les réponses de ses amis. Il n'y a aucun contenu public.
+
+**État d'implémentation.** Les trois méthodes de connexion Google, Apple et e-mail + mot de passe sont en place, et le profil `v1_users/{uid}` est créé à l'inscription. Restent à faire, dans l'ordre où le produit en aura besoin :
+
+- **Facebook** — décrit ci-dessus, pas encore branché.
+- **Liaison d'identités** (`linkWithCredential`) — un même e-mail arrivant par deux providers crée aujourd'hui deux comptes distincts ; l'app affiche un message expliquant quelle méthode utiliser au lieu de lier.
+- **Écran de choix du pseudo et de l'avatar** — le pseudo est pour l'instant pré-rempli automatiquement (provider, puis prénom Apple, puis partie locale de l'e-mail) sans écran dédié.
+- **Unicité du pseudo** — non vérifiée : elle demande une collection de réservation ou un contrôle côté backend.
+- **Suppression de compte** — non implémentée.
 
 ### 4.2 Question du jour
 

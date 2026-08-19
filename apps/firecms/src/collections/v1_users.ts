@@ -1,6 +1,6 @@
 import { buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
 
-import { USER_COLLECTION, UserData } from '@statowrel/models';
+import { AUTH_PROVIDER_IDS, USER_COLLECTION, UserData } from '@statowrel/models';
 
 /**
  * FireCMS reads Firestore documents through its own data source, which maps
@@ -25,7 +25,13 @@ const callbacks = buildEntityCallbacks<UserEntity>({
       throw new Error('Un profil doit porter un pseudo.');
     }
 
-    return { ...values, display_name: displayName, photo_url: values.photo_url || null };
+    return {
+      ...values,
+      display_name: displayName,
+      photo_url: values.photo_url || null,
+      email: values.email || null,
+      auth_providers: values.auth_providers ?? [],
+    };
   },
 });
 
@@ -53,6 +59,22 @@ const usersCollection = buildCollection<UserEntity>({
       name: 'Avatar',
       description: 'URL de l\'image de profil. Vide si l\'utilisateur n\'en a pas.',
       url: 'image',
+    }),
+    email: buildProperty({
+      dataType: 'string',
+      name: 'Email',
+      description: 'Miroir de Firebase Auth, écrit par l\'app à la connexion. Vide si aucun provider n\'en fournit.',
+      readOnly: true,
+    }),
+    auth_providers: buildProperty({
+      dataType: 'array',
+      name: 'Providers',
+      description: 'Méthodes de connexion liées au compte. Miroir de Firebase Auth, écrit par l\'app.',
+      readOnly: true,
+      of: {
+        dataType: 'string',
+        enumValues: Object.fromEntries(AUTH_PROVIDER_IDS.map((provider) => [ provider, provider ])),
+      },
     }),
     created_at: buildProperty({
       dataType: 'date',

@@ -1,6 +1,6 @@
 # StatOwrel — Architecture
 
-Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's five collections (`v1_questions`, `v1_daily_questions`, `v1_daily_question_answers`, `v1_users`) and their FireCMS collections exist; there are still no app screens and no backend to own the daily cycle. The rest is added incrementally on top of this foundation.
+Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's five collections (`v1_questions`, `v1_daily_questions`, `v1_daily_question_answers`, `v1_users`) and their FireCMS collections exist, and the app has its sign-in flow; every other screen is still to come, as is the backend owning the daily cycle. The rest is added incrementally on top of this foundation.
 
 ## Stack
 
@@ -9,12 +9,12 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Monorepo | Turborepo + npm workspaces | npm only — never yarn/pnpm/bun |
 | Language | TypeScript 5.4+ | Strict mode everywhere |
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
-| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `tailwind.config.js`; component primitives added later |
+| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `tailwind.config.js`; `Button` / `TextField` primitives in `src/components/`, the rest added as screens need them |
 | Mobile routing | Expo Router | File-based, `apps/app/app/` |
 | Backoffice | React 18 + Vite (SPA) + FireCMS v2 + MUI | Firebase-Hosting-deployed admin UI |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
 | Database | Firebase Firestore | NoSQL, event-sourcing-friendly, `v1_` collection prefix |
-| Auth | Firebase Auth | Client SDK on mobile (`firebase`, not `@react-native-firebase`), Admin SDK in functions |
+| Auth | Firebase Auth | Client SDK on mobile (`firebase`, not `@react-native-firebase`), Admin SDK in functions. Google/Apple credentials come from native SDKs — see "Authentication" below |
 | Storage | Firebase Storage | Rules in `packages/firestore-config/storage.rules` |
 
 ## Why the Firebase client SDK on mobile (not `@react-native-firebase`)
@@ -128,13 +128,15 @@ The document id is the author's Auth UID, which makes "one answer per person per
 |---|---|---|
 | `display_name` | `string` | pseudo, unique, chosen at first sign-in |
 | `photo_url` | `string \| null` | avatar; `null` until the user picks one |
+| `email` | `string \| null` | mirrored from Firebase Auth, which stays the source of truth |
+| `auth_providers` | `AuthProviderId[]` | `password` / `google.com` / `apple.com` / `facebook.com`, mirrored from Auth at each sign-in |
 | `created_at` | `UniversalTimestamp` | |
 | `updated_at` | `UniversalTimestamp` | bumped on every profile write |
 | `streak_count` | `number` | consecutive days answered on time; backend-owned — the answer trigger bumps it, the midnight scheduler resets it to 0 for whoever didn't answer, and a catch-up answer never restores it |
 | `streak_best` | `number` | longest `streak_count` ever reached |
 | `streak_last_answered_on` | `string \| null` (`YYYY-MM-DD`) | day of the last on-time answer; `null` until the first one |
 
-Profile and answering stats now — the PRD's `email`, `auth_providers` and `invite_code` are still to be modelled.
+The profile half of the document is written by the app itself, at first sign-in — `apps/app/src/auth/profile.ts`, under the owner-only `create`/`update` rules. The streak fields belong to the backend and the app never writes them. Only the PRD's `invite_code` is still to be modelled.
 
 Two things to keep straight about the options:
 
@@ -191,6 +193,42 @@ Three build profiles in `eas.json`, mapped to root-level npm scripts:
 
 `submit:prod` runs `eas submit --profile production` for both platforms. Store credentials (Apple/Google) are configured once via `eas credentials` and stored by EAS, not in this repo.
 
+### Authentication
+
+Firebase Auth, three methods offered at the same level (`docs/prd.md` §4.1). The JS `firebase` SDK owns the *session* everywhere; the two social providers only exist to hand it a credential:
+
+| Provider | How the credential is obtained |
+|---|---|
+| Email / password | `createUserWithEmailAndPassword` — the address is not verified, on purpose (`docs/prd.md` §4.1) |
+| Google | `@react-native-google-signin/google-signin` → `idToken` → `GoogleAuthProvider.credential()` |
+| Apple | `expo-apple-authentication` → `identityToken` → `new OAuthProvider('apple.com').credential()` |
+
+**Why the native Google SDK and not `expo-auth-session`.** `signInWithPopup` has no meaning in React Native, so a credential has to come from somewhere else. `expo-auth-session` would drive the OAuth dance in a web view; the native SDK is what Expo's own Google-authentication guide recommends, gives a first-party account picker, and returns an id token directly. The cost is a config plugin (`iosUrlScheme`, the reversed iOS client id) — acceptable since CNG and `expo-dev-client` are already in place. The plugin is added only when `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` is set, so a checkout without Google credentials still runs; the button then hides itself.
+
+**Apple and the nonce.** A raw nonce is generated with `expo-crypto`; its SHA-256 goes to Apple, the raw one to Firebase, which re-hashes it to check the token was minted for this request. Apple also returns the user's name on the *first* authorization only — never again, and never through Firebase Auth — so it is captured before the sign-in call (`src/auth/profileHints.ts`) and consumed when the profile document is created.
+
+```
+apps/app/
+├── app/
+│   ├── _layout.tsx          # AuthProvider + splash held until the session resolves
+│   ├── (auth)/              # sign-in, sign-up — redirects to / as soon as a session exists
+│   └── index.tsx            # protected; redirects to /sign-in without a session
+└── src/
+    ├── auth/                # AuthContext, providers, profile, schemas, errors
+    ├── components/          # Button, TextField — the first neobrutalism primitives
+    └── lib/firestore.ts     # getDocumentRef / getCollectionRef, converter-wired
+```
+
+`src/auth/profile.ts` is what makes an account real: on every sign-in it upserts `v1_users/{uid}` — **document id = Firebase Auth UID** — pre-filling the pseudo from the provider, then Apple's given name, then the email's local part. It reads before writing, so it is idempotent and cheap on a session restore, and it carries `created_at` over untouched because `firestore.rules` refuses an update that changes it.
+
+`src/lib/firestore.ts` mirrors `apps/functions/src/libs/firebase-admin.ts` on the client side: every ref is built with a `@statowrel/models` converter, so no screen ever reads `snap.data()` untyped.
+
+Forms use `react-hook-form` + `zod` (`@hookform/resolvers`), never raw `useState`. Firebase error codes are translated to French in `src/auth/errors.ts` — a user-facing string never leaks a raw `auth/*` code.
+
+Both emulators are wired behind env vars (`EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_*`, `…_FIRESTORE_EMULATOR_*`), matching the ports in `firebase.json`.
+
+Deliberately deferred: Facebook (PRD §4.1, no button yet), identity linking via `linkWithCredential` (the `auth/account-exists-with-different-credential` case shows an explanatory message instead), the dedicated pseudo/avatar onboarding screen (the pseudo is pre-filled automatically for now), pseudo uniqueness (needs a reserved-names collection or a backend check), and account deletion.
+
 ### Design system
 
 **Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur. Tokens live in `apps/app/tailwind.config.js`: color palette (`background`/`foreground`/`card`/`primary`/`primary-hover`/`secondary`/`muted`/`accent`/`destructive`/`border`/`input`/`ring`), `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), `borderRadius` collapsed to `0` (except `full`), a thicker default `borderWidth` (2px), and a hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/app/_layout.tsx`, with the splash screen held until `useFonts` resolves.
@@ -216,9 +254,9 @@ Two Firebase projects, aliased in `.firebaserc`:
 
 ## What's deliberately not here yet
 
-- No app screens beyond the placeholder route — nothing consumes `v1_questions` on mobile yet.
+- No app screens beyond sign-in and a placeholder home — nothing consumes `v1_questions` on mobile yet.
 - Four of the PRD's five collections exist; only `v1_users/{id}/friends` is still to be modelled — see `docs/prd.md` §6.
 - No backend to own `v1_daily_questions`/`v1_daily_question_answers`: no daily scheduler, no answer trigger to increment `answer_counts` and bump streaks, no midnight closer (docs/prd.md §6 "Backend") — and no app screens consume any of it yet. The data model landed alone, on purpose.
-- No design-system component primitives (buttons, cards, inputs) — the neobrutalism theme tokens exist in `tailwind.config.js`, the primitives are the next step. No dark-mode theming either.
+- Only two design-system primitives (`Button`, `TextField`), built for the auth forms — cards, chips and the rest come with the screens that need them. No dark-mode theming either.
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.
