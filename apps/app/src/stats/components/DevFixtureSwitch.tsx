@@ -28,7 +28,7 @@ export const DevFixtureSwitch = ({ fixtures, active, onSelect }: DevFixtureSwitc
             accessibilityRole="button"
             accessibilityState={{ selected }}
             style={selected ? shadows.sm : undefined}
-            className={`flex-1 rounded border-2 border-border px-3 py-2 ${selected ? 'bg-primary' : 'bg-card'}`}
+            className={`flex-1 rounded-sm border-2 border-border px-3 py-2 ${selected ? 'bg-primary' : 'bg-card'}`}
             onPress={() => onSelect(fixture.id)}
           >
             <Text className="text-center font-sans text-xs uppercase text-foreground">{fixture.label}</Text>

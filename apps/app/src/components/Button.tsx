@@ -142,7 +142,7 @@ const ICON_SIZE: Record<ButtonSize, number> = {
 const isIconOnly = (size: ButtonSize) => size.startsWith('icon');
 
 /**
- * The neobrutalist button: thick border, slightly rounded corners and a hard
+ * The neobrutalist button: thick border, rounded corners (`sm`) and a hard
  * offset shadow it presses *into* — the press translates the surface by exactly
  * the shadow offset (4px, see `SUNK`) and drops the shadow, so the button looks
  * like it sinks flat against the page.
@@ -176,7 +176,7 @@ export const Button = ({
           // A pressed surface drops its shadow entirely — it has sunk into it.
           style={pressed ? PRESSED[variant] : RESTING[variant]}
           className={[
-            'flex-row items-center justify-center gap-2 rounded',
+            'flex-row items-center justify-center gap-2 rounded-sm',
             SURFACE[variant],
             SIZE[size],
             pressed ? PRESSED_TINT[variant] : '',

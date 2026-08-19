@@ -148,7 +148,7 @@ Immédiatement après avoir répondu :
 
 ## 5. Navigation & écrans
 
-L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), coins **légèrement** arrondis (`rounded` = 4px — ni carrés, ni pilule), titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Les tokens sont déjà dans `apps/app/src/design/tokens.js` (palette + rayon) et `apps/app/tailwind.config.js` (typo, bordures, ombres) — aucun écran ne définit sa propre palette.
+L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), coins franchement arrondis (`sm` = 8px sur les boutons, `DEFAULT` = 12px, jusqu'à 32px — jamais carrés), titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Les tokens sont déjà dans `apps/app/src/design/tokens.js` (palette + rayon) et `apps/app/tailwind.config.js` (typo, bordures, ombres) — aucun écran ne définit sa propre palette.
 
 Toute l'app tient en **un écran, une modale et une carte**, plus le Profil qui s'ouvre par-dessus. Il n'y a ni barre d'onglets, ni menu, ni troisième niveau de navigation.
 
@@ -175,7 +175,7 @@ La racine de l'app. De haut en bas :
 
 **3. Record et jours répondus.** Deux tuiles côte à côte sous le bloc streak, fond `card`, bordure noire, ombre dure : le meilleur streak jamais atteint (`streak_best`) et le nombre total de jours répondus depuis l'inscription. Elles remettent le streak courant en perspective sans lui voler la vedette.
 
-**4. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, coins légèrement arrondis (`rounded`), séparées par une gouttière régulière. Quatre états :
+**4. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, coins arrondis (`rounded`), séparées par une gouttière régulière. Quatre états :
 
 | État | Rendu | Tap |
 |---|---|---|
@@ -199,7 +199,7 @@ La racine de l'app. De haut en bas :
 
 La question ne vit **jamais** dans un écran à elle : c'est toujours une **bottom sheet** posée par-dessus l'écran Stats.
 
-- **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins supérieurs légèrement arrondis (`rounded`), bordure haute noire épaisse, ombre dure vers le haut.
+- **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins supérieurs arrondis (`rounded`), bordure haute noire épaisse, ombre dure vers le haut.
 - **Rattrapage depuis le calendrier** → même sheet, mais **fermable** (poignée + tap sur le fond) : on a le droit de regarder une vieille question et de repartir sans répondre.
 
 Contenu, de haut en bas :

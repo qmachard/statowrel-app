@@ -10,7 +10,7 @@ export interface TextFieldProps extends TextInputProps {
 }
 
 /**
- * The neobrutalist input: thick border, slightly rounded corners, a small hard
+ * The neobrutalist input: thick border, rounded corners, a small hard
  * shadow, and a focus ring that sits *outside* the border (the `outline-2
  * outline-offset-2` of the web recipe).
  *
