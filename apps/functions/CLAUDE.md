@@ -1,6 +1,6 @@
 # Functions (`@statowrel/functions`)
 
-Firebase Cloud Functions v2 (gen2) + Express 5, TypeScript compiled with `tsc` + `tsc-alias` to `lib/`.
+Firebase Cloud Functions v2 (gen2) + Express 5, TypeScript bundled with esbuild into `dist/` — the generated artifact `firebase.json` deploys, not this workspace (see `scripts/build.mjs`).
 
 ## Domain structure
 
@@ -37,24 +37,23 @@ Every ref helper takes a `FirestoreConverter` from `@statowrel/models` — never
 ## Local development
 
 ```bash
-cp apps/functions/.env.example apps/functions/.env.local   # emulator params
-npm run dev            # emulators (functions, firestore, auth, storage) + tsc --watch
+npm run dev            # emulators (functions, firestore, auth, storage) + esbuild --watch
 npm run dev:functions   # same, run from the repo root via turbo
 ```
+
+No env file to set up: the emulator publishes the project id and mock credentials itself.
 
 Emulator state persists to `.firebase-emulator/` across runs (`--export-on-exit` / `--import`).
 
 ## Env params
 
-`src/libs/firebase-admin.ts` declares three `defineString()` params: `CUSTOM_FIREBASE_PROJECT_ID`, `CUSTOM_FIREBASE_CLIENT_EMAIL`, `CUSTOM_FIREBASE_PRIVATE_KEY` (base64 of the service account's PEM `private_key`). The Firebase CLI resolves them from, in order: `.env`, `.env.<projectId>` (`.env.statowrel-dev`, `.env.statowrel-prod`), and `.env.local` for the emulator.
+There are none, deliberately. `initFirebase()` calls `initializeApp()` with no arguments and lets the runtime supply the project id and Application Default Credentials — deployed and emulated alike.
 
-All of those are gitignored — only `.env.example` is tracked, because a filled-in copy holds a real credential.
-
-Outside the emulator, `initFirebase()` only reaches for the explicit `cert()` — deployed functions could instead rely on the runtime's default service account and drop those params entirely.
+Adding a `defineString()` param is not free: the Firebase CLI resolves params **at deploy time** and stops to ask for every one it cannot find in `.env` / `.env.<projectId>`, so an unset param turns every deploy into an interactive prompt. Add one only for a value the runtime genuinely cannot provide, and ship its value in `.env.<projectId>` at the same time. `.env*` is gitignored — a param holding a credential must never be committed.
 
 ## Ops scripts (`scripts/`)
 
-Plain `.mjs`, run directly with node — outside `src/`, so `tsc` ignores them and they are excluded from the deploy bundle (`firebase.json` → `functions.ignore`).
+Plain `.mjs`, run directly with node — outside `src/`, so they are neither type-checked nor reachable from the bundle's entry point, and never reach the deploy artifact.
 
 ```bash
 npm run set-admin -- <email>                  # grant the `admin` claim, default project
