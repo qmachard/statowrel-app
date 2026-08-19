@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type FirebaseApp, getApps, initializeApp } from 'firebase/app';
-import { type Auth, getAuth, initializeAuth } from 'firebase/auth';
+import { type Auth, connectAuthEmulator, getAuth, initializeAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, type Firestore, getFirestore } from 'firebase/firestore';
 
 // getReactNativePersistence exists in firebase/auth's React Native build
@@ -36,6 +36,14 @@ try {
 export const auth = authInstance;
 
 export const db: Firestore = getFirestore(app);
+
+if (process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST && process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_PORT) {
+  connectAuthEmulator(
+    auth,
+    `http://${process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST}:${process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_PORT}`,
+    { disableWarnings: true },
+  );
+}
 
 if (process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST && process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT) {
   connectFirestoreEmulator(
