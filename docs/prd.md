@@ -173,7 +173,7 @@ La racine de l'app. De haut en bas :
 
 **1. En-tête.** La date du jour en micro-texte et la salutation (« Salut Lou ») en `font-head`, à gauche ; à droite les deux boutons-icônes de §5.1.
 
-**2. Bandeau question du jour.** Tant que la question du jour est ouverte et sans réponse, un bandeau `accent` pleine largeur — bordure noire, ombre dure, texte blanc — annonce son intitulé et ouvre la modale question (§5.4). C'est le même token `accent` que la case « aujourd'hui, pas encore répondu » du calendrier : la journée à faire porte une seule couleur. Une fois la journée répondue, le bandeau disparaît — le calendrier suffit à en rendre compte.
+**2. Bandeau question du jour.** Tant que la question du jour est ouverte et sans réponse, un bandeau `accent` pleine largeur — bordure noire, ombre dure, texte blanc — annonce son intitulé, précédé d'un pictogramme de bulle interrogative, et ouvre la modale question (§5.4). C'est le même token `accent` que la case « aujourd'hui, pas encore répondu » du calendrier : la journée à faire porte une seule couleur. Une fois la journée répondue, le bandeau disparaît — le calendrier suffit à en rendre compte.
 
 **3. Ligne de stats.** Le streak et ses compteurs tiennent sur **une seule ligne**, à défilement horizontal, débordant jusqu'aux deux bords de l'écran. En tête, la carte streak : `primary` bordée, ombre `lg`, la flamme et le libellé en haut, le nombre de jours en `font-head` puis « jours d'affilée » — la même échelle typographique que les tuiles qui suivent, pour que la ligne tienne sur une seule hauteur. Quand le streak est à 0, elle passe en `muted` avec « Réponds aujourd'hui pour repartir ». Suivent deux tuiles `card` plus étroites, bordure noire, ombre dure : le meilleur streak jamais atteint (`streak_best`) et le nombre total de jours répondus depuis l'inscription. Elles remettent le streak courant en perspective sans lui voler la vedette, et la ligne rend sa hauteur au calendrier.
 
@@ -183,7 +183,7 @@ La racine de l'app. De haut en bas :
 |---|---|---|
 | **Répondu** | Case `primary`, ombre dure, le `stat_label` du jour en micro-texte (tronqué) | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
 | **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
-| **Aujourd'hui, pas encore répondu** | Case `accent`, bordure doublée | Ouvre la modale question du jour (§5.4) |
+| **Aujourd'hui, pas encore répondu** | Case `accent`, sans bordure — l'aplat rouge suffit à la faire ressortir | Ouvre la modale question du jour (§5.4) |
 | **Futur, ou antérieur à l'inscription** | Case `muted`, sans bordure | Inerte |
 
 - Navigation mois par mois (chevrons gauche/droite), bornée à la date d'inscription d'un côté et au mois courant de l'autre.

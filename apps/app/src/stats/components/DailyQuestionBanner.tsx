@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, MessageCircleQuestionMark } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { shadows } from '@/design/shadows';
@@ -25,6 +25,11 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
     gap: spacing(1.5),
+  },
+  heading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(2),
   },
   caption: {
     fontFamily: fonts.sans,
@@ -53,7 +58,10 @@ export const DailyQuestionBanner = ({ label, onPress }: DailyQuestionBannerProps
     {({ pressed }) => (
       <View style={[ styles.surface, pressed ? SUNK : shadows.md ]}>
         <View style={styles.copy}>
-          <Text style={styles.caption}>Question du jour</Text>
+          <View style={styles.heading}>
+            <MessageCircleQuestionMark size={14} color={colors['accent-foreground']} />
+            <Text style={styles.caption}>Question du jour</Text>
+          </View>
           <Text style={styles.label} numberOfLines={3}>
             {label}
           </Text>

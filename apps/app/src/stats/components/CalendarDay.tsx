@@ -41,9 +41,10 @@ const styles = StyleSheet.create({
 
 const SURFACE = StyleSheet.create({
   answered: { borderWidth, borderColor: colors.border, backgroundColor: colors.primary },
-  // Doubled border on the accent red, per docs/prd.md §5.2 — today has to read
-  // before anything else, and it does so without moving.
-  today: { borderWidth: borderWidth * 2, borderColor: colors.border, backgroundColor: colors.accent },
+  // Bare accent red, per docs/prd.md §5.2 — the only unbordered cell of the
+  // grid besides `idle`: the flat red already reads before anything else, and a
+  // border would only tie it back to the days around it.
+  today: { backgroundColor: colors.accent },
   missed: { borderWidth, borderColor: colors.border, backgroundColor: colors.background },
   idle: { backgroundColor: colors.muted },
 }) satisfies Record<CalendarDayState, ViewStyle>;
