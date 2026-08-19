@@ -1,4 +1,3 @@
-import { Redirect } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,15 +14,12 @@ const PROVIDER_LABELS: Record<string, string> = {
 
 // Placeholder home screen — it exists to prove the session and the profile
 // document are wired end to end. Real screens land with the daily question.
-export default function Index() {
-  const { user, profile, initializing } = useAuth();
-
-  if (initializing) {
-    return null;
-  }
+// `RootNavigator` only mounts it for a signed-in session, so `user` is set.
+export const HomeScreen = () => {
+  const { user, profile } = useAuth();
 
   if (!user) {
-    return <Redirect href="/sign-in" />;
+    return null;
   }
 
   return (
@@ -48,4 +44,4 @@ export default function Index() {
       </ScrollView>
     </SafeAreaView>
   );
-}
+};

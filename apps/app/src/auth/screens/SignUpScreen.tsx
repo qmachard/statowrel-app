@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
@@ -11,8 +11,10 @@ import { signUpWithEmail } from '@/auth/providers';
 import { type SignUpValues, signUpSchema } from '@/auth/schemas';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
+import type { RootStackNavigation } from '@/navigation/types';
 
-export default function SignUpScreen() {
+export const SignUpScreen = () => {
+  const navigation = useNavigation<RootStackNavigation>();
   const [ error, setError ] = useState<string | null>(null);
 
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignUpValues>({
@@ -107,13 +109,14 @@ export default function SignUpScreen() {
             <SocialSignInButtons disabled={isSubmitting} />
           </View>
 
-          <Link href="/sign-in" asChild>
-            <Text className="text-center font-sans text-base text-foreground underline">
-              Déjà un compte ? Connecte-toi
-            </Text>
-          </Link>
+          <Text
+            className="text-center font-sans text-base text-foreground underline"
+            onPress={() => navigation.navigate('SignIn')}
+          >
+            Déjà un compte ? Connecte-toi
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
+};
