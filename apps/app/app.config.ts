@@ -37,7 +37,7 @@ const variant = VARIANT_CONFIG[APP_VARIANT];
 const googleIosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
 
 if (!googleIosUrlScheme) {
-  console.warn('[app.config] EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME is missing — Google sign-in will be disabled.');
+  console.warn('[app.config] EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME is missing — Google sign-in will be unavailable on iOS.');
 }
 
 const plugins: NonNullable<ExpoConfig['plugins']> = [

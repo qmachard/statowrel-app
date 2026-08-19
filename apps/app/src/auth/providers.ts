@@ -25,10 +25,23 @@ const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 /**
  * Hides the Google button on a build that ships without OAuth client ids, or
  * whose binary predates the native module.
+ *
+ * iOS needs its own client id on top of the web one, because the matching URL
+ * scheme has to be registered in the binary at build time (see app.config.ts).
+ * Without it the native SDK refuses the sign-in, so the button is hidden rather
+ * than left to fail on tap.
  */
-export const isGoogleSignInAvailable = (): boolean => (
-  Boolean(GOOGLE_WEB_CLIENT_ID) && loadGoogleSignIn() !== null
-);
+export const isGoogleSignInAvailable = (): boolean => {
+  if (!GOOGLE_WEB_CLIENT_ID) {
+    return false;
+  }
+
+  if (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID) {
+    return false;
+  }
+
+  return loadGoogleSignIn() !== null;
+};
 
 let googleConfigured = false;
 
