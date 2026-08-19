@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const fs = require('fs');
 
 const { getDefaultConfig } = require('expo/metro-config');
-const { withNativeWind } = require('nativewind/metro');
 
 const config = getDefaultConfig(__dirname);
 
@@ -42,4 +41,4 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 // here invalidate the cache on its own.
 config.cacheVersion = crypto.createHash('sha1').update(fs.readFileSync(__filename)).digest('hex').slice(0, 12);
 
-module.exports = withNativeWind(config, { input: './src/global.css' });
+module.exports = config;

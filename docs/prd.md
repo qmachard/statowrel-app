@@ -148,7 +148,7 @@ Immédiatement après avoir répondu :
 
 ## 5. Navigation & écrans
 
-L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), coins franchement arrondis (`sm` = 8px sur les boutons, `DEFAULT` = 12px, jusqu'à 32px — jamais carrés), titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Les tokens sont déjà dans `apps/app/src/design/tokens.js` (palette + rayon) et `apps/app/tailwind.config.js` (typo, bordures, ombres) — aucun écran ne définit sa propre palette.
+L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), coins franchement arrondis (`sm` = 8px sur les boutons, `DEFAULT` = 12px, jusqu'à 32px — jamais carrés), titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Tous les tokens (palette, rayons, ombres, typo, bordures, espacements) sont déjà dans `apps/app/src/design/tokens.ts` — aucun écran ne définit sa propre palette.
 
 Toute l'app tient en **un écran, une modale et une carte**, plus le Profil qui s'ouvre par-dessus. Il n'y a ni barre d'onglets, ni menu, ni troisième niveau de navigation.
 

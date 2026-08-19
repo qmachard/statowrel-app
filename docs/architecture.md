@@ -9,7 +9,7 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Monorepo | Turborepo + npm workspaces | npm only — never yarn/pnpm/bun |
 | Language | TypeScript 5.4+ | Strict mode everywhere |
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
-| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `src/design/tokens.js`; `Button` / `TextField` primitives in `src/components/`, the rest added as screens need them |
+| Mobile styling | React Native `StyleSheet` | Neobrutalism design tokens in `src/design/tokens.ts`; `Button` / `TextField` / `Card` / `Calendar` primitives in `src/components/`, the rest added as screens need them |
 | Mobile routing | React Navigation 7 | Native stack only — no tab bar, Stats is the root (docs/prd.md §5.1) — declared in `apps/app/src/navigation/` |
 | Backoffice | React 18 + Vite (SPA) + FireCMS v2 + MUI | Firebase-Hosting-deployed admin UI |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
@@ -28,7 +28,7 @@ The tradeoff: no `@react-native-firebase`-specific features (e.g. some backgroun
 ```
 statowrel-app/
 ├── apps/
-│   ├── app/          # React Native + Expo + EAS + Nativewind — the mobile app
+│   ├── app/          # React Native + Expo + EAS — the mobile app
 │   ├── firecms/       # React + Vite + FireCMS v2 — backoffice
 │   └── functions/     # Firebase Cloud Functions v2 + Express 5 — backend
 ├── packages/
@@ -206,7 +206,7 @@ Two things to know when writing a collection:
 
 ## `apps/app` — mobile
 
-Expo managed workflow, React Navigation for navigation, Nativewind for styling. `app.config.ts` is a dynamic config keyed off `APP_VARIANT` (`development` | `preview` | `production`) so the three EAS build profiles produce distinct app names / bundle identifiers / package names — dev, preview, and production builds can be installed side-by-side on the same device.
+Expo managed workflow, React Navigation for navigation, React Native `StyleSheet` for styling. `app.config.ts` is a dynamic config keyed off `APP_VARIANT` (`development` | `preview` | `production`) so the three EAS build profiles produce distinct app names / bundle identifiers / package names — dev, preview, and production builds can be installed side-by-side on the same device.
 
 ### EAS build/submit pipeline
 
@@ -258,11 +258,13 @@ Deliberately deferred: Facebook (PRD §4.1, no button yet), identity linking via
 
 ### Design system
 
-**Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur. The palette lives in `apps/app/src/design/tokens.js` — CommonJS, so `tailwind.config.js` can `require()` it while TypeScript imports the same values for the parts React Navigation paints itself (container theme, tab bar, stack `contentStyle`). That module also owns the `borderRadius` scale (corners are rounded rather than square — the border and the shadow carry the brutalism, so the ladder runs 8/12/16/20/24/32px from `sm` to `2xl`, `full` still available) and the hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). `apps/app/tailwind.config.js` holds the rest: color palette (`background`/`foreground`/`card`/`primary`/`primary-hover`/`secondary`/`secondary-hover`/`muted`/`accent`/`accent-hover`/`destructive`/`border`/`input`/`ring`) — four tokens carry the identity, black text on a cream `background`, a yellow `primary` for the main action and a saturated red `accent` for the accentuated one, which is why `accent` is the only surface taking white text, `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), and a thicker default `borderWidth` (2px).
+**Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur. Every token lives in `apps/app/src/design/tokens.ts`, and every consumer reads it from there — the components' own `StyleSheet.create` blocks as much as the parts React Navigation paints itself (container theme, stack `contentStyle`). One source, no drift. It exports the color palette (`background`/`foreground`/`card`/`primary`/`primary-hover`/`secondary`/`secondary-hover`/`muted`/`accent`/`accent-hover`/`destructive`/`border`/`input`/`ring`) — four tokens carry the identity, black text on a cream `background`, a yellow `primary` for the main action and a saturated red `accent` for the accentuated one, which is why `accent` is the only surface taking white text — the `radius` scale (corners are rounded rather than square: the border and the shadow carry the brutalism, so the ladder runs 8/12/16/20/24/32px from `sm` to `2xl`, `full` still available), the hard-offset no-blur `shadows` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`), the thick `borderWidth` (2px), the `fonts` (`head` = Archivo Black, `sans` = Space Grotesk), the `fontSize` scale, and `spacing(steps)` — one step is 4px, which is what keeps every screen's padding and `gap` on a single grid.
 
-Components apply the shadows through `apps/app/src/design/shadows.ts` rather than Nativewind's `shadow-*` classNames. Those compile down to the *legacy* iOS shadow props (`shadowOffset` / `shadowRadius` / `shadowOpacity`, plus `elevation` on Android), which stop reproducing a CSS box-shadow faithfully once a surface has a corner radius — the edge softens, which defeats the point of a neobrutalist shadow. `shadows.ts` hands React Native the CSS `boxShadow` string (RN 0.76+) instead, so a `0` blur radius stays a `0` blur radius. Same token strings feed both. Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/src/App.tsx`, with the splash screen held until `useFonts` resolves.
+Components apply the shadows through `apps/app/src/design/shadows.ts`, which hands React Native the CSS `boxShadow` string (RN 0.76+) rather than the *legacy* iOS shadow props (`shadowOffset` / `shadowRadius` / `shadowOpacity`, plus `elevation` on Android). Those stop reproducing a CSS box-shadow faithfully once a surface has a corner radius — the edge softens, which defeats the point of a neobrutalist shadow — whereas `boxShadow` keeps a `0` blur radius at `0` on any radius. Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/src/App.tsx`, with the splash screen held until `useFonts` resolves.
 
 neobrutalism.com's own registry ships components through the `shadcn` CLI (`npx shadcn add https://neobrutalism.com/r/...`), but those are web-only, built on Radix UI / Base UI — both need a DOM and can't run in React Native. Hence the hand-written token setup here rather than a CLI install.
+
+Styling itself is plain React Native: a `StyleSheet.create` block colocated with each component, composed from those tokens. The app ran on Nativewind (Tailwind classNames for RN) until the tokens outgrew what a Tailwind theme could express — the `boxShadow` workaround above was the first crack, the pressed-button render crash (a conditionally-declared CSS variable tripping Nativewind's prop serialiser) the second — and paying a Babel transform, a Metro wrapper and a `tailwind.config.js` for a handful of hand-built primitives stopped earning its keep.
 
 Still deferred: shared component primitives (buttons, cards, inputs) built against these tokens, and dark-mode theming (no dark-mode toggle mechanism exists yet).
 

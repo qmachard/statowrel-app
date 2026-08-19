@@ -4,8 +4,8 @@ import { colors } from '@/design/tokens';
 
 /**
  * React Navigation paints the screen background, the card and the header
- * itself, so it needs the neobrutalism palette as plain values — Nativewind
- * classNames only reach the components we render inside a screen.
+ * itself, so it needs the neobrutalism palette — the same tokens the screens
+ * style themselves with, so the chrome never drifts from the content.
  */
 export const navigationTheme: Theme = {
   ...DefaultTheme,
