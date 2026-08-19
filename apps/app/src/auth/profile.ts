@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import { getDoc, setDoc } from 'firebase/firestore';
+import { Timestamp, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 import {
   type AuthProviderId,
@@ -61,6 +61,11 @@ export const ensureUserProfile = async (user: User, hints?: ProfileHints | null)
       auth_providers: authProviders,
       created_at: now,
       updated_at: now,
+      // The streak belongs to the backend from here on — the app only ever seeds
+      // it, because nothing else creates this document.
+      streak_count: 0,
+      streak_best: 0,
+      streak_last_answered_on: null,
     };
 
     await setDoc(ref, profile);
@@ -83,7 +88,22 @@ export const ensureUserProfile = async (user: User, hints?: ProfileHints | null)
     return current;
   }
 
-  const profile: UserData = {
+  // Only the profile fields are written back, and through update() rather than
+  // set(): a whole-document set() would carry the streak values read a moment
+  // ago, reverting whatever the answer trigger wrote in between. update() also
+  // leaves `created_at` alone, which `firestore.rules` requires.
+  //
+  // update() does not run the converter (see the repo's CLAUDE.md), so
+  // `updated_at` is written as a Timestamp here rather than as an ISO string.
+  await updateDoc(ref, {
+    display_name: displayName,
+    photo_url: photoUrl,
+    email,
+    auth_providers: authProviders,
+    updated_at: Timestamp.now(),
+  });
+
+  return {
     ...current,
     display_name: displayName,
     photo_url: photoUrl,
@@ -91,10 +111,4 @@ export const ensureUserProfile = async (user: User, hints?: ProfileHints | null)
     auth_providers: authProviders,
     updated_at: now,
   };
-
-  // `created_at` is carried over untouched — `firestore.rules` refuses an update
-  // that changes it.
-  await setDoc(ref, profile);
-
-  return profile;
 };
