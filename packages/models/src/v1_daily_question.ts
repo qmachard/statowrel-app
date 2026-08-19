@@ -36,7 +36,7 @@ export interface DailyQuestionFirebaseData {
   date: string;
   /** Document id in `v1_questions`. That question's `status` becomes `used` when it is drawn. */
   question_id: string;
-  /** When the question was pushed to the app. The drop time varies from one day to the next (docs/prd.md §4.2). */
+  /** When the question was pushed to the app — 07:00 Paris, the same hour for everyone (docs/prd.md §4.2). */
   published_at: UniversalTimestamp;
   /** Paris midnight. Past it, an answer no longer counts for the streak and is flagged `late` (docs/prd.md §4.6). */
   closes_at: UniversalTimestamp;

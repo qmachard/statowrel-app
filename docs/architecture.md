@@ -169,16 +169,16 @@ The daily cycle's first half — docs/prd.md §6, "Backend". Two Cloud Functions
 
 | Function | Kind | Role |
 |---|---|---|
-| `dailyQuestions-scheduleDailyQuestion` | Cloud Scheduler, `0 2 * * *` Europe/Paris | Draws **tomorrow's** question and picks the time it drops |
-| `dailyQuestions-notifyDailyQuestion` | Cloud Tasks (`onTaskDispatched`) | Pushes it at that time — **the push itself is not implemented yet** |
+| `dailyQuestions-scheduleDailyQuestion` | Cloud Scheduler, `0 7 * * *` Europe/Paris | Draws **today's** question and queues its publication |
+| `dailyQuestions-notifyDailyQuestion` | Cloud Tasks (`onTaskDispatched`) | Pushes it to everyone — **the push itself is not implemented yet** |
 
-The scheduler draws one `approved` question at random, mints `v1_daily_questions/{tomorrow}` with a `published_at` picked uniformly between 08:00 and 20:00 Paris and a `closes_at` at the following Paris midnight, and flips the question to `used` with its `broadcast_at` — day document and question status in **one batch**, so a question is never consumed without the day that consumes it. Then it enqueues the notification task with `scheduleTime = published_at`.
+The scheduler draws one `approved` question at random, mints `v1_daily_questions/{today}` with `published_at` at 07:00 Paris and `closes_at` at the following Paris midnight, and flips the question to `used` with its `broadcast_at` — day document and question status in **one batch**, so a question is never consumed without the day that consumes it. Then it queues the notification task for immediate dispatch.
 
-It runs a day ahead precisely so the 08:00 slot stays reachable: a same-day run would have to fire before 08:00 and would truncate the window at the slightest delay. Writing the day early is safe — `firestore.rules` refuses an answer before `published_at`.
+Drawing and publishing happen in the same run: everyone gets the same question at the same hour, and the day stays open until midnight, which is the whole answering window (docs/prd.md §4.2). `published_at` is derived from the day key rather than read off the clock, so a retry recomputes the same instant and a run delayed by a few seconds still stamps the round hour. The push still goes through Cloud Tasks instead of being sent inline: the fan-out gets its own retries and rate limit, and a failing push never makes the scheduler re-draw the day.
 
 **Every step is idempotent**, because Cloud Scheduler retries. The day document is read before being drawn, so a retry reuses the committed draw rather than burning a second question; the notification task carries a day-derived id, so a re-enqueue is rejected by Cloud Tasks as a duplicate instead of notifying twice.
 
-`helpers/parisTime.ts` converts a Paris wall-clock time to an instant in two passes — the offset can only be read *from* an instant, and a single pass lands on the wrong side of a DST switch. Day arithmetic (`nextDateKey`) runs on the `YYYY-MM-DD` key, never as `+ 24h`: a DST day is 23 or 25 hours long.
+`helpers/parisTime.ts` converts a Paris wall-clock time to an instant in two passes — the offset can only be read *from* an instant, and a single pass lands on the wrong side of a DST switch. That is what keeps 07:00 and the midnight close on the right side of a DST day, which is 23 or 25 hours long.
 
 Deploying this domain needs the scheduler's service account to hold `cloudtasks.enqueuer` and to be allowed to `actAs` the task function's service account — the notification is enqueued from code, not by an IAM-free trigger.
 
@@ -287,7 +287,7 @@ The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=�
 
 - The Stats screen (docs/prd.md §5.2) renders from fixtures, not Firestore — `apps/app/src/stats/data/` holds two fake data sets and the `__DEV__` switch between them. Nothing consumes `v1_questions` on mobile yet, and the calendar's cells are not tappable: the question sheet (§5.4) and the StatOwrel card (§5.5) they open do not exist.
 - Four of the PRD's five collections exist; only `v1_users/{id}/friends` is still to be modelled — see `docs/prd.md` §6.
-- The daily cycle's back half: no answer trigger to increment `answer_counts` and bump streaks, no midnight closer resetting the streaks of whoever didn't answer (docs/prd.md §6 "Backend"). The push `dailyQuestions-notifyDailyQuestion` sends is a stub too — the task fires at the right instant, it just doesn't notify anyone yet. And no app screen consumes any of it.
+- The daily cycle's back half: no answer trigger to increment `answer_counts` and bump streaks, no midnight closer resetting the streaks of whoever didn't answer (docs/prd.md §6 "Backend"). The push `dailyQuestions-notifyDailyQuestion` sends is a stub too — the task fires, it just doesn't notify anyone yet. And no app screen consumes any of it.
 - Design-system primitives are added as screens need them — `Button`, `TextField`, `Card`, `IconButton`, `Calendar` so far. No dark-mode theming either (light only).
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.

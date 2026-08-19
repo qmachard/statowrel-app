@@ -6,7 +6,7 @@ Status: **draft initial**. Ce document décrit le produit visé, pas l'état du 
 
 StatOwrel est un réseau social entre amis, sans feed ni likes.
 
-Chaque jour, à une heure aléatoire entre 8h et 20h, **une seule question** est posée à tout le monde en même temps. Une question personnelle, absurde, que personne ne pense à poser. Tu réponds, et tu découvres deux choses :
+Chaque jour à 7h du matin, **une seule question** est posée à tout le monde en même temps, et la journée entière pour y répondre. Une question personnelle, absurde, que personne ne pense à poser. Tu réponds, et tu découvres deux choses :
 
 1. **Ta StatOwrel** — ta réponse replacée dans la statistique globale : _« Comme 68% des utilisateurs, tu es un.e efficace. »_
 2. **Les réponses de tes potes** — débloquées uniquement si tu as répondu toi-même.
@@ -35,7 +35,7 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 ## 3. Boucle produit
 
 ```
-   Heure aléatoire (8h–20h)
+   Tous les jours à 07:00
             │
             ▼
    Notification push « La question du jour est tombée »
@@ -87,7 +87,7 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 ### 4.2 Question du jour
 
 - **Une** question par jour, la même pour tous les utilisateurs.
-- Heure de publication tirée au hasard chaque jour entre **08:00 et 20:00** (fuseau de l'utilisateur, v1 : Europe/Paris pour tout le monde).
+- Publication **tous les jours à 07:00** (fuseau de l'utilisateur, v1 : Europe/Paris pour tout le monde) — même heure pour tout le monde, tous les jours.
 - Push notification à la publication.
 - Format v1 : **choix unique parmi N options** — de **2 à 6** options selon la question. Une question peut donc être binaire (« moins de 2 min / plus de 10 min ») ou à choix multiple (« par le bout / au milieu / je l'écrase »).
 - L'utilisateur ne choisit **qu'une seule** option, quel que soit le nombre proposé. Pas de réponses multiples, pas de texte libre, pas de photo.
