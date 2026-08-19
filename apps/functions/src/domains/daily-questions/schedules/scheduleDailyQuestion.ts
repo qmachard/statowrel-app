@@ -3,14 +3,10 @@ import { logger } from 'firebase-functions/v2';
 import { Timestamp } from 'firebase-admin/firestore';
 import {
   DAILY_QUESTION_COLLECTION,
-  DAILY_QUESTION_MONTH_COLLECTION,
   DAILY_QUESTION_TIME_ZONE,
   type DailyQuestionData,
   dailyQuestionConverter,
   dailyQuestionDateKey,
-  dailyQuestionMonthConverter,
-  monthDayKeyOf,
-  monthKeyOf,
   QUESTION_COLLECTION,
   questionConverter,
 } from '@statowrel/models';
@@ -18,15 +14,12 @@ import {
 import { createWriteBatch, getDocumentRef, parseData, REGION_CLOUD } from '@/libs/firebase-admin';
 
 import { drawApprovedQuestion } from '../helpers/drawQuestion';
+import { dailyQuestionMonthRefOf, indexDailyQuestion, monthIndexEntryOf } from '../helpers/monthIndex';
 import { enqueueDailyQuestionNotification } from '../helpers/notificationQueue';
 import { closingTimeOf, publicationTimeOf, PUBLICATION_HOUR } from '../helpers/publicationTime';
 
 const dailyQuestionRefOf = (date: string) => (
   getDocumentRef(DAILY_QUESTION_COLLECTION, date, dailyQuestionConverter)
-);
-
-const dailyQuestionMonthRefOf = (date: string) => (
-  getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKeyOf(date), dailyQuestionMonthConverter)
 );
 
 /**
@@ -65,13 +58,11 @@ const drawDailyQuestion = async (date: string): Promise<DailyQuestionData | null
     status: 'used',
     broadcast_at: Timestamp.fromDate(publishedAt),
   });
-  // `merge` deep-merges maps, so this adds one entry to the month rather than
-  // replacing the days already in it.
-  batch.set(dailyQuestionMonthRefOf(date), {
-    month: monthKeyOf(date),
-    days: { [monthDayKeyOf(date)]: { question_id: question.id, label: question.label } },
-    updated_at: publishedAt.toISOString(),
-  }, { merge: true });
+  batch.set(
+    dailyQuestionMonthRefOf(date),
+    monthIndexEntryOf(date, question.id, question.label, publishedAt.toISOString()),
+    { merge: true },
+  );
 
   await batch.commit();
 
@@ -95,10 +86,20 @@ export const scheduleDailyQuestion = onSchedule({
 
   // A day is drawn once and only once: a retried run reuses what the previous
   // attempt already committed instead of burning a second question.
-  const scheduled = parseData(await dailyQuestionRefOf(date).get()) ?? await drawDailyQuestion(date);
+  const drawn = parseData(await dailyQuestionRefOf(date).get());
+  const scheduled = drawn ?? await drawDailyQuestion(date);
 
   if (scheduled === null) {
     return;
+  }
+
+  // Reusing the day also means skipping the batch that indexes it, so a day
+  // drawn before the month index existed — or by a run that died between the
+  // draw and the index — would stay invisible to the Stats banner and the
+  // calendar for ever. Costs one read on a day that is already indexed, which
+  // is every day after this ships.
+  if (drawn !== null) {
+    await indexDailyQuestion(drawn);
   }
 
   await enqueueDailyQuestionNotification({ date, question_id: scheduled.question_id });
