@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
-import { ActivityIndicator, Pressable, type PressableProps, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, type PressableProps, Text, View, type ViewStyle } from 'react-native';
 
+import { shadows } from '@/design/shadows';
 import { colors } from '@/design/tokens';
 
 export type ButtonVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
@@ -54,15 +55,17 @@ const FOREGROUND: Record<ButtonVariant, string> = {
 
 /**
  * The raised variants carry the hard offset shadow at rest; `ghost` and `link`
- * are flat, so they have nothing to sink into.
+ * are flat, so they have nothing to sink into. It's a style rather than a
+ * `shadow-md` className because Nativewind's version blurs the edge — see
+ * `src/design/shadows.ts`.
  */
-const RESTING: Record<ButtonVariant, string> = {
-  default: 'shadow-md',
-  secondary: 'shadow-md',
-  destructive: 'shadow-md',
-  outline: 'shadow-md',
-  ghost: '',
-  link: '',
+const RESTING: Record<ButtonVariant, ViewStyle | undefined> = {
+  default: shadows.md,
+  secondary: shadows.md,
+  destructive: shadows.md,
+  outline: shadows.md,
+  ghost: undefined,
+  link: undefined,
 };
 
 /**
@@ -70,10 +73,10 @@ const RESTING: Record<ButtonVariant, string> = {
  * flat ones acknowledge the press with a tint instead.
  */
 const PRESSED: Record<ButtonVariant, string> = {
-  default: 'translate-x-1 translate-y-1 shadow-none',
-  secondary: 'translate-x-1 translate-y-1 shadow-none',
-  destructive: 'translate-x-1 translate-y-1 shadow-none',
-  outline: 'translate-x-1 translate-y-1 shadow-none',
+  default: 'translate-x-1 translate-y-1',
+  secondary: 'translate-x-1 translate-y-1',
+  destructive: 'translate-x-1 translate-y-1',
+  outline: 'translate-x-1 translate-y-1',
   ghost: 'bg-accent',
   link: 'opacity-70',
 };
@@ -116,7 +119,7 @@ const isIconOnly = (size: ButtonSize) => size.startsWith('icon');
 /**
  * The neobrutalist button: thick border, slightly rounded corners and a hard
  * offset shadow it presses *into* — the press translates the surface by exactly
- * the shadow offset (`shadow-md` is 4px, `translate-*-1` is 4px) and drops the
+ * the shadow offset (`shadows.md` is 4px, `translate-*-1` is 4px) and drops the
  * shadow, so the button looks like it sinks flat against the page.
  */
 export const Button = ({
@@ -145,11 +148,13 @@ export const Button = ({
     >
       {({ pressed }) => (
         <View
+          // A pressed surface drops its shadow entirely — it has sunk into it.
+          style={pressed ? undefined : RESTING[variant]}
           className={[
             'flex-row items-center justify-center gap-2 rounded',
             SURFACE[variant],
             SIZE[size],
-            pressed ? PRESSED[variant] : RESTING[variant],
+            pressed ? PRESSED[variant] : '',
             isDisabled ? 'opacity-60' : '',
           ].join(' ')}
         >
