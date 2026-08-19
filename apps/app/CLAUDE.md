@@ -4,13 +4,13 @@ React Native + Expo (managed workflow) + EAS. iOS + Android. Styled with [Native
 
 No screens or domain models exist yet — this app is scaffolding only (routing shell, Firebase wiring, build/submit pipeline). See root `docs/architecture.md` for the overall plan.
 
-**Design system**: not installed yet. The app is planned to use a neobrutalism visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold flat colors, thick borders, hard offset shadows — but the theme tokens, fonts, and component primitives are a separate, later step. `tailwind.config.js` currently has no custom theme.
+**Design system**: neobrutalism visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold flat colors, thick borders, hard offset shadows, `radius: 0`. Theme tokens (palette, `font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`) live in `tailwind.config.js`. Headings use `font-head` (Archivo Black), body text uses `font-sans` (Space Grotesk) — both loaded via `expo-font` + `@expo-google-fonts/*` in `app/_layout.tsx`. The neobrutalism.com registry itself (`shadcn` CLI, Radix/Base UI components) targets the web DOM and does **not** work with React Native — component primitives (Button, Card, Input, …) are hand-built against these tokens as a separate, later step.
 
 ## Structure
 
 - `app/` — [Expo Router](https://docs.expo.dev/router/introduction/) file-based routes. `_layout.tsx` is the root layout (wraps the app in `SafeAreaProvider`, imports `global.css`). Add screens as `app/<route>.tsx` / `app/<route>/_layout.tsx`.
 - `src/lib/firebase.ts` — Firebase client SDK (`firebase` npm package, not `@react-native-firebase`) init: `app`, `auth` (persisted via `@react-native-async-storage/async-storage`), `db`. Same client SDK the rest of the monorepo uses, so `@statowrel/models` converters work unchanged.
-- `tailwind.config.js` — Nativewind preset, no custom theme yet. Design tokens (palette, shadows, borders) are added later, in a dedicated design-system step.
+- `tailwind.config.js` — Nativewind preset + neobrutalism theme tokens (palette, `font-head`/`font-sans`, `borderRadius: 0`, thick `borderWidth`, hard offset `boxShadow` scale).
 - `global.css` — Tailwind directives, imported once in `app/_layout.tsx`.
 - `app.config.ts` — dynamic Expo config. Reads `APP_VARIANT` (`development` | `preview` | `production`, set per EAS build profile in `eas.json`) to pick app name / bundle identifier / package name, so dev/preview/prod can be installed side-by-side on a device.
 - `eas.json` — EAS Build & Submit profiles: `development` (dev client, internal), `preview` (internal), `production` (store-ready, auto-incremented build number).
