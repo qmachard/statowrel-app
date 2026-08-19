@@ -9,7 +9,7 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Monorepo | Turborepo + npm workspaces | npm only — never yarn/pnpm/bun |
 | Language | TypeScript 5.4+ | Strict mode everywhere |
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
-| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `src/design/tokens.js`; `Button` / `TextField` primitives in `src/components/`, the rest added as screens need them |
+| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `src/design/tokens.js` — four inks, no more; Lucide icons (`lucide-react-native` + `react-native-svg`); `Button` / `TextField` / `ErrorNotice` primitives in `src/components/`, the rest added as screens need them |
 | Mobile routing | React Navigation 7 | Native stack + bottom tabs, declared in `apps/app/src/navigation/` |
 | Backoffice | React 18 + Vite (SPA) + FireCMS v2 + MUI | Firebase-Hosting-deployed admin UI |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
@@ -234,7 +234,7 @@ apps/app/
 │   └── index.tsx            # protected; redirects to /sign-in without a session
 └── src/
     ├── auth/                # AuthContext, providers, profile, schemas, errors
-    ├── components/          # Button, TextField — the first neobrutalism primitives
+    ├── components/          # Button, TextField, ErrorNotice — the first neobrutalism primitives
     └── lib/firestore.ts     # getDocumentRef / getCollectionRef, converter-wired
 ```
 
@@ -250,11 +250,24 @@ Deliberately deferred: Facebook (PRD §4.1, no button yet), identity linking via
 
 ### Design system
 
-**Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur. The palette lives in `apps/app/src/design/tokens.js` — CommonJS, so `tailwind.config.js` can `require()` it while TypeScript imports the same values for the parts React Navigation paints itself (container theme, tab bar, stack `contentStyle`). `apps/app/tailwind.config.js` holds the rest: color palette (`background`/`foreground`/`card`/`primary`/`primary-hover`/`secondary`/`muted`/`accent`/`destructive`/`border`/`input`/`ring`), `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), `borderRadius` collapsed to `0` (except `full`), a thicker default `borderWidth` (2px), and a hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/src/App.tsx`, with the splash screen held until `useFonts` resolves.
+**Neobrutalism / sticker** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat colors, thick black borders, hard offset shadows, no gradients or blur. The principles are written up in `docs/design.md`; this section covers how they are wired.
+
+The palette is **four inks and no more** — black `#000000` (every outline), cream `#FEECDD` (background and panel surfaces), gold `#FFC802` (default accent), bubblegum pink `#FE91E7` (reserved for what is not an ordinary day: streak, record, today's cell, invitation). They live in `apps/app/src/design/tokens.js` — CommonJS, because two consumers with no shared runtime need them:
+
+- `apps/app/tailwind.config.js` `require()`s it at style build time and builds the `colors` scale from it (the four inks under their own names, plus the semantic roles `background`/`foreground`/`border`/`ring`/`card`/`input`/`primary`/`secondary`/`accent` and their `-foreground` pairs);
+- TypeScript imports the same file for the colors that travel as **values** rather than classNames — the React Navigation container theme, the tab bar, the stack `contentStyle`, a Lucide icon, an `ActivityIndicator`, a `placeholderTextColor`.
+
+It exports `ink` (the four hex values, written once and nowhere else), `colors` (the roles derived from them) and `withAlpha` (dimming for the props that only accept a resolved color).
+
+`colors`, `opacity`, `borderRadius`, `borderWidth` and `boxShadow` are declared **in place of** the Tailwind default scales rather than in `extend`, so a screen cannot reach for `bg-red-500`, `rounded-lg` or `shadow-inner` — the constraint is enforced by the toolchain, not by discipline. There is deliberately no gray (dim with `text-foreground/60`, `bg-foreground/10`) and no red (errors are solid black, via `src/components/ErrorNotice.tsx`); React Navigation's `notification` color is the pink, which is exactly what a badge is for.
+
+The rest of the scales: `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), `borderRadius` reduced to `none` / `panel` (10pt, the default — cards, fields, calendar cells, bottom sheet) / `full` (buttons and pills), a thicker default `borderWidth` (2px, with `3`/`4` to press harder), and a hard-offset, zero-blur `boxShadow` scale (`none`/`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/src/App.tsx`, with the splash screen held until `useFonts` resolves.
+
+Icons are [Lucide](https://lucide.dev) (`lucide-react-native`, rendered by `react-native-svg`) first, with custom SVG illustrations where Lucide falls short. Never emoji.
 
 neobrutalism.com's own registry ships components through the `shadcn` CLI (`npx shadcn add https://neobrutalism.com/r/...`), but those are web-only, built on Radix UI / Base UI — both need a DOM and can't run in React Native. Hence the hand-written token setup here rather than a CLI install.
 
-Still deferred: shared component primitives (buttons, cards, inputs) built against these tokens, and dark-mode theming (no dark-mode toggle mechanism exists yet).
+Still deferred: the component primitives beyond `Button` / `TextField` / `ErrorNotice` (cards, chips, calendar cells) — they land with the screens that need them — and dark-mode theming (no dark-mode toggle mechanism exists yet).
 
 ## Firestore rules & indexes
 

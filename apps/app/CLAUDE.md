@@ -4,20 +4,28 @@ React Native + Expo (managed workflow) + EAS. iOS + Android. Styled with [Native
 
 The authentication flow exists (Google, Apple, email + password, and the `v1_users/{uid}` profile it creates), behind it a two-tab navigator with a placeholder home and a profile screen; no product screen does yet. See root `docs/architecture.md` for the overall plan.
 
-**Design system**: neobrutalism visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold flat colors, thick borders, hard offset shadows, `radius: 0`. The palette lives in `src/design/tokens.js` and the remaining tokens (`font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`) in `tailwind.config.js`. Headings use `font-head` (Archivo Black), body text uses `font-sans` (Space Grotesk) — both loaded via `expo-font` + `@expo-google-fonts/*` in `src/App.tsx`. The neobrutalism.com registry itself (`shadcn` CLI, Radix/Base UI components) targets the web DOM and does **not** work with React Native — component primitives are hand-built against these tokens instead. `src/components/Button.tsx` and `src/components/TextField.tsx` exist; the rest lands with the screens that need it.
+**Design system**: neobrutalism / sticker (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat colors, thick black borders, hard offset shadows (never blurred), buttons in `rounded-full`, panels in `rounded-panel` (10pt). **Four inks, no more**: cream `#FEECDD` (background and panel surfaces), gold `#FFC802` (default accent), bubblegum pink `#FE91E7`, black `#000000` (every outline). Pink is not decorative — it marks what is not an ordinary day (streak, record, today's cell, invitation). No screen defines its own palette. Headings use `font-head` (Archivo Black), body text `font-sans` (Space Grotesk) — both loaded via `expo-font` + `@expo-google-fonts/*` in `src/App.tsx`.
+
+The palette lives in `src/design/tokens.js`, in CommonJS, because two consumers with no shared runtime need it: `tailwind.config.js` `require()`s it at style build time, and TypeScript imports the same values for the colors that travel as **values** rather than classNames — the React Navigation theme, the tab bar, the stack `contentStyle`, a Lucide icon, a `placeholderTextColor`. It exports `ink` (the four hex values, written once), `colors` (the semantic roles derived from them) and `withAlpha` (dimming). Never write a hex anywhere else.
+
+`colors`, `opacity`, `borderRadius`, `borderWidth` and `boxShadow` **replace** the Tailwind default scales rather than extending them, so `bg-red-500`, `rounded-lg` and `shadow-inner` do not exist. There is no gray (`muted` is gone — dim with `text-foreground/60`, `bg-foreground/10`, or `withAlpha(ink.black, …)` for a prop) and no red (`destructive` is gone — errors are solid black, see `src/components/ErrorNotice.tsx`).
+
+Icons come from [Lucide](https://lucide.dev) (`lucide-react-native`, rendered by `react-native-svg`), with custom SVG illustrations where Lucide falls short. **Never emoji.**
+
+The neobrutalism.com registry itself (`shadcn` CLI, Radix/Base UI components) targets the web DOM and does **not** work with React Native — component primitives are hand-built against these tokens instead. `src/components/` holds `Button`, `TextField` and `ErrorNotice`; the rest lands with the screens that need it. Full principles: root `docs/design.md`.
 
 ## Structure
 
 - `index.js` — entry point: `registerRootComponent(App)`.
 - `src/App.tsx` — root component. Imports `global.css`, loads the fonts, then `SafeAreaProvider` → `GestureHandlerRootView` → `NavigationContainer` (ref, theme, deep links) → `AuthProvider` → `RootNavigator`, holding the splash screen until the persisted session resolves.
 - `src/navigation/` — [React Navigation 7](https://reactnavigation.org), same layout as `qmachard/checkpack-v3`. `RootNavigator.tsx` is a native stack that registers **only** the half of the app the session can reach (`SignIn`/`SignUp` signed out, `Tabs` signed in), `TabNavigator.tsx` the bottom tabs (`Home`, `Profile`), `types.ts` the param lists (also registered globally as `ReactNavigation.RootParamList`), `linking.ts` the deep-link map, `navigationRef.ts` the imperative ref, `theme.ts` the container theme built from the design tokens.
-- `src/design/tokens.js` — the neobrutalism palette, in CommonJS so `tailwind.config.js` can `require()` it while TypeScript imports the same values for the navigator chrome. One source, no drift.
+- `src/design/tokens.js` — the four inks, the semantic roles and `withAlpha`, in CommonJS so `tailwind.config.js` can `require()` it while TypeScript imports the same values for the navigator chrome and for props. One source, no drift, no hex written twice.
 - `src/auth/` — everything authentication. `AuthContext.tsx` (`useAuth()`: `user`, `profile`, `initializing`), `providers.ts` (Google / Apple / email primitives + `signOut`), `profile.ts` (upserts `v1_users/{uid}` — **id = Firebase Auth UID**), `profileHints.ts`, `schemas.ts` (zod), `errors.ts` (French messages for `auth/*` codes), `SocialSignInButtons.tsx`, `screens/` (`SignInScreen`, `SignUpScreen`, `ProfileScreen`).
 - `src/home/screens/` — `HomeScreen`, the placeholder the daily question will replace.
-- `src/components/` — neobrutalism primitives (`Button`, `TextField`).
+- `src/components/` — neobrutalism primitives (`Button`, `TextField`, `ErrorNotice`).
 - `src/lib/firebase.ts` — Firebase client SDK (`firebase` npm package, not `@react-native-firebase`) init: `app`, `auth` (persisted via `@react-native-async-storage/async-storage`), `db`, plus the Auth and Firestore emulator hookups. Same client SDK the rest of the monorepo uses, so `@statowrel/models` converters work unchanged.
 - `src/lib/firestore.ts` — `getDocumentRef` / `getCollectionRef`, each wired with a `@statowrel/models` converter. Use these rather than calling `doc()`/`collection()` directly.
-- `tailwind.config.js` — Nativewind preset + neobrutalism theme tokens: the palette from `src/design/tokens.js`, plus `font-head`/`font-sans`, `borderRadius: 0`, thick `borderWidth`, hard offset `boxShadow` scale.
+- `tailwind.config.js` — Nativewind preset + neobrutalism theme tokens: the palette from `src/design/tokens.js`, plus `font-head`/`font-sans`, `borderRadius` `none`/`panel`/`full`, thick `borderWidth`, hard offset `boxShadow` scale.
 - `src/global.css` — Tailwind directives, imported once in `src/App.tsx`.
 - `app.config.ts` — dynamic Expo config. Reads `APP_VARIANT` (`development` | `preview` | `production`, set per EAS build profile in `eas.json`) to pick app name / bundle identifier / package name, so dev/preview/prod can be installed side-by-side on a device.
 - `eas.json` — EAS Build & Submit profiles: `development` (dev client, internal), `preview` (internal), `production` (store-ready, auto-incremented build number).
@@ -25,6 +33,7 @@ The authentication flow exists (Google, Apple, email + password, and the `v1_use
 ## Conventions
 
 - Use `className` (Nativewind) for styling, not `StyleSheet.create`, unless a style genuinely can't be expressed in Tailwind (complex platform-specific values) — in which case colocate it with `useMemo`/`StyleSheet.create` next to the component.
+- A color that has to be a **value** (a Lucide icon, an `ActivityIndicator`, a `placeholderTextColor`, the navigator chrome) comes from `ink` / `colors` in `@/design/tokens` — never a literal hex, never a `className`.
 - Firestore reads/writes ALWAYS go through a converter from `@statowrel/models` — use `getDocumentRef` / `getCollectionRef` from `src/lib/firestore.ts`, never read `snap.data()` untyped.
 - Forms use `react-hook-form` + `zod` via `@hookform/resolvers/zod`, never raw `useState`.
 - Auth session state comes from `useAuth()`; never call `onAuthStateChanged` from a screen.

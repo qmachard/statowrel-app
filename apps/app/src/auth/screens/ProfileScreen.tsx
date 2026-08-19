@@ -1,3 +1,4 @@
+import { LogOut } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,18 +23,18 @@ export const ProfileScreen = () => {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={[ 'top' ]}>
       <ScrollView contentContainerClassName="grow justify-center gap-8 p-6">
-        <View className="gap-2 border-2 border-border bg-card px-6 py-5 shadow-md">
+        <View className="gap-2 rounded-panel border-2 border-border bg-card px-6 py-5 shadow-md">
           <Text className="font-head text-2xl uppercase text-card-foreground">
             {profile?.display_name ?? 'Profil en cours de création…'}
           </Text>
-          <Text className="font-sans text-sm text-muted-foreground">{profile?.email ?? user.email ?? '—'}</Text>
-          <Text className="font-sans text-sm text-muted-foreground">
+          <Text className="font-sans text-sm text-foreground/60">{profile?.email ?? user.email ?? '—'}</Text>
+          <Text className="font-sans text-sm text-foreground/60">
             Connecté via {profile?.auth_providers.map((provider) => PROVIDER_LABELS[provider] ?? provider).join(', ') || '—'}
           </Text>
-          <Text className="font-sans text-xs text-muted-foreground">UID {user.uid}</Text>
+          <Text className="font-sans text-xs text-foreground/60">UID {user.uid}</Text>
         </View>
 
-        <Button label="Se déconnecter" variant="secondary" onPress={() => signOut()} />
+        <Button label="Se déconnecter" variant="secondary" icon={LogOut} onPress={() => signOut()} />
       </ScrollView>
     </SafeAreaView>
   );

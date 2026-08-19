@@ -11,6 +11,7 @@ import { authErrorMessage } from '@/auth/errors';
 import { signInWithEmail } from '@/auth/providers';
 import { type SignInValues, signInSchema } from '@/auth/schemas';
 import { Button } from '@/components/Button';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { TextField } from '@/components/TextField';
 import type { RootStackParamList } from '@/navigation/types';
 
@@ -39,7 +40,7 @@ export const SignInScreen = () => {
         <ScrollView contentContainerClassName="grow justify-center gap-8 p-6" keyboardShouldPersistTaps="handled">
           <View className="gap-2">
             <Text className="font-head text-3xl uppercase text-foreground">Content de te revoir</Text>
-            <Text className="font-sans text-base text-muted-foreground">
+            <Text className="font-sans text-base text-foreground/60">
               Connecte-toi pour retrouver la question du jour.
             </Text>
           </View>
@@ -83,13 +84,13 @@ export const SignInScreen = () => {
               )}
             />
 
-            {error ? <Text className="font-sans text-sm text-destructive">{error}</Text> : null}
+            {error ? <ErrorNotice message={error} /> : null}
 
             <Button label="Se connecter" loading={isSubmitting} onPress={onSubmit} />
           </View>
 
           <View className="gap-3">
-            <Text className="text-center font-sans text-sm uppercase text-muted-foreground">ou</Text>
+            <Text className="text-center font-sans text-sm uppercase text-foreground/60">ou</Text>
             <SocialSignInButtons disabled={isSubmitting} />
           </View>
 

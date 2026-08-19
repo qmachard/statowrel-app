@@ -148,7 +148,7 @@ Immédiatement après avoir répondu :
 
 ## 5. Navigation & écrans
 
-L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), `radius: 0` partout, titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Les tokens sont déjà dans `apps/app/tailwind.config.js` — aucun écran ne définit sa propre palette.
+L'app est en **neobrutalisme / sticker** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), boutons en `rounded-full` et panels en `rounded-panel` (10 pt), titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). **Quatre encres, pas une de plus** — crème (fond), jaune doré, rose bubblegum, noir (tous les contours) ; le rose marque ce qui n'est pas un jour comme les autres. Les tokens sont dans `apps/app/src/design/tokens.js`, lus à la fois par `apps/app/tailwind.config.js` et par le runtime — aucun écran ne définit sa propre palette. Principes complets : `docs/design.md`.
 
 Toute l'app tient en **deux onglets, une modale et une carte**. Il n'y a pas de troisième niveau de navigation.
 
@@ -162,23 +162,23 @@ Deux onglets, et deux seulement :
 | **Profil** | Son identité, ses amis, ses propositions de questions, ses réglages |
 
 - Barre fixe en bas, fond `card`, **bordure haute noire épaisse**, pas d'ombre interne, pas de flou de fond.
-- Onglet actif : pastille `primary` pleine sous l'icône + label, bordure noire et ombre dure décalée (`shadow-sm`) — l'onglet actif « sort » de la barre. Onglet inactif : `muted-foreground`, sans bordure.
+- Onglet actif : pastille `primary` pleine sous l'icône + label, bordure noire et ombre dure décalée (`shadow-sm`) — l'onglet actif « sort » de la barre. Onglet inactif : `text-foreground/60`, sans bordure.
 - Pas de badge numérique ; l'état « question du jour non répondue » se signale par la modale (§5.4), pas par une pastille.
 
 ### 5.2 Écran Stats
 
 L'écran d'accueil. De haut en bas :
 
-**1. Bloc streak.** Une carte `primary` bordée, ombre `lg`, occupant toute la largeur : le nombre de jours en très gros (`font-head`), le mot « jours d'affilée » en dessous, et un pictogramme de flamme. Quand le streak est à 0, la carte passe en `muted` avec « Réponds aujourd'hui pour repartir ».
+**1. Bloc streak.** Une carte `accent` (rose — le streak est précisément ce qui n'est pas ordinaire) bordée, ombre `lg`, occupant toute la largeur : le nombre de jours en très gros (`font-head`), le mot « jours d'affilée » en dessous, et l'icône Lucide `Flame`. Quand le streak est à 0, la carte perd son rose et passe en `bg-foreground/10` avec « Réponds aujourd'hui pour repartir ».
 
-**2. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, `radius: 0`, séparées par une gouttière régulière. Quatre états :
+**2. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, `rounded-panel`, séparées par une gouttière régulière. Quatre états :
 
 | État | Rendu | Tap |
 |---|---|---|
 | **Répondu** | Case `primary`, ombre dure, le `stat_label` du jour en micro-texte (tronqué) | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
 | **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
-| **Aujourd'hui, pas encore répondu** | Case `accent`, bordure doublée, légère pulsation | Ouvre la modale question du jour (§5.4) |
-| **Futur, ou antérieur à l'inscription** | Case `muted`, sans bordure | Inerte |
+| **Aujourd'hui, pas encore répondu** | Case `accent` (rose), bordure doublée, légère pulsation | Ouvre la modale question du jour (§5.4) |
+| **Futur, ou antérieur à l'inscription** | Case `bg-foreground/10`, sans bordure | Inerte |
 
 - Navigation mois par mois (chevrons gauche/droite), bornée à la date d'inscription d'un côté et au mois courant de l'autre.
 - Le calendrier **est** l'historique : c'est le seul endroit où l'on retrouve les questions passées et ses propres cartes.
@@ -189,7 +189,7 @@ L'écran d'accueil. De haut en bas :
 ### 5.3 Écran Profil
 
 - **En-tête carte** : avatar (cadre noir épais, ombre dure), pseudo en `font-head`, streak courant et meilleur streak.
-- **Mes amis** : liste avatar + pseudo + streak, avec l'action « Retirer ». En tête de liste, un bouton plein `primary` « Inviter un pote » (partage du lien + code à 6 caractères, §4.1). Si la liste est vide, l'état vide occupe la place de la liste : « Sans potes, StatOwrel c'est juste des chiffres. »
+- **Mes amis** : liste avatar + pseudo + streak, avec l'action « Retirer ». En tête de liste, un bouton plein `accent` (rose — l'invitation fait partie des exceptions) « Inviter un pote » (partage du lien + code à 6 caractères, §4.1). Si la liste est vide, l'état vide occupe la place de la liste : « Sans potes, StatOwrel c'est juste des chiffres. »
 - **Mes questions** : proposer une question (§4.7) et suivre le statut de celles déjà envoyées (`en attente` / `validée` / `rejetée` + raison / `tirée le JJ/MM`).
 - **Réglages** : notifications, déconnexion, suppression de compte.
 
@@ -197,7 +197,7 @@ L'écran d'accueil. De haut en bas :
 
 La question ne vit **jamais** dans un onglet : c'est toujours une **bottom sheet** posée par-dessus l'écran Stats.
 
-- **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins droits (`radius: 0`), bordure haute noire épaisse, ombre dure vers le haut.
+- **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins bas droits et coins hauts en `rounded-panel`, bordure haute noire épaisse, ombre dure vers le haut.
 - **Rattrapage depuis le calendrier** → même sheet, mais **fermable** (poignée + tap sur le fond) : on a le droit de regarder une vieille question et de repartir sans répondre.
 
 Contenu, de haut en bas :
@@ -219,15 +219,15 @@ Anatomie de la carte, dans l'ordre vertical :
 |---|---|---|
 | **Cadre** | — | Double encadrement : bordure noire épaisse + liseré intérieur `primary`, ombre `2xl`, proportions portrait ~2:3 |
 | **Bandeau haut** | Le `stat_label` en très gros (« Efficace ») à gauche, le **pourcentage** à droite | Le pourcentage tient la place des PV d'une carte Pokémon |
-| **Illustration** | Encart carré bordé : l'emoji/visuel de l'option choisie sur aplat de couleur | La « fenêtre d'illustration » de la carte |
+| **Illustration** | Encart carré bordé : le visuel de l'option choisie (icône Lucide ou SVG sur mesure, jamais d'emoji) sur aplat de couleur | La « fenêtre d'illustration » de la carte |
 | **Phrase** | « Comme **68%** des utilisateurs, tu es un.e **efficace**. » | Corps de texte de la carte |
-| **Encart question** | La question du jour + l'option choisie, sur fond `muted` | L'équivalent du bloc « attaque » |
+| **Encart question** | La question du jour + l'option choisie, sur fond `bg-foreground/10` | L'équivalent du bloc « attaque » |
 | **Barre de stats** | La répartition complète des options en barres horizontales bordées, la sienne mise en avant | Le bas de carte, chiffré |
 | **Pied** | Date, numéro du jour (« #142 »), pseudo de l'auteur de la question | Le pied d'une carte : édition + illustrateur |
 
-- **Rareté.** Plus l'option choisie est minoritaire, plus la carte est rare : au-delà de 50% la carte est `common` (aplat `primary`), sous 25% elle passe `rare` (liseré doré), sous 10% `ultra rare` (fond holographique animé au tilt de l'appareil). C'est ce qui rend intéressant de répondre honnêtement plutôt que comme tout le monde. La rareté est calculée à l'affichage depuis `answer_counts`, elle n'est pas figée : elle bouge tant que les réponses arrivent, et se stabilise à la clôture.
+- **Rareté.** Plus l'option choisie est minoritaire, plus la carte est rare : au-delà de 50% la carte est `common` (aplat `primary`), sous 25% elle passe `rare` (liseré `accent` rose), sous 10% `ultra rare` (aplat rose plein et reflet animé au tilt de l'appareil). C'est ce qui rend intéressant de répondre honnêtement plutôt que comme tout le monde. La rareté est calculée à l'affichage depuis `answer_counts`, elle n'est pas figée : elle bouge tant que les réponses arrivent, et se stabilise à la clôture.
 - **Bouton « Partager »** sous la carte : génère l'image de la carte seule (sans les amis) — §4.4.
-- **Les amis, sous la carte** (§4.5) : hors du cadre, en liste simple — avatar, pseudo, l'option choisie et l'heure. Les amis qui ont répondu comme moi sont regroupés en tête sous « Comme toi », les autres suivent, les non-répondants ferment la liste en `muted`.
+- **Les amis, sous la carte** (§4.5) : hors du cadre, en liste simple — avatar, pseudo, l'option choisie et l'heure. Les amis qui ont répondu comme moi sont regroupés en tête sous « Comme toi », les autres suivent, les non-répondants ferment la liste estompés (`text-foreground/40`).
 - Cette carte est **rejouable à volonté** : tap sur un jour répondu dans le calendrier (§5.2) la rouvre à l'identique, avec les stats à jour et les réponses des amis arrivées depuis.
 
 ### 5.6 Ce qui n'existe pas

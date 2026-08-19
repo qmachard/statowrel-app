@@ -11,6 +11,7 @@ import { authErrorMessage } from '@/auth/errors';
 import { signUpWithEmail } from '@/auth/providers';
 import { type SignUpValues, signUpSchema } from '@/auth/schemas';
 import { Button } from '@/components/Button';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { TextField } from '@/components/TextField';
 import type { RootStackParamList } from '@/navigation/types';
 
@@ -39,7 +40,7 @@ export const SignUpScreen = () => {
         <ScrollView contentContainerClassName="grow justify-center gap-8 p-6" keyboardShouldPersistTaps="handled">
           <View className="gap-2">
             <Text className="font-head text-3xl uppercase text-foreground">Rejoins la partie</Text>
-            <Text className="font-sans text-base text-muted-foreground">
+            <Text className="font-sans text-base text-foreground/60">
               Une question par jour, les réponses de tes potes en prime.
             </Text>
           </View>
@@ -100,13 +101,13 @@ export const SignUpScreen = () => {
               )}
             />
 
-            {error ? <Text className="font-sans text-sm text-destructive">{error}</Text> : null}
+            {error ? <ErrorNotice message={error} /> : null}
 
             <Button label="Créer mon compte" loading={isSubmitting} onPress={onSubmit} />
           </View>
 
           <View className="gap-3">
-            <Text className="text-center font-sans text-sm uppercase text-muted-foreground">ou</Text>
+            <Text className="text-center font-sans text-sm uppercase text-foreground/60">ou</Text>
             <SocialSignInButtons disabled={isSubmitting} />
           </View>
 

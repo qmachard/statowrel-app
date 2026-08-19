@@ -145,7 +145,11 @@ Top-level `functions/src/index.ts` uses namespace re-exports (`export * as healt
 - Styling via [Nativewind](https://www.nativewind.dev) (`className`), not `StyleSheet.create`, unless a style can't be expressed in Tailwind.
 - Firebase client SDK (`firebase` npm package), not `@react-native-firebase` — see `apps/app/src/lib/firebase.ts`. Same SDK the converters in `@statowrel/models` target on the client side.
 - Navigation via [React Navigation 7](https://reactnavigation.org) — native stack + bottom tabs declared in `apps/app/src/navigation/`, entry point `apps/app/index.js` → `src/App.tsx`. Routes are typed through `RootStackParamList` / `TabParamList`, never route strings.
-- **Design system**: neobrutalism (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold colors, thick borders, hard offset shadows, `radius: 0`. The palette lives in `apps/app/src/design/tokens.js` (read by both `tailwind.config.js` and the navigation theme); the rest of the tokens (`font-head`/`font-sans`, `borderRadius`, `borderWidth`, `boxShadow`) live in `apps/app/tailwind.config.js`; fonts (Archivo Black, Space Grotesk) load via `expo-font` + `@expo-google-fonts/*`. The neobrutalism.com `shadcn` registry itself is web-only (Radix/Base UI need a DOM) — it does not apply to this React Native app; reusable component primitives are hand-built against these tokens (`apps/app/src/components/`).
+- **Design system**: neobrutalism / sticker — flat colors, thick black borders, hard offset shadows (never blurred), `font-head` (Archivo Black) for headings, `font-sans` (Space Grotesk) for text, buttons in `rounded-full`, panels in `rounded-panel` (10pt). **Four inks, no more** — cream (background), gold, bubblegum pink, black (every outline). Pink is not decorative: it marks what is not an ordinary day (streak, record, today's cell, invitation). No screen defines its own palette.
+- **Single palette source**: `apps/app/src/design/tokens.js` (CommonJS) holds the four inks and the semantic roles derived from them. It is read both by `apps/app/tailwind.config.js` at style build time and by the app for colors passed as **values** rather than classNames — the React Navigation theme, the tab bar, a Lucide icon (`color={ink.pink}`), a `placeholderTextColor`. A hex is never written anywhere else. `colors`, `opacity`, `borderRadius`, `borderWidth` and `boxShadow` **replace** the Tailwind defaults rather than extending them, so `bg-red-500` / `rounded-lg` / `shadow-inner` simply do not exist. There is no gray and no red: dim with `text-foreground/60` (or `withAlpha`), signal errors in solid black (`ErrorNotice`).
+- **Icons**: [Lucide](https://lucide.dev) (`lucide-react-native` + `react-native-svg`) first, custom SVG illustrations where Lucide falls short. **Never emoji.**
+- The neobrutalism.com `shadcn` registry is web-only (Radix/Base UI need a DOM) — it does not apply to this React Native app; reusable component primitives are hand-built against these tokens (`apps/app/src/components/`).
+- Full principles: `docs/design.md`.
 
 ## Testing
 
@@ -154,3 +158,4 @@ There are no tests in this codebase. Do not add test infrastructure without expl
 ## Documentation
 
 - **Architecture**: `docs/architecture.md` — stack decisions, monorepo layout, Firebase project structure, EAS build/submit pipeline.
+- **Design**: `docs/design.md` — visual principles, the four-ink palette, tokens, icons.

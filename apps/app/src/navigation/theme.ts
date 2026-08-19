@@ -16,6 +16,8 @@ export const navigationTheme: Theme = {
     card: colors.card,
     text: colors.foreground,
     border: colors.border,
-    notification: colors.destructive,
+    // Le rose signale ce qui n'est pas un jour comme les autres — c'est
+    // exactement ce qu'est un badge de notification.
+    notification: colors.accent,
   },
 };
