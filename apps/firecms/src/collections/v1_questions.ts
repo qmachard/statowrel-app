@@ -132,7 +132,6 @@ const buildQuestionsCollection = (user: User | null) => buildCollection<Question
     author_id: buildProperty({
       dataType: 'string',
       name: 'Auteur',
-      description: 'Pré-rempli avec l\'utilisateur connecté. Une question proposée depuis l\'app garde son auteur d\'origine, affiché ici par son user id tant qu\'il ne fait pas partie des choix.',
       defaultValue: user?.uid,
       enumValues: authorEnumValues(user),
       validation: { required: true },
