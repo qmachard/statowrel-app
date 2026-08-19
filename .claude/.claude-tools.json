@@ -1,0 +1,18 @@
+{
+  "repo": "qmachard/claude-tools",
+  "ref": "main",
+  "scope": "project",
+  "files": [
+    ".claude/agents/team-architect.md",
+    ".claude/agents/team-dev-back.md",
+    ".claude/agents/team-dev-front.md",
+    ".claude/agents/team-dev.md",
+    ".claude/agents/team-pm.md",
+    ".claude/agents/team-seo.md",
+    ".claude/agents/team-ux.md",
+    ".claude/skills/review-feedback",
+    ".claude/skills/workflow-apex",
+    ".claude/skills/workflow-fix",
+    ".claude/skills/workflow-oneshot"
+  ]
+}
