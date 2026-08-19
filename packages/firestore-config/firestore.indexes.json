@@ -1,7 +1,7 @@
 {
   "indexes": [
     {
-      "collectionGroup": "answers",
+      "collectionGroup": "v1_daily_question_answers",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         {

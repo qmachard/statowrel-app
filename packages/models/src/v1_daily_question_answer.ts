@@ -7,13 +7,17 @@ import {
 } from './commons';
 
 /**
- * Sub-collection of `v1_daily_questions`, hence no `v1_` prefix and a file name
- * without one either: the prefix versions the top-level collection, and the
- * whole sub-tree is versioned with its parent.
+ * Sub-collection of `v1_daily_questions`, at
+ * `v1_daily_questions/{date}/v1_daily_question_answers/{user_id}`.
  *
- * Full path: `v1_daily_questions/{date}/answers/{user_id}`.
+ * A sub-collection carries the `v1_` prefix and its parent's name for a reason
+ * the top-level collections don't have: a collection group is global to the
+ * database and keyed by the last path segment alone. A bare `answers` would
+ * collide with any other `answers` sub-collection added later — the calendar's
+ * collection-group query and its index would silently span both — and there
+ * would be no way to version this one on its own.
  */
-export const ANSWER_COLLECTION = 'answers';
+export const DAILY_QUESTION_ANSWER_COLLECTION = 'v1_daily_question_answers';
 
 /**
  * One user's answer to one day's question — see docs/prd.md §6.
@@ -25,18 +29,19 @@ export const ANSWER_COLLECTION = 'answers';
  * for someone else. An answer is never updated nor deleted — the choice is
  * final (docs/prd.md §4.2).
  */
-export interface AnswerFirebaseData {
+export interface DailyQuestionAnswerFirebaseData {
   /** Firebase Auth UID of the author, same value as the document id. Carried as a field so the collection-group query can filter on it. */
   user_id: string;
   /**
    * `YYYY-MM-DD` day key, denormalized from the parent document's id.
    *
    * The Stats calendar (docs/prd.md §5.2) reads a month of the current user's
-   * answers. With this field it is one collection-group query on `answers`
-   * — `user_id ==` + `date` range, backed by the composite index in
-   * `packages/firestore-config` — instead of a query joined against the month's
-   * `v1_daily_questions` client-side. A day's date never changes, so the copy
-   * never goes stale.
+   * answers. With this field it is one collection-group query on
+   * `v1_daily_question_answers` — `user_id ==` + `date` range, backed by the
+   * composite index in
+   * `packages/firestore-config` — instead of a query joined against the
+   * month's `v1_daily_questions` client-side. A day's date never changes, so
+   * the copy never goes stale.
    */
   date: string;
   /** `QuestionOptionFirebaseData.id` of the picked option — never its position in the array. */
@@ -51,9 +56,9 @@ export interface AnswerFirebaseData {
   late: boolean;
 }
 
-export type AnswerData = ModelData<AnswerFirebaseData>;
+export type DailyQuestionAnswerData = ModelData<DailyQuestionAnswerFirebaseData>;
 
-export const answerConverter: FirestoreConverter<AnswerData, AnswerFirebaseData> = (TimestampClass) => ({
+export const dailyQuestionAnswerConverter: FirestoreConverter<DailyQuestionAnswerData, DailyQuestionAnswerFirebaseData> = (TimestampClass) => ({
   toFirestore: (data) => removeMissingFields({
     user_id: data.user_id,
     date: data.date,
