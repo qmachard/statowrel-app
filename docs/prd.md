@@ -54,7 +54,14 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 
 ### 4.1 Compte & amis
 
-- Inscription par numéro de téléphone (Firebase Auth), pseudo + avatar.
+- Inscription et connexion via **Firebase Auth**, avec quatre méthodes proposées au même niveau :
+  - **Email + mot de passe** (email vérifié obligatoire avant d'accéder à l'app)
+  - **Google**
+  - **Facebook**
+  - **Apple** (obligatoire sur iOS dès qu'un autre provider social est proposé — règle App Store)
+- Après la première connexion, quel que soit le provider : choix du **pseudo** (unique) et d'un **avatar**. Le pseudo et l'avatar sont pré-remplis depuis le provider quand il les fournit.
+- Un même email ne crée qu'un seul compte : si un utilisateur inscrit par email se connecte ensuite via Google avec la même adresse, les identités sont **liées** au même compte (`linkWithCredential`), pas dupliquées.
+- Suppression de compte disponible dans les réglages (exigée par les stores) : supprime le profil, les amitiés et anonymise les réponses passées (elles restent dans les compteurs agrégés).
 - **Pas de recherche publique d'utilisateurs.** On ajoute un ami par lien d'invitation ou par code à 6 caractères.
 - Une invitation acceptée crée une amitié **réciproque** (pas de follow asymétrique).
 - On peut retirer un ami ; l'amitié disparaît des deux côtés.
@@ -108,7 +115,7 @@ Conventions : collections préfixées `v1_`, champs en `snake_case`, champs opti
 
 | Collection | Contenu |
 |---|---|
-| `v1_users` | `display_name`, `avatar_url`, `phone`, `streak_count`, `streak_last_answered_on`, `invite_code` |
+| `v1_users` | `display_name`, `avatar_url`, `email`, `auth_providers[]` (`password` / `google.com` / `facebook.com` / `apple.com`), `streak_count`, `streak_last_answered_on`, `invite_code` |
 | `v1_users/{id}/friends` | une entrée par ami (écrite des deux côtés à l'acceptation) |
 | `v1_questions` | `label`, `options[]` (`{ key, label, stat_label }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason` |
 | `v1_daily_questions` | une par jour : `date`, `question_id`, `published_at`, `closes_at`, `answer_counts` (map option → total) |
