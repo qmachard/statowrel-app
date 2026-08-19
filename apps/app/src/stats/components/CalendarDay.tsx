@@ -41,18 +41,18 @@ const styles = StyleSheet.create({
 
 const SURFACE = StyleSheet.create({
   answered: { borderWidth, borderColor: colors.border, backgroundColor: colors.primary },
-  // Bare accent red, per docs/prd.md §5.2 — the only unbordered cell of the
-  // grid besides `idle`: the flat red already reads before anything else, and a
-  // border would only tie it back to the days around it.
-  today: { backgroundColor: colors.accent },
+  // Exactly the treatment an answered day gets — border and hard shadow alike —
+  // with the accent red as its only difference (docs/prd.md §5.2). The colour
+  // carries today on its own; the doubled border it used to wear did not.
+  today: { borderWidth, borderColor: colors.border, backgroundColor: colors.accent },
   missed: { borderWidth, borderColor: colors.border, backgroundColor: colors.background },
   idle: { backgroundColor: colors.muted },
 }) satisfies Record<CalendarDayState, ViewStyle>;
 
-// Only an answered day is raised.
+// An answered day and today are raised; the days with nothing to show are flat.
 const SHADOW: Record<CalendarDayState, ViewStyle | undefined> = {
   answered: shadows.sm,
-  today: undefined,
+  today: shadows.sm,
   missed: undefined,
   idle: undefined,
 };
