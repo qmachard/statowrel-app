@@ -1,4 +1,4 @@
-import { type App, cert, getApps, initializeApp } from 'firebase-admin/app';
+import { type App, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import {
   type DocumentData,
@@ -10,36 +10,28 @@ import {
   GeoPoint,
 } from 'firebase-admin/firestore';
 import { getStorage as getAdminStorage } from 'firebase-admin/storage';
-import { defineString } from 'firebase-functions/params';
 import { ulid } from 'ulid';
 
 import { type FirestoreConverter, Identifiable } from '@statowrel/models';
 
-const CUSTOM_FIREBASE_PROJECT_ID = defineString('CUSTOM_FIREBASE_PROJECT_ID');
-const CUSTOM_FIREBASE_PRIVATE_KEY = defineString('CUSTOM_FIREBASE_PRIVATE_KEY');
-const CUSTOM_FIREBASE_CLIENT_EMAIL = defineString('CUSTOM_FIREBASE_CLIENT_EMAIL');
-
+/**
+ * The deployed runtime and the emulator both publish the project id and
+ * Application Default Credentials through the environment, so there is nothing
+ * to hand `initializeApp()` — and no service-account key to carry around.
+ *
+ * The one thing default credentials cannot do is sign a Storage URL locally:
+ * `getAdminStorageSignedUrl` needs the runtime service account to hold
+ * `iam.serviceAccountTokenCreator` on itself. Grant that role when a signed URL
+ * is first needed, rather than shipping a private key to avoid it.
+ */
 export const initFirebase = (): App => {
   const apps = getApps();
+
   if (apps.length > 0) {
     return apps[0] as App;
   }
 
-  if (process.env.FUNCTIONS_EMULATOR === 'true' || process.env.FIRESTORE_EMULATOR_HOST) {
-    console.log('🔧 Initialisation de Firebase en mode émulateur');
-    return initializeApp({
-      projectId: process.env.GCLOUD_PROJECT ?? process.env.CUSTOM_FIREBASE_PROJECT_ID,
-    });
-  }
-
-  return initializeApp({
-    projectId: CUSTOM_FIREBASE_PROJECT_ID.value(),
-    credential: cert({
-      projectId: CUSTOM_FIREBASE_PROJECT_ID.value(),
-      privateKey: Buffer.from(CUSTOM_FIREBASE_PRIVATE_KEY.value(), 'base64').toString('utf-8'),
-      clientEmail: CUSTOM_FIREBASE_CLIENT_EMAIL.value(),
-    }),
-  });
+  return initializeApp();
 };
 
 export const getAuth = () => {
