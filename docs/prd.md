@@ -166,7 +166,7 @@ Pourquoi une map plutôt qu'un tableau :
 - **Écritures concurrentes sûres.** `answer_counts.{option_id}` s'incrémente par `FieldValue.increment()` sur un chemin fixe. Avec un tableau, incrémenter `answer_counts[2]` demanderait de réécrire tout le tableau — et deux réponses simultanées s'écraseraient.
 - **ULID plutôt qu'UUID** : triable lexicographiquement par date de création, plus court, lisible dans le backoffice.
 
-Un ULID d'option est **généré côté serveur** à la validation de la question et n'est jamais réutilisé. Supprimer une option d'une question déjà diffusée est interdit — on rejette la question et on en crée une nouvelle.
+Les ULID sont **générés côté client** (app ou backoffice) au moment de la saisie de la question — c'est justement l'intérêt du format : pas d'aller-retour serveur pour obtenir un identifiant. Un ULID d'option n'est jamais réutilisé, et supprimer une option d'une question déjà diffusée est interdit — on rejette la question et on en crée une nouvelle.
 
 L'ordre d'affichage vient de `position` (entier, dense à partir de 0), pas de l'ordre des clés de la map, qui n'est pas garanti.
 
