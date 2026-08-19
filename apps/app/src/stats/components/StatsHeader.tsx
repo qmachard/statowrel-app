@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontFamily: fonts.head,
-    fontSize: fontSize['2xl'],
+    fontSize: fontSize.xl,
     textTransform: 'uppercase',
     color: colors.foreground,
   },
