@@ -49,7 +49,7 @@ export interface CardProps {
 export const Card = ({ variant = 'card', shadow = 'md', className = '', children }: CardProps) => (
   <View
     style={SHADOW[shadow]}
-    className={`gap-4 rounded-md border-2 border-border py-4 ${SURFACE[variant]} ${className}`}
+    className={`gap-5 rounded-md border-2 border-border py-5 ${SURFACE[variant]} ${className}`}
   >
     {children}
   </View>
@@ -61,7 +61,7 @@ export interface CardSectionProps {
 }
 
 export const CardHeader = ({ className = '', children }: CardSectionProps) => (
-  <View className={`gap-1 px-4 ${className}`}>{children}</View>
+  <View className={`gap-1.5 px-5 ${className}`}>{children}</View>
 );
 
 export const CardTitle = ({ className = '', children }: CardSectionProps) => (
@@ -73,13 +73,13 @@ export const CardDescription = ({ className = '', children }: CardSectionProps) 
 );
 
 export const CardContent = ({ className = '', children }: CardSectionProps) => (
-  <View className={`px-4 ${className}`}>{children}</View>
+  <View className={`px-5 ${className}`}>{children}</View>
 );
 
-// `-mb-4` cancels the root's bottom padding, the React Native stand-in for the
+// `-mb-5` cancels the root's bottom padding, the React Native stand-in for the
 // web version's `has-data-[slot=card-footer]:pb-0`.
 export const CardFooter = ({ className = '', children }: CardSectionProps) => (
-  <View className={`-mb-4 flex-row items-center rounded-b-md border-t-2 border-border bg-muted p-4 ${className}`}>
+  <View className={`-mb-5 flex-row items-center rounded-b-md border-t-2 border-border bg-muted p-5 ${className}`}>
     {children}
   </View>
 );

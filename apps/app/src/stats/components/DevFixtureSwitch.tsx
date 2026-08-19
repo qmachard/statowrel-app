@@ -16,9 +16,9 @@ export interface DevFixtureSwitchProps {
  * disappears with the fixtures themselves.
  */
 export const DevFixtureSwitch = ({ fixtures, active, onSelect }: DevFixtureSwitchProps) => (
-  <View className="gap-2 rounded-md border-2 border-dashed border-muted-foreground bg-muted p-3">
+  <View className="gap-3 rounded-md border-2 border-dashed border-muted-foreground bg-muted p-4">
     <Text className="font-sans text-[10px] uppercase text-muted-foreground">Dev — jeu de données</Text>
-    <View className="flex-row gap-2">
+    <View className="flex-row gap-3">
       {fixtures.map((fixture) => {
         const selected = fixture.id === active;
 

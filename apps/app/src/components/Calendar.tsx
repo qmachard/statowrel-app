@@ -32,7 +32,7 @@ export const Calendar = ({ month, onMonthChange, minMonth = null, maxMonth = nul
   const canGoForward = maxMonth === null || compareMonths(nextMonth, maxMonth) <= 0;
 
   return (
-    <View className="gap-3">
+    <View className="gap-4">
       <View className="flex-row items-center justify-between">
         <Button
           label="Mois précédent"
@@ -53,7 +53,7 @@ export const Calendar = ({ month, onMonthChange, minMonth = null, maxMonth = nul
         />
       </View>
 
-      <View className="flex-row gap-1.5">
+      <View className="flex-row gap-2">
         {WEEKDAY_INITIALS.map((initial, index) => (
           <Text
             key={index}
@@ -64,9 +64,9 @@ export const Calendar = ({ month, onMonthChange, minMonth = null, maxMonth = nul
         ))}
       </View>
 
-      <View className="gap-1.5">
+      <View className="gap-2">
         {getMonthWeeks(month).map((week, weekIndex) => (
-          <View key={weekIndex} className="flex-row gap-1.5">
+          <View key={weekIndex} className="flex-row gap-2">
             {week.map((date, dayIndex) => (
               <View key={dayIndex} className="aspect-square flex-1">
                 {date === null ? null : renderDay(date)}

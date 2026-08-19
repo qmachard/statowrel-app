@@ -28,12 +28,12 @@ export const StatsScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={[ 'top' ]}>
-      <ScrollView contentContainerClassName="gap-4 p-4 pb-10">
+      <ScrollView contentContainerClassName="gap-6 p-5 pb-12">
         <StatsHeader displayName={displayName} onEditProfile={() => navigation.navigate('Profile')} />
 
         <StreakCard count={user.streak_count} />
 
-        <View className="flex-row gap-4">
+        <View className="flex-row gap-5">
           <StatTile icon={Trophy} label="Record" value={user.streak_best} unit="jours d’affilée" />
           <StatTile icon={CalendarCheck} label="Jours répondus" value={answers.length} unit="depuis l’inscription" />
         </View>
