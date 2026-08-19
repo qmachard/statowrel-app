@@ -1,6 +1,6 @@
 # StatOwrel — PRD
 
-Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Seul le §4.1 est partiellement implémenté (connexion Google / Apple / e-mail + mot de passe et création du profil) ; tout le reste est à faire — voir `docs/architecture.md` pour l'état technique réel.
+Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Sont partiellement implémentés le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil) et le §5.2 — l'écran Stats existe en tant qu'écran racine, sur des données factices : le bloc streak, les deux tuiles et le calendrier avec ses quatre états sont là, les taps sur les cases et les deux boutons-icônes ne mènent encore nulle part. Tout le reste est à faire — voir `docs/architecture.md` pour l'état technique réel.
 
 ## 1. Vision
 
@@ -148,48 +148,61 @@ Immédiatement après avoir répondu :
 
 ## 5. Navigation & écrans
 
-L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), `radius: 0` partout, titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Les tokens sont déjà dans `apps/app/tailwind.config.js` — aucun écran ne définit sa propre palette.
+L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Les boutons sont en radius plein, les panneaux en radius 10pt ; tout le reste est à angle droit.
 
-Toute l'app tient en **deux onglets, une modale et une carte**. Il n'y a pas de troisième niveau de navigation.
+**Quatre encres, pas une de plus** — crème (le fond), jaune doré, rose bubblegum, noir (tous les contours). Le rose n'est pas décoratif : il marque ce qui n'est pas un jour comme les autres — le streak en cours, le record, la case d'aujourd'hui, l'invitation. Les quatre valeurs vivent dans `apps/app/src/theme/palette.json`, lu à la fois par `tailwind.config.js` et par le runtime (`src/theme/colors.ts`) : une icône prend une couleur en prop, pas une classe, et les deux ne peuvent pas diverger. Aucun écran ne définit sa propre palette.
 
-### 5.1 Tabbar
+Les icônes viennent de **Lucide** (`lucide-react-native`), complétées par des illustrations SVG sur mesure là où aucune icône ne convient. Jamais d'emoji.
 
-Deux onglets, et deux seulement :
+Toute l'app tient en **un écran racine, une modale et une carte**. Il n'y a pas de second niveau de navigation.
 
-| Onglet | Rôle |
+### 5.1 Racine & navigation
+
+**Il n'y a pas de tabbar.** L'écran Stats (§5.2) *est* la racine de l'app : c'est ce qu'on voit en l'ouvrant, et le seul endroit d'où l'on part. Une barre d'onglets pour deux destinations dont l'une n'est visitée qu'une fois par mois coûtait un tiers de la hauteur d'écran pour rien.
+
+Tout le reste s'ouvre par-dessus :
+
+| Depuis | Vers |
 |---|---|
-| **Stats** (par défaut) | Le streak, le calendrier, l'accès à la question du jour et aux jours passés |
-| **Profil** | Son identité, ses amis, ses propositions de questions, ses réglages |
+| Bouton-icône « inviter un pote », en haut à droite | Le partage du lien + code à 6 caractères (§4.1) |
+| Bouton-icône « modifier le profil », en haut à droite | L'écran Profil (§5.3) |
+| Une case du calendrier | La modale question (§5.4) ou la carte StatOwrel du jour (§5.5) |
+| L'ouverture de l'app, question du jour non répondue | La modale question, non fermable (§5.4) |
 
-- Barre fixe en bas, fond `card`, **bordure haute noire épaisse**, pas d'ombre interne, pas de flou de fond.
-- Onglet actif : pastille `primary` pleine sous l'icône + label, bordure noire et ombre dure décalée (`shadow-sm`) — l'onglet actif « sort » de la barre. Onglet inactif : `muted-foreground`, sans bordure.
-- Pas de badge numérique ; l'état « question du jour non répondue » se signale par la modale (§5.4), pas par une pastille.
+- Les deux boutons-icônes sont ronds (radius plein), bordure noire, ombre dure. Celui de l'invitation est rose — c'est la seule action de l'écran qui sort de l'app ; celui du profil est crème.
+- Pas de badge numérique : l'état « question du jour non répondue » se signale par la modale (§5.4) et par la case d'aujourd'hui du calendrier, jamais par une pastille.
 
 ### 5.2 Écran Stats
 
-L'écran d'accueil. De haut en bas :
+La racine de l'app (§5.1). De haut en bas :
 
-**1. Bloc streak.** Une carte `primary` bordée, ombre `lg`, occupant toute la largeur : le nombre de jours en très gros (`font-head`), le mot « jours d'affilée » en dessous, et un pictogramme de flamme. Quand le streak est à 0, la carte passe en `muted` avec « Réponds aujourd'hui pour repartir ».
+**1. En-tête.** La salutation et le pseudo à gauche (`font-head`), les deux boutons-icônes à droite — inviter un pote, modifier le profil.
 
-**2. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, `radius: 0`, séparées par une gouttière régulière. Quatre états :
+**2. Bloc streak.** Un panneau bordé, ombre `lg`, occupant toute la largeur : le nombre de jours en très gros (`font-head`), le mot « jours d'affilée » en dessous, et une flamme. Streak en cours : panneau rose, flamme remplie de jaune. Streak à 0 : panneau crème, flamme vide, et « Réponds aujourd'hui pour repartir ».
+
+**3. Record et jours répondus.** Deux tuiles secondaires côte à côte sous le bloc streak : le meilleur streak jamais atteint (rose — un record n'est pas un jour comme les autres) et le nombre total de jours répondus (crème).
+
+**4. Calendrier mensuel.** Une grille de cases carrées, une par jour, séparées par une gouttière régulière. Quatre états :
 
 | État | Rendu | Tap |
 |---|---|---|
-| **Répondu** | Case `primary`, ombre dure, le `stat_label` du jour en micro-texte (tronqué) | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
-| **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
-| **Aujourd'hui, pas encore répondu** | Case `accent`, bordure doublée, légère pulsation | Ouvre la modale question du jour (§5.4) |
-| **Futur, ou antérieur à l'inscription** | Case `muted`, sans bordure | Inerte |
+| **Répondu** | Case jaune, bordure noire, ombre dure, le `stat_label` du jour en micro-texte (tronqué) | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
+| **Raté** (jour passé sans réponse) | Case crème hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
+| **Aujourd'hui, pas encore répondu** | Case rose, bordure doublée, légère pulsation | Ouvre la modale question du jour (§5.4) |
+| **Futur, ou antérieur à l'inscription** | Case crème estompée, sans bordure | Inerte |
 
 - Navigation mois par mois (chevrons gauche/droite), bornée à la date d'inscription d'un côté et au mois courant de l'autre.
 - Le calendrier **est** l'historique : c'est le seul endroit où l'on retrouve les questions passées et ses propres cartes.
 - Un jour sans question diffusée (avant le lancement, ou incident de publication) est rendu comme « futur » : inerte, non rattrapable.
 
-**3. Rappel du jour.** Si la question du jour n'est pas encore tombée, un encart en bas : « La question tombe entre 8h et 20h ». Pas de compte à rebours (l'heure est aléatoire — un compte à rebours mentirait).
+Pas d'encart annonçant la fenêtre de publication. L'heure est aléatoire (§4.2) : rappeler en permanence qu'elle tombe « entre 8h et 20h » n'apprend rien après le premier jour, et occupe la place d'une information qui, elle, change.
 
 ### 5.3 Écran Profil
 
+Ouvert depuis le bouton-icône « modifier le profil » de l'écran Stats (§5.1), jamais depuis un onglet.
+
 - **En-tête carte** : avatar (cadre noir épais, ombre dure), pseudo en `font-head`, streak courant et meilleur streak.
-- **Mes amis** : liste avatar + pseudo + streak, avec l'action « Retirer ». En tête de liste, un bouton plein `primary` « Inviter un pote » (partage du lien + code à 6 caractères, §4.1). Si la liste est vide, l'état vide occupe la place de la liste : « Sans potes, StatOwrel c'est juste des chiffres. »
+- **Mes amis** : liste avatar + pseudo + streak, avec l'action « Retirer ». En tête de liste, un bouton plein rose « Inviter un pote » (partage du lien + code à 6 caractères, §4.1). Si la liste est vide, l'état vide occupe la place de la liste : « Sans potes, StatOwrel c'est juste des chiffres. »
 - **Mes questions** : proposer une question (§4.7) et suivre le statut de celles déjà envoyées (`en attente` / `validée` / `rejetée` + raison / `tirée le JJ/MM`).
 - **Réglages** : notifications, déconnexion, suppression de compte.
 
@@ -197,14 +210,14 @@ L'écran d'accueil. De haut en bas :
 
 La question ne vit **jamais** dans un onglet : c'est toujours une **bottom sheet** posée par-dessus l'écran Stats.
 
-- **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins droits (`radius: 0`), bordure haute noire épaisse, ombre dure vers le haut.
+- **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins droits, bordure haute noire épaisse, ombre dure vers le haut.
 - **Rattrapage depuis le calendrier** → même sheet, mais **fermable** (poignée + tap sur le fond) : on a le droit de regarder une vieille question et de repartir sans répondre.
 
 Contenu, de haut en bas :
 
 1. La **date** en micro-texte (« Aujourd'hui » ou « Mardi 12 août »).
 2. Le **titre de la question**, très gros, en `font-head`, cadré à gauche sur 2 à 4 lignes — c'est l'élément dominant de l'écran, façon carton de quizz.
-3. Les **options**, empilées verticalement, une par ligne, pleine largeur : carte `card`, bordure noire, ombre dure, label en `font-sans` gras. De 2 à 6 selon la question, dans leur ordre fixe (§4.2). Au-delà de 4 options, la liste défile — le titre reste épinglé en haut.
+3. Les **options**, empilées verticalement, une par ligne, pleine largeur : panneau crème, bordure noire, ombre dure, label en `font-sans` gras. De 2 à 6 selon la question, dans leur ordre fixe (§4.2). Au-delà de 4 options, la liste défile — le titre reste épinglé en haut.
 4. Le **crédit auteur** en bas (« proposée par @pseudo ») quand la question vient d'un utilisateur.
 
 L'interaction est le **double tap** décrit en §4.3 : premier tap = sélection (l'option se soulève, les autres s'estompent), deuxième tap = validation. Après validation, la sheet ne se ferme pas : son contenu **bascule** sur la carte StatOwrel (§5.5), sans changement d'écran ni retour au calendrier.
@@ -217,22 +230,22 @@ Anatomie de la carte, dans l'ordre vertical :
 
 | Zone | Contenu | Traitement carte |
 |---|---|---|
-| **Cadre** | — | Double encadrement : bordure noire épaisse + liseré intérieur `primary`, ombre `2xl`, proportions portrait ~2:3 |
+| **Cadre** | — | Double encadrement : bordure noire épaisse + liseré intérieur jaune, ombre `2xl`, proportions portrait ~2:3 |
 | **Bandeau haut** | Le `stat_label` en très gros (« Efficace ») à gauche, le **pourcentage** à droite | Le pourcentage tient la place des PV d'une carte Pokémon |
 | **Illustration** | Encart carré bordé : l'emoji/visuel de l'option choisie sur aplat de couleur | La « fenêtre d'illustration » de la carte |
 | **Phrase** | « Comme **68%** des utilisateurs, tu es un.e **efficace**. » | Corps de texte de la carte |
-| **Encart question** | La question du jour + l'option choisie, sur fond `muted` | L'équivalent du bloc « attaque » |
+| **Encart question** | La question du jour + l'option choisie, sur fond crème estompé | L'équivalent du bloc « attaque » |
 | **Barre de stats** | La répartition complète des options en barres horizontales bordées, la sienne mise en avant | Le bas de carte, chiffré |
 | **Pied** | Date, numéro du jour (« #142 »), pseudo de l'auteur de la question | Le pied d'une carte : édition + illustrateur |
 
-- **Rareté.** Plus l'option choisie est minoritaire, plus la carte est rare : au-delà de 50% la carte est `common` (aplat `primary`), sous 25% elle passe `rare` (liseré doré), sous 10% `ultra rare` (fond holographique animé au tilt de l'appareil). C'est ce qui rend intéressant de répondre honnêtement plutôt que comme tout le monde. La rareté est calculée à l'affichage depuis `answer_counts`, elle n'est pas figée : elle bouge tant que les réponses arrivent, et se stabilise à la clôture.
+- **Rareté.** Plus l'option choisie est minoritaire, plus la carte est rare : au-delà de 50% la carte est `common` (aplat jaune), sous 25% elle passe `rare` (liseré rose), sous 10% `ultra rare` (fond holographique animé au tilt de l'appareil). C'est ce qui rend intéressant de répondre honnêtement plutôt que comme tout le monde. La rareté est calculée à l'affichage depuis `answer_counts`, elle n'est pas figée : elle bouge tant que les réponses arrivent, et se stabilise à la clôture.
 - **Bouton « Partager »** sous la carte : génère l'image de la carte seule (sans les amis) — §4.4.
-- **Les amis, sous la carte** (§4.5) : hors du cadre, en liste simple — avatar, pseudo, l'option choisie et l'heure. Les amis qui ont répondu comme moi sont regroupés en tête sous « Comme toi », les autres suivent, les non-répondants ferment la liste en `muted`.
+- **Les amis, sous la carte** (§4.5) : hors du cadre, en liste simple — avatar, pseudo, l'option choisie et l'heure. Les amis qui ont répondu comme moi sont regroupés en tête sous « Comme toi », les autres suivent, les non-répondants ferment la liste, estompés.
 - Cette carte est **rejouable à volonté** : tap sur un jour répondu dans le calendrier (§5.2) la rouvre à l'identique, avec les stats à jour et les réponses des amis arrivées depuis.
 
 ### 5.6 Ce qui n'existe pas
 
-Pas de feed, pas d'onglet « amis » séparé, pas d'écran de recherche, pas de menu latéral, pas de réglages sur l'écran Stats. Deux onglets, une modale, une carte.
+Pas de feed, pas de tabbar, pas d'onglet « amis » séparé, pas d'écran de recherche, pas de menu latéral, pas de réglages sur l'écran Stats. Un écran racine, une modale, une carte.
 
 ## 6. Modèle de données (esquisse)
 

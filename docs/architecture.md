@@ -1,6 +1,6 @@
 # StatOwrel — Architecture
 
-Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's five collections (`v1_questions`, `v1_daily_questions`, `v1_daily_question_answers`, `v1_users`) and their FireCMS collections exist, and the app has its sign-in flow; every other screen is still to come, as is the backend owning the daily cycle. The rest is added incrementally on top of this foundation.
+Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's five collections (`v1_questions`, `v1_daily_questions`, `v1_daily_question_answers`, `v1_users`) and their FireCMS collections exist, the app has its sign-in flow and its Stats home screen (on fixtures); every other screen is still to come, as is the backend owning the daily cycle. The rest is added incrementally on top of this foundation.
 
 ## Stack
 
@@ -9,7 +9,7 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Monorepo | Turborepo + npm workspaces | npm only — never yarn/pnpm/bun |
 | Language | TypeScript 5.4+ | Strict mode everywhere |
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
-| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `tailwind.config.js`; `Button` / `TextField` primitives in `src/components/`, the rest added as screens need them |
+| Mobile styling | Nativewind (Tailwind CSS for RN) | Neobrutalism design tokens in `tailwind.config.js`, palette in `src/theme/palette.json`; primitives in `src/components/`, the rest added as screens need them |
 | Mobile routing | Expo Router | File-based, `apps/app/app/` |
 | Backoffice | React 18 + Vite (SPA) + FireCMS v2 + MUI | Firebase-Hosting-deployed admin UI |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
@@ -212,12 +212,16 @@ apps/app/
 ├── app/
 │   ├── _layout.tsx          # AuthProvider + splash held until the session resolves
 │   ├── (auth)/              # sign-in, sign-up — redirects to / as soon as a session exists
-│   └── index.tsx            # protected; redirects to /sign-in without a session
+│   └── index.tsx            # protected Stats home (docs/prd.md §5.2); redirects to /sign-in without a session
 └── src/
     ├── auth/                # AuthContext, providers, profile, schemas, errors
-    ├── components/          # Button, TextField — the first neobrutalism primitives
+    ├── components/          # Button, IconButton, Panel, TextField, InlineError, HatchFill
+    ├── home/                # the Stats screen: calendar maths, fixtures, useHomeStats, its components
+    ├── theme/               # palette.json (the four inks) + colors.ts, its runtime reader
     └── lib/firestore.ts     # getDocumentRef / getCollectionRef, converter-wired
 ```
+
+**The Stats screen runs on fixtures.** `src/home/useHomeStats.ts` is the single seam: it serves `HOME_FIXTURES` today and will serve `v1_users/{uid}` plus the calendar's collection-group query on `v1_daily_question_answers` tomorrow. The fixtures are typed as `UserData` / `DailyQuestionAnswerData` — the real models, not stand-in shapes — so that swap stays inside that one file. Two datasets (running streak, lost streak) are switchable from a `__DEV__`-only panel at the bottom of the screen, which also holds sign-out until the Profile screen exists. Both are internally consistent: `streak_count` and `streak_best` are true of the generated answers, not just asserted next to them.
 
 `src/auth/profile.ts` is what makes an account real: on every sign-in it upserts `v1_users/{uid}` — **document id = Firebase Auth UID** — pre-filling the pseudo from the provider, then Apple's given name, then the email's local part. It reads before writing, so it is idempotent and cheap on a session restore, and it carries `created_at` over untouched because `firestore.rules` refuses an update that changes it.
 
@@ -231,11 +235,17 @@ Deliberately deferred: Facebook (PRD §4.1, no button yet), identity linking via
 
 ### Design system
 
-**Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur. Tokens live in `apps/app/tailwind.config.js`: color palette (`background`/`foreground`/`card`/`primary`/`primary-hover`/`secondary`/`muted`/`accent`/`destructive`/`border`/`input`/`ring`), `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), `borderRadius` collapsed to `0` (except `full`), a thicker default `borderWidth` (2px), and a hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`). Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/app/_layout.tsx`, with the splash screen held until `useFonts` resolves.
+**Neobrutalism** visual style (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — flat saturated colors, thick black borders, hard offset shadows, no gradients or blur.
+
+**Four inks, and no more** — cream `#FEECDD` (the ground), yellow `#FFC802`, pink `#FE91E7`, black `#000000` (every outline). Pink is not decorative: it marks whatever is not an ordinary day — a running streak, the record, today's calendar cell, the invitation.
+
+The four values live in `apps/app/src/theme/palette.json` and nowhere else. `tailwind.config.js` `require()`s it for the class names, and `src/theme/colors.ts` imports it for the runtime — an icon takes its color as a prop, not as a class, and the two cannot drift apart. The Tailwind palette is set on `theme.colors` rather than `theme.extend.colors`, so it is closed: no screen can quietly reach for a fifth ink through a default Tailwind color.
+
+The rest of `tailwind.config.js`: `fontFamily` (`font-head` = Archivo Black, `font-sans` = Space Grotesk), `borderRadius` (`0` by default, `panel` = 10pt for panels, `full` for buttons), a thicker default `borderWidth` (2px), and a hard-offset, no-blur `boxShadow` scale (`xs`/`sm`/`DEFAULT`/`md`/`lg`/`xl`/`2xl`) built from the same black. Icons come from `lucide-react-native`, drawn by `react-native-svg`; never an emoji. Fonts load via `expo-font` + `@expo-google-fonts/archivo-black` + `@expo-google-fonts/space-grotesk` in `apps/app/app/_layout.tsx`, with the splash screen held until `useFonts` resolves.
 
 neobrutalism.com's own registry ships components through the `shadcn` CLI (`npx shadcn add https://neobrutalism.com/r/...`), but those are web-only, built on Radix UI / Base UI — both need a DOM and can't run in React Native. Hence the hand-written token setup here rather than a CLI install.
 
-Still deferred: shared component primitives (buttons, cards, inputs) built against these tokens, and dark-mode theming (no dark-mode toggle mechanism exists yet).
+Still deferred: dark-mode theming (no dark-mode toggle mechanism exists yet), and the custom SVG illustrations meant to stand in where no Lucide icon fits.
 
 ## Firestore rules & indexes
 
@@ -254,9 +264,9 @@ Two Firebase projects, aliased in `.firebaserc`:
 
 ## What's deliberately not here yet
 
-- No app screens beyond sign-in and a placeholder home — nothing consumes `v1_questions` on mobile yet.
+- No app screens beyond sign-in and the Stats home — and the home runs on fixtures, so nothing consumes `v1_questions` or `v1_daily_question_answers` on mobile yet. Its calendar cells and its two header buttons (invite, edit profile) are inert: the question sheet (docs/prd.md §5.4), the StatOwrel card (§5.5) and the Profile screen (§5.3) do not exist.
 - Four of the PRD's five collections exist; only `v1_users/{id}/friends` is still to be modelled — see `docs/prd.md` §6.
 - No backend to own `v1_daily_questions`/`v1_daily_question_answers`: no daily scheduler, no answer trigger to increment `answer_counts` and bump streaks, no midnight closer (docs/prd.md §6 "Backend") — and no app screens consume any of it yet. The data model landed alone, on purpose.
-- Only two design-system primitives (`Button`, `TextField`), built for the auth forms — cards, chips and the rest come with the screens that need them. No dark-mode theming either.
+- A thin design system: `Button`, `IconButton`, `Panel`, `TextField`, `InlineError`, `HatchFill` — the rest comes with the screens that need it. No dark-mode theming either.
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.
