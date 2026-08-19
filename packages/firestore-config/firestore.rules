@@ -20,7 +20,13 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Add v1_* collection rules here as the data model is designed, e.g.:
+    // v1_question is not public: only the FireCMS backoffice reaches it,
+    // through the isAdmin() rule above. The mobile app has no access.
+    match /v1_question/{question_id} {
+      allow read, write: if false;
+    }
+
+    // Add the other v1_* collection rules here as the data model is designed, e.g.:
     //
     // match /v1_users/{user_id} {
     //   allow read, update: if isOwner(user_id);
