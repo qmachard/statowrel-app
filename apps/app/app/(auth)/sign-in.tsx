@@ -10,6 +10,7 @@ import { authErrorMessage } from '@/auth/errors';
 import { signInWithEmail } from '@/auth/providers';
 import { type SignInValues, signInSchema } from '@/auth/schemas';
 import { Button } from '@/components/Button';
+import { InlineError } from '@/components/InlineError';
 import { TextField } from '@/components/TextField';
 
 export default function SignInScreen() {
@@ -31,12 +32,12 @@ export default function SignInScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-cream">
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerClassName="grow justify-center gap-8 p-6" keyboardShouldPersistTaps="handled">
           <View className="gap-2">
-            <Text className="font-head text-3xl uppercase text-foreground">Content de te revoir</Text>
-            <Text className="font-sans text-base text-muted-foreground">
+            <Text className="font-head text-3xl uppercase text-black">Content de te revoir</Text>
+            <Text className="font-sans text-base text-black/60">
               Connecte-toi pour retrouver la question du jour.
             </Text>
           </View>
@@ -80,18 +81,18 @@ export default function SignInScreen() {
               )}
             />
 
-            {error ? <Text className="font-sans text-sm text-destructive">{error}</Text> : null}
+            {error ? <InlineError message={error} /> : null}
 
             <Button label="Se connecter" loading={isSubmitting} onPress={onSubmit} />
           </View>
 
           <View className="gap-3">
-            <Text className="text-center font-sans text-sm uppercase text-muted-foreground">ou</Text>
+            <Text className="text-center font-sans text-sm uppercase text-black/60">ou</Text>
             <SocialSignInButtons disabled={isSubmitting} />
           </View>
 
           <Link href="/sign-up" asChild>
-            <Text className="text-center font-sans text-base text-foreground underline">
+            <Text className="text-center font-sans text-base text-black underline">
               Pas encore de compte ? Inscris-toi
             </Text>
           </Link>

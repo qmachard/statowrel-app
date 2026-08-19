@@ -1,6 +1,8 @@
 import { ActivityIndicator, Pressable, type PressableProps, Text, View } from 'react-native';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline';
+import { COLORS } from '@/theme/colors';
+
+export type ButtonVariant = 'primary' | 'secondary' | 'accent' | 'outline';
 
 export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> {
   label: string;
@@ -9,21 +11,24 @@ export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> 
 }
 
 const SURFACE: Record<ButtonVariant, string> = {
-  primary: 'bg-primary',
-  secondary: 'bg-secondary',
-  outline: 'bg-card',
+  primary: 'bg-yellow',
+  secondary: 'bg-black',
+  accent: 'bg-pink',
+  outline: 'bg-cream',
 };
 
 const LABEL: Record<ButtonVariant, string> = {
-  primary: 'text-primary-foreground',
-  secondary: 'text-secondary-foreground',
-  outline: 'text-foreground',
+  primary: 'text-black',
+  secondary: 'text-cream',
+  accent: 'text-black',
+  outline: 'text-black',
 };
 
 const SPINNER: Record<ButtonVariant, string> = {
-  primary: '#000000',
-  secondary: '#ffffff',
-  outline: '#000000',
+  primary: COLORS.black,
+  secondary: COLORS.cream,
+  accent: COLORS.black,
+  outline: COLORS.black,
 };
 
 export const Button = ({ label, variant = 'primary', loading = false, disabled, ...props }: ButtonProps) => {
@@ -39,7 +44,7 @@ export const Button = ({ label, variant = 'primary', loading = false, disabled, 
       {({ pressed }) => (
         <View
           className={[
-            'flex-row items-center justify-center border-2 border-border px-5 py-4',
+            'flex-row items-center justify-center rounded-full border-2 border-black px-5 py-4',
             SURFACE[variant],
             // Pressing collapses the hard offset shadow — the neobrutalism "push".
             pressed ? 'shadow-none' : 'shadow-md',

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { InlineError } from '@/components/InlineError';
 
 import { SignInCancelledError, authErrorMessage } from './errors';
 import {
@@ -83,7 +84,7 @@ export const SocialSignInButtons = ({ disabled = false }: { disabled?: boolean }
         />
       ) : null}
 
-      {error ? <Text className="font-sans text-sm text-destructive">{error}</Text> : null}
+      {error ? <InlineError message={error} /> : null}
     </View>
   );
 };

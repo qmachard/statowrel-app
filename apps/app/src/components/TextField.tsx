@@ -1,5 +1,9 @@
 import { Text, TextInput, type TextInputProps, View } from 'react-native';
 
+import { COLORS } from '@/theme/colors';
+
+import { InlineError } from './InlineError';
+
 export interface TextFieldProps extends TextInputProps {
   label: string;
   error?: string;
@@ -7,16 +11,18 @@ export interface TextFieldProps extends TextInputProps {
 
 export const TextField = ({ label, error, ...props }: TextFieldProps) => (
   <View className="gap-2">
-    <Text className="font-head text-xs uppercase text-foreground">{label}</Text>
+    <Text className="font-head text-xs uppercase text-black">{label}</Text>
     <TextInput
       accessibilityLabel={label}
-      placeholderTextColor="#6b6355"
+      placeholderTextColor={`${COLORS.black}66`}
       className={[
-        'border-2 bg-input px-4 py-3 font-sans text-base text-foreground shadow-sm',
-        error ? 'border-destructive' : 'border-border',
+        'rounded-panel border-black bg-cream px-4 py-3 font-sans text-base text-black shadow-sm',
+        // An error thickens the frame rather than recolouring it: the outline is
+        // always black, and the message carries the alert on its own.
+        error ? 'border-4' : 'border-2',
       ].join(' ')}
       {...props}
     />
-    {error ? <Text className="font-sans text-sm text-destructive">{error}</Text> : null}
+    {error ? <InlineError message={error} /> : null}
   </View>
 );
