@@ -5,7 +5,7 @@ import { ProfileScreen } from '@/auth/screens/ProfileScreen';
 import { SignInScreen } from '@/auth/screens/SignInScreen';
 import { SignUpScreen } from '@/auth/screens/SignUpScreen';
 import { DailyQuestionScreen } from '@/daily-question/screens/DailyQuestionScreen';
-import { colors, radius } from '@/design/tokens';
+import { colors } from '@/design/tokens';
 import { StatsScreen } from '@/stats/screens/StatsScreen';
 
 import type { RootStackParamList } from './types';
@@ -44,7 +44,6 @@ export const RootNavigator = () => {
               presentation: 'formSheet',
               sheetAllowedDetents: 'fitToContents',
               sheetGrabberVisible: true,
-              sheetCornerRadius: radius['2xl'],
             }}
           />
           <Stack.Screen name="Profile" component={ProfileScreen} />
