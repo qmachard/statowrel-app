@@ -1,8 +1,11 @@
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { CalendarCheck, Trophy } from 'lucide-react-native';
 import { ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAuth } from '@/auth/AuthContext';
+import { consumeStaleProfile } from '@/daily-question/data/answerStore';
 import { colors, pagePadding, spacing } from '@/design/tokens';
 import { DailyQuestionBanner } from '@/stats/components/DailyQuestionBanner';
 import { StatTile } from '@/stats/components/StatTile';
@@ -32,7 +35,17 @@ const styles = StyleSheet.create({
 
 export const StatsScreen = () => {
   const navigation = useNavigation();
+  const { refreshProfile } = useAuth();
   const { profile, today, month, selectMonth, calendar, todayQuestion, answeredToday } = useStatsData();
+
+  // The streak and the two counters come off the profile, which the answer
+  // trigger moves after the sheet above has written its answer — so coming back
+  // from an answer, and only then, costs one read of it.
+  useFocusEffect(useCallback(() => {
+    if (consumeStaleProfile()) {
+      void refreshProfile();
+    }
+  }, [ refreshProfile ]));
 
   // The profile is null while it loads, and stays null until the onboarding
   // sheet has created it. Zeros and a calendar bounded to today: nothing
