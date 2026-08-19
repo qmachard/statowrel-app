@@ -50,7 +50,7 @@ export const SocialSignInButtons = ({ disabled = false }: { disabled?: boolean }
       // here, and the component unmounts.
     } catch (caught) {
       if (!(caught instanceof SignInCancelledError)) {
-        setError(authErrorMessage(caught));
+        setError(authErrorMessage(caught, provider));
       }
 
       setPending(null);
