@@ -1,5 +1,5 @@
 import { Flame } from 'lucide-react-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { Card, CardContent } from '@/components/Card';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
@@ -9,18 +9,23 @@ export interface StreakCardProps {
   count: number;
 }
 
+/**
+ * Share of the screen the card takes on the strip. Not the whole width: what is
+ * left is the peek of the next counter, which is what says the line scrolls.
+ */
+const SCREEN_SHARE = 0.9;
+
+const FLAME_SIZE = 64;
+
 const styles = StyleSheet.create({
-  card: {
-    // A touch wider than the counters framing it — it leads the strip — but on
-    // the same type scale, so the whole line stays one height (docs/prd.md §5.2).
-    width: spacing(44),
-  },
   content: {
-    gap: spacing(2),
-  },
-  heading: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing(4),
+  },
+  copy: {
+    flexShrink: 1,
     gap: spacing(2),
   },
   label: {
@@ -47,28 +52,29 @@ const styles = StyleSheet.create({
   },
 });
 
-/** The head of the stats strip: the streak, on the same type scale as the counters after it. */
+/** The head of the stats strip: the streak, on nearly the whole screen width. */
 export const StreakCard = ({ count }: StreakCardProps) => {
+  const { width } = useWindowDimensions();
   const alive = count > 0;
 
   return (
-    <Card variant={alive ? 'primary' : 'muted'} shadow="lg" style={styles.card}>
+    <Card variant={alive ? 'primary' : 'muted'} shadow="lg" style={{ width: width * SCREEN_SHARE }}>
       <CardContent style={styles.content}>
-        <View style={styles.heading}>
-          <Flame size={16} color={alive ? colors.foreground : colors['muted-foreground']} />
+        <View style={styles.copy}>
           <Text style={styles.label}>Série en cours</Text>
+          <Text style={styles.count}>{count}</Text>
+          <Text style={styles.unit}>
+            {count === 1 ? 'jour d’affilée' : 'jours d’affilée'}
+          </Text>
+
+          {alive ? null : (
+            <Text style={styles.nudge}>
+              Réponds aujourd’hui pour repartir.
+            </Text>
+          )}
         </View>
 
-        <Text style={styles.count}>{count}</Text>
-        <Text style={styles.unit}>
-          {count === 1 ? 'jour d’affilée' : 'jours d’affilée'}
-        </Text>
-
-        {alive ? null : (
-          <Text style={styles.nudge}>
-            Réponds aujourd’hui pour repartir.
-          </Text>
-        )}
+        <Flame size={FLAME_SIZE} color={alive ? colors.foreground : colors['muted-foreground']} />
       </CardContent>
     </Card>
   );
