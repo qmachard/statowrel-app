@@ -13,7 +13,7 @@ export interface StreakCardProps {
  * Share of the screen the card takes on the strip. Not the whole width: what is
  * left is the peek of the next counter, which is what says the line scrolls.
  */
-const SCREEN_SHARE = 0.9;
+const SCREEN_SHARE = 0.8;
 
 const FLAME_SIZE = 64;
 
