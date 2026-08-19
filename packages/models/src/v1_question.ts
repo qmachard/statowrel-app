@@ -49,6 +49,12 @@ export interface QuestionFirebaseData {
   author_id: string;
   /** Reason sent back to the author. Null unless `status` is `rejected`. */
   rejection_reason: string | null;
+  /**
+   * Day and time the question is broadcast as the daily question. The drop
+   * time varies from one day to the next, so this carries the hour too, not
+   * just the date. Null until the question is scheduled.
+   */
+  broadcast_at: UniversalTimestamp | null;
   created_at: UniversalTimestamp;
 }
 
@@ -85,6 +91,7 @@ export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebas
     status: data.status,
     author_id: data.author_id,
     rejection_reason: data.rejection_reason ?? null,
+    broadcast_at: data.broadcast_at ? TimestampClass.fromDate(new Date(data.broadcast_at)) : null,
     created_at: TimestampClass.fromDate(new Date(data.created_at)),
   }),
   fromFirestore: (snap) => {
@@ -96,6 +103,7 @@ export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebas
       status: data.status ?? 'pending',
       author_id: data.author_id ?? '',
       rejection_reason: data.rejection_reason ?? null,
+      broadcast_at: parseTimestamp(data.broadcast_at ?? null),
       created_at: parseTimestamp(data.created_at ?? null, 'now'),
     };
   },
