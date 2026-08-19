@@ -2,6 +2,8 @@ import { buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
 
 import { AUTH_PROVIDER_IDS, USER_COLLECTION, UserData, isValidUsername, normalizeUsername } from '@statowrel/models';
 
+import userCalendarMonthsCollection from './v1_user_calendar_months';
+
 /**
  * FireCMS reads Firestore documents through its own data source, which maps
  * Firestore `Timestamp`s to `Date` — not through `userConverter` (that one is
@@ -50,6 +52,7 @@ const usersCollection = buildCollection<UserEntity>({
     create: false,
     edit: false,
   },
+  subcollections: [ userCalendarMonthsCollection ],
   properties: {
     username: buildProperty({
       dataType: 'string',
@@ -102,6 +105,12 @@ const usersCollection = buildCollection<UserEntity>({
       dataType: 'number',
       name: 'Meilleur streak',
       description: 'Plus long streak jamais atteint.',
+      readOnly: true,
+    }),
+    answers_count: buildProperty({
+      dataType: 'number',
+      name: 'Jours répondus',
+      description: 'Total de jours répondus depuis l\'inscription, rattrapages compris. Tenu par le trigger de réponse.',
       readOnly: true,
     }),
     streak_last_answered_on: buildProperty({

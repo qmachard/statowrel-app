@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
 
 import { shadows } from '@/design/shadows';
-import { borderWidth, colors, fontSize, fonts, radius } from '@/design/tokens';
+import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 import type { CalendarDayState } from '@/stats/helpers/calendarState';
 
 import { Hatch } from './Hatch';
@@ -28,9 +28,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     borderRadius: radius.DEFAULT,
+    paddingHorizontal: spacing(0.5),
   },
   label: {
     fontSize: fontSize.sm,
+  },
+  statLabel: {
+    maxWidth: '100%',
+    fontFamily: fonts.sans,
+    fontSize: fontSize['2xs'],
+    textTransform: 'uppercase',
+    color: colors['primary-foreground'],
   },
   missedGlyph: {
     fontFamily: fonts.head,
@@ -79,19 +87,26 @@ const LABEL = StyleSheet.create({
 export interface CalendarDayProps {
   date: Date;
   state: CalendarDayState;
+  /**
+   * The `stat_label` earned that day, on an answered cell — docs/prd.md §5.2
+   * asks for it in micro-text, truncated. It comes copied on the calendar month
+   * itself, so rendering it costs no extra read.
+   */
+  statLabel?: string | null;
   /** Opens that day (docs/prd.md §5.2). An `idle` day stays inert whatever is passed. */
   onPress?: () => void;
 }
 
 /**
  * A day of the month calendar, and the way into that day's question
- * (docs/prd.md §5.2). Every state but `idle` is tappable: `idle` is a future day
- * or one before the account existed, and there is nothing behind it.
+ * (docs/prd.md §5.2). Every state but `idle` is tappable: `idle` is a future
+ * day, one before the account existed, or one that never had a question — and
+ * there is nothing behind any of them.
  *
  * A raised day sinks into its own shadow when pressed, like the buttons do —
  * `shadows.sm` is a 2px offset, so that is exactly how far it travels.
  */
-export const CalendarDay = ({ date, state, onPress }: CalendarDayProps) => {
+export const CalendarDay = ({ date, state, statLabel = null, onPress }: CalendarDayProps) => {
   const isInert = state === 'idle' || onPress === undefined;
 
   return (
@@ -106,6 +121,9 @@ export const CalendarDay = ({ date, state, onPress }: CalendarDayProps) => {
         >
           {state === 'missed' ? <Hatch /> : null}
           <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
+          {state === 'answered' && statLabel ? (
+            <Text style={styles.statLabel} numberOfLines={1}>{statLabel}</Text>
+          ) : null}
           {state === 'missed' ? <Text style={styles.missedGlyph}>?</Text> : null}
         </View>
       )}

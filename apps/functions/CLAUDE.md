@@ -30,9 +30,17 @@ ALWAYS use these helpers instead of calling `getFirestore()` / `snap.data()` / `
 - `getDocumentRef(collection, id, converter).get().then(parseData)` — returns `Identifiable<T> | null`.
 - `getSubDocumentRef` / `getSubCollectionRef` / `getCollectionGroupRef` for sub-documents, sub-collections, and collection groups.
 - `createWriteBatch`, `createDocumentRef`, `createSubDocumentRef`, `getDocumentUpsertRef` for writes (IDs are ULIDs).
+- `runTransaction(async (transaction) => …)` when a write depends on what is already there — see below.
+- `parseSnapshotData(event.data, converter)` to read a trigger's raw event snapshot through a model converter.
 - `getAdminStorageSignedUrl(path, filename?)`.
 
 Every ref helper takes a `FirestoreConverter` from `@statowrel/models` — never read/write a collection without its converter.
+
+## Triggers are delivered at least once
+
+A Firestore trigger can fire twice for the same write, so anything it does has to be idempotent — and "increment a counter" never is on its own. Read a marker inside a transaction and bail out before writing, rather than adding a flag nobody else needs: `triggers/steps/onAnswerCreated.ts` uses the day's own entry in the author's calendar month, which the same transaction writes.
+
+One more thing that catches people out: `DocumentReference.update()` does **not** run the converter (only `set()` and reads do), so a timestamp written through it must be a `Timestamp`, never an ISO string.
 
 ## Local development
 
