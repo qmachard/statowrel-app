@@ -1,21 +1,43 @@
-import { Text, View, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
 
 import { shadows } from '@/design/shadows';
+import { borderWidth, colors, fontSize, fonts, radius } from '@/design/tokens';
 import type { CalendarDayState } from '@/stats/helpers/calendarState';
 
 import { Hatch } from './Hatch';
 
-const SURFACE: Record<CalendarDayState, string> = {
-  answered: 'border-2 border-border bg-primary',
+/** The `?` on a missed day is an ornament, sized below the smallest scale step. */
+const MISSED_GLYPH_SIZE = 9;
+
+const styles = StyleSheet.create({
+  cell: {
+    height: '100%',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderRadius: radius.DEFAULT,
+  },
+  label: {
+    fontSize: fontSize.sm,
+  },
+  missedGlyph: {
+    fontFamily: fonts.head,
+    fontSize: MISSED_GLYPH_SIZE,
+    color: colors['muted-foreground'],
+  },
+});
+
+const SURFACE = StyleSheet.create({
+  answered: { borderWidth, borderColor: colors.border, backgroundColor: colors.primary },
   // Doubled border on the accent red, per docs/prd.md §5.2 — today has to read
   // before anything else, and it does so without moving.
-  today: 'border-4 border-border bg-accent',
-  missed: 'border-2 border-border bg-background',
-  idle: 'bg-muted',
-};
+  today: { borderWidth: borderWidth * 2, borderColor: colors.border, backgroundColor: colors.accent },
+  missed: { borderWidth, borderColor: colors.border, backgroundColor: colors.background },
+  idle: { backgroundColor: colors.muted },
+}) satisfies Record<CalendarDayState, ViewStyle>;
 
-// Only an answered day is raised. A style rather than a `shadow-sm` className:
-// Nativewind's version blurs the edge — see `src/design/shadows.ts`.
+// Only an answered day is raised.
 const SHADOW: Record<CalendarDayState, ViewStyle | undefined> = {
   answered: shadows.sm,
   today: undefined,
@@ -23,12 +45,12 @@ const SHADOW: Record<CalendarDayState, ViewStyle | undefined> = {
   idle: undefined,
 };
 
-const LABEL: Record<CalendarDayState, string> = {
-  answered: 'font-head text-primary-foreground',
-  today: 'font-head text-accent-foreground',
-  missed: 'font-head text-muted-foreground',
-  idle: 'font-sans text-muted-foreground',
-};
+const LABEL = StyleSheet.create({
+  answered: { fontFamily: fonts.head, color: colors['primary-foreground'] },
+  today: { fontFamily: fonts.head, color: colors['accent-foreground'] },
+  missed: { fontFamily: fonts.head, color: colors['muted-foreground'] },
+  idle: { fontFamily: fonts.sans, color: colors['muted-foreground'] },
+}) satisfies Record<CalendarDayState, TextStyle>;
 
 export interface CalendarDayProps {
   date: Date;
@@ -38,12 +60,9 @@ export interface CalendarDayProps {
 // Presentational only. The taps of docs/prd.md §5.2 — open the day's card, or
 // the question sheet in catch-up mode — land once those screens exist.
 export const CalendarDay = ({ date, state }: CalendarDayProps) => (
-  <View
-    style={SHADOW[state]}
-    className={`h-full w-full items-center justify-center overflow-hidden rounded ${SURFACE[state]}`}
-  >
+  <View style={[ styles.cell, SURFACE[state], SHADOW[state] ]}>
     {state === 'missed' ? <Hatch /> : null}
-    <Text className={`text-sm ${LABEL[state]}`}>{date.getDate()}</Text>
-    {state === 'missed' ? <Text className="font-head text-[9px] text-muted-foreground">?</Text> : null}
+    <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
+    {state === 'missed' ? <Text style={styles.missedGlyph}>?</Text> : null}
   </View>
 );

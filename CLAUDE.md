@@ -10,7 +10,7 @@ Turborepo monorepo with npm workspaces. Node 20, TypeScript 5.4+.
 
 | Directory   | Description                        | Tech                                             |
 |-------------|-------------------------------------|---------------------------------------------------|
-| `app`       | Mobile app (iOS + Android)          | React Native + Expo (managed) + EAS + Nativewind  |
+| `app`       | Mobile app (iOS + Android)          | React Native + Expo (managed) + EAS               |
 | `firecms`   | Admin backoffice                    | React 18 + Vite (SPA) + FireCMS v2 + MUI          |
 | `functions` | Backend                             | Firebase Cloud Functions v2 + Express 5           |
 
@@ -142,10 +142,10 @@ Top-level `functions/src/index.ts` uses namespace re-exports (`export * as healt
 
 ### App (`apps/app`) — React Native / Expo
 
-- Styling via [Nativewind](https://www.nativewind.dev) (`className`), not `StyleSheet.create`, unless a style can't be expressed in Tailwind.
+- Styling via React Native's own `StyleSheet.create`, colocated at the top of the component file and built from `src/design/tokens.ts` — never a raw hex, a magic padding or a hardcoded font name.
 - Firebase client SDK (`firebase` npm package), not `@react-native-firebase` — see `apps/app/src/lib/firebase.ts`. Same SDK the converters in `@statowrel/models` target on the client side.
 - Navigation via [React Navigation 7](https://reactnavigation.org) — native stack + bottom tabs declared in `apps/app/src/navigation/`, entry point `apps/app/index.js` → `src/App.tsx`. Routes are typed through `RootStackParamList` / `TabParamList`, never route strings.
-- **Design system**: neobrutalism (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold colors, thick borders, hard offset shadows, and generously rounded corners (`sm` = 8px on the buttons, `DEFAULT` = 12px, up to 32px — never square). The palette, the radius scale **and** the shadow scale live in `apps/app/src/design/tokens.js` (read by both `tailwind.config.js` and the navigation theme); the rest (`font-head`/`font-sans`, `borderWidth`) lives in `apps/app/tailwind.config.js`. Components apply shadows through `apps/app/src/design/shadows.ts`, **never** the `shadow-*` classNames — Nativewind compiles those to the legacy iOS shadow props, which blur the edge once a surface has a corner radius; that module hands React Native the CSS `boxShadow` string instead, which stays crisp; fonts (Archivo Black, Space Grotesk) load via `expo-font` + `@expo-google-fonts/*`. The neobrutalism.com `shadcn` registry itself is web-only (Radix/Base UI need a DOM) — it does not apply to this React Native app; reusable component primitives are hand-built against these tokens (`apps/app/src/components/`).
+- **Design system**: neobrutalism (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold colors, thick borders, hard offset shadows, and generously rounded corners (`sm` = 8px on the buttons, `DEFAULT` = 12px, up to 32px — never square). Every token — palette, radius, shadows, spacing, type scale, border width — lives in `apps/app/src/design/tokens.ts`, read by the components and the navigation theme alike. Components apply shadows through `apps/app/src/design/shadows.ts`, which hands React Native the CSS `boxShadow` string — the legacy iOS shadow props blur the edge once a surface has a corner radius, `boxShadow` stays crisp; fonts (Archivo Black, Space Grotesk) load via `expo-font` + `@expo-google-fonts/*`. The neobrutalism.com `shadcn` registry itself is web-only (Radix/Base UI need a DOM) — it does not apply to this React Native app; reusable component primitives are hand-built against these tokens (`apps/app/src/components/`).
 
 ## Testing
 

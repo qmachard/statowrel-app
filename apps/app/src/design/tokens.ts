@@ -1,13 +1,13 @@
 /**
- * Neobrutalism design tokens — the single source of truth for colors and the
- * corner radius.
+ * Neobrutalism design tokens — the single source of truth for the palette, the
+ * corner radius, the spacing rhythm and the type scale.
  *
- * Written in CommonJS because `tailwind.config.js` has to `require()` it (no
- * TypeScript loader there), while TypeScript imports it for the values React
- * Navigation needs as plain JS: the container theme, the tab bar and the stack
- * `contentStyle`. Keeping one copy stops the Tailwind theme and the navigator
- * chrome from drifting apart.
+ * Consumed straight as React Native style values: `colors` by the components
+ * and by the parts React Navigation paints itself (container theme, stack
+ * `contentStyle`), the rest by the `StyleSheet.create` blocks colocated with
+ * each component.
  */
+
 /**
  * Four tokens carry the identity — everything else is scaffolding around them:
  * `foreground` for text, `primary` for the main action, `accent` for the
@@ -16,7 +16,7 @@
  * `accent` is a saturated red, so it takes white text where `primary` takes
  * black — both land at a 4.58 contrast ratio against their own surface.
  */
-const colors = {
+export const colors = {
   background: '#f7f0d4',
   foreground: '#000000',
   card: '#ffffff',
@@ -47,28 +47,55 @@ const colors = {
  * starts at 8px — `sm`, what the buttons use — and `DEFAULT` is what a surface
  * takes unless it needs more.
  */
-const radius = {
-  none: '0px',
-  sm: '8px',
-  DEFAULT: '12px',
-  md: '16px',
-  lg: '20px',
-  xl: '24px',
-  '2xl': '32px',
-  '3xl': '40px',
-  full: '9999px',
+export const radius = {
+  none: 0,
+  sm: 8,
+  DEFAULT: 12,
+  md: 16,
+  lg: 20,
+  xl: 24,
+  '2xl': 32,
+  '3xl': 40,
+  full: 9999,
+};
+
+/** Every neobrutalist surface carries the same thick border. */
+export const borderWidth = 2;
+
+/**
+ * Spacing rhythm — one step is 4px, so `spacing(5)` is the 20px page padding and
+ * `spacing(0.5)` the 2px focus gap. Padding, margins and `gap` all measure in
+ * these steps, which is what keeps the screens on a single grid.
+ */
+export const spacing = (steps: number) => steps * 4;
+
+export const fonts = {
+  head: 'ArchivoBlack_400Regular',
+  sans: 'SpaceGrotesk_400Regular',
+};
+
+export const fontSize = {
+  '2xs': 10,
+  xs: 12,
+  sm: 14,
+  base: 16,
+  lg: 18,
+  xl: 20,
+  '2xl': 24,
+  '3xl': 30,
+  '4xl': 36,
+  '7xl': 72,
 };
 
 /**
  * Hard offset shadows — no blur — the neobrutalism signature look. The offsets
  * match the translation a pressed surface uses to sink into its own shadow:
- * `md` (4px) pairs with the 4px `SUNK` transform in `src/components/Button.tsx`.
+ * `md` (4px) pairs with the `SUNK` transform in `src/components/Button.tsx`.
  *
- * These are CSS `box-shadow` strings, which is what both consumers want:
- * Tailwind's `boxShadow` theme, and React Native's own `boxShadow` style prop
- * (see `src/design/shadows.ts` for why components use the latter).
+ * CSS `box-shadow` strings, because that is exactly what React Native's own
+ * `boxShadow` style prop takes — see `src/design/shadows.ts`.
  */
-const shadows = {
+export const shadows = {
   xs: '1px 1px 0 0 #000',
   sm: '2px 2px 0 0 #000',
   DEFAULT: '3px 3px 0 0 #000',
@@ -77,5 +104,3 @@ const shadows = {
   xl: '10px 10px 0 1px #000',
   '2xl': '16px 16px 0 1px #000',
 };
-
-module.exports = { colors, radius, shadows };
