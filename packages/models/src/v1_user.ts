@@ -27,14 +27,20 @@ export const isAuthProviderId = (value: string): value is AuthProviderId => (
  * The document id is the Firebase Auth UID, not a ULID: it is the key every
  * other collection points at (`author_id`, `user_id`, friendships) and the one
  * `firestore.rules` compares against `request.auth.uid`. The document is
- * written by the app itself at first sign-in (`src/auth/profile.ts`).
+ * written by the app itself, once the pseudo has been chosen on the onboarding
+ * screen (`src/auth/profile.ts`).
  *
  * Profile, sign-in identities and answering stats. Only the PRD's
  * `invite_code` is still to be modelled.
  */
 export interface UserFirebaseData {
-  /** Pseudo, unique, chosen at first sign-in — pre-filled from the auth provider when it gives one. */
-  display_name: string;
+  /**
+   * Handle, unique across the app, typed by the user on the onboarding sheet —
+   * never pre-filled from a provider. Lowercase, `USERNAME_PATTERN`-shaped, and
+   * mirrored by a `v1_usernames/{username}` document, which is what makes it
+   * unique and what resolves it back to this account (docs/prd.md §4.1).
+   */
+  username: string;
   /** Avatar. Null until the user picks one and when the provider gives none. */
   photo_url: string | null;
   /**
@@ -76,7 +82,7 @@ const parseAuthProviders = (providers: unknown): AuthProviderId[] => (
 
 export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (TimestampClass) => ({
   toFirestore: (data) => removeMissingFields({
-    display_name: data.display_name,
+    username: data.username,
     photo_url: data.photo_url ?? null,
     email: data.email ?? null,
     auth_providers: data.auth_providers ?? [],
@@ -90,7 +96,7 @@ export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (Ti
     const data = snap.data();
 
     return {
-      display_name: data.display_name ?? '',
+      username: data.username ?? '',
       photo_url: data.photo_url ?? null,
       email: data.email ?? null,
       auth_providers: parseAuthProviders(data.auth_providers),

@@ -51,7 +51,7 @@ const EMPTY: DailyQuestionView = {
 };
 
 /**
- * The author's pseudo, or `null` — a missing profile is not worth failing the
+ * The author's username, or `null` — a missing profile is not worth failing the
  * screen over, the credit line simply doesn't render.
  */
 const readAuthorName = async (authorId: string): Promise<string | null> => {
@@ -62,7 +62,7 @@ const readAuthorName = async (authorId: string): Promise<string | null> => {
   try {
     const snapshot = await getDoc(getDocumentRef(USER_COLLECTION, authorId, userConverter));
 
-    return snapshot.data()?.display_name ?? null;
+    return snapshot.data()?.username ?? null;
   } catch {
     return null;
   }

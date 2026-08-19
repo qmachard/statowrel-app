@@ -1,6 +1,6 @@
 import { buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
 
-import { AUTH_PROVIDER_IDS, USER_COLLECTION, UserData } from '@statowrel/models';
+import { AUTH_PROVIDER_IDS, USER_COLLECTION, UserData, isValidUsername, normalizeUsername } from '@statowrel/models';
 
 /**
  * FireCMS reads Firestore documents through its own data source, which maps
@@ -19,15 +19,18 @@ type UserEntity = Omit<UserData, 'created_at' | 'updated_at'> & {
  */
 const callbacks = buildEntityCallbacks<UserEntity>({
   onPreSave: ({ values }) => {
-    const displayName = values.display_name?.trim();
+    const username = normalizeUsername(values.username ?? '');
 
-    if (!displayName) {
-      throw new Error('Un profil doit porter un pseudo.');
+    // The backoffice does not hold the `v1_usernames` reservation that makes a
+    // handle unique, so it only ever checks its shape — renaming someone from
+    // here would leave the reservation behind and is deliberately not offered.
+    if (!isValidUsername(username)) {
+      throw new Error('Un profil doit porter un nom d\'utilisateur valide.');
     }
 
     return {
       ...values,
-      display_name: displayName,
+      username,
       photo_url: values.photo_url || null,
       email: values.email || null,
       auth_providers: values.auth_providers ?? [],
@@ -48,11 +51,12 @@ const usersCollection = buildCollection<UserEntity>({
     edit: false,
   },
   properties: {
-    display_name: buildProperty({
+    username: buildProperty({
       dataType: 'string',
-      name: 'Pseudo',
-      description: 'Unique, choisi à la première connexion.',
+      name: 'Nom d\'utilisateur',
+      description: 'Unique, choisi à la première connexion. Réservé dans v1_usernames, qui fait autorité.',
       validation: { required: true },
+      readOnly: true,
     }),
     photo_url: buildProperty({
       dataType: 'string',

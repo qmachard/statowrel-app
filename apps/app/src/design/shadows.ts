@@ -21,4 +21,5 @@ export const shadows = {
   lg: { boxShadow: tokens.lg },
   xl: { boxShadow: tokens.xl },
   '2xl': { boxShadow: tokens['2xl'] },
+  up: { boxShadow: tokens.up },
 } satisfies Record<string, ViewStyle>;

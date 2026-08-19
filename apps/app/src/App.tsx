@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
+import { OnboardingSheet } from '@/auth/OnboardingSheet';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { linking } from '@/navigation/linking';
 import { navigationRef } from '@/navigation/navigationRef';
@@ -38,7 +39,14 @@ const SessionGate = () => {
     return null;
   }
 
-  return <RootNavigator />;
+  // The sheet lives beside the navigator rather than in it: it is driven by the
+  // session, not by a route, and it has to be able to cover any screen.
+  return (
+    <>
+      <RootNavigator />
+      <OnboardingSheet />
+    </>
+  );
 };
 
 export default function App() {

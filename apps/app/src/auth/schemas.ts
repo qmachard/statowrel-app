@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_PATTERN } from '@statowrel/models';
+
 /** Firebase Auth's own floor. */
 const PASSWORD_MIN_LENGTH = 6;
-const DISPLAY_NAME_MIN_LENGTH = 2;
-const DISPLAY_NAME_MAX_LENGTH = 24;
 
 const email = z
   .string()
@@ -23,13 +23,27 @@ export const signInSchema = z.object({
 export type SignInValues = z.infer<typeof signInSchema>;
 
 export const signUpSchema = z.object({
-  display_name: z
-    .string()
-    .trim()
-    .min(DISPLAY_NAME_MIN_LENGTH, `Ton pseudo doit faire au moins ${DISPLAY_NAME_MIN_LENGTH} caractères.`)
-    .max(DISPLAY_NAME_MAX_LENGTH, `Ton pseudo doit faire au plus ${DISPLAY_NAME_MAX_LENGTH} caractères.`),
   email,
   password,
 });
 
 export type SignUpValues = z.infer<typeof signUpSchema>;
+
+/**
+ * The username is asked for once, on its own sheet, after the first sign-in.
+ *
+ * Lowercased rather than rejected on case: a handle is compared, stored and
+ * looked up in one single form (`normalizeUsername`), so `Lou` and `lou` are
+ * the same person's claim on the same name, not two different ones.
+ */
+export const onboardingSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(USERNAME_MIN_LENGTH, `Ton nom d'utilisateur doit faire au moins ${USERNAME_MIN_LENGTH} caractères.`)
+    .max(USERNAME_MAX_LENGTH, `Ton nom d'utilisateur doit faire au plus ${USERNAME_MAX_LENGTH} caractères.`)
+    .regex(USERNAME_PATTERN, 'Lettres, chiffres, point et tiret bas seulement, et il doit commencer et finir par une lettre ou un chiffre.'),
+});
+
+export type OnboardingValues = z.infer<typeof onboardingSchema>;

@@ -6,7 +6,6 @@ import {
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
-  updateProfile,
 } from 'firebase/auth';
 import { Platform } from 'react-native';
 
@@ -14,7 +13,6 @@ import { auth } from '@/lib/firebase';
 
 import { SignInCancelledError, SignInUnavailableError } from './errors';
 import { loadAppleAuthentication, loadCrypto, loadGoogleSignIn } from './nativeModules';
-import { rememberProfileHints } from './profileHints';
 
 const MISSING_NATIVE_MODULE = 'Cette méthode de connexion manque à cette version de l\'app. Reconstruis le dev client.';
 
@@ -143,24 +141,14 @@ export const signInWithApple = async (): Promise<UserCredential> => {
 
   try {
     const credential = await apple.signInAsync({
-      requestedScopes: [
-        apple.AppleAuthenticationScope.FULL_NAME,
-        apple.AppleAuthenticationScope.EMAIL,
-      ],
+      // Only the email is asked for: the pseudo comes from the onboarding
+      // screen, never from the provider (docs/prd.md §4.1).
+      requestedScopes: [ apple.AppleAuthenticationScope.EMAIL ],
       nonce: hashedNonce,
     });
 
     if (!credential.identityToken) {
       throw new SignInUnavailableError('Apple n\'a pas renvoyé de jeton d\'identité.');
-    }
-
-    // Apple hands over the name on the first authorization only — never again,
-    // and never through Firebase Auth. Record it before signing in, so the
-    // profile document can be created with it.
-    const givenName = credential.fullName?.givenName?.trim();
-
-    if (givenName) {
-      rememberProfileHints({ displayName: givenName });
     }
 
     return await signInWithCredential(
@@ -180,19 +168,9 @@ export const signInWithEmail = async (email: string, password: string): Promise<
   signInWithEmailAndPassword(auth, email, password)
 );
 
-export const signUpWithEmail = async (
-  email: string,
-  password: string,
-  displayName: string,
-): Promise<UserCredential> => {
-  rememberProfileHints({ displayName });
-
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
-  await updateProfile(userCredential.user, { displayName });
-
-  return userCredential;
-};
+export const signUpWithEmail = async (email: string, password: string): Promise<UserCredential> => (
+  createUserWithEmailAndPassword(auth, email, password)
+);
 
 export const signOut = async (): Promise<void> => {
   // Without this, Google's native SDK keeps the account selected and the next

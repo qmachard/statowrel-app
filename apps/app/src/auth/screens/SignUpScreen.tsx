@@ -76,14 +76,14 @@ export const SignUpScreen = () => {
 
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { display_name: '', email: '', password: '' },
+    defaultValues: { email: '', password: '' },
   });
 
-  const onSubmit = handleSubmit(async ({ display_name, email, password }) => {
+  const onSubmit = handleSubmit(async ({ email, password }) => {
     setError(null);
 
     try {
-      await signUpWithEmail(email, password, display_name);
+      await signUpWithEmail(email, password);
     } catch (caught) {
       setError(authErrorMessage(caught));
     }
@@ -101,23 +101,6 @@ export const SignUpScreen = () => {
           </View>
 
           <View style={styles.form}>
-            <Controller
-              control={control}
-              name="display_name"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextField
-                  label="Pseudo"
-                  placeholder="ton pseudo"
-                  autoCapitalize="none"
-                  autoComplete="username"
-                  value={value}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  error={errors.display_name?.message}
-                />
-              )}
-            />
-
             <Controller
               control={control}
               name="email"

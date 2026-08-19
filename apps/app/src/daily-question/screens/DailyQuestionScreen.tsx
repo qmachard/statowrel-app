@@ -181,7 +181,7 @@ export const DailyQuestionScreen = () => {
         )}
 
         {authorName === null ? null : (
-          <Text style={[ styles.credit, FOREGROUND[surface] ]}>proposée par {authorName}</Text>
+          <Text style={[ styles.credit, FOREGROUND[surface] ]}>proposée par @{authorName}</Text>
         )}
       </View>
     </SafeAreaView>

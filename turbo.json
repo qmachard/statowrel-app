@@ -9,13 +9,14 @@
       "outputs": ["dist/**", "!dist/**/*.map"]
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": ["^build", "^typecheck"]
     },
     "lint": {
       "dependsOn": ["^lint"]
     },
     "dev": {
       "cache": false,
+      "dependsOn": ["^build"],
       "persistent": true
     }
   },

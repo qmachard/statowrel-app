@@ -1,6 +1,6 @@
 # StatOwrel — Architecture
 
-Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's five collections (`v1_questions`, `v1_daily_questions`, `v1_daily_question_answers`, `v1_users`) and their FireCMS collections exist, and the app has its sign-in flow; every other screen is still to come, and the backend owns the front half of the daily cycle (drawing and scheduling) but not yet the back half (answers, streaks, closing). The rest is added incrementally on top of this foundation.
+Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Five of the PRD's six collections (`v1_questions`, `v1_daily_questions`, `v1_daily_question_answers`, `v1_users`, `v1_usernames`) and their FireCMS collections exist, and the app has its sign-in flow; every other screen is still to come, and the backend owns the front half of the daily cycle (drawing and scheduling) but not yet the back half (answers, streaks, closing). The rest is added incrementally on top of this foundation.
 
 ## Stack
 
@@ -9,7 +9,7 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Monorepo | Turborepo + npm workspaces | npm only — never yarn/pnpm/bun |
 | Language | TypeScript 5.4+ | Strict mode everywhere |
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
-| Mobile styling | React Native `StyleSheet` | Neobrutalism design tokens in `src/design/tokens.ts`; `Button` / `TextField` / `Card` / `Calendar` primitives in `src/components/`, the rest added as screens need them |
+| Mobile styling | React Native `StyleSheet` | Neobrutalism design tokens in `src/design/tokens.ts`; `Button` / `TextField` / `Card` / `Calendar` / `BottomSheet` primitives in `src/components/`, the rest added as screens need them |
 | Mobile routing | React Navigation 7 | Native stack only — no tab bar, Stats is the root (docs/prd.md §5.1) — declared in `apps/app/src/navigation/` |
 | Backoffice | React 18 + Vite (SPA) + FireCMS v2 + MUI | Firebase-Hosting-deployed admin UI |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
@@ -126,7 +126,7 @@ The document id is the author's Auth UID, which makes "one answer per person per
 
 | Field | Type | Notes |
 |---|---|---|
-| `display_name` | `string` | pseudo, unique, chosen at first sign-in |
+| `username` | `string` | handle, unique app-wide, typed on the onboarding sheet — never pre-filled from a provider; `v1_usernames` below is what makes it unique |
 | `photo_url` | `string \| null` | avatar; `null` until the user picks one |
 | `email` | `string \| null` | mirrored from Firebase Auth, which stays the source of truth |
 | `auth_providers` | `AuthProviderId[]` | `password` / `google.com` / `apple.com` / `facebook.com`, mirrored from Auth at each sign-in |
@@ -137,6 +137,14 @@ The document id is the author's Auth UID, which makes "one answer per person per
 | `streak_last_answered_on` | `string \| null` (`YYYY-MM-DD`) | day of the last on-time answer; `null` until the first one |
 
 The profile half of the document is written by the app itself, at first sign-in — `apps/app/src/auth/profile.ts`, under the owner-only `create`/`update` rules. The streak fields belong to the backend and the app never writes them. Only the PRD's `invite_code` is still to be modelled.
+
+### `v1_usernames`
+
+`packages/models/src/v1_username.ts` — one document per taken handle, **the document id being the handle itself**, carrying `user_id` (the holder's Auth UID) and `created_at`.
+
+**Why a collection and not a uniqueness check.** Firestore has no unique index, and no query can be made atomic against a concurrent one — two people submitting `lou` at the same moment would both find it free. A `create` on a document that already exists is denied by Firestore itself, though, so making the handle the *document id* turns uniqueness into a property of the path: the loser of the race gets `permission-denied`, not a duplicate. It is also the lookup that resolves a `@handle` to an account when a friend is added by username (`docs/prd.md` §4.1), which is why `get` is open to any signed-in user while `list` is denied — resolving a handle you already know is not browsing a directory.
+
+The reservation is written *before* the profile, never in the same batch: `firestore.rules` checks the profile's `username` against this collection with a `get()`, and rules evaluate each write of a batch against the state that preceded it — a reservation created in the same batch would still be invisible. The two writes are therefore sequential, and re-writing a reservation one already holds is allowed so a retry after a failed profile write goes through. An abandoned onboarding can leave a reservation with no profile behind it; freeing one is a backend job, alongside account deletion.
 
 Two things to keep straight about the options:
 
@@ -232,7 +240,7 @@ Firebase Auth, three methods offered at the same level (`docs/prd.md` §4.1). Th
 
 **Why the native Google SDK and not `expo-auth-session`.** `signInWithPopup` has no meaning in React Native, so a credential has to come from somewhere else. `expo-auth-session` would drive the OAuth dance in a web view; the native SDK is what Expo's own Google-authentication guide recommends, gives a first-party account picker, and returns an id token directly. The cost is a config plugin (`iosUrlScheme`, the reversed iOS client id) — acceptable since CNG and `expo-dev-client` are already in place. The plugin is added only when `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` is set, so a checkout without Google credentials still runs; the button then hides itself.
 
-**Apple and the nonce.** A raw nonce is generated with `expo-crypto`; its SHA-256 goes to Apple, the raw one to Firebase, which re-hashes it to check the token was minted for this request. Apple also returns the user's name on the *first* authorization only — never again, and never through Firebase Auth — so it is captured before the sign-in call (`src/auth/profileHints.ts`) and consumed when the profile document is created.
+**Apple and the nonce.** A raw nonce is generated with `expo-crypto`; its SHA-256 goes to Apple, the raw one to Firebase, which re-hashes it to check the token was minted for this request. Only the email scope is requested: Apple's `fullName` would be of no use, since the username is never pre-filled from a provider.
 
 ```
 apps/app/
@@ -241,12 +249,18 @@ apps/app/
 │   ├── (auth)/              # sign-in, sign-up — redirects to / as soon as a session exists
 │   └── index.tsx            # protected; redirects to /sign-in without a session
 └── src/
-    ├── auth/                # AuthContext, providers, profile, schemas, errors
+    ├── auth/                # AuthContext, providers, profile, schemas, errors, the onboarding sheet, screens (sign-in, sign-up, profile)
     ├── components/          # Button, TextField — the first neobrutalism primitives
     └── lib/firestore.ts     # getDocumentRef / getCollectionRef, converter-wired
 ```
 
-`src/auth/profile.ts` is what makes an account real: on every sign-in it upserts `v1_users/{uid}` — **document id = Firebase Auth UID** — pre-filling the pseudo from the provider, then Apple's given name, then the email's local part. It reads before writing, so it is idempotent and cheap on a session restore, and it carries `created_at` over untouched because `firestore.rules` refuses an update that changes it.
+`src/auth/profile.ts` is what makes an account real: `createUserProfile` writes `v1_users/{uid}` — **document id = Firebase Auth UID** — with the username claimed on the onboarding sheet, and `syncUserProfile` re-reads it on every later sign-in to mirror `email`, `auth_providers` and the avatar back from Auth. It only writes when something actually differs, so a session restore is cheap, and it carries `created_at` over untouched because `firestore.rules` refuses an update that changes it.
+
+**Why the profile document is created there and not at sign-in.** The username comes from the user alone — no provider pre-fill (`docs/prd.md` §4.1) — and `firestore.rules` rejects a profile whose handle is not reserved, so there is nothing to write until the onboarding sheet has been through. "No username" *is* the onboarding signal: `AuthContext` exposes it as `needsOnboarding` and `OnboardingSheet` opens on it, for a missing document and for a profile written before handles existed alike — the latter is completed in place, carrying its `created_at` and its streak over. A failed *read* deliberately does not raise that flag — an account that already has a handle must never be sent back through onboarding by a network blip.
+
+The sheet is a blocking `Modal` rendered beside the navigator (`src/App.tsx`), not a stack screen: it is driven by session state rather than by navigation — nothing pushes or pops it, it is up exactly while `needsOnboarding` holds.
+
+**Why the app has two sheet mechanisms.** `DailyQuestion` is a `presentation: 'formSheet'` route: the system draws it, sizes it to its content and lets the user flick it away, which is what a question you may leave unanswered needs. Onboarding needs the opposite — no grabber, no backdrop, no back button — and a form sheet is dismissable by design. Hence the `BottomSheet` primitive in `src/components/`: a `Modal` painting the same neobrutalist surface (scrim, rounded top corners, thick top border, `shadows.up`), for the sheets that have to be answered. The question sheet inherits §5.4's pinned-open behaviour the day answering lands; until then the two do not share an implementation.
 
 `src/lib/firestore.ts` mirrors `apps/functions/src/libs/firebase-admin.ts` on the client side: every ref is built with a `@statowrel/models` converter, so no screen ever reads `snap.data()` untyped. It carries `getSubDocumentRef` too — flat path segments rather than a parent ref, since a parent built by `getDocumentRef` already holds its own converter.
 
@@ -256,7 +270,7 @@ Forms use `react-hook-form` + `zod` (`@hookform/resolvers`), never raw `useState
 
 Both emulators are wired behind env vars (`EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_*`, `…_FIRESTORE_EMULATOR_*`), matching the ports in `firebase.json`.
 
-Deliberately deferred: Facebook (PRD §4.1, no button yet), identity linking via `linkWithCredential` (the `auth/account-exists-with-different-credential` case shows an explanatory message instead), the dedicated pseudo/avatar onboarding screen (the pseudo is pre-filled automatically for now), pseudo uniqueness (needs a reserved-names collection or a backend check), and account deletion.
+Deliberately deferred: Facebook (PRD §4.1, no button yet), identity linking via `linkWithCredential` (the `auth/account-exists-with-different-credential` case shows an explanatory message instead), the avatar half of the onboarding sheet (only the handle is asked for), changing a handle once it is taken (freeing its reservation needs the backend), and account deletion.
 
 ### Design system
 
@@ -291,7 +305,7 @@ The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=�
 
 - The Stats screen (docs/prd.md §5.2) renders from fixtures, not Firestore — `apps/app/src/stats/data/` holds two fake data sets and the `__DEV__` switch between them. Its calendar cells now open the day's question, so a fixture day and the real `v1_daily_questions` document behind it can disagree until that hook reads Firestore.
 - The question screen shows the options; it cannot take one. The double tap of docs/prd.md §4.3 (`expo-haptics` is not a dependency yet), the answer write and the StatOwrel card it flips to (§5.5) are all still to come — and until they are, the sheet stays dismissable — grabber included — rather than pinned open on today's unanswered question as §5.4 wants: trapping the user on a screen with no way to answer would be worse. A question long enough to overflow the tallest sheet would need a detent array plus `sheetExpandsWhenScrolledToEdge`, not a nested scroll view.
-- Four of the PRD's five collections exist; only `v1_users/{id}/friends` is still to be modelled — see `docs/prd.md` §6.
+- Five of the PRD's six collections exist; only `v1_users/{id}/friends` is still to be modelled — so a handle resolves to an account, but nothing befriends it yet — see `docs/prd.md` §6.
 - The daily cycle's back half: no answer trigger to increment `answer_counts` and bump streaks, no midnight closer resetting the streaks of whoever didn't answer (docs/prd.md §6 "Backend"). The push `dailyQuestions-notifyDailyQuestion` sends is a stub too — the task fires, it just doesn't notify anyone yet. And no app screen consumes any of it.
 - Design-system primitives are added as screens need them — `Button`, `TextField`, `Card`, `IconButton`, `Calendar` so far. No dark-mode theming either (light only).
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.

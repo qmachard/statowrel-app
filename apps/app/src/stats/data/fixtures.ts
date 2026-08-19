@@ -59,7 +59,7 @@ const buildAnswer = (offset: number, index: number): DailyQuestionAnswerData => 
   };
 };
 
-type UserFixtureInput = Pick<UserData, 'display_name' | 'streak_count' | 'streak_best' | 'streak_last_answered_on'>;
+type UserFixtureInput = Pick<UserData, 'username' | 'streak_count' | 'streak_best' | 'streak_last_answered_on'>;
 
 const buildUser = (user: UserFixtureInput): UserData => ({
   photo_url: null,
@@ -81,7 +81,7 @@ export const STATS_FIXTURES: StatsFixture[] = [
     id: 'streak-ongoing',
     label: 'Streak en cours',
     user: buildUser({
-      display_name: 'Lou',
+      username: 'lou',
       streak_count: 12,
       streak_best: 34,
       streak_last_answered_on: toDateKey(TODAY),
@@ -92,7 +92,7 @@ export const STATS_FIXTURES: StatsFixture[] = [
     id: 'streak-lost',
     label: 'Streak perdu',
     user: buildUser({
-      display_name: 'Lou',
+      username: 'lou',
       streak_count: 0,
       streak_best: 21,
       streak_last_answered_on: toDateKey(addDays(TODAY, -3)),

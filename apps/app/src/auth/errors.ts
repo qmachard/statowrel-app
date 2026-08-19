@@ -16,6 +16,14 @@ export class SignInUnavailableError extends Error {
   }
 }
 
+/** Thrown when a username is already held by another account (docs/prd.md §4.1). */
+export class UsernameTakenError extends Error {
+  constructor() {
+    super('Username already taken');
+    this.name = 'UsernameTakenError';
+  }
+}
+
 /** Which door the user came through — the same Firebase code means different things per provider. */
 export type SignInMethod = 'password' | 'google' | 'apple';
 

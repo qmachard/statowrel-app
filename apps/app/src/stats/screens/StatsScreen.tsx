@@ -39,9 +39,10 @@ export const StatsScreen = () => {
   const { profile } = useAuth();
   const { user, answers, fixtures, fixtureId, selectFixture } = useStatsData();
 
-  // The signed-in pseudo is the one piece of real data available today; the
-  // stats below it still come from the fixture.
-  const displayName = profile?.display_name ?? user.display_name;
+  // The signed-in username is the one piece of real data available today; the
+  // stats below it still come from the fixture. The greeting drops the `@` —
+  // it reads as a name there, and the handle is shown as one on the profile.
+  const displayName = profile?.username ?? user.username;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[ 'top' ]}>
