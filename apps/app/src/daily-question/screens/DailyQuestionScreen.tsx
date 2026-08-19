@@ -16,7 +16,6 @@ import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { hapticSelection, hapticValidation } from '@/lib/haptics';
 import { toDateKey } from '@/lib/dates';
 import type { RootStackParamList } from '@/navigation/types';
-import { invalidateCalendarMonth } from '@/stats/data/useStatsData';
 
 /** What a day that carries no answerable question has to say for itself. */
 const DEAD_END: Partial<Record<DailyQuestionStatus, string>> = {
@@ -187,12 +186,10 @@ export const DailyQuestionScreen = () => {
     try {
       const written = await submitAnswer({ userId: user.uid, date, optionId, dailyQuestion });
 
-      // Both this sheet and the Stats banner underneath read the day through
-      // `useDailyQuestion`, and both flip on this.
+      // The sheet flips on its own answer subscription; this is for the Stats
+      // banner underneath, which reads the calendar month the trigger has not
+      // written yet.
       rememberAnswer(written);
-      // The answer trigger rewrites the month behind the app's back, so the
-      // Stats screen underneath must not go on serving the copy it cached.
-      invalidateCalendarMonth(user.uid, date);
       setSelectedId(null);
       setArmed(false);
       setCelebrating(true);

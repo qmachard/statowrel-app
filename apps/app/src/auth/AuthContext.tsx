@@ -1,5 +1,6 @@
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
+import { onSnapshot } from 'firebase/firestore';
 import {
   type ReactNode,
   createContext,
@@ -10,16 +11,25 @@ import {
   useState,
 } from 'react';
 
-import type { UserData } from '@statowrel/models';
+import { USER_COLLECTION, type UserData, userConverter } from '@statowrel/models';
 
 import { auth } from '@/lib/firebase';
+import { getDocumentRef } from '@/lib/firestore';
 
 import { createUserProfile, syncUserProfile } from './profile';
 
 export interface AuthContextValue {
   /** Firebase Auth session, or null when signed out. */
   user: User | null;
-  /** `v1_users/{uid}`, null until it has been read or created. */
+  /**
+   * `v1_users/{uid}`, live — null while it loads, and for an account that has
+   * not been through onboarding yet.
+   *
+   * Subscribed to rather than read: the counters on it — streak, record,
+   * answered days — belong to the answer trigger (docs/prd.md §4.6), which
+   * moves them a beat after the app writes an answer. A read would have to
+   * guess when that beat has passed.
+   */
   profile: UserData | null;
   /** True until the persisted session has been restored — hold the splash screen. */
   initializing: boolean;
@@ -27,85 +37,78 @@ export interface AuthContextValue {
   needsOnboarding: boolean;
   /** Claims the chosen username and writes the profile, which is what opens the app up. */
   completeOnboarding: (username: string) => Promise<void>;
-  /**
-   * Re-reads `v1_users/{uid}`.
-   *
-   * The counters on it — streak, record, answered days — are moved by the
-   * answer trigger (docs/prd.md §4.6), so the copy held here goes stale the
-   * moment the user answers. The Stats screen refreshes on focus rather than
-   * subscribing: the profile changes once a day at most, and a snapshot
-   * listener open for the life of the app would cost a read every time the
-   * backend touches the document.
-   */
-  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [ user, setUser ] = useState<User | null>(null);
-  const [ profile, setProfile ] = useState<UserData | null>(null);
   const [ initializing, setInitializing ] = useState(true);
-  const [ needsOnboarding, setNeedsOnboarding ] = useState(false);
+  // The snapshot carries the account it describes, so switching account never
+  // shows the previous one's profile for a render — and nothing has to be reset
+  // on the way out.
+  const [ loaded, setLoaded ] = useState<{ uid: string; profile: UserData | null } | null>(null);
 
-  useEffect(() => onAuthStateChanged(auth, async (nextUser) => {
+  useEffect(() => onAuthStateChanged(auth, (nextUser) => {
     setUser(nextUser);
 
-    if (!nextUser) {
-      setProfile(null);
-      setNeedsOnboarding(false);
+    if (nextUser === null) {
       setInitializing(false);
 
       return;
     }
 
-    try {
-      const synced = await syncUserProfile(nextUser);
-
-      setProfile(synced);
-      // A profile without a username is one written before usernames existed:
-      // it goes through onboarding too, and `createUserProfile` completes it in
-      // place rather than starting a new one.
-      setNeedsOnboarding(synced === null || synced.username === '');
-    } catch (error) {
-      // A failed profile read must not lock the user out of the app, and must
-      // not send an account that already has a username back through onboarding:
-      // the next sign-in or session restore retries it.
+    // Mirrors Auth back into the profile, and nothing more: what it writes
+    // comes back through the subscription below, which is what holds the state.
+    // Failing is survivable — the copy in Firestore is a mirror, Auth stays the
+    // source of truth — so this never blocks the session.
+    syncUserProfile(nextUser).catch((error: unknown) => {
       console.warn('[auth] could not sync the user profile', error);
-      setProfile(null);
-      setNeedsOnboarding(false);
-    } finally {
-      setInitializing(false);
-    }
+    });
   }), []);
+
+  useEffect(() => {
+    if (user === null) {
+      return undefined;
+    }
+
+    const uid = user.uid;
+
+    return onSnapshot(
+      getDocumentRef(USER_COLLECTION, uid, userConverter),
+      (snapshot) => {
+        setLoaded({ uid, profile: snapshot.data() ?? null });
+        setInitializing(false);
+      },
+      (error) => {
+        // A profile that cannot be read must not lock the user out of the app,
+        // and must not send an account that already has a username back through
+        // onboarding: the next session restore retries it.
+        console.warn('[auth] lost the user profile subscription', error);
+        setInitializing(false);
+      },
+    );
+  }, [ user ]);
+
+  const current = user !== null && loaded?.uid === user.uid ? loaded : null;
+  const profile = current?.profile ?? null;
+  // No document at all is an account that has signed in and not chosen a handle
+  // yet; a document without a username predates them. Both go through the
+  // sheet, and `createUserProfile` completes the second in place rather than
+  // starting a new one. Neither is true while the first snapshot is still out —
+  // `initializing` is what holds the splash screen until then.
+  const needsOnboarding = current !== null && (current.profile === null || current.profile.username === '');
 
   const completeOnboarding = useCallback(async (username: string) => {
     if (!user) {
       throw new Error('completeOnboarding requires a signed-in user.');
     }
 
-    setProfile(await createUserProfile(user, username, profile));
-    setNeedsOnboarding(false);
+    // The subscription above is what clears `needsOnboarding`: Firestore hands
+    // a local write straight to its own listeners, so the sheet closes on the
+    // write rather than on the round trip.
+    await createUserProfile(user, username, profile);
   }, [ user, profile ]);
-
-  const refreshProfile = useCallback(async () => {
-    if (!user) {
-      return;
-    }
-
-    try {
-      const synced = await syncUserProfile(user);
-
-      // A refresh never clears the profile: `syncUserProfile` returns null for a
-      // document that does not exist, and the stale copy beats no copy.
-      if (synced !== null) {
-        setProfile(synced);
-      }
-    } catch (error) {
-      // A refresh is a nicety — the screen keeps the copy it already has.
-      console.warn('[auth] could not refresh the user profile', error);
-    }
-  }, [ user ]);
 
   const value = useMemo<AuthContextValue>(() => ({
     user,
@@ -113,8 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializing,
     needsOnboarding,
     completeOnboarding,
-    refreshProfile,
-  }), [ user, profile, initializing, needsOnboarding, completeOnboarding, refreshProfile ]);
+  }), [ user, profile, initializing, needsOnboarding, completeOnboarding ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
