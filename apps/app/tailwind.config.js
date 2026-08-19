@@ -1,4 +1,4 @@
-const { colors } = require('./src/design/tokens');
+const { colors, radius } = require('./src/design/tokens');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -11,21 +11,14 @@ module.exports = {
         head: ['ArchivoBlack_400Regular'],
         sans: ['SpaceGrotesk_400Regular'],
       },
-      borderRadius: {
-        none: '0px',
-        DEFAULT: '0px',
-        sm: '0px',
-        md: '0px',
-        lg: '0px',
-        xl: '0px',
-        '2xl': '0px',
-        '3xl': '0px',
-        full: '9999px',
-      },
+      // Slightly rounded corners — see `src/design/tokens.js`.
+      borderRadius: radius,
       borderWidth: {
         DEFAULT: '2px',
       },
-      // Hard offset shadows — no blur — the neobrutalism signature look.
+      // Hard offset shadows — no blur — the neobrutalism signature look. The
+      // offsets match the `translate-*` values a pressed surface uses to sink
+      // into its own shadow: `shadow-md` (4px) pairs with `translate-x-1`.
       boxShadow: {
         xs: '1px 1px 0 0 #000',
         sm: '2px 2px 0 0 #000',

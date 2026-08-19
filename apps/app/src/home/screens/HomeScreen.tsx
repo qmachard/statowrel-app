@@ -11,11 +11,11 @@ export const HomeScreen = () => {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={[ 'top' ]}>
       <ScrollView contentContainerClassName="grow justify-center gap-8 p-6">
-        <View className="border-2 border-border bg-primary px-6 py-4 shadow-md">
+        <View className="rounded-md border-2 border-border bg-primary px-6 py-4 shadow-md">
           <Text className="font-head text-xl uppercase text-primary-foreground">StatOwrel</Text>
         </View>
 
-        <View className="gap-2 border-2 border-border bg-card px-6 py-5 shadow-md">
+        <View className="gap-2 rounded-md border-2 border-border bg-card px-6 py-5 shadow-md">
           <Text className="font-head text-2xl uppercase text-card-foreground">
             Salut {profile?.display_name ?? 'toi'}
           </Text>

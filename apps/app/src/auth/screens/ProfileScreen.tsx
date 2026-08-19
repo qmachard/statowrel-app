@@ -22,7 +22,7 @@ export const ProfileScreen = () => {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={[ 'top' ]}>
       <ScrollView contentContainerClassName="grow justify-center gap-8 p-6">
-        <View className="gap-2 border-2 border-border bg-card px-6 py-5 shadow-md">
+        <View className="gap-2 rounded-md border-2 border-border bg-card px-6 py-5 shadow-md">
           <Text className="font-head text-2xl uppercase text-card-foreground">
             {profile?.display_name ?? 'Profil en cours de création…'}
           </Text>
