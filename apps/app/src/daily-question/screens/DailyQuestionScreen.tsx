@@ -1,8 +1,8 @@
 import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { dailyQuestionDateKey } from '@statowrel/models';
 import { X } from 'lucide-react-native';
-import type { ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { type ReactNode, useLayoutEffect } from 'react';
+import { ActivityIndicator, StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -18,6 +18,13 @@ const DEAD_END: Partial<Record<DailyQuestionStatus, string>> = {
   missing: 'Pas de question ce jour-là.',
   error: 'Impossible de charger la question. Réessaie dans un instant.',
 };
+
+/**
+ * The sheet wears the colour of the calendar cell that opens it (docs/prd.md
+ * §5.2): the accent red of an unanswered today, the primary yellow of a day
+ * already answered.
+ */
+type Surface = 'accent' | 'primary';
 
 /** `A`, `B`, `C`… for the option at that rank — a question carries 2 to 6 (docs/prd.md §4.2). */
 const letterOf = (index: number) => String.fromCharCode('A'.charCodeAt(0) + index);
@@ -43,9 +50,6 @@ const styles = StyleSheet.create({
   // No `flex: 1` anywhere on the way down: the sheet's detent is
   // `fitToContents`, so it measures this column and a stretched child would
   // make it measure the whole screen instead.
-  safeArea: {
-    backgroundColor: colors.accent,
-  },
   content: {
     gap: spacing(5),
     padding: spacing(6),
@@ -66,7 +70,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.head,
     fontSize: fontSize.xl,
     textTransform: 'uppercase',
-    color: colors['accent-foreground'],
   },
   // `fonts.head` at body size is this app's bold — Space Grotesk ships in a
   // single weight, so a `fontWeight` here would only ask for a face that isn't
@@ -74,29 +77,36 @@ const styles = StyleSheet.create({
   question: {
     fontFamily: fonts.head,
     fontSize: fontSize.base,
-    color: colors['accent-foreground'],
   },
   options: {
     gap: spacing(4),
   },
-  // On the accent red `muted-foreground` is unreadable, and the palette has no
-  // muted token for that surface: these two take the full foreground and stay
-  // secondary by size alone.
+  // On either coloured surface `muted-foreground` is unreadable, and the palette
+  // has no muted token for one: every text here takes the surface's own
+  // foreground and stays secondary by size alone.
   message: {
     fontFamily: fonts.sans,
     fontSize: fontSize.base,
-    color: colors['accent-foreground'],
   },
   credit: {
     textAlign: 'center',
     fontFamily: fonts.sans,
     fontSize: fontSize.xs,
-    color: colors['accent-foreground'],
   },
 });
 
-const Message = ({ children }: { children: ReactNode }) => (
-  <Text style={styles.message}>{children}</Text>
+const SURFACE = StyleSheet.create({
+  accent: { backgroundColor: colors.accent },
+  primary: { backgroundColor: colors.primary },
+}) satisfies Record<Surface, ViewStyle>;
+
+const FOREGROUND = StyleSheet.create({
+  accent: { color: colors['accent-foreground'] },
+  primary: { color: colors['primary-foreground'] },
+}) satisfies Record<Surface, TextStyle>;
+
+const Message = ({ children, surface }: { children: ReactNode; surface: Surface }) => (
+  <Text style={[ styles.message, FOREGROUND[surface] ]}>{children}</Text>
 );
 
 /**
@@ -107,7 +117,8 @@ const Message = ({ children }: { children: ReactNode }) => (
  *
  * The sheet is sized by this content (see `RootNavigator`), which is why the
  * options sit in a plain column rather than a scroll view: a short question
- * gets a short sheet.
+ * gets a short sheet. It also wears the colour of the calendar cell that opens
+ * it — accent while today is unanswered, primary once it is answered.
  *
  * Answering is not wired yet — the double tap of §4.3 and the StatOwrel card it
  * flips to (§5.5) come next. Until then the sheet is dismissable even for
@@ -126,21 +137,34 @@ export const DailyQuestionScreen = () => {
   const isToday = date === toDateKey(new Date());
   const deadEnd = DEAD_END[status];
 
+  // Red only while today is still open — the moment it is answered it turns
+  // yellow, exactly as its calendar cell does.
+  const surface: Surface = isToday && answer === null ? 'accent' : 'primary';
+
+  // The sheet's own background, behind the content this screen lays out. Set
+  // here rather than in `RootNavigator` because the navigator has no way of
+  // knowing whether the day has been answered.
+  useLayoutEffect(() => {
+    navigation.setOptions({ contentStyle: SURFACE[surface] });
+  }, [ navigation, surface ]);
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={[ 'bottom' ]}>
+    <SafeAreaView style={SURFACE[surface]} edges={[ 'bottom' ]}>
       <View style={styles.content}>
         <View style={styles.prompt}>
           <View style={styles.head}>
-            <Text style={styles.heading}>{headingOf(date, isToday)}</Text>
+            <Text style={[ styles.heading, FOREGROUND[surface] ]}>{headingOf(date, isToday)}</Text>
             <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
           </View>
 
-          {question === null ? null : <Text style={styles.question}>{question.label}</Text>}
+          {question === null ? null : (
+            <Text style={[ styles.question, FOREGROUND[surface] ]}>{question.label}</Text>
+          )}
         </View>
 
         {status === 'loading' ? <ActivityIndicator size="large" /> : null}
 
-        {deadEnd ? <Message>{deadEnd}</Message> : null}
+        {deadEnd ? <Message surface={surface}>{deadEnd}</Message> : null}
 
         {question === null ? null : (
           <View style={styles.options}>
@@ -157,7 +181,7 @@ export const DailyQuestionScreen = () => {
         )}
 
         {authorName === null ? null : (
-          <Text style={styles.credit}>proposée par {authorName}</Text>
+          <Text style={[ styles.credit, FOREGROUND[surface] ]}>proposée par {authorName}</Text>
         )}
       </View>
     </SafeAreaView>

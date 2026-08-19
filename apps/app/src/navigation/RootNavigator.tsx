@@ -44,11 +44,9 @@ export const RootNavigator = () => {
               presentation: 'formSheet',
               sheetAllowedDetents: 'fitToContents',
               sheetGrabberVisible: true,
-              // Accent red, the same surface as today's calendar cell — the
-              // sheet is what that cell opens. Overridden here rather than in
-              // the screen so nothing of the stack's cream shows through around
-              // the content.
-              contentStyle: { backgroundColor: colors.accent },
+              // The surface is set by the screen itself, which is the only
+              // place that knows whether the day has been answered — see
+              // `DailyQuestionScreen`.
             }}
           />
           <Stack.Screen name="Profile" component={ProfileScreen} />
