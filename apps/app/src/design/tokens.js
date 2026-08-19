@@ -49,8 +49,8 @@ const radius = {
 
 /**
  * Hard offset shadows — no blur — the neobrutalism signature look. The offsets
- * match the `translate-*` a pressed surface uses to sink into its own shadow:
- * `md` (4px) pairs with `translate-x-1`.
+ * match the translation a pressed surface uses to sink into its own shadow:
+ * `md` (4px) pairs with the 4px `SUNK` transform in `src/components/Button.tsx`.
  *
  * These are CSS `box-shadow` strings, which is what both consumers want:
  * Tailwind's `boxShadow` theme, and React Native's own `boxShadow` style prop

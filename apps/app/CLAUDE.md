@@ -26,6 +26,7 @@ The authentication flow exists (Google, Apple, email + password, and the `v1_use
 ## Conventions
 
 - Use `className` (Nativewind) for styling, not `StyleSheet.create`, unless a style genuinely can't be expressed in Tailwind (complex platform-specific values) — in which case colocate it with `useMemo`/`StyleSheet.create` next to the component.
+- NEVER apply a Tailwind utility that **declares a CSS variable** conditionally (after the initial render) — the transforms (`translate-*`, `scale-*`, `rotate-*`, `skew-*`), `shadow-*` and `ring-*`. Nativewind then prints an "upgrade" warning whose serialiser walks the props recursively, reaches React Navigation's context object and trips its throwing getters: the app red-screens with "Couldn't find a navigation context". Express such a state change as a React Native style instead — see `SUNK` in `src/components/Button.tsx`.
 - Firestore reads/writes ALWAYS go through a converter from `@statowrel/models` — use `getDocumentRef` / `getCollectionRef` from `src/lib/firestore.ts`, never read `snap.data()` untyped.
 - Forms use `react-hook-form` + `zod` via `@hookform/resolvers/zod`, never raw `useState`.
 - Auth session state comes from `useAuth()`; never call `onAuthStateChanged` from a screen.
