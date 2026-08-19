@@ -77,7 +77,7 @@ Re-export every new model from `src/index.ts`.
 
 ### `v1_questions`
 
-`packages/models/src/v1_question.ts` — collections are plural, the model file that describes one document is singular. The pot of questions users propose and moderators approve — see `docs/prd.md` §4.7 and §5.
+`packages/models/src/v1_question.ts` — collections are plural, the model file that describes one document is singular. The pot of questions users propose and moderators approve — see `docs/prd.md` §4.7 and §6.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -108,7 +108,7 @@ Two things to keep straight about the options:
 
 `options` is a plain array rather than a map keyed by id: the array order *is* the display order, which removes the `position` field and lets FireCMS's built-in repeat field handle reordering.
 
-There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §6).
+There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §7).
 
 ## `apps/functions` — domain structure
 
@@ -180,7 +180,7 @@ Two Firebase projects, aliased in `.firebaserc`:
 ## What's deliberately not here yet
 
 - No app screens beyond the placeholder route — nothing consumes `v1_questions` on mobile yet.
-- Two of the PRD's five collections exist, and `v1_users` only carries its profile fields. `v1_users/{id}/friends`, `v1_daily_questions` and its `answers` sub-collection are still to be modelled — see `docs/prd.md` §5.
+- Two of the PRD's five collections exist, and `v1_users` only carries its profile fields. `v1_users/{id}/friends`, `v1_daily_questions` and its `answers` sub-collection are still to be modelled — see `docs/prd.md` §6.
 - No design-system component primitives (buttons, cards, inputs) — the neobrutalism theme tokens exist in `tailwind.config.js`, the primitives are the next step. No dark-mode theming either.
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.

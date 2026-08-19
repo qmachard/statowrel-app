@@ -53,6 +53,9 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
             │                    (débloquées car j'ai répondu)
             ▼
    Je ne réponds pas avant minuit ──► Streak remis à zéro
+                                       (jour rattrapable plus tard
+                                        depuis le calendrier, sans
+                                        récupérer le streak)
 ```
 
 ## 4. Fonctionnalités
@@ -81,7 +84,9 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 - Format v1 : **choix unique parmi N options** — de **2 à 6** options selon la question. Une question peut donc être binaire (« moins de 2 min / plus de 10 min ») ou à choix multiple (« par le bout / au milieu / je l'écrase »).
 - L'utilisateur ne choisit **qu'une seule** option, quel que soit le nombre proposé. Pas de réponses multiples, pas de texte libre, pas de photo.
 - L'ordre des options est **fixe** (celui défini à la création), identique pour tous — c'est ce qui rend les captures d'écran comparables entre potes.
-- La question expire à **minuit**. Passé ce délai, on ne peut plus répondre — la journée est perdue.
+- La question **ferme à minuit** : passé ce délai elle ne compte plus pour le streak (§4.6) et n'est plus poussée en modale bloquante.
+- Une journée manquée reste **rattrapable** depuis le calendrier de l'écran Stats (§5.2) : on peut répondre après coup pour compléter sa collection de cartes et voir les réponses de ses amis. Le rattrapage **ne restaure jamais le streak** — le streak récompense la régularité, la carte récompense la collection.
+- Une réponse de rattrapage compte dans les compteurs agrégés (`answer_counts`) au même titre qu'une réponse à l'heure ; elle est marquée `late: true` pour pouvoir distinguer les deux plus tard.
 - Réponse **définitive** : pas de modification après validation (c'est ce qui rend la stat crédible).
 
 ### 4.3 Le double tap
@@ -120,7 +125,7 @@ Immédiatement après avoir répondu :
 ### 4.6 Streak
 
 - +1 à chaque journée où l'on a répondu avant minuit.
-- **0** dès qu'une journée est manquée. Pas de joker, pas de rattrapage en v1.
+- **0** dès qu'une journée est manquée. Pas de joker : répondre en retard depuis le calendrier (§4.2) complète la journée dans le calendrier et débloque la carte, mais ne rallume pas le streak cassé.
 - Streak visible sur son profil et à côté de son nom dans la liste des amis.
 - Rappel push à 21h si la question du jour n'a pas été répondue et que le streak est en cours.
 
@@ -133,7 +138,95 @@ Immédiatement après avoir répondu :
 - L'auteur est notifié quand sa question est validée, puis quand elle est effectivement tirée. Son pseudo est crédité sur l'écran de la question.
 - Une question déjà tirée ne peut pas ressortir (v1 : jamais de rediffusion).
 
-## 5. Modèle de données (esquisse)
+## 5. Navigation & écrans
+
+L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), `radius: 0` partout, titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Les tokens sont déjà dans `apps/app/tailwind.config.js` — aucun écran ne définit sa propre palette.
+
+Toute l'app tient en **deux onglets, une modale et une carte**. Il n'y a pas de troisième niveau de navigation.
+
+### 5.1 Tabbar
+
+Deux onglets, et deux seulement :
+
+| Onglet | Rôle |
+|---|---|
+| **Stats** (par défaut) | Le streak, le calendrier, l'accès à la question du jour et aux jours passés |
+| **Profil** | Son identité, ses amis, ses propositions de questions, ses réglages |
+
+- Barre fixe en bas, fond `card`, **bordure haute noire épaisse**, pas d'ombre interne, pas de flou de fond.
+- Onglet actif : pastille `primary` pleine sous l'icône + label, bordure noire et ombre dure décalée (`shadow-sm`) — l'onglet actif « sort » de la barre. Onglet inactif : `muted-foreground`, sans bordure.
+- Pas de badge numérique ; l'état « question du jour non répondue » se signale par la modale (§5.4), pas par une pastille.
+
+### 5.2 Écran Stats
+
+L'écran d'accueil. De haut en bas :
+
+**1. Bloc streak.** Une carte `primary` bordée, ombre `lg`, occupant toute la largeur : le nombre de jours en très gros (`font-head`), le mot « jours d'affilée » en dessous, et un pictogramme de flamme. Quand le streak est à 0, la carte passe en `muted` avec « Réponds aujourd'hui pour repartir ».
+
+**2. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, `radius: 0`, séparées par une gouttière régulière. Quatre états :
+
+| État | Rendu | Tap |
+|---|---|---|
+| **Répondu** | Case `primary`, ombre dure, le `stat_label` du jour en micro-texte (tronqué) | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
+| **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
+| **Aujourd'hui, pas encore répondu** | Case `accent`, bordure doublée, légère pulsation | Ouvre la modale question du jour (§5.4) |
+| **Futur, ou antérieur à l'inscription** | Case `muted`, sans bordure | Inerte |
+
+- Navigation mois par mois (chevrons gauche/droite), bornée à la date d'inscription d'un côté et au mois courant de l'autre.
+- Le calendrier **est** l'historique : c'est le seul endroit où l'on retrouve les questions passées et ses propres cartes.
+- Un jour sans question diffusée (avant le lancement, ou incident de publication) est rendu comme « futur » : inerte, non rattrapable.
+
+**3. Rappel du jour.** Si la question du jour n'est pas encore tombée, un encart en bas : « La question tombe entre 8h et 20h ». Pas de compte à rebours (l'heure est aléatoire — un compte à rebours mentirait).
+
+### 5.3 Écran Profil
+
+- **En-tête carte** : avatar (cadre noir épais, ombre dure), pseudo en `font-head`, streak courant et meilleur streak.
+- **Mes amis** : liste avatar + pseudo + streak, avec l'action « Retirer ». En tête de liste, un bouton plein `primary` « Inviter un pote » (partage du lien + code à 6 caractères, §4.1). Si la liste est vide, l'état vide occupe la place de la liste : « Sans potes, StatOwrel c'est juste des chiffres. »
+- **Mes questions** : proposer une question (§4.7) et suivre le statut de celles déjà envoyées (`en attente` / `validée` / `rejetée` + raison / `tirée le JJ/MM`).
+- **Réglages** : notifications, déconnexion, suppression de compte.
+
+### 5.4 Modale question (bottom sheet)
+
+La question ne vit **jamais** dans un onglet : c'est toujours une **bottom sheet** posée par-dessus l'écran Stats.
+
+- **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins droits (`radius: 0`), bordure haute noire épaisse, ombre dure vers le haut.
+- **Rattrapage depuis le calendrier** → même sheet, mais **fermable** (poignée + tap sur le fond) : on a le droit de regarder une vieille question et de repartir sans répondre.
+
+Contenu, de haut en bas :
+
+1. La **date** en micro-texte (« Aujourd'hui » ou « Mardi 12 août »).
+2. Le **titre de la question**, très gros, en `font-head`, cadré à gauche sur 2 à 4 lignes — c'est l'élément dominant de l'écran, façon carton de quizz.
+3. Les **options**, empilées verticalement, une par ligne, pleine largeur : carte `card`, bordure noire, ombre dure, label en `font-sans` gras. De 2 à 6 selon la question, dans leur ordre fixe (§4.2). Au-delà de 4 options, la liste défile — le titre reste épinglé en haut.
+4. Le **crédit auteur** en bas (« proposée par @pseudo ») quand la question vient d'un utilisateur.
+
+L'interaction est le **double tap** décrit en §4.3 : premier tap = sélection (l'option se soulève, les autres s'estompent), deuxième tap = validation. Après validation, la sheet ne se ferme pas : son contenu **bascule** sur la carte StatOwrel (§5.5), sans changement d'écran ni retour au calendrier.
+
+### 5.5 Écran résultat — la carte StatOwrel
+
+L'écran de récompense. Il reprend délibérément les codes d'une **carte Pokémon** : c'est un objet qu'on collectionne, qu'on compare et qu'on screenshote.
+
+Anatomie de la carte, dans l'ordre vertical :
+
+| Zone | Contenu | Traitement carte |
+|---|---|---|
+| **Cadre** | — | Double encadrement : bordure noire épaisse + liseré intérieur `primary`, ombre `2xl`, proportions portrait ~2:3 |
+| **Bandeau haut** | Le `stat_label` en très gros (« Efficace ») à gauche, le **pourcentage** à droite | Le pourcentage tient la place des PV d'une carte Pokémon |
+| **Illustration** | Encart carré bordé : l'emoji/visuel de l'option choisie sur aplat de couleur | La « fenêtre d'illustration » de la carte |
+| **Phrase** | « Comme **68%** des utilisateurs, tu es un.e **efficace**. » | Corps de texte de la carte |
+| **Encart question** | La question du jour + l'option choisie, sur fond `muted` | L'équivalent du bloc « attaque » |
+| **Barre de stats** | La répartition complète des options en barres horizontales bordées, la sienne mise en avant | Le bas de carte, chiffré |
+| **Pied** | Date, numéro du jour (« #142 »), pseudo de l'auteur de la question | Le pied d'une carte : édition + illustrateur |
+
+- **Rareté.** Plus l'option choisie est minoritaire, plus la carte est rare : au-delà de 50% la carte est `common` (aplat `primary`), sous 25% elle passe `rare` (liseré doré), sous 10% `ultra rare` (fond holographique animé au tilt de l'appareil). C'est ce qui rend intéressant de répondre honnêtement plutôt que comme tout le monde. La rareté est calculée à l'affichage depuis `answer_counts`, elle n'est pas figée : elle bouge tant que les réponses arrivent, et se stabilise à la clôture.
+- **Bouton « Partager »** sous la carte : génère l'image de la carte seule (sans les amis) — §4.4.
+- **Les amis, sous la carte** (§4.5) : hors du cadre, en liste simple — avatar, pseudo, l'option choisie et l'heure. Les amis qui ont répondu comme moi sont regroupés en tête sous « Comme toi », les autres suivent, les non-répondants ferment la liste en `muted`.
+- Cette carte est **rejouable à volonté** : tap sur un jour répondu dans le calendrier (§5.2) la rouvre à l'identique, avec les stats à jour et les réponses des amis arrivées depuis.
+
+### 5.6 Ce qui n'existe pas
+
+Pas de feed, pas d'onglet « amis » séparé, pas d'écran de recherche, pas de menu latéral, pas de réglages sur l'écran Stats. Deux onglets, une modale, une carte.
+
+## 6. Modèle de données (esquisse)
 
 Conventions : collections préfixées `v1_`, champs en `snake_case`, champs optionnels toujours à `null`, timestamps en `UniversalTimestamp`. Voir `CLAUDE.md`.
 
@@ -143,7 +236,9 @@ Conventions : collections préfixées `v1_`, champs en `snake_case`, champs opti
 | `v1_users/{id}/friends` | une entrée par ami (écrite des deux côtés à l'acceptation) |
 | `v1_questions` | `label`, `options` (**tableau ordonné** de `{ id: ULID, label, stat_label }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason` |
 | `v1_daily_questions` | une par jour : `date`, `question_id`, `published_at`, `closes_at`, `answer_counts` (map `option_id` → total) |
-| `v1_daily_questions/{id}/answers` | une par utilisateur : `user_id`, `option_id`, `answered_at` |
+| `v1_daily_questions/{id}/answers` | une par utilisateur : `user_id`, `option_id`, `answered_at`, `late` (réponse de rattrapage, §4.2) |
+
+Le calendrier de l'écran Stats (§5.2) lit un mois de réponses **de l'utilisateur courant** : c'est une requête de groupe de collections sur `answers` filtrée par `user_id`, croisée avec les `v1_daily_questions` du mois. L'index composite correspondant est à prévoir dans `packages/firestore-config`.
 
 ### Les options d'une question
 
@@ -177,16 +272,16 @@ Les ULID sont **générés côté client** (app ou backoffice) au moment de la s
 - Un trigger sur création de réponse incrémente `answer_counts.{option_id}` (`FieldValue.increment(1)`) et met à jour le streak de l'auteur.
 - Un scheduler à minuit clôture la journée et remet à zéro les streaks des utilisateurs sans réponse.
 
-## 6. Hors périmètre (v1)
+## 7. Hors périmètre (v1)
 
 - Feed, likes, commentaires, messagerie.
 - Questions à texte libre, à photo, à réponses multiples (cocher plusieurs options), ou à plus de 6 options.
 - Groupes / cercles d'amis multiples.
-- Historique des questions passées et de ses propres stats dans le temps.
+- Statistiques agrégées de ses propres réponses dans le temps (l'historique jour par jour existe, lui, via le calendrier — §5.2).
 - Classements, badges, monétisation.
 - Multi-fuseau horaire (tout le monde sur Europe/Paris).
 
-## 7. Indicateurs de succès
+## 8. Indicateurs de succès
 
 | Indicateur | Cible |
 |---|---|
@@ -196,9 +291,11 @@ Les ULID sont **générés côté client** (app ou backoffice) au moment de la s
 | Questions proposées / 100 utilisateurs / semaine | > 10 |
 | Partages de StatOwrel / réponse | > 5% |
 
-## 8. Questions ouvertes
+## 9. Questions ouvertes
 
 - Que se passe-t-il quand le pot commun de questions validées est vide ? (Réserve rédigée en interne, ou rediffusion d'une ancienne question ?)
 - Doit-on afficher la StatOwrel restreinte à ses amis en plus de la stat globale ?
 - Le rappel de 21h est-il perçu comme utile ou comme du harcèlement ? À tester.
 - Faut-il une modération automatique (LLM) en amont de la modération humaine pour absorber le volume ?
+- Le rattrapage illimité (§4.2) dévalue-t-il la réponse à l'heure ? Faut-il le borner (7 derniers jours ?) ou marquer visuellement les cartes obtenues en retard ?
+- La rareté de la carte (§5.5) bouge tant que les réponses arrivent : faut-il la figer à la clôture de minuit pour que la carte partagée reste vraie ?
