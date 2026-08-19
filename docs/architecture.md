@@ -1,6 +1,6 @@
 # StatOwrel — Architecture
 
-Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's five collections (`v1_questions`, `v1_daily_questions`, `answers`, `v1_users`) and their FireCMS collections exist; there are still no app screens and no backend to own the daily cycle. The rest is added incrementally on top of this foundation.
+Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's five collections (`v1_questions`, `v1_daily_questions`, `v1_daily_question_answers`, `v1_users`) and their FireCMS collections exist; there are still no app screens and no backend to own the daily cycle. The rest is added incrementally on top of this foundation.
 
 ## Stack
 
@@ -102,9 +102,11 @@ Re-export every new model from `src/index.ts`.
 
 The document id is the `YYYY-MM-DD` day key, not a ULID: the app reads today's question by building the id instead of querying for it, and the scheduler that draws tomorrow's question can `set()` the same day twice without ever creating it twice. Day keys are computed with `dailyQuestionDateKey()` (Europe/Paris), never `toISOString().slice(0, 10)` — that reads the UTC day, so anything between Paris midnight and 2am lands on the day before.
 
-### `answers`
+### `v1_daily_question_answers`
 
-`packages/models/src/answer.ts` — sub-collection of `v1_daily_questions`, path `v1_daily_questions/{date}/answers/{user_id}`. Neither the collection nor the model file carries a `v1_` prefix: the prefix versions the top-level collection, and this sub-tree is versioned along with its parent.
+`packages/models/src/v1_daily_question_answer.ts` — sub-collection of `v1_daily_questions`, path `v1_daily_questions/{date}/v1_daily_question_answers/{user_id}`.
+
+It carries the `v1_` prefix *and* its parent's name, which a sub-collection might look like it can skip. It cannot: a collection group is global to the database and keyed by the last path segment alone. A bare `answers` would collide with any other `answers` sub-collection the model grows later — the calendar's group query, its index and its recursive-wildcard rule would silently span both — and there would be no way to version this one on its own.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -116,7 +118,7 @@ The document id is the `YYYY-MM-DD` day key, not a ULID: the app reads today's q
 
 The document id is the author's Auth UID, which makes "one answer per person per day" a property of the path rather than a check: a second answer is a write to an existing document, so it's an `update`, and `firestore.rules` denies those — `answer_counts` can never be double-counted. `date` is denormalized from the parent id so the Stats calendar reads a month of the current user's answers as one collection-group query instead of a client-side join against that month's daily questions; a day's date never changes, so the copy never goes stale.
 
-**Why answers live under the day and not under the user.** `answer_counts` needs a parent document to increment on a fixed path — there's no such path if the answer lives under `v1_users`. The day screen also needs every friend's answer to one question in one query, which is only cheap when they share a parent. And the privacy boundary lands per day: reading a friend's answer never exposes their whole history, because a read is scoped to one `v1_daily_questions/{date}/answers` collection at a time.
+**Why answers live under the day and not under the user.** `answer_counts` needs a parent document to increment on a fixed path — there's no such path if the answer lives under `v1_users`. The day screen also needs every friend's answer to one question in one query, which is only cheap when they share a parent. And the privacy boundary lands per day: reading a friend's answer never exposes their whole history, because a read is scoped to one `v1_daily_questions/{date}/v1_daily_question_answers` collection at a time.
 
 ### `v1_users`
 
@@ -199,9 +201,9 @@ Still deferred: shared component primitives (buttons, cards, inputs) built again
 
 ## Firestore rules & indexes
 
-`packages/firestore-config/firestore.rules` establishes the pattern: a wildcard `isAdmin()` bypass at the top (for the FireCMS backoffice, via a custom `admin` auth claim) followed by explicit per-collection rules for the mobile app's own access — collections are never left world-readable/writable by omission. Rules are OR'ed, so a per-collection rule only ever *adds* to what the `isAdmin()` bypass already grants — `allow update, delete: if false` under it means "moderators only", not "nobody". `v1_questions` shows the shape: an author may create their own proposal (`status` forced to `pending`, 2–6 options) and read it back, and nothing else. `firestore.indexes.json` holds the repo's first composite index — collection group `answers`, `user_id ASC, date ASC`, `queryScope: COLLECTION_GROUP` — backing the Stats calendar's collection-group query; add further ones as Firestore's emulator/console error messages require them (copy the definition from the error, don't hand-write it).
+`packages/firestore-config/firestore.rules` establishes the pattern: a wildcard `isAdmin()` bypass at the top (for the FireCMS backoffice, via a custom `admin` auth claim) followed by explicit per-collection rules for the mobile app's own access — collections are never left world-readable/writable by omission. Rules are OR'ed, so a per-collection rule only ever *adds* to what the `isAdmin()` bypass already grants — `allow update, delete: if false` under it means "moderators only", not "nobody". `v1_questions` shows the shape: an author may create their own proposal (`status` forced to `pending`, 2–6 options) and read it back, and nothing else. `firestore.indexes.json` holds the repo's first composite index — collection group `v1_daily_question_answers`, `user_id ASC, date ASC`, `queryScope: COLLECTION_GROUP` — backing the Stats calendar's collection-group query; add further ones as Firestore's emulator/console error messages require them (copy the definition from the error, don't hand-write it).
 
-A collection-group query is never covered by a nested `match`: it needs its own recursive-wildcard block (`match /{path=**}/answers/{user_id}`), and that block scopes reads to `resource.data.user_id` rather than the document id, because Firestore only accepts a query it can prove safe and the calendar filters on that field. Worth remembering too: an answer's `date` and `late` are checked against the parent day document via a `get()` in the per-day rule, so neither can be forged.
+A collection-group query is never covered by a nested `match`: it needs its own recursive-wildcard block (`match /{path=**}/v1_daily_question_answers/{user_id}`), and that block scopes reads to `resource.data.user_id` rather than the document id, because Firestore only accepts a query it can prove safe and the calendar filters on that field. That block is also why the sub-collection's name has to be globally unique — it reaches every collection bearing it, wherever it sits. Worth remembering too: an answer's `date` and `late` are checked against the parent day document via a `get()` in the per-day rule, so neither can be forged.
 
 ## Environments
 
@@ -216,7 +218,7 @@ Two Firebase projects, aliased in `.firebaserc`:
 
 - No app screens beyond the placeholder route — nothing consumes `v1_questions` on mobile yet.
 - Four of the PRD's five collections exist; only `v1_users/{id}/friends` is still to be modelled — see `docs/prd.md` §6.
-- No backend to own `v1_daily_questions`/`answers`: no daily scheduler, no answer trigger to increment `answer_counts` and bump streaks, no midnight closer (docs/prd.md §6 "Backend") — and no app screens consume any of it yet. The data model landed alone, on purpose.
+- No backend to own `v1_daily_questions`/`v1_daily_question_answers`: no daily scheduler, no answer trigger to increment `answer_counts` and bump streaks, no midnight closer (docs/prd.md §6 "Backend") — and no app screens consume any of it yet. The data model landed alone, on purpose.
 - No design-system component primitives (buttons, cards, inputs) — the neobrutalism theme tokens exist in `tailwind.config.js`, the primitives are the next step. No dark-mode theming either.
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.

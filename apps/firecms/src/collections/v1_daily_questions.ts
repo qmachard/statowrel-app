@@ -1,12 +1,8 @@
 import { CMSType, EntityIdUpdateProps, buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
 
-import {
-  ANSWER_COLLECTION,
-  AnswerData,
-  DAILY_QUESTION_COLLECTION,
-  DailyQuestionData,
-  QUESTION_COLLECTION,
-} from '@statowrel/models';
+import { DAILY_QUESTION_COLLECTION, DailyQuestionData, QUESTION_COLLECTION } from '@statowrel/models';
+
+import dailyQuestionAnswersCollection from './v1_daily_question_answers';
 
 /**
  * FireCMS reads Firestore documents through its own data source, which maps
@@ -24,10 +20,6 @@ type DailyQuestionEntity = Omit<DailyQuestionData, 'published_at' | 'closes_at' 
    * type here rather than dropping the field from the backoffice.
    */
   answer_counts: Record<string, CMSType>;
-};
-
-type AnswerEntity = Omit<AnswerData, 'answered_at'> & {
-  answered_at: Date;
 };
 
 /** `YYYY-MM-DD`, the day key a daily question is stored under. */
@@ -62,57 +54,6 @@ const callbacks = buildEntityCallbacks<DailyQuestionEntity>({
   },
 });
 
-/**
- * Read-only: an answer is final (docs/prd.md §4.2), and editing one here would
- * desynchronise it from the `answer_counts` the trigger has already
- * incremented. Deleting one is a backend job — it has to decrement the map in
- * the same pass.
- */
-const answersCollection = buildCollection<AnswerEntity>({
-  path: ANSWER_COLLECTION,
-  name: 'Réponses',
-  singularName: 'Réponse',
-  icon: 'HowToVote',
-  description: 'Une réponse par utilisateur. L\'identifiant du document est l\'UID Firebase Auth de son auteur.',
-  permissions: {
-    create: false,
-    edit: false,
-    delete: false,
-  },
-  properties: {
-    user_id: buildProperty({
-      dataType: 'string',
-      name: 'Utilisateur',
-      description: 'UID Firebase Auth, identique à l\'identifiant du document.',
-      readOnly: true,
-    }),
-    option_id: buildProperty({
-      dataType: 'string',
-      name: 'Option choisie',
-      description: 'ULID de l\'option dans la question — jamais sa position.',
-      readOnly: true,
-    }),
-    date: buildProperty({
-      dataType: 'string',
-      name: 'Jour',
-      description: 'Recopié du jour parent, pour que le calendrier se lise en une requête de groupe.',
-      readOnly: true,
-    }),
-    answered_at: buildProperty({
-      dataType: 'date',
-      mode: 'date_time',
-      name: 'Répondu le',
-      readOnly: true,
-    }),
-    late: buildProperty({
-      dataType: 'boolean',
-      name: 'Rattrapage',
-      description: 'Réponse donnée après la clôture : elle complète le calendrier mais ne restaure pas le streak.',
-      readOnly: true,
-    }),
-  },
-});
-
 const dailyQuestionsCollection = buildCollection<DailyQuestionEntity>({
   path: DAILY_QUESTION_COLLECTION,
   name: 'Questions du jour',
@@ -121,7 +62,7 @@ const dailyQuestionsCollection = buildCollection<DailyQuestionEntity>({
   icon: 'Today',
   description: 'Une entrée par jour : la question diffusée et le décompte des réponses. Programmée par le backend ; à remplir à la main tant qu\'il n\'existe pas.',
   callbacks,
-  subcollections: [ answersCollection ],
+  subcollections: [ dailyQuestionAnswersCollection ],
   properties: {
     date: buildProperty({
       dataType: 'string',

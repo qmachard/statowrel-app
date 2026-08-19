@@ -87,7 +87,7 @@ service cloud.firestore {
       //
       // An answer is final: no update, no delete (docs/prd.md §4.2). Only the
       // backend rewrites one, to anonymise it when an account is deleted.
-      match /answers/{user_id} {
+      match /v1_daily_question_answers/{user_id} {
         allow read: if isAuthenticated();
         allow create: if isOwner(user_id)
                       && request.resource.data.user_id == user_id
@@ -106,12 +106,17 @@ service cloud.firestore {
     // to one — a collection group needs a recursive wildcard — so this block is
     // what makes that query legal, on top of the per-day rule above.
     //
+    // A collection group is keyed by the last path segment alone, which is why
+    // the sub-collection is named `v1_daily_question_answers` and not `answers`:
+    // this block would otherwise reach into every other `answers` sub-collection
+    // the model grows later.
+    //
     // Scoped to the caller's own answers, and deliberately not to the document
     // id: Firestore only accepts a query it can prove safe, and the calendar
     // filters on the `user_id` field. Anything broader is rejected outright, so
     // nobody can group-query their way into a friend's history — reading a
     // friend's answer stays a per-day read.
-    match /{path=**}/answers/{user_id} {
+    match /{path=**}/v1_daily_question_answers/{user_id} {
       allow read: if isOwner(resource.data.user_id);
     }
 
