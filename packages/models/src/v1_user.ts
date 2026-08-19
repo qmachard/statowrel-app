@@ -9,20 +9,45 @@ import {
 export const USER_COLLECTION = 'v1_users';
 
 /**
- * Profile and answering stats of an app user — see docs/prd.md §2 and §5.
+ * Firebase Auth provider ids, as they appear in `User.providerData[].providerId`
+ * — see docs/prd.md §4.1. `facebook.com` is listed by the PRD but not wired in
+ * the app yet; a profile may already carry it once it is.
+ */
+export const AUTH_PROVIDER_IDS = [ 'password', 'google.com', 'apple.com', 'facebook.com' ] as const;
+
+export type AuthProviderId = (typeof AUTH_PROVIDER_IDS)[number];
+
+export const isAuthProviderId = (value: string): value is AuthProviderId => (
+  (AUTH_PROVIDER_IDS as readonly string[]).includes(value)
+);
+
+/**
+ * Profile and answering stats of an app user — see docs/prd.md §2 and §6.
  *
  * The document id is the Firebase Auth UID, not a ULID: it is the key every
  * other collection points at (`author_id`, `user_id`, friendships) and the one
- * `firestore.rules` compares against `request.auth.uid`.
+ * `firestore.rules` compares against `request.auth.uid`. The document is
+ * written by the app itself at first sign-in (`src/auth/profile.ts`).
  *
- * Profile and answering stats. The rest of the PRD's `v1_users` shape
- * (`email`, `auth_providers`, `invite_code`) is still to be modelled.
+ * Profile, sign-in identities and answering stats. Only the PRD's
+ * `invite_code` is still to be modelled.
  */
 export interface UserFirebaseData {
   /** Pseudo, unique, chosen at first sign-in — pre-filled from the auth provider when it gives one. */
   display_name: string;
   /** Avatar. Null until the user picks one and when the provider gives none. */
   photo_url: string | null;
+  /**
+   * Account email, mirrored from Firebase Auth. Null when no provider gives one
+   * (Apple's private relay can be hidden, and the field is not the source of
+   * truth — Firebase Auth is).
+   */
+  email: string | null;
+  /**
+   * Every provider linked to the account, mirrored from Auth at each sign-in.
+   * A single account can carry several once identities are linked (PRD §4.1).
+   */
+  auth_providers: AuthProviderId[];
   created_at: UniversalTimestamp;
   /** Bumped on every profile write, so a stale client can tell it needs to refetch. */
   updated_at: UniversalTimestamp;
@@ -43,10 +68,18 @@ export interface UserFirebaseData {
 
 export type UserData = ModelData<UserFirebaseData>;
 
+const parseAuthProviders = (providers: unknown): AuthProviderId[] => (
+  Array.isArray(providers) ? providers.filter((provider): provider is AuthProviderId => (
+    typeof provider === 'string' && isAuthProviderId(provider)
+  )) : []
+);
+
 export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (TimestampClass) => ({
   toFirestore: (data) => removeMissingFields({
     display_name: data.display_name,
     photo_url: data.photo_url ?? null,
+    email: data.email ?? null,
+    auth_providers: data.auth_providers ?? [],
     created_at: TimestampClass.fromDate(new Date(data.created_at)),
     updated_at: TimestampClass.fromDate(new Date(data.updated_at)),
     streak_count: data.streak_count,
@@ -59,6 +92,8 @@ export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (Ti
     return {
       display_name: data.display_name ?? '',
       photo_url: data.photo_url ?? null,
+      email: data.email ?? null,
+      auth_providers: parseAuthProviders(data.auth_providers),
       created_at: parseTimestamp(data.created_at ?? null, 'now'),
       updated_at: parseTimestamp(data.updated_at ?? null, 'now'),
       streak_count: data.streak_count ?? 0,
