@@ -1,25 +1,23 @@
 {
   "name": "@statowrel/functions",
   "scripts": {
-    "clean": "rm -rf lib",
+    "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint",
-    "build": "npm run clean && tsc && tsc-alias",
-    "build:watch": "concurrently \"tsc -w\" \"tsc-alias -w\"",
+    "build": "npm run clean && node scripts/build.mjs",
+    "build:watch": "node scripts/build.mjs --watch",
     "start:emulators": "firebase emulators:start --only functions,firestore,auth,storage --export-on-exit=./.firebase-emulator --import=./.firebase-emulator",
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions -f",
     "logs": "firebase functions:log",
     "set-admin": "node scripts/set-admin.mjs",
-    "dev": "NODE_ENV=development concurrently --kill-others \"npm run start:emulators\" \"npm run build:watch\""
+    "dev": "npm run build && NODE_ENV=development NODE_OPTIONS=--enable-source-maps concurrently --kill-others \"npm run start:emulators\" \"npm run build:watch\""
   },
   "engines": {
     "node": "20"
   },
-  "main": "lib/index.js",
   "dependencies": {
-    "@statowrel/models": "*",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "firebase": "^12.16.0",
@@ -30,13 +28,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@statowrel/models": "*",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "concurrently": "^9.0.1",
     "dotenv": "^16.6.1",
+    "esbuild": "^0.25.0",
     "eslint": "^10.8.0",
     "globals": "^16.4.0",
-    "tsc-alias": "~1.8.17",
     "typescript": "^5.4.5",
     "typescript-eslint": "^8.65.0"
   },

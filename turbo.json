@@ -6,7 +6,7 @@
       "cache": false,
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**", "lib/**", "!dist/**/*.map"]
+      "outputs": ["dist/**", "!dist/**/*.map"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]

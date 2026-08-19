@@ -184,6 +184,14 @@ Deploying this domain needs the scheduler's service account to hold `cloudtasks.
 
 `src/libs/firebase-admin.ts` centralizes all Firestore/Storage access (`getDocumentRef`, `getSubCollectionRef`, `createWriteBatch`, `getAdminStorageSignedUrl`, …) — every ref is created with a `@statowrel/models` converter, never read untyped.
 
+### Building the deployable artifact
+
+`firebase.json` points at `apps/functions/dist`, a **generated** directory — not at the workspace itself. `npm run build` (esbuild, `scripts/build.mjs`) writes it: `index.js` plus a manifest listing only the registry dependencies.
+
+The indirection exists because `firebase deploy` uploads the functions source directory alone and runs `npm install` on Cloud Build, with no access to the monorepo. A `@statowrel/models` entry in that manifest is fatal — it is a private workspace package the registry has never heard of, and npm fails on it whichever dependency key it sits under (`--omit=dev` still resolves dev edges). So the artifact carries no workspace reference at all: esbuild inlines `@statowrel/models` into the bundle, and everything published stays external, installed on the build machine as usual.
+
+That also makes `@statowrel/models` a *dev* dependency of `apps/functions` — it is consumed at build time and never at runtime. The emulator runs the same bundle as production, with `--enable-source-maps` so stack traces still point at `src/`.
+
 ## `apps/firecms` — backoffice
 
 FireCMS v2 SPA. `src/collections/index.ts` is an `EntityCollectionsBuilder` returning the `EntityCollection` definitions for the logged-in user. Each collection is added as its own file once the corresponding model exists in `@statowrel/models`, using that model's `*_COLLECTION` constant, then registered in the index. `src/collections/v1_questions.ts` is the first one; a collection file is named after the collection itself, plural.
