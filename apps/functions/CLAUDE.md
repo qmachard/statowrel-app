@@ -23,6 +23,19 @@ domains/{domain-name}/
 
 Top-level `src/index.ts` uses namespace re-exports (`export * as health from './domains/health'`) — this produces function names like `health-healthApi` in Firebase.
 
+An API app is admin-only by putting the check on the app rather than on each route — `daily-questions/api/index.ts` does `app.use(requireAdmin)` before its routes. `requireAdmin` verifies a Firebase ID token and demands the `admin` custom claim, the same signal `isAdmin()` uses in `packages/firestore-config/firestore.rules`: the Admin SDK bypasses the rules entirely, so an endpoint that writes carries its own gate.
+
+## The month index is a projection, and projections need a repair path
+
+`v1_daily_question_months` is what the Stats banner and the calendar read — a day absent from it is a day neither can see, however complete it is in `v1_daily_questions`. It is written in the batch that draws the day, so the two can never diverge on a fresh draw. Two things can still leave a day out of it:
+
+- a day drawn before the index existed;
+- a run that died between the draw and the index.
+
+`scheduleDailyQuestion` therefore re-checks the day it reuses (`indexDailyQuestion` in `helpers/monthIndex.ts` — one read on a day already indexed, which is every day from now on), and `POST /reindex-months` on `dailyQuestionsApi` replays a range of already-drawn days. Both are idempotent: they read the month first and write nothing for a day already there.
+
+Anything else derived from another collection gets the same treatment — write it where the source is written, re-check it where the write can be skipped, and expose a replay for the days that predate it.
+
 ## `src/libs/firebase-admin.ts`
 
 ALWAYS use these helpers instead of calling `getFirestore()` / `snap.data()` / `bucket().file().getSignedUrl()` directly:
