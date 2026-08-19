@@ -56,22 +56,21 @@ const styles = StyleSheet.create({
     padding: spacing(6),
     paddingTop: spacing(4),
   },
-  // The question and the way out read as one block, set apart from the options
-  // below. `alignItems: flex-start` rather than `center`: a question long enough
-  // to wrap would otherwise drag the close button down to its middle.
+  // The way out and the question read as one block, set apart from the options
+  // below.
   prompt: {
+    gap: spacing(3),
+  },
+  // The close button sits on its own line, pushed right — a row of its own
+  // rather than a corner of the question's, so the question below it runs the
+  // full width of the sheet whatever its length.
+  close: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    // `flex-end` rather than `space-between`: the question already takes the
-    // row through its own `flex: 1`, and on a day with no question to show the
-    // close button has to stay on the right rather than slide over to the left.
     justifyContent: 'flex-end',
-    gap: spacing(4),
   },
   // The question *is* the sheet's title — there is nothing else worth reading
   // at the top of it, and no label above it saying what one already sees.
   question: {
-    flex: 1,
     fontFamily: fonts.head,
     fontSize: fontSize['2xl'],
   },
@@ -119,9 +118,9 @@ const Message = ({ children, surface }: { children: ReactNode; surface: Surface 
 
 /**
  * One day's question — today's by default, any past day when the route carries a
- * `date` (docs/prd.md §5.4): the question itself as the sheet's title, then the
- * options in their fixed order, each behind its quizz letter. No label above
- * the question saying it is one.
+ * `date` (docs/prd.md §5.4): the way out on its own line, the question under it
+ * as the sheet's title, then the options in their fixed order, each behind its
+ * quizz letter. No label above the question saying it is one.
  *
  * The sheet is sized by this content (see `RootNavigator`), which is why the
  * options sit in a plain column rather than a scroll view: a short question
@@ -231,11 +230,13 @@ export const DailyQuestionScreen = () => {
     <SafeAreaView style={SURFACE[surface]} edges={[ 'bottom' ]}>
       <View style={styles.content}>
         <View style={styles.prompt}>
+          <View style={styles.close}>
+            <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
+          </View>
+
           {question === null ? null : (
             <Text style={[ styles.question, FOREGROUND[surface] ]}>{question.label}</Text>
           )}
-
-          <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
         </View>
 
         {status === 'loading' ? <ActivityIndicator size="large" /> : null}
