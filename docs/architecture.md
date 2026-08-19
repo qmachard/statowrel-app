@@ -138,7 +138,7 @@ Two things to know when writing a collection:
 - **Document ids are ULIDs**, not Firestore auto-ids: wire `onIdUpdate: ulidEntityId` (from `src/collections/entityId.ts`) into every collection.
 - **Collection-level invariants live in `callbacks.onPreSave`.** The backoffice writes as an admin, and the wildcard `isAdmin()` rule lets those writes through unchecked — so the 2–6 options rule, "a rejected question needs a reason", and minting each option's ULID all happen there as well as in `firestore.rules`.
 
-`src/authenticator/admin.ts` is the sign-in gate (currently: any authenticated user — tighten to an email allow-list, or a custom `admin` auth claim checked server-side, before shipping).
+`src/authenticator/admin.ts` is the sign-in gate: it refreshes the ID token and rejects anyone without the custom `admin` auth claim — the same claim `firestore.rules`' `isAdmin()` checks, so the backoffice UI and the rules agree on who is an admin. The claim itself is granted server-side; there is no client-side way to obtain it.
 
 ## `apps/app` — mobile
 
