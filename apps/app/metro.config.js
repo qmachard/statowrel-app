@@ -11,4 +11,25 @@ const config = getDefaultConfig(__dirname);
 // does support correctly. See https://github.com/firebase/firebase-js-sdk/issues/8353
 config.resolver.unstable_enablePackageExports = false;
 
+// apps/firecms is pinned to firebase 10 (FireCMS v2's peer range), so npm hoists
+// that tree's @firebase/app@0.10 to the repo root while firebase 12 keeps its own
+// @firebase/app@0.16 nested under node_modules/firebase. @firebase/auth declares
+// @firebase/app as a peer with the wide "0.x" range, so it dedupes onto the old
+// root copy — `initializeApp()` then creates the app in one component container
+// and auth registers itself in another, which surfaces at runtime as
+// "Component auth has not been registered yet".
+//
+// Resolving every @firebase/* request from firebase 12's own tree keeps the whole
+// SDK on a single copy. Only this Metro bundle is affected: apps/firecms builds
+// with Vite and keeps its firebase 10.
+const firebaseOrigin = require.resolve('firebase/package.json');
+
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  const origin = moduleName.startsWith('@firebase/')
+    ? { ...context, originModulePath: firebaseOrigin }
+    : context;
+
+  return context.resolveRequest(origin, moduleName, platform);
+};
+
 module.exports = withNativeWind(config, { input: './global.css' });
