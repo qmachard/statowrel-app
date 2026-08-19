@@ -17,10 +17,6 @@
     "dev": {
       "cache": false,
       "persistent": true
-    },
-    "deploy": {
-      "cache": false,
-      "dependsOn": []
     }
   },
   "envMode": "loose"

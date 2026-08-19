@@ -279,6 +279,8 @@ Two Firebase projects, aliased in `.firebaserc`:
 
 `npm run deploy:*` scripts switch project via `firebase use` before deploying and switch back to `default` afterward for the `:production` variants, mirroring planexplora-hub's convention.
 
+The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=…`) rather than through turbo. A deploy asks questions — enabling an API, setting an Artifact Registry cleanup policy — and turbo does not forward stdin to the tasks it runs, so those prompts hang unanswered. Turbo has an `interactive` task flag, but it only works under the full-screen `tui` renderer, which is not worth imposing on every `dev` and `build` run for this. It buys nothing here either: the deploy tasks were uncached and dependency-free, and `deploy:firecms` already called the CLI directly.
+
 ## What's deliberately not here yet
 
 - No app screens beyond sign-in and a placeholder home — nothing consumes `v1_questions` on mobile yet.
