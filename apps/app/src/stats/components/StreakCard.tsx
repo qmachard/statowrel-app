@@ -11,9 +11,9 @@ export interface StreakCardProps {
 
 const styles = StyleSheet.create({
   card: {
-    // Wider than the counters framing it: the streak leads the strip, and the
-    // count is set in `7xl` — it needs the room (docs/prd.md §5.2).
-    width: spacing(52),
+    // A touch wider than the counters framing it — it leads the strip — but on
+    // the same type scale, so the whole line stays one height (docs/prd.md §5.2).
+    width: spacing(44),
   },
   content: {
     gap: spacing(2),
@@ -31,24 +31,23 @@ const styles = StyleSheet.create({
   },
   count: {
     fontFamily: fonts.head,
-    fontSize: fontSize['7xl'],
-    lineHeight: fontSize['7xl'],
+    fontSize: fontSize['4xl'],
+    lineHeight: fontSize['4xl'],
     color: colors.foreground,
   },
   unit: {
-    fontFamily: fonts.head,
-    fontSize: fontSize.lg,
-    textTransform: 'uppercase',
+    fontFamily: fonts.sans,
+    fontSize: fontSize.xs,
     color: colors.foreground,
   },
   nudge: {
     fontFamily: fonts.sans,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors['muted-foreground'],
   },
 });
 
-/** The head of the stats strip: the streak, the biggest thing on it (docs/prd.md §5.2). */
+/** The head of the stats strip: the streak, on the same type scale as the counters after it. */
 export const StreakCard = ({ count }: StreakCardProps) => {
   const alive = count > 0;
 

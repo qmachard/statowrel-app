@@ -13,7 +13,7 @@ import { STATS_FIXTURES, type StatsFixture, type StatsFixtureId } from './fixtur
  * development and leaves with the fixtures.
  */
 export const useStatsData = () => {
-  const [ fixtureId, selectFixture ] = useState<StatsFixtureId>('streak-ongoing');
+  const [ fixtureId, selectFixture ] = useState<StatsFixtureId>('question-open');
   const fixture: StatsFixture = STATS_FIXTURES.find((candidate) => candidate.id === fixtureId) ?? STATS_FIXTURES[0];
 
   return {

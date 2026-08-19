@@ -11,10 +11,11 @@ import { addDays, startOfDay, toDateKey } from '@/lib/dates';
  * `v1_daily_question_answers` (docs/prd.md §6). Wiring the real source in
  * replaces this file and `useStatsData`, and nothing else.
  *
- * Two sets, because the streak block and the calendar look nothing alike at 12
- * days and at 0 (docs/prd.md §4.6) — `DevFixtureSwitch` flips between them.
+ * Three sets, because the screen looks nothing alike with the day's question
+ * still open, with it answered, and with the streak lost (docs/prd.md §4.6) —
+ * `DevFixtureSwitch` flips between them.
  */
-export type StatsFixtureId = 'streak-ongoing' | 'streak-lost';
+export type StatsFixtureId = 'question-open' | 'day-answered' | 'streak-lost';
 
 export interface StatsFixture {
   id: StatsFixtureId;
@@ -74,8 +75,12 @@ const buildUser = (user: UserFixtureInput): UserData => ({
   ...user,
 });
 
+// 12 unbroken days up to yesterday: the streak is alive and today's question is
+// still waiting — the state the app opens on most mornings.
+const PENDING_OFFSETS = [ ...range(1, 13), ...historyOffsets(14, HISTORY_DAYS) ];
+
 // 12 unbroken days up to today, then a two-day hole, then the older history.
-const ONGOING_OFFSETS = [ ...range(0, 12), ...historyOffsets(13, HISTORY_DAYS) ];
+const ANSWERED_OFFSETS = [ ...range(0, 12), ...historyOffsets(13, HISTORY_DAYS) ];
 
 // Same history, but the last three days are missed — the streak is dead.
 const LOST_OFFSETS = [ ...range(3, 12), ...historyOffsets(13, HISTORY_DAYS) ];
@@ -112,15 +117,28 @@ const TODAY_DAILY_QUESTION: DailyQuestionData = {
 
 export const STATS_FIXTURES: StatsFixture[] = [
   {
-    id: 'streak-ongoing',
-    label: 'Streak en cours',
+    id: 'question-open',
+    label: 'Question ouverte',
     user: buildUser({
       username: 'lou',
       streak_count: 12,
       streak_best: 34,
+      streak_last_answered_on: toDateKey(addDays(TODAY, -1)),
+    }),
+    answers: PENDING_OFFSETS.map(buildAnswer),
+    dailyQuestion: TODAY_DAILY_QUESTION,
+    question: TODAY_QUESTION,
+  },
+  {
+    id: 'day-answered',
+    label: 'Journée répondue',
+    user: buildUser({
+      username: 'lou',
+      streak_count: 13,
+      streak_best: 34,
       streak_last_answered_on: toDateKey(TODAY),
     }),
-    answers: ONGOING_OFFSETS.map(buildAnswer),
+    answers: ANSWERED_OFFSETS.map(buildAnswer),
     dailyQuestion: TODAY_DAILY_QUESTION,
     question: TODAY_QUESTION,
   },
