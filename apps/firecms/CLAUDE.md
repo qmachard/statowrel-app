@@ -6,7 +6,7 @@ Backoffice for StatOwrel. React 18 + Vite (SPA) + FireCMS v2 + MUI. Deployed to 
 
 - `src/firebase-config.ts` — reads `VITE_FIREBASE_*` env vars, passed to `<FirebaseCMSApp firebaseConfig={...} />`.
 - `src/authenticator/admin.ts` — gate: only allows sign-in for allow-listed admin emails (`Authenticator<FirebaseUser>`).
-- `src/collections/index.ts` — the list of `EntityCollection` definitions rendered as the CMS's left nav.
+- `src/collections/index.ts` — the `EntityCollectionsBuilder` returning the `EntityCollection` definitions rendered as the CMS's left nav. It receives the logged-in `user`, so a collection can depend on who is connected.
 - `src/collections/v1_questions.ts` — the `v1_questions` collection; the reference to copy when adding a new one.
 - `src/collections/v1_users.ts` — the `v1_users` collection; the exception to the ULID rule, its document id is the Firebase Auth UID.
 - `src/collections/entityId.ts` — `ulidEntityId`, the `onIdUpdate` callback a collection wires in so its document ids are ULIDs.
@@ -14,7 +14,7 @@ Backoffice for StatOwrel. React 18 + Vite (SPA) + FireCMS v2 + MUI. Deployed to 
 
 ## Adding a collection
 
-One file per `v1_*` Firestore collection under `src/collections/`, **named after the collection** (`v1_questions.ts`, not `questions.ts`) — unlike the models, which take the singular. Follow FireCMS's `buildCollection<T>()` API, using the `*_COLLECTION` constant from `@statowrel/models`. Import and add it to the array in `src/collections/index.ts`.
+One file per `v1_*` Firestore collection under `src/collections/`, **named after the collection** (`v1_questions.ts`, not `questions.ts`) — unlike the models, which take the singular. Follow FireCMS's `buildCollection<T>()` API, using the `*_COLLECTION` constant from `@statowrel/models`. Export the collection directly (`v1_users.ts`), or a builder taking the logged-in `user` (`buildQuestionsCollection(user)`) when the definition depends on who is connected, then register it in the array returned by `src/collections/index.ts`.
 
 Two gotchas, both visible in `v1_questions.ts`:
 

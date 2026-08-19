@@ -1,4 +1,4 @@
-import { buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
+import { EnumValues, User, buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
 import { ulid } from 'ulid';
 
 import {
@@ -58,7 +58,15 @@ const callbacks = buildEntityCallbacks<QuestionEntity>({
   },
 });
 
-const questionsCollection = buildCollection<QuestionEntity>({
+/**
+ * The authors a moderator can pick from. Only the logged-in admin for now —
+ * the real authors, proposing from the app, come later.
+ */
+const authorEnumValues = (user: User | null): EnumValues => (
+  user ? { [user.uid]: 'Moi' } : {}
+);
+
+const buildQuestionsCollection = (user: User | null) => buildCollection<QuestionEntity>({
   path: QUESTION_COLLECTION,
   name: 'Questions',
   singularName: 'Question',
@@ -123,9 +131,11 @@ const questionsCollection = buildCollection<QuestionEntity>({
     }),
     author_id: buildProperty({
       dataType: 'string',
-      name: 'Auteur (user id)',
-      description: 'Renseigné automatiquement à l\'enregistrement : l\'utilisateur connecté pour une question créée ici, l\'auteur d\'origine pour une question proposée depuis l\'app.',
-      readOnly: true,
+      name: 'Auteur',
+      description: 'Pré-rempli avec l\'utilisateur connecté. Une question proposée depuis l\'app garde son auteur d\'origine, affiché ici par son user id tant qu\'il ne fait pas partie des choix.',
+      defaultValue: user?.uid,
+      enumValues: authorEnumValues(user),
+      validation: { required: true },
     }),
     created_at: buildProperty({
       dataType: 'date',
@@ -136,4 +146,4 @@ const questionsCollection = buildCollection<QuestionEntity>({
   },
 });
 
-export default questionsCollection;
+export default buildQuestionsCollection;
