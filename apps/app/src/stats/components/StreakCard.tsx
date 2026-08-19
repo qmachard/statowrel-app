@@ -58,11 +58,6 @@ const styles = StyleSheet.create({
     marginLeft: -spacing(5),
     marginRight: -spacing(8),
   },
-  nudge: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.xs,
-    color: colors['muted-foreground'],
-  },
 });
 
 /** The head of the stats strip: the streak, on nearly the whole screen width. */
@@ -79,12 +74,6 @@ export const StreakCard = ({ count }: StreakCardProps) => {
           <Text style={styles.unit}>
             {count === 1 ? 'jour d’affilée' : 'jours d’affilée'}
           </Text>
-
-          {alive ? null : (
-            <Text style={styles.nudge}>
-              Réponds aujourd’hui pour repartir.
-            </Text>
-          )}
         </View>
 
         {/*
