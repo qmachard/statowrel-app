@@ -148,7 +148,7 @@ Only the shared half is immutable: a month of `v1_daily_question_months` is froz
 | `updated_at` | `UniversalTimestamp` | bumped on every profile write |
 | `streak_count` | `number` | consecutive days answered on time; backend-owned — the answer trigger bumps it, the midnight scheduler resets it to 0 for whoever didn't answer, and a catch-up answer never restores it |
 | `streak_best` | `number` | longest `streak_count` ever reached |
-| `answers_count` | `number` | total days answered, catch-ups included — days predating the account among them, which is why the Stats tile reads « au total » and not « depuis l'inscription ». The tile reads the field rather than counting, since the calendar only ever loads one month |
+| `answers_count` | `number` | total days answered, catch-ups included — days predating the account among them, which is why the Stats tile is labelled « Total » over « jours » and not « depuis l'inscription ». The tile reads the field rather than counting, since the calendar only ever loads one month |
 | `streak_last_answered_on` | `string \| null` (`YYYY-MM-DD`) | day of the last on-time answer; `null` until the first one |
 
 The profile half of the document is written by the app itself, at first sign-in — `apps/app/src/auth/profile.ts`, under the owner-only `create`/`update` rules. The counters belong to the backend: the app seeds them at sign-up and `firestore.rules` rejects an update that moves one, so a forged score is not a thing a client can write. Only the PRD's `invite_code` is still to be modelled.
