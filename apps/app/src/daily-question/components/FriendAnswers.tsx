@@ -1,6 +1,6 @@
 import { findQuestionOption, type QuestionData } from '@statowrel/models';
 import { useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Card, CardContent } from '@/components/Card';
 import type { FriendAnswer, FriendAnswersStatus } from '@/daily-question/data/useFriendAnswers';
@@ -71,6 +71,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors['muted-foreground'],
   },
+  // The one-liner that stands in for the whole section — on the sheet, so it
+  // takes the surface's own foreground rather than the card's muted grey.
+  notice: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.xs,
+  },
 });
 
 /** A friend's answer, resolved against the question — what one row renders. */
@@ -131,6 +137,10 @@ export interface FriendAnswersProps {
  * It only ever renders on an answered day — the screen doesn't mount it before,
  * and `useFriendAnswers` reads nothing before either: unlocking your friends by
  * answering yourself is the mechanic, not a loading state (§4.5).
+ *
+ * With nobody to list it collapses to a single line on the sheet, card and
+ * heading included: an account with no friends yet is the common case, and a
+ * framed section holding one grey sentence looks like a section that broke.
  */
 export const FriendAnswers = ({ status, friends, question, pickedOptionId, surface }: FriendAnswersProps) => {
   const rows = useMemo(
@@ -138,42 +148,48 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
     [ friends, question, pickedOptionId ],
   );
 
+  // Nothing to list is not an empty card: a card with one grey sentence in it
+  // reads as a section that failed to load. The sentence goes straight on the
+  // sheet instead, in its foreground — `muted-foreground` is unreadable there —
+  // and takes the heading's place rather than sitting under it.
+  if (rows.length === 0) {
+    if (status === 'loading') {
+      return null;
+    }
+
+    return (
+      <Text style={[ styles.notice, FOREGROUND[surface] ]}>
+        {status === 'error'
+          ? 'Impossible de charger les réponses de tes potes.'
+          : 'Invite un pote pour comparer vos réponses.'}
+      </Text>
+    );
+  }
+
   return (
     <View style={styles.section}>
       <Text style={[ styles.heading, FOREGROUND[surface] ]}>Tes potes</Text>
 
       <Card variant="card" shadow="md">
         <CardContent>
-          {status === 'loading' ? <ActivityIndicator /> : null}
-
-          {status === 'error' ? (
-            <Text style={styles.message}>Impossible de charger les réponses de tes potes.</Text>
-          ) : null}
-
-          {status === 'ready' && rows.length === 0 ? (
-            <Text style={styles.message}>Invite un pote pour comparer vos réponses.</Text>
-          ) : null}
-
-          {rows.length === 0 ? null : (
-            <ScrollView style={{ maxHeight: MAX_LIST_HEIGHT }} contentContainerStyle={styles.list}>
-              {rows.map((row) => (
-                <View key={row.friendId} style={styles.row}>
-                  <View style={styles.who}>
-                    <Text style={styles.handle}>@{row.username}</Text>
-                    {row.timeLabel === null ? null : <Text style={styles.time}>{row.timeLabel}</Text>}
-                  </View>
-
-                  {row.optionLabel === null ? (
-                    <Text style={styles.message}>n’a pas encore répondu</Text>
-                  ) : (
-                    <Text style={[ styles.chip, row.same ? styles.chipSame : null ]} numberOfLines={1}>
-                      {row.optionLabel}
-                    </Text>
-                  )}
+          <ScrollView style={{ maxHeight: MAX_LIST_HEIGHT }} contentContainerStyle={styles.list}>
+            {rows.map((row) => (
+              <View key={row.friendId} style={styles.row}>
+                <View style={styles.who}>
+                  <Text style={styles.handle}>@{row.username}</Text>
+                  {row.timeLabel === null ? null : <Text style={styles.time}>{row.timeLabel}</Text>}
                 </View>
-              ))}
-            </ScrollView>
-          )}
+
+                {row.optionLabel === null ? (
+                  <Text style={styles.message}>n’a pas encore répondu</Text>
+                ) : (
+                  <Text style={[ styles.chip, row.same ? styles.chipSame : null ]} numberOfLines={1}>
+                    {row.optionLabel}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </ScrollView>
         </CardContent>
       </Card>
     </View>
