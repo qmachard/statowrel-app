@@ -204,7 +204,7 @@ La racine de l'app. De haut en bas :
 La question ne vit **jamais** dans un écran à elle : c'est toujours une **bottom sheet** posée par-dessus l'écran Stats.
 
 - **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins supérieurs arrondis (`rounded`), bordure haute noire épaisse, ombre dure vers le haut.
-- **Rattrapage depuis le calendrier** → même sheet, mais **fermable** (poignée + tap sur le fond) : on a le droit de regarder une vieille question et de repartir sans répondre. Tant que le jour est ouvert à une réponse, une ligne sous les options rappelle que le rattrapage complète la collection sans compter pour le streak (§4.2).
+- **Rattrapage depuis le calendrier** → même sheet, mais **fermable** (poignée + tap sur le fond) : on a le droit de regarder une vieille question et de repartir sans répondre.
 
 Contenu, de haut en bas :
 

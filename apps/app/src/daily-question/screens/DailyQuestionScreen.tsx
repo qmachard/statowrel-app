@@ -27,14 +27,6 @@ const DEAD_END: Partial<Record<DailyQuestionStatus, string>> = {
 };
 
 /**
- * What a past day still open to an answer says about itself — the catch-up of
- * docs/prd.md §4.2, whether the day was missed or simply predates the account.
- * The streak rewards regularity and a catch-up never restores it, so the sheet
- * says so before the tap rather than leaving the counter to explain itself.
- */
-const LATE_NOTICE = 'Rattrapage : cette réponse complète ta collection, mais ne compte pas pour le streak.';
-
-/**
  * The guard of docs/prd.md §4.3: a second tap landing sooner than this is an
  * accidental double tap, not a validation. The answer is final, so the cost of
  * ignoring one real tap is a tap; the cost of taking a stray one is a wrong
@@ -285,8 +277,6 @@ export const DailyQuestionScreen = () => {
             ))}
           </View>
         )}
-
-        {answerable && !isToday ? <Message surface={surface}>{LATE_NOTICE}</Message> : null}
 
         {failure === null ? null : <Message surface={surface}>{failure}</Message>}
 
