@@ -21,10 +21,26 @@ const VARIANT_CONFIG: Record<Variant, { name: string; iosBundleIdentifier: strin
     iosBundleIdentifier: 'fr.quentinmachard.statowrel.dev',
     androidPackage: 'fr.quentinmachard.statowrel.dev',
   },
+  /*
+   * Preview shares production's identity on purpose, and it is the only
+   * variant that shares anything.
+   *
+   * A Google OAuth iOS client and a Sign in with Apple capability are both
+   * bound to a bundle identifier, so a `.preview` suffix of its own would mean
+   * a third OAuth client and a third App ID to keep in step with the other two
+   * — for a variant whose entire job is to be what production will be. Taking
+   * production's identifier makes it inherit both, and makes a preview build
+   * exercise the very credentials the store build will sign against.
+   *
+   * The cost is that preview and production cannot sit side by side on a
+   * device: installing one replaces the other. The app name still tells them
+   * apart once installed, and `development` keeps its own suffix, so the
+   * everyday pair (dev + one of the two) still coexists.
+   */
   preview: {
     name: 'StatOwrel (Preview)',
-    iosBundleIdentifier: 'fr.quentinmachard.statowrel.preview',
-    androidPackage: 'fr.quentinmachard.statowrel.preview',
+    iosBundleIdentifier: 'fr.quentinmachard.statowrel',
+    androidPackage: 'fr.quentinmachard.statowrel',
   },
   production: {
     name: 'StatOwrel',

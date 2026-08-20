@@ -284,7 +284,9 @@ The build inlines the Firebase web config, so the deploy needs `apps/admin/.env.
 
 ## `apps/app` — mobile
 
-Expo managed workflow, React Navigation for navigation, React Native `StyleSheet` for styling. `app.config.ts` is a dynamic config keyed off `APP_VARIANT` (`development` | `preview` | `production`) so the three EAS build profiles produce distinct app names / bundle identifiers / package names — dev, preview, and production builds can be installed side-by-side on the same device.
+Expo managed workflow, React Navigation for navigation, React Native `StyleSheet` for styling. `app.config.ts` is a dynamic config keyed off `APP_VARIANT` (`development` | `preview` | `production`), which picks the app name, the bundle identifier and the Android package. `development` carries a `.dev` suffix and installs beside either of the others; `preview` and `production` share `fr.quentinmachard.statowrel`, so those two replace each other on a device and only their names differ.
+
+**Why preview shares production's identifier.** A Google OAuth iOS client and a Sign in with Apple capability are both bound to a bundle identifier. A `.preview` suffix would mean a third OAuth client and a third App ID to keep in step with the other two, for a variant whose whole purpose is to be what production is about to be — while sharing the identifier makes a preview build exercise the very credentials the store build will sign against. The two costs are paid deliberately: the pair cannot coexist on a device, and both profiles auto-increment, since `appVersionSource: remote` counts build numbers per application identifier and duplicates against a shared counter are what App Store Connect rejects.
 
 ### EAS build/submit pipeline
 
@@ -293,7 +295,7 @@ Three build profiles in `eas.json`, mapped to root-level npm scripts:
 | Profile | Distribution | Script |
 |---|---|---|
 | `development` | internal, dev client | `build:dev:ios`, `build:dev:android` |
-| `preview` | internal | `build:preview:ios`, `build:preview:android` |
+| `preview` | internal, production identifier | `build:preview:ios`, `build:preview:android` |
 | `production` | store submission | `build:prod:ios`, `build:prod:android` |
 
 **`@statowrel/models` is compiled on the EAS worker.** The root-level scripts prefix `npm run build:models`, but that only compiles the machine starting the build: EAS uploads the repository as git sees it — `packages/models/dist` is ignored — then installs and bundles, never running a workspace build of its own. Metro followed the package's `main` to a `dist/index.js` that did not exist and failed to resolve `@statowrel/models`. The `eas-build-post-install` hook in `apps/app/package.json` (`cd ../.. && npm run build:models`) fills that hole: EAS runs it right after the install, before bundling.
@@ -314,7 +316,7 @@ Firebase Auth, three methods offered at the same level (`docs/prd.md` §4.1). Th
 | Google | `@react-native-google-signin/google-signin` → `idToken` → `GoogleAuthProvider.credential()` |
 | Apple | `expo-apple-authentication` → `identityToken` → `new OAuthProvider('apple.com').credential()` |
 
-**Why the native Google SDK and not `expo-auth-session`.** `signInWithPopup` has no meaning in React Native, so a credential has to come from somewhere else. `expo-auth-session` would drive the OAuth dance in a web view; the native SDK is what Expo's own Google-authentication guide recommends, gives a first-party account picker, and returns an id token directly. The cost is a config plugin (`iosUrlScheme`, the reversed iOS client id) — acceptable since CNG and `expo-dev-client` are already in place. The plugin is added only when `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` is set, so a checkout without Google credentials still runs; the button then hides itself. The scheme is set in the `development` and `production` profiles of `eas.json`; `preview` does not carry one yet, so the Google button stays hidden there on iOS.
+**Why the native Google SDK and not `expo-auth-session`.** `signInWithPopup` has no meaning in React Native, so a credential has to come from somewhere else. `expo-auth-session` would drive the OAuth dance in a web view; the native SDK is what Expo's own Google-authentication guide recommends, gives a first-party account picker, and returns an id token directly. The cost is a config plugin (`iosUrlScheme`, the reversed iOS client id) — acceptable since CNG and `expo-dev-client` are already in place. The plugin is added only when `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` is set, so a checkout without Google credentials still runs; the button then hides itself. The scheme is set in all three profiles of `eas.json` — `development` from its own iOS OAuth client, `preview` and `production` from the one client their shared bundle identifier entitles them to.
 
 **Apple and the nonce.** A raw nonce is generated with `expo-crypto`; its SHA-256 goes to Apple, the raw one to Firebase, which re-hashes it to check the token was minted for this request. Only the email scope is requested: Apple's `fullName` would be of no use, since the username is never pre-filled from a provider.
 
