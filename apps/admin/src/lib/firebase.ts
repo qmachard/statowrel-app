@@ -26,18 +26,25 @@ export const auth: Auth = getAuth(app);
 
 export const db: Firestore = getFirestore(app);
 
-if (import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST && import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT) {
-  connectAuthEmulator(
-    auth,
-    `http://${import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST}:${import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT}`,
-    { disableWarnings: true },
-  );
-}
+/**
+ * Emulator wiring is development-only. `vite build` compiles `import.meta.env.DEV`
+ * to `false`, so a deployed bundle cannot be pointed at a localhost emulator by a
+ * `.env.local` left over from a dev session.
+ */
+if (import.meta.env.DEV) {
+  if (import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST && import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT) {
+    connectAuthEmulator(
+      auth,
+      `http://${import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST}:${import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT}`,
+      { disableWarnings: true },
+    );
+  }
 
-if (import.meta.env.VITE_FIREBASE_FIRESTORE_EMULATOR_HOST && import.meta.env.VITE_FIREBASE_FIRESTORE_EMULATOR_PORT) {
-  connectFirestoreEmulator(
-    db,
-    import.meta.env.VITE_FIREBASE_FIRESTORE_EMULATOR_HOST,
-    Number(import.meta.env.VITE_FIREBASE_FIRESTORE_EMULATOR_PORT),
-  );
+  if (import.meta.env.VITE_FIREBASE_FIRESTORE_EMULATOR_HOST && import.meta.env.VITE_FIREBASE_FIRESTORE_EMULATOR_PORT) {
+    connectFirestoreEmulator(
+      db,
+      import.meta.env.VITE_FIREBASE_FIRESTORE_EMULATOR_HOST,
+      Number(import.meta.env.VITE_FIREBASE_FIRESTORE_EMULATOR_PORT),
+    );
+  }
 }
