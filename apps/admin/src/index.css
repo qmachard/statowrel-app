@@ -1,0 +1,417 @@
+/**
+ * Neobrutalism, ported from `apps/app/src/design/tokens.ts` — the mobile app is
+ * the source of truth for the palette, the radius ladder and the hard offset
+ * shadows. Change one there, change it here.
+ */
+:root {
+  --color-background: #f7f0d4;
+  --color-foreground: #000000;
+  --color-card: #ffffff;
+  --color-primary: #ffdc59;
+  --color-primary-hover: #ffd12e;
+  --color-secondary: #000000;
+  --color-secondary-foreground: #ffffff;
+  --color-muted: #eae1bd;
+  --color-muted-foreground: #6b6355;
+  --color-accent: #d04060;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #e63946;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #000000;
+  --color-input: #ffffff;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-2xl: 32px;
+
+  --border-width: 2px;
+
+  --shadow-sm: 2px 2px 0 0 #000;
+  --shadow: 3px 3px 0 0 #000;
+  --shadow-md: 4px 4px 0 0 #000;
+  --shadow-lg: 6px 6px 0 0 #000;
+
+  --font-head: 'Archivo Black', system-ui, sans-serif;
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+
+  font-family: var(--font-sans);
+  color: var(--color-foreground);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-head);
+  font-weight: 400;
+  margin: 0;
+}
+
+/* Layout ------------------------------------------------------------------ */
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.page--centered {
+  min-height: 100vh;
+  justify-content: center;
+  max-width: 460px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.row--between {
+  justify-content: space-between;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* Surfaces ---------------------------------------------------------------- */
+
+.card {
+  background: var(--color-card);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 20px;
+}
+
+.card--muted {
+  background: var(--color-muted);
+  box-shadow: var(--shadow);
+}
+
+.app-header {
+  border-bottom: var(--border-width) solid var(--color-border);
+  background: var(--color-primary);
+}
+
+.app-header__inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-title {
+  font-size: 20px;
+}
+
+.tagline {
+  color: var(--color-muted-foreground);
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Buttons ----------------------------------------------------------------- */
+
+.button {
+  font-family: var(--font-head);
+  font-size: 15px;
+  padding: 12px 18px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  background: var(--color-primary);
+  color: var(--color-foreground);
+  cursor: pointer;
+  transition: transform 60ms ease, box-shadow 60ms ease;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+/* Pressing sinks the surface into its own shadow — the `md` offset it carries. */
+.button:active:not(:disabled) {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button--secondary {
+  background: var(--color-secondary);
+  color: var(--color-secondary-foreground);
+}
+
+.button--secondary:hover:not(:disabled) {
+  background: #1a1a1a;
+}
+
+.button--ghost {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  text-decoration: underline;
+  padding: 8px 4px;
+}
+
+.button--ghost:active:not(:disabled) {
+  transform: none;
+}
+
+.button--small {
+  font-size: 13px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.button--small:active:not(:disabled) {
+  transform: translate(2px, 2px);
+}
+
+.button--block {
+  width: 100%;
+}
+
+/* Fields ------------------------------------------------------------------ */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.field__hint {
+  color: var(--color-muted-foreground);
+  font-size: 13px;
+}
+
+.field__input {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  padding: 12px 14px;
+  background: var(--color-input);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-foreground);
+  width: 100%;
+}
+
+.field__input:focus {
+  outline: var(--border-width) solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.field__error {
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Feedback ---------------------------------------------------------------- */
+
+.alert {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.alert--error {
+  background: var(--color-destructive);
+  color: var(--color-destructive-foreground);
+}
+
+.alert--success {
+  background: var(--color-primary);
+}
+
+.alert--warning {
+  background: var(--color-muted);
+}
+
+.badge {
+  display: inline-block;
+  white-space: nowrap;
+  font-family: var(--font-head);
+  font-size: 12px;
+  padding: 4px 10px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: 9999px;
+  background: var(--color-muted);
+}
+
+.badge--pending {
+  background: var(--color-muted);
+}
+
+.badge--approved {
+  background: var(--color-primary);
+}
+
+.badge--rejected {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+.badge--used {
+  background: var(--color-secondary);
+  color: var(--color-secondary-foreground);
+}
+
+/* Question form ----------------------------------------------------------- */
+
+.option {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-muted);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.option__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.option__index {
+  font-family: var(--font-head);
+  font-size: 13px;
+}
+
+.proposal__options {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--color-muted-foreground);
+  font-size: 14px;
+}
+
+.empty {
+  color: var(--color-muted-foreground);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Moderation table ---------------------------------------------------------- */
+
+/* Wide content scrolls inside its own box — the page itself never does. */
+.table-wrap {
+  overflow-x: auto;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  background: var(--color-card);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 14px 16px;
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.table thead th {
+  font-family: var(--font-head);
+  font-size: 13px;
+  background: var(--color-primary);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:nth-child(even) td {
+  background: var(--color-muted);
+}
+
+/*
+ * The cell stays a table cell — laying it out as a flex box detaches it from the
+ * row, and the borders stop lining up. The buttons get their own box inside.
+ */
+.table__actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.table__actions-inner {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Modal --------------------------------------------------------------------- */
+
+/*
+ * A native <dialog>: the focus trap, the inert background and Escape are the
+ * browser's, so the only thing left here is the neobrutalist skin.
+ */
+.modal {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  background: var(--color-card);
+  color: var(--color-foreground);
+  padding: 0;
+  width: min(560px, calc(100vw - 40px));
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
+.modal::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.modal__inner {
+  padding: 24px;
+}

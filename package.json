@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo build",
     "build:models": "turbo build --filter=@statowrel/models",
+    "build:admin": "turbo build --filter=@statowrel/admin",
     "build:functions": "turbo build --filter=@statowrel/functions",
     "build:dev:ios": "npm run build:models && npm run build:dev:ios --workspace=@statowrel/app",
     "build:dev:android": "npm run build:models && npm run build:dev:android --workspace=@statowrel/app",
@@ -16,6 +17,7 @@
     "submit:prod": "npm run submit:prod:ios && npm run submit:prod:android",
     "dev": "turbo dev",
     "dev:app": "turbo dev --filter=@statowrel/app",
+    "dev:admin": "turbo dev --filter=@statowrel/admin",
     "dev:functions": "turbo dev --filter=@statowrel/functions",
     "set-admin": "node apps/functions/scripts/set-admin.mjs",
     "typecheck": "turbo typecheck",

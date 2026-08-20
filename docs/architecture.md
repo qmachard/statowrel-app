@@ -11,6 +11,7 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
 | Mobile styling | React Native `StyleSheet` | Neobrutalism design tokens in `src/design/tokens.ts`; `Button` / `TextField` / `Card` / `Calendar` / `BottomSheet` primitives in `src/components/`, the rest added as screens need them |
 | Mobile routing | React Navigation 7 | Native stack only — no tab bar, Stats is the root (docs/prd.md §5.1) — declared in `apps/app/src/navigation/` |
+| Moderation console | React 18 + Vite (SPA) | `apps/admin` — plain client SDK, no CMS framework; neobrutalism tokens ported from the app |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
 | Database | Firebase Firestore | NoSQL, event-sourcing-friendly, `v1_` collection prefix |
 | Auth | Firebase Auth | Client SDK on mobile (`firebase`, not `@react-native-firebase`), Admin SDK in functions. Google/Apple credentials come from native SDKs — see "Authentication" below |
@@ -28,6 +29,7 @@ The tradeoff: no `@react-native-firebase`-specific features (e.g. some backgroun
 statowrel-app/
 ├── apps/
 │   ├── app/          # React Native + Expo + EAS — the mobile app
+│   ├── admin/        # React + Vite — question moderation console
 │   └── functions/     # Firebase Cloud Functions v2 + Express 5 — backend
 ├── packages/
 │   ├── models/                # @statowrel/models — TS models + Firestore converters
@@ -44,7 +46,7 @@ statowrel-app/
 
 ```
 apps/app ──────┐
-               ├──► @statowrel/models ──► firebase / firebase-admin (types only, per SDK)
+apps/admin ────┼──► @statowrel/models ──► firebase / firebase-admin (types only, per SDK)
 apps/functions ┘
 ```
 
@@ -260,6 +262,22 @@ The client `firebase` SDK sits in that same *dev* slot, for the same reason: not
 
 The runtime is **nodejs22**, pinned in two places that must stay in step: `engines.node` in `apps/functions/package.json` (copied verbatim into the generated manifest, which is what Cloud Functions reads to pick the runtime) and esbuild's `target` in `scripts/build.mjs`. Node 22 is a floor, not a preference — `firebase-admin` v14 declares `engines.node >= 22` and dropped Node 18/20 outright.
 
+## `apps/admin` — question moderation console
+
+A plain React + Vite SPA — no CMS framework, the Firebase client SDK directly — and what stands where the FireCMS backoffice used to. It does deliberately less: FireCMS exposed every collection, this knows only `v1_questions`. The whole pot in one table, a modal to write a question or reword one, and approval a click away — the moderation flow of `docs/prd.md` §4.7. Anything else admin-shaped still happens in the Firebase console.
+
+**No sign-up.** Accounts pre-exist — created by the mobile app or by the Firebase console — and access opens one account at a time through the `admin` custom claim (`npm run set-admin -- <email>`). `src/auth/AuthContext.tsx` is that gate: `getIdTokenResult(true)`, forcing a token refresh so an account promoted mid-session gets in without waiting out its token. It is the same claim `firestore.rules`' `isAdmin()` checks, so the UI and the rules agree on who is an admin, and the claim itself is only ever granted server-side. A session without it reaches `AccessDeniedScreen` and nothing else. Sign-in offers e-mail + password and Google; Apple is left out, since its web flow needs a Services ID and a key the mobile build does not, and nothing here is iOS.
+
+Because every user of this interface is an admin, its reads and writes go through the wildcard `isAdmin()` bypass rather than through `v1_questions`' own rules — which is what lets one table hold the whole pot, where the author-scoped `read` would only show a moderator their own proposals. What it writes is nonetheless exactly what that `allow create` would accept — `status: 'pending'`, `author_id` the signed-in UID, `broadcast_at` / `broadcast_on` / `closes_at` left null, 2 to 6 options — so lifting the claim requirement later is a change to the gate alone.
+
+The document id is a ULID, and so is every option's, and **an option's id is never regenerated**: an answer and its `answer_counts` entry both point at it, so an edit carries the existing id back through the form and only mints one for an option typed in for the first time. Editing and approving both go through `updateDoc` on the fields they touch, never a whole-document `set()`, which would carry back the `answer_counts` and broadcast stamps read a moment earlier and revert whatever the backend wrote in between. Rejecting is not built yet: a rejection owes its author a reason, so it needs a text field as well as a button — `setQuestionStatus` already takes the parameter.
+
+The create/edit modal is a native `<dialog>`: the focus trap, the inert background and Escape come from the browser rather than from a component library. It is mounted only while open and keyed by what it edits, so the form is built from the right defaults instead of being reset after mounting.
+
+`src/lib/firebase.ts` and `src/lib/firestore.ts` are the browser twins of the app's: same converter wiring, minus the React Native persistence dance — the browser build persists in `indexedDB` on its own. `src/index.css` carries the neobrutalism tokens as CSS custom properties, ported from `apps/app/src/design/tokens.ts`, which stays the source of truth.
+
+**It has no deploy path.** `firebase.json` lost its `hosting` block when FireCMS was removed, so the bundle builds and nothing serves it; wiring it back needs a Hosting site and its target.
+
 ## `apps/app` — mobile
 
 Expo managed workflow, React Navigation for navigation, React Native `StyleSheet` for styling. `app.config.ts` is a dynamic config keyed off `APP_VARIANT` (`development` | `preview` | `production`) so the three EAS build profiles produce distinct app names / bundle identifiers / package names — dev, preview, and production builds can be installed side-by-side on the same device.
@@ -363,5 +381,6 @@ The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=�
 - Every collection the PRD sketches now exists, `v1_user_friends` included — but nothing in the app writes or reads a friendship yet: no invitation link, no 6-character code, no screen to add a friend by handle, and no account-deletion pass to drop the friendships it leaves behind (`docs/prd.md` §4.1). The two monthly documents are extra to that list: read models the PRD does not describe, because it describes what the app shows, not what it costs to show it.
 - The daily cycle's back half is half there: the answer trigger increments `answer_counts`, projects the day into the calendar and moves the streak, but no midnight closer resets the streak of whoever didn't answer (docs/prd.md §6 "Backend"). The app works around that at display time — `resolveStreakCount` shows 0 when the last on-time answer is older than yesterday — so the counter is right on screen even while the stored value is stale. The push `dailyQuestions-notifyDailyQuestion` sends is still a stub: the task fires, it just doesn't notify anyone yet.
 - Design-system primitives are added as screens need them — `Button`, `TextField`, `Card`, `IconButton`, `Calendar` so far. No dark-mode theming either (light only).
-- **No backoffice.** The FireCMS SPA that used to live in `apps/firecms` is gone, and with it the only UI a moderator had: the moderation flow of `docs/prd.md` §4.7 has rules (`isAdmin()`, the custom `admin` auth claim, `npm run set-admin`) and no screen behind them. Question moderation happens straight in the Firebase console until a replacement exists.
+- **The backoffice is one screen wide.** `apps/admin` covers the moderation flow of `docs/prd.md` §4.7 and stops there — no view over `v1_users`, `v1_usernames`, the answers or the monthly read models, where the FireCMS SPA had one over each. Inspecting or fixing any of those means the Firebase console. Rejecting a question is missing from the screen too, since it owes its author a reason. And nothing serves the bundle: `firebase.json` has no `hosting` block since FireCMS left.
+- No shared React-hooks package (a `@repo/firebase-react` equivalent). `apps/admin` is the first place duplication actually bites: its `lib/firebase.ts` and `lib/firestore.ts` are near-copies of the app's, and its `auth/errors.ts` is the app's message table minus Apple. Small enough to live twice for now; extracting a package is the move the next time either side changes.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.
