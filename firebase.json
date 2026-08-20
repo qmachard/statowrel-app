@@ -20,6 +20,7 @@
     "predeploy": [
       "npm run build:admin"
     ],
+    "cleanUrls": true,
     "ignore": [
       "firebase.json",
       "**/.*",
