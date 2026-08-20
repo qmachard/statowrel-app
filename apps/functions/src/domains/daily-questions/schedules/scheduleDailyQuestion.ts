@@ -2,6 +2,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { logger } from 'firebase-functions/v2';
 import { Timestamp } from 'firebase-admin/firestore';
 import {
+  closingTimeOf,
   DAILY_QUESTION_MONTH_COLLECTION,
   DAILY_QUESTION_TIME_ZONE,
   type DailyQuestionMonthDayData,
@@ -9,6 +10,8 @@ import {
   dailyQuestionDateKey,
   monthDayKeyOf,
   monthKeyOf,
+  publicationTimeOf,
+  PUBLICATION_HOUR,
   QUESTION_COLLECTION,
   questionConverter,
 } from '@statowrel/models';
@@ -17,8 +20,6 @@ import { createWriteBatch, getDocumentRef, parseData, REGION_CLOUD } from '@/lib
 
 import { drawApprovedQuestion } from '../helpers/drawQuestion';
 import { enqueueDailyQuestionNotification } from '../helpers/notificationQueue';
-import { closingTimeOf, publicationTimeOf, PUBLICATION_HOUR } from '../helpers/publicationTime';
-
 const dailyQuestionMonthRefOf = (date: string) => (
   getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKeyOf(date), dailyQuestionMonthConverter)
 );

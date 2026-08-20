@@ -25,19 +25,22 @@
 //   gcloud auth application-default login
 // Against the emulator, set FIRESTORE_EMULATOR_HOST=localhost:8080 instead.
 
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { GeoPoint, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { ulid } from 'ulid';
 
-const USAGE = `Usage: npm run seed-questions -- [file.json] [--production | --project <id>] [--status pending|approved] [--author <uid>] [--dry-run]`;
+import { die, resolveProjectId } from './lib/firebase-project.mjs';
+import {
+  DEFAULT_SEED_FILE,
+  documentIdentityOf,
+  entryIdentityOf,
+  readSeedEntries,
+  seedOptionsOf,
+} from './lib/questions-seed.mjs';
 
-const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(SCRIPTS_DIR, '../../..');
-const DEFAULT_FILE = resolve(SCRIPTS_DIR, 'questions.seed.json');
+const USAGE = `Usage: npm run seed-questions -- [file.json] [--production | --project <id>] [--status pending|approved] [--author <uid>] [--dry-run]`;
 
 // A Firestore batch caps at 500 operations.
 const BATCH_SIZE = 400;
@@ -50,11 +53,6 @@ const SEEDABLE_STATUSES = [ 'pending', 'approved' ];
 // `pending` and not `approved`: a seeded batch is a proposal like any other, and
 // the moderation pass is what turns it into something the daily draw can pick.
 const DEFAULT_STATUS = 'pending';
-
-const die = (message) => {
-  console.error(`✖ ${message}`);
-  process.exit(1);
-};
 
 const parseArgs = (argv) => {
   const parsed = { file: null, project: null, alias: 'default', status: DEFAULT_STATUS, author: '', dryRun: false };
@@ -85,83 +83,8 @@ const parseArgs = (argv) => {
     die(`--status must be one of ${SEEDABLE_STATUSES.join(', ')} (got "${parsed.status}").\n${USAGE}`);
   }
 
-  return { ...parsed, file: parsed.file ?? DEFAULT_FILE };
+  return { ...parsed, file: parsed.file ?? DEFAULT_SEED_FILE };
 };
-
-// The project ids live in .firebaserc so this script and `firebase use` never drift apart.
-const resolveProjectId = ({ project, alias }) => {
-  if (project) return project;
-
-  let projects;
-  try {
-    ({ projects } = JSON.parse(readFileSync(resolve(REPO_ROOT, '.firebaserc'), 'utf-8')));
-  } catch (error) {
-    die(`Could not read .firebaserc (${error.message}). Pass --project <id> instead.`);
-  }
-
-  return projects?.[alias] ?? die(`No "${alias}" project in .firebaserc. Pass --project <id> instead.`);
-};
-
-const readEntries = (file) => {
-  let entries;
-
-  try {
-    entries = JSON.parse(readFileSync(file, 'utf-8'));
-  } catch (error) {
-    die(`Could not read ${file} (${error.message}).`);
-  }
-
-  if (!Array.isArray(entries)) {
-    die(`${file} must hold an array of questions.`);
-  }
-
-  return entries;
-};
-
-const isFilledString = (value) => typeof value === 'string' && value.trim() !== '';
-
-/**
- * Rejects the whole file rather than seeding half of it: a malformed entry is a
- * typo in the JSON, not a row to drop silently.
- */
-const validateEntries = (entries, { minOptions, maxOptions }) => {
-  const errors = entries.flatMap((entry, index) => {
-    const at = `#${index + 1}${isFilledString(entry?.question) ? ` ("${entry.question}")` : ''}`;
-    const options = entry?.options;
-
-    if (!isFilledString(entry?.question)) {
-      return [ `${at}: missing "question".` ];
-    }
-
-    if (!Array.isArray(options) || options.length < minOptions || options.length > maxOptions) {
-      return [ `${at}: needs between ${minOptions} and ${maxOptions} options (got ${Array.isArray(options) ? options.length : 0}).` ];
-    }
-
-    return options.flatMap((option, optionIndex) => (
-      isFilledString(option?.label) && isFilledString(option?.stat_label)
-        ? []
-        : [ `${at}, option #${optionIndex + 1}: needs a "label" and a "stat_label".` ]
-    ));
-  });
-
-  if (errors.length > 0) {
-    die(`${errors.length} invalid ${errors.length === 1 ? 'entry' : 'entries'}:\n  ${errors.join('\n  ')}`);
-  }
-};
-
-/**
- * What identifies a question, for this script: its label and its option labels.
- *
- * The JSON carries no key Firestore knows about — its numeric `id` is not the
- * document id — and the same label comes back with different options ("Tu
- * prends ta douche…" poses three of them). So the options are part of the key,
- * and case and spacing are out of it.
- */
-const identityOf = (label, optionLabels) => (
-  [ label, ...optionLabels ]
-    .map((value) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('fr-FR'))
-    .join(' ⇥ ')
-);
 
 const { file, dryRun, status, author, ...selector } = parseArgs(process.argv.slice(2));
 const projectId = resolveProjectId(selector);
@@ -180,8 +103,7 @@ const {
   questionConverter,
 } = models;
 
-const entries = readEntries(file);
-validateEntries(entries, { minOptions: QUESTION_MIN_OPTIONS, maxOptions: QUESTION_MAX_OPTIONS });
+const entries = readSeedEntries(file, { minOptions: QUESTION_MIN_OPTIONS, maxOptions: QUESTION_MAX_OPTIONS });
 
 initializeApp({
   projectId,
@@ -197,11 +119,7 @@ const existing = await collection.get().catch((error) => die(
   `Cannot read ${QUESTION_COLLECTION} on ${projectId}: ${error.message}`,
 ));
 
-const seen = new Set(existing.docs.map((document) => {
-  const data = document.data();
-
-  return identityOf(data.label ?? '', (data.options ?? []).map((option) => option?.label ?? ''));
-}));
+const seen = new Set(existing.docs.map((document) => documentIdentityOf(document.data())));
 
 // One instant per question, in file order: the moderation console sorts on
 // `created_at` descending, and a shared instant would make the order of the
@@ -212,8 +130,7 @@ const pending = [];
 let skipped = 0;
 
 entries.forEach((entry, index) => {
-  const optionLabels = entry.options.map((option) => option.label.trim());
-  const identity = identityOf(entry.question.trim(), optionLabels);
+  const identity = entryIdentityOf(entry);
 
   // Holds for two identical entries *of the file* too: the first one wins.
   if (seen.has(identity)) {
@@ -226,13 +143,7 @@ entries.forEach((entry, index) => {
 
   pending.push({
     label: entry.question.trim(),
-    // One ULID per option, minted here the way the console mints one as an
-    // option is typed in: an answer and its `answer_counts` entry point at it.
-    options: entry.options.map((option) => ({
-      id: ulid(),
-      label: option.label.trim(),
-      stat_label: option.stat_label.trim(),
-    })),
+    options: seedOptionsOf(entry),
     status,
     author_id: author,
     rejection_reason: null,

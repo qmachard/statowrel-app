@@ -15,21 +15,12 @@
 //   gcloud auth application-default login
 // Against the emulator, set FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 instead.
 
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
+import { die, resolveProjectId } from './lib/firebase-project.mjs';
+
 const USAGE = `Usage: npm run set-admin -- <email> [--production | --project <id>] [--revoke]`;
-
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-
-const die = (message) => {
-  console.error(`✖ ${message}`);
-  process.exit(1);
-};
 
 const parseArgs = (argv) => {
   const parsed = { email: null, project: null, alias: 'default', revoke: false };
@@ -55,20 +46,6 @@ const parseArgs = (argv) => {
   if (!parsed.email) die(`Missing email.\n${USAGE}`);
 
   return parsed;
-};
-
-// The project ids live in .firebaserc so this script and `firebase use` never drift apart.
-const resolveProjectId = ({ project, alias }) => {
-  if (project) return project;
-
-  let projects;
-  try {
-    ({ projects } = JSON.parse(readFileSync(resolve(REPO_ROOT, '.firebaserc'), 'utf-8')));
-  } catch (error) {
-    die(`Could not read .firebaserc (${error.message}). Pass --project <id> instead.`);
-  }
-
-  return projects?.[alias] ?? die(`No "${alias}" project in .firebaserc. Pass --project <id> instead.`);
 };
 
 const { email, revoke, ...selector } = parseArgs(process.argv.slice(2));

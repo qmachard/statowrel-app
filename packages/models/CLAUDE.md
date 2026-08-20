@@ -15,7 +15,13 @@ Shared infrastructure — do not duplicate it in a model file:
 
 ## `src/callables.ts`
 
-The wire contracts of the callable Cloud Functions — the one module here describing no Firestore collection. It carries each callable's deployed name (`INVITE_FRIEND_CALLABLE`), its payload and its result, because this package is the only one both `apps/app` and `apps/functions` depend on: a callable's payload has a converter's problem — two sides serialising the same shape with no compiler between them unless it is written down once. Fields stay `snake_case` like everywhere else, even though nothing here is stored.
+The wire contracts of the callable Cloud Functions — one of the two modules here describing no Firestore collection. It carries each callable's deployed name (`INVITE_FRIEND_CALLABLE`), its payload and its result, because this package is the only one both `apps/app` and `apps/functions` depend on: a callable's payload has a converter's problem — two sides serialising the same shape with no compiler between them unless it is written down once. Fields stay `snake_case` like everywhere else, even though nothing here is stored.
+
+## `src/daily_question_time.ts`
+
+The daily cycle's clock: `parisTimeToInstant`, and the two instants a day key stands for — `publicationTimeOf` (07:00 Europe/Paris, `PUBLICATION_HOUR`) and `closingTimeOf` (the following Paris midnight). No collection either, but the two values it computes are what `v1_questions`' `broadcast_at` and `closes_at` *mean*, so they belong beside the models rather than inside the scheduler that happens to write them: the seeding script (`npm run seed-daily-questions`) stamps the same fields from outside the functions runtime.
+
+Day-key arithmetic stays in `v1_daily_question_month.ts`, next to `dailyQuestionDateKey` — `dateKeyParts`, `previousDateKey`, `monthKeyOf`, `monthDayKeyOf`, `dateKeyOf`.
 
 ## Models (`src/`)
 
