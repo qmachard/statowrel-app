@@ -2,10 +2,11 @@ import { findQuestionOption, type QuestionData } from '@statowrel/models';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Card, CardContent } from '@/components/Card';
+import { Card } from '@/components/Card';
 import type { FriendAnswer, FriendAnswersStatus } from '@/daily-question/data/useFriendAnswers';
 import { FOREGROUND, type Surface } from '@/daily-question/helpers/surface';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
+import { FriendRow } from '@/friends/components/FriendRow';
 import { formatTimeLabel } from '@/lib/dates';
 
 /**
@@ -16,6 +17,9 @@ import { formatTimeLabel } from '@/lib/dates';
  */
 const MAX_LIST_HEIGHT = spacing(56);
 
+/** A picked option never takes more than this much of a row — the handle keeps the rest. */
+const CHIP_MAX_WIDTH = spacing(32);
+
 const styles = StyleSheet.create({
   section: {
     gap: spacing(2),
@@ -25,32 +29,22 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     textTransform: 'uppercase',
   },
+  // The card *is* the list — no padding of its own, no gap between the rows, the
+  // separators do that work. Same anatomy as the Menu screen's friend list, so
+  // one friend reads the same way wherever they show up.
   list: {
-    gap: spacing(3),
+    gap: 0,
+    paddingVertical: 0,
+    overflow: 'hidden',
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing(3),
+  separated: {
+    borderTopWidth: borderWidth,
+    borderTopColor: colors.border,
   },
-  // Takes the rest of the row, so a long handle wraps instead of pushing the
-  // answer off the card.
-  who: {
-    flex: 1,
-  },
-  handle: {
-    fontFamily: fonts.head,
-    fontSize: fontSize.sm,
-    color: colors['card-foreground'],
-  },
-  time: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize['2xs'],
-    color: colors['muted-foreground'],
-  },
-  // What they picked, as a bordered chip — never wider than half the row.
+  // What they picked, as a bordered chip — capped, so a long option never
+  // squeezes the handle beside it.
   chip: {
-    flexShrink: 1,
+    maxWidth: CHIP_MAX_WIDTH,
     overflow: 'hidden',
     borderRadius: radius.sm,
     borderWidth,
@@ -66,7 +60,7 @@ const styles = StyleSheet.create({
   chipSame: {
     backgroundColor: colors.primary,
   },
-  message: {
+  pending: {
     fontFamily: fonts.sans,
     fontSize: fontSize.xs,
     color: colors['muted-foreground'],
@@ -80,9 +74,10 @@ const styles = StyleSheet.create({
 });
 
 /** A friend's answer, resolved against the question — what one row renders. */
-interface FriendRow {
+interface Row {
   friendId: string;
   username: string;
+  photoUrl: string | null | undefined;
   /** The label of what they picked, `null` for a friend who hasn't answered. */
   optionLabel: string | null;
   timeLabel: string | null;
@@ -95,7 +90,7 @@ interface FriendRow {
  * §5.5): the yellow chips group at the top, the rest of the day follows, and
  * the friends still to answer close the list.
  */
-const rank = (row: FriendRow) => {
+const rank = (row: Row) => {
   if (row.optionLabel === null) {
     return 2;
   }
@@ -103,7 +98,7 @@ const rank = (row: FriendRow) => {
   return row.same ? 0 : 1;
 };
 
-const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: string): FriendRow[] => (
+const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: string): Row[] => (
   friends
     .map((friend) => {
       const option = friend.optionId === null ? null : findQuestionOption(question.options, friend.optionId);
@@ -111,6 +106,7 @@ const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: strin
       return {
         friendId: friend.friendId,
         username: friend.username,
+        photoUrl: friend.photoUrl,
         optionLabel: option?.label ?? null,
         timeLabel: friend.answeredAt === null ? null : formatTimeLabel(new Date(friend.answeredAt)),
         same: friend.optionId === pickedId,
@@ -170,27 +166,26 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
     <View style={styles.section}>
       <Text style={[ styles.heading, FOREGROUND[surface] ]}>Tes potes</Text>
 
-      <Card variant="card" shadow="md">
-        <CardContent>
-          <ScrollView style={{ maxHeight: MAX_LIST_HEIGHT }} contentContainerStyle={styles.list}>
-            {rows.map((row) => (
-              <View key={row.friendId} style={styles.row}>
-                <View style={styles.who}>
-                  <Text style={styles.handle}>@{row.username}</Text>
-                  {row.timeLabel === null ? null : <Text style={styles.time}>{row.timeLabel}</Text>}
-                </View>
-
+      <Card style={styles.list}>
+        <ScrollView style={{ maxHeight: MAX_LIST_HEIGHT }}>
+          {rows.map((row, index) => (
+            <View key={row.friendId} style={index === 0 ? null : styles.separated}>
+              <FriendRow
+                username={row.username}
+                photoUrl={row.photoUrl}
+                note={row.timeLabel ?? undefined}
+              >
                 {row.optionLabel === null ? (
-                  <Text style={styles.message}>n’a pas encore répondu</Text>
+                  <Text style={styles.pending}>n’a pas encore répondu</Text>
                 ) : (
                   <Text style={[ styles.chip, row.same ? styles.chipSame : null ]} numberOfLines={1}>
                     {row.optionLabel}
                   </Text>
                 )}
-              </View>
-            ))}
-          </ScrollView>
-        </CardContent>
+              </FriendRow>
+            </View>
+          ))}
+        </ScrollView>
       </Card>
     </View>
   );

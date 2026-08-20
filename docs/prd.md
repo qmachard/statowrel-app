@@ -133,7 +133,7 @@ Immédiatement après avoir répondu :
 - Liste des amis : avatar, nom d'utilisateur, réponse choisie, heure de réponse.
 - Les amis qui n'ont pas encore répondu apparaissent en attente (« n'a pas encore répondu »), sans notion de retard ou de temps de réaction en v1.
 
-**État d'implémentation.** La liste existe, sous la carte de récap du §5.5 : `@handle`, l'option choisie en puce et l'heure, ceux qui ont répondu comme moi en tête, ceux qui n'ont pas encore répondu en fin de liste. Seules les amitiés `accepted` y figurent, et rien n'est lu tant qu'on n'a pas répondu soi-même — c'est la mécanique, pas une optimisation. L'**avatar** manque : le modèle de profil n'en porte pas encore.
+**État d'implémentation.** La liste existe, sous la carte de récap du §5.5 : avatar, `@handle`, l'option choisie en puce et l'heure, ceux qui ont répondu comme moi en tête, ceux qui n'ont pas encore répondu en fin de liste. C'est la ligne de la liste d'amis du §5.3, à l'identique — même avatar DiceBear semé sur le handle, même carte découpée par des séparateurs — pour qu'un pote se reconnaisse du même coup d'œil où qu'il apparaisse. Seules les amitiés `accepted` y figurent, et aucune réponse n'est lue tant qu'on n'a pas répondu soi-même — c'est la mécanique, pas une optimisation. Sans aucun pote, la section se réduit à une ligne sur la sheet, sans carte.
 
 ### 4.6 Streak
 
