@@ -242,6 +242,8 @@ Adding a friend by handle — docs/prd.md §4.1. One Cloud Function:
 
 A callable rather than a trigger, and rather than a client-side write. The screen asks a question — "does this handle exist?" — which a Firestore trigger cannot answer: it fires *after* a write, and an unknown handle produces none. `firestore.rules` would in fact let the app resolve the handle itself (`v1_usernames` is `get`-able) and write both halves (`v1_user_friends` is writable from either side of the pair), but that spreads the invariants — no self-invite, no second invitation over an existing pair — across a client nobody can hold to them.
 
+The app reads the `v1_usernames` reservation before calling, and skips the call when there is none — one document read instead of an invocation on the likeliest outcome of that screen, a typo. The callable resolves the handle again all the same: the client-side read is a shortcut, never the check.
+
 The pair is written in one batch, both halves `pending` from the moment the invitation is sent, so the invitee sees it in their own list without a collection-group query (see `v1_user_friend.ts`). An existing pair comes back as an outcome (`already_invited` / `already_friends`) rather than an error, since nothing failed; an unknown handle, one's own handle and a malformed one are `HttpsError`s, since none of them wrote anything.
 
 Nothing reads `v1_user_friends` yet — accepting or refusing an invitation is the friend list of docs/prd.md §5.3, still to build.

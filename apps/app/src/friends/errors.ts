@@ -1,6 +1,18 @@
 import { FirebaseError } from 'firebase/app';
 
 /**
+ * Thrown when no `v1_usernames` reservation matches the handle — raised by the
+ * client-side lookup that spares the callable a call it would answer with
+ * `functions/not-found` anyway (see `data/inviteFriend.ts`).
+ */
+export class FriendNotFoundError extends Error {
+  constructor(username: string) {
+    super(`No account holds @${username}`);
+    this.name = 'FriendNotFoundError';
+  }
+}
+
+/**
  * Where a failed invitation has to be shown: `field` when the answer that has
  * to change is the handle itself, `form` when it is the connection.
  *
@@ -40,6 +52,13 @@ const FALLBACK: InviteFailure = {
  * mean « personne ne s'appelle comme ça ».
  */
 export const inviteFailure = (error: unknown): InviteFailure => {
+  // The client-side lookup got there first — same sentence as the callable's
+  // own `functions/not-found`, and nothing to log: an unknown handle is a
+  // normal outcome of this screen, not a failure.
+  if (error instanceof FriendNotFoundError) {
+    return NOT_FOUND;
+  }
+
   if (error instanceof FirebaseError) {
     console.warn(`[friends] invitation failed with ${error.code}`, error.message);
 
