@@ -1,14 +1,18 @@
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft } from 'lucide-react-native';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { deleteAccount } from '@/auth/account';
 import { useAuth } from '@/auth/AuthContext';
+import { deleteAccountErrorMessage } from '@/auth/errors';
 import { signOut } from '@/auth/providers';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendsCard } from '@/friends/components/FriendsCard';
+import { LegalLinks } from '@/menu/components/LegalLinks';
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -48,11 +52,50 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors['muted-foreground'],
   },
+  // Signing out, deleting the account and the legal footer are one block at the
+  // bottom of the screen, tighter than the screen's own rhythm: the three lines
+  // belong together, and the gap above them is what separates them from the
+  // friends.
+  settings: {
+    marginTop: 'auto',
+    gap: spacing(3),
+  },
 });
 
 export const MenuScreen = () => {
   const navigation = useNavigation();
   const { user, profile } = useAuth();
+  const [ deleting, setDeleting ] = useState(false);
+
+  const runDeletion = async () => {
+    setDeleting(true);
+
+    try {
+      await deleteAccount();
+      // Nothing to reset on the way out: the session is gone, so the navigator
+      // has already swapped this screen for the signed-out half of the stack.
+    } catch (error) {
+      setDeleting(false);
+      Alert.alert('Suppression impossible', deleteAccountErrorMessage(error));
+    }
+  };
+
+  /**
+   * A deletion is final and nothing brings it back, so it is asked twice — the
+   * native alert rather than a sheet of our own: it is the dialog both systems
+   * have taught their users to read before answering, and its destructive
+   * button is the one they already know to hesitate on.
+   */
+  const confirmDeletion = () => {
+    Alert.alert(
+      'Supprimer ton compte ?',
+      'Ton profil, ton pseudo, tes potes et ton streak disparaissent définitivement. Tes réponses passées restent dans les compteurs, sans plus rien qui les relie à toi.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Supprimer', style: 'destructive', onPress: () => void runDeletion() },
+      ],
+    );
+  };
 
   if (!user) {
     return null;
@@ -83,7 +126,16 @@ export const MenuScreen = () => {
 
         <FriendsCard onInvite={() => navigation.navigate('InviteFriend')} />
 
-        <Button label="Se déconnecter" variant="secondary" onPress={() => signOut()} />
+        <View style={styles.settings}>
+          <Button label="Se déconnecter" variant="secondary" disabled={deleting} onPress={() => signOut()} />
+          <Button
+            label="Supprimer mon compte"
+            variant="ghost"
+            loading={deleting}
+            onPress={confirmDeletion}
+          />
+          <LegalLinks />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
