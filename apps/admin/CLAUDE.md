@@ -90,6 +90,15 @@ qui fait tenir une SPA derrière un rechargement de page. Les assets portent leu
 donc `/assets/**` part `immutable` pour un an, tandis que `**/*.html` reste `no-cache` — sans quoi
 un déploiement resterait invisible le temps du cache par défaut de Hosting sur le document d'entrée.
 
+**`public/legal/` n'appartient pas à la console.** Ce sont les CGU et les mentions légales de l'app
+mobile (docs/prd.md §5.3), deux pages HTML écrites à la main que Vite recopie telles quelles dans
+`dist/legal/` : elles ne passent jamais par le bundler, donc elles portent leur propre copie des
+tokens (`legal.css`) au lieu d'importer `src/index.css`. Elles survivent à la réécriture SPA parce
+que Hosting sert un fichier *avant* de réécrire, et `cleanUrls` est ce qui en fait `/legal/cgu` et
+`/legal/mentions-legales` — la forme que l'app pointe et que les stores reçoivent, donc elle ne
+change pas. L'identité de l'éditeur y est marquée en rouge (`À COMPLÉTER`) : c'est la seule chose
+que le dépôt ne peut pas connaître, et elle doit être remplie avant toute publication.
+
 **Le build inline la config Firebase**, donc le déploiement demande son propre fichier :
 `apps/admin/.env.production.local`, que Vite lit avant `.env.local` (et que `*.local` ignore déjà).
 Sans lui, le bundle part avec des variables vides et la page reste blanche sur
