@@ -131,7 +131,7 @@ const Message = ({ children, surface }: { children: ReactNode; surface: Surface 
  *
  * **Answering is the double tap of docs/prd.md §4.3**: the first tap selects,
  * the second one on the same option writes
- * `v1_daily_questions/{date}/v1_daily_question_answers/{uid}` — document id =
+ * `v1_questions/{question_id}/v1_daily_question_answers/{uid}` — document id =
  * the author's UID, which is what makes one answer per person per day a
  * property of the data. There is no « Valider » button; tapping another option
  * only moves the selection.
@@ -150,7 +150,7 @@ export const DailyQuestionScreen = () => {
   // No param means today, and today is Paris' day, not the device's — the day
   // key *is* the document id (docs/architecture.md).
   const date = params?.date ?? dailyQuestionDateKey(new Date());
-  const { status, dailyQuestion, question, answer, authorName } = useDailyQuestion(date);
+  const { status, question, questionId, answer, authorName } = useDailyQuestion(date);
 
   const [ selectedId, setSelectedId ] = useState<string | null>(null);
   // False for the first `VALIDATION_DELAY_MS` of a selection — the guard above.
@@ -179,7 +179,7 @@ export const DailyQuestionScreen = () => {
   }, [ navigation, surface ]);
 
   const validate = async (optionId: string) => {
-    if (user === null || dailyQuestion === null) {
+    if (user === null || question === null || questionId === null) {
       return;
     }
 
@@ -188,7 +188,7 @@ export const DailyQuestionScreen = () => {
     hapticValidation();
 
     try {
-      const written = await submitAnswer({ userId: user.uid, date, optionId, dailyQuestion });
+      const written = await submitAnswer({ userId: user.uid, questionId, question, optionId });
 
       // The sheet flips on its own answer subscription; this is for the Stats
       // banner underneath, which reads the calendar month the trigger has not
@@ -231,12 +231,12 @@ export const DailyQuestionScreen = () => {
   // taps — and so does a day still writing one.
   const answerable = status === 'ready' && user !== null && answer === null && !submitting;
 
-  // The reward of docs/prd.md §5.5, recomputed on every `answer_counts` the day
-  // subscription hands over: the card's rarity is that map's shape at display
-  // time, so it keeps moving while the day's answers come in.
-  const statOwrel = question === null || dailyQuestion === null || answer === null
+  // The reward of docs/prd.md §5.5, recomputed on every `answer_counts` the
+  // question subscription hands over: the card's rarity is that map's shape at
+  // display time, so it keeps moving while the day's answers come in.
+  const statOwrel = question === null || answer === null
     ? null
-    : buildStatOwrel(question, dailyQuestion.answer_counts, answer.option_id);
+    : buildStatOwrel(question, question.answer_counts, answer.option_id);
 
   return (
     <SafeAreaView style={SURFACE[surface]} edges={[ 'bottom' ]}>

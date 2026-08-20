@@ -37,7 +37,7 @@ export const getCollectionRef = <TModelData extends DocumentData, TFirebaseData 
 
 /**
  * A document inside a sub-collection —
- * `getSubDocumentRef('v1_daily_questions', date, 'v1_daily_question_answers', uid, converter)`.
+ * `getSubDocumentRef('v1_questions', questionId, 'v1_daily_question_answers', uid, converter)`.
  *
  * The path segments are passed flat rather than as a parent ref: a parent built
  * by `getDocumentRef` already carries its own converter, and handing that

@@ -13,7 +13,7 @@ type DailyQuestionAnswerEntity = Omit<DailyQuestionAnswerData, 'answered_at'> & 
 };
 
 /**
- * Sub-collection of `v1_daily_questions`, wired into it via `subcollections`.
+ * Sub-collection of `v1_questions`, wired into it via `subcollections`.
  *
  * Read-only: an answer is final (docs/prd.md §4.2), and editing one here would
  * desynchronise it from the `answer_counts` the trigger has already
@@ -25,7 +25,7 @@ const dailyQuestionAnswersCollection = buildCollection<DailyQuestionAnswerEntity
   name: 'Réponses',
   singularName: 'Réponse',
   icon: 'HowToVote',
-  description: 'Une réponse par utilisateur. L\'identifiant du document est l\'UID Firebase Auth de son auteur.',
+  description: 'Une réponse par utilisateur pour cette question. L\'identifiant du document est l\'UID Firebase Auth de son auteur.',
   permissions: {
     create: false,
     edit: false,
@@ -38,6 +38,12 @@ const dailyQuestionAnswersCollection = buildCollection<DailyQuestionAnswerEntity
       description: 'UID Firebase Auth, identique à l\'identifiant du document.',
       readOnly: true,
     }),
+    question_id: buildProperty({
+      dataType: 'string',
+      name: 'Question',
+      description: 'Recopié de la question parente, identique à l\'identifiant du document parent.',
+      readOnly: true,
+    }),
     option_id: buildProperty({
       dataType: 'string',
       name: 'Option choisie',
@@ -47,7 +53,7 @@ const dailyQuestionAnswersCollection = buildCollection<DailyQuestionAnswerEntity
     date: buildProperty({
       dataType: 'string',
       name: 'Jour',
-      description: 'Recopié du jour parent, pour que le calendrier se lise en une requête de groupe.',
+      description: 'Jour de diffusion de la question parente, recopié pour que le calendrier se lise en une requête de groupe.',
       readOnly: true,
     }),
     answered_at: buildProperty({

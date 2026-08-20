@@ -22,11 +22,12 @@ type DailyQuestionMonthEntity = Omit<DailyQuestionMonthData, 'updated_at' | 'day
 /**
  * Read-only index of the broadcast days, one document per month.
  *
- * Written by the daily scheduler in the same batch as the day itself, and read
- * by every app opening its calendar — it is what tells a missed day from a day
- * that never had a question (docs/prd.md §5.2). Editing it here would either
- * invent a day nobody can answer or hide one somebody already did: fix the
- * `v1_daily_questions` entry instead, and let the backend re-index it.
+ * Written by the daily scheduler in the same batch that stamps the question,
+ * and read by every app opening its calendar — it is what tells a missed day
+ * from a day that never had a question (docs/prd.md §5.2), and the only mapping
+ * from a day to its question. Editing it here would either invent a day nobody
+ * can answer or hide one somebody already did: fix the question's own broadcast
+ * fields instead, and let the backend re-index it.
  */
 const dailyQuestionMonthsCollection = buildCollection<DailyQuestionMonthEntity>({
   path: DAILY_QUESTION_MONTH_COLLECTION,
