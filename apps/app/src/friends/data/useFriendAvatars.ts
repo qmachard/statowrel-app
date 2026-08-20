@@ -30,8 +30,8 @@ const readAvatar = (userId: string): Promise<void> => {
       cache.set(userId, snapshot.data()?.photo_url ?? null);
     })
     .catch((error: unknown) => {
-      // The row falls back to its initials, which is what it shows while the
-      // read is in flight anyway — nothing to recover from.
+      // The row keeps the avatar generated from the handle, which is what it
+      // shows while the read is in flight anyway — nothing to recover from.
       console.warn('[friends] could not read a friend avatar', userId, error);
       cache.set(userId, null);
     })
@@ -54,8 +54,9 @@ const readAvatar = (userId: string): Promise<void> => {
  * signed-in user for.
  *
  * Read once rather than subscribed, and cached for the session: a friend list
- * is short, an avatar changes about never, and a missing one is a fallback to
- * initials rather than a failure.
+ * is short, a picture changes about never, and a missing one falls back to the
+ * avatar generated from the handle (`src/lib/avatars.ts`) rather than to
+ * nothing.
  */
 export const useFriendAvatars = (userIds: string[]): FriendAvatars => {
   const [ avatars, setAvatars ] = useState<FriendAvatars>(() => Object.fromEntries(cache));

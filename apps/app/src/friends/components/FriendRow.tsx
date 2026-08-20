@@ -7,7 +7,7 @@ import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/
 export interface FriendRowProps {
   /** The friend's handle, rendered with its `@` — docs/prd.md §4.1. */
   username: string;
-  /** Their picture, read from their profile. Undefined while it loads, null when they have none — both show the initials. */
+  /** Their picture, read from their profile. Undefined while it loads, null when they have none — both fall back to the generated avatar. */
   photoUrl?: string | null;
   /** What this line is waiting on, when it is waiting on something. */
   note?: string;

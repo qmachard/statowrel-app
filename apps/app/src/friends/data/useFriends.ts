@@ -45,8 +45,9 @@ const EMPTY: Friends = { accepted: [], incoming: [], outgoing: [], loading: fals
  *
  * The handle shown per line is `friend_username`, the copy carried on the
  * entry — that is what makes a list of N friends cost one read instead of N
- * profile reads. Nothing else about the friend is available here, which is why
- * the row shows no streak and no avatar despite §5.3.
+ * profile reads. Nothing else about the friend is carried, which is why the row
+ * shows no streak despite §5.3, and why the picture is fetched separately
+ * (`useFriendAvatars`) rather than read from here.
  */
 export const useFriends = (): Friends => {
   const { user } = useAuth();
