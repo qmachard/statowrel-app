@@ -17,7 +17,7 @@ import { ANIMATION_SOURCES, type AnimationName } from './sources';
  * the imperative API — `play()`, `reset()`, `pause()`, `resume()` — when the
  * screen replays the animation without remounting it.
  */
-export type AnimationSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+export type AnimationSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 
 const SIZE = StyleSheet.create({
   sm: { width: spacing(12), height: spacing(12) },
@@ -25,6 +25,9 @@ const SIZE = StyleSheet.create({
   lg: { width: spacing(32), height: spacing(32) },
   xl: { width: spacing(40), height: spacing(40) },
   '2xl': { width: spacing(48), height: spacing(48) },
+  // The launch screen's step (`src/splash/Splash.tsx`): the star as the screen
+  // itself, rather than as something sitting on one.
+  '3xl': { width: spacing(64), height: spacing(64) },
 }) satisfies Record<AnimationSize, ViewStyle>;
 
 export interface AnimationProps {
