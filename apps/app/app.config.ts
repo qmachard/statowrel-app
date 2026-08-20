@@ -5,13 +5,19 @@ type Variant = 'development' | 'preview' | 'production';
 const APP_VARIANT = (process.env.APP_VARIANT as Variant | undefined) ?? 'development';
 
 /**
- * `colors.background` of `src/design/tokens.ts`, written out rather than
- * imported: the Expo CLI reads this file on its own, outside Metro, and gets no
- * further than the config module itself — an import of the token file fails to
- * resolve there. Keep the two in step by hand; it is the colour the launch
- * screen stands on, native side and JS side alike.
+ * The two colours the native chrome is painted with, written out rather than
+ * imported from `src/design/tokens.ts`: the Expo CLI reads this file on its own,
+ * outside Metro, and gets no further than the config module itself — an import
+ * of the token file fails to resolve there.
+ *
+ * Each one belongs to the asset it stands behind, and moves with it.
+ * `ICON_BACKGROUND` is `colors.primary`, the yellow `assets/icon.png` is drawn
+ * on, so Android's second icon layer carries on where the art stops.
+ * `SPLASH_BACKGROUND` is the white of `assets/splash-icon.png`, which is an
+ * opaque square: anything else here would frame it.
  */
-const BACKGROUND = '#f7f0d4';
+const ICON_BACKGROUND = '#ffdc59';
+const SPLASH_BACKGROUND = '#ffffff';
 
 const VARIANT_CONFIG: Record<Variant, { name: string; iosBundleIdentifier: string; androidPackage: string }> = {
   development: {
@@ -55,25 +61,20 @@ const plugins: NonNullable<ExpoConfig['plugins']> = [
     'expo-splash-screen',
     {
       /*
-       * The native half of the launch screen — `src/splash/Splash.tsx` is the
-       * other half, and the two are built to be indistinguishable: same
-       * background, same star, at the same size and in the same frame.
+       * The launch screen: the star of `assets/splash-icon.png` on the white it
+       * is drawn on. The art keeps three quarters of its square empty, so the
+       * width below is the *square's*, not the star's — the star itself lands
+       * at a bit under a third of it.
        *
-       * `splash-icon.png` is the star of `assets/lottie/star.json` held still,
-       * in that composition's own square canvas, and 256 is the side the
-       * animated one takes on screen (`Animation`'s `3xl` step). The animation
-       * opens on the star already in place, so what the handover shows is the
-       * still star becoming the moving one, rather than a launch screen
-       * replacing another.
+       * Android composes the icon into a canvas of its own and masks it to a
+       * circle, which caps that width at 288; iOS gets a size that still fits
+       * across the narrowest phone.
        */
-      backgroundColor: BACKGROUND,
+      backgroundColor: SPLASH_BACKGROUND,
       image: './assets/splash-icon.png',
-      imageWidth: 256,
+      imageWidth: 320,
       android: {
-        // Android draws the splash icon inside a circle it masks itself, so the
-        // star is stepped down to fit in it and grows into place when the
-        // animated splash takes over.
-        imageWidth: 192,
+        imageWidth: 288,
       },
     },
   ],
@@ -109,10 +110,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...config.android,
     package: variant.androidPackage,
     adaptiveIcon: {
-      // The mark alone, on its own layer: a launcher masks the two together and
-      // moves them apart on a press, so the background is a flat colour here.
+      // The star alone, on its own layer, over the yellow `icon.png` is drawn
+      // on: a launcher masks the two together and moves them apart on a press,
+      // which is why the background is a flat colour rather than part of the art.
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: BACKGROUND,
+      backgroundColor: ICON_BACKGROUND,
     },
   },
   plugins,
