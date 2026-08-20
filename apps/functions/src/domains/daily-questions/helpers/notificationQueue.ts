@@ -14,7 +14,7 @@ const TASK_ALREADY_EXISTS = 'functions/task-already-exists';
 export interface NotifyDailyQuestionPayload {
   /** `YYYY-MM-DD` Paris day the question is published on. */
   date: string;
-  /** Document id in `v1_questions`, carried so the handler skips a read. */
+  /** Document id in `v1_questions` — what the handler reads the label off, and what its logs are traced by. */
   question_id: string;
 }
 
