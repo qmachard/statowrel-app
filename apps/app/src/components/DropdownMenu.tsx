@@ -2,7 +2,7 @@ import { EllipsisVertical } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { Button, type ButtonIcon } from '@/components/Button';
+import { Button, type ButtonIcon, type ButtonVariant } from '@/components/Button';
 import { shadows } from '@/design/shadows';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 
@@ -20,6 +20,8 @@ export interface DropdownMenuProps {
   items: DropdownMenuItem[];
   /** The trigger's icon — the vertical ellipsis unless something better says what the menu holds. */
   icon?: ButtonIcon;
+  /** The trigger's own variant — `ghost` when the menu must not compete with the row's buttons. */
+  variant?: ButtonVariant;
   disabled?: boolean;
 }
 
@@ -87,7 +89,13 @@ interface Anchor {
  * The panel flips above the trigger when the bottom of the screen is too close
  * — the last row of a list is exactly where a menu like this gets used.
  */
-export const DropdownMenu = ({ label, items, icon = EllipsisVertical, disabled }: DropdownMenuProps) => {
+export const DropdownMenu = ({
+  label,
+  items,
+  icon = EllipsisVertical,
+  variant = 'outline',
+  disabled,
+}: DropdownMenuProps) => {
   const trigger = useRef<View>(null);
   const { height: windowHeight } = useWindowDimensions();
   const [ anchor, setAnchor ] = useState<Anchor | null>(null);
@@ -126,7 +134,7 @@ export const DropdownMenu = ({ label, items, icon = EllipsisVertical, disabled }
 
   return (
     <View ref={trigger} collapsable={false}>
-      <Button label={label} icon={icon} variant="outline" size="icon-sm" disabled={disabled} onPress={open} />
+      <Button label={label} icon={icon} variant={variant} size="icon-sm" disabled={disabled} onPress={open} />
 
       <Modal visible={anchor !== null} transparent animationType="fade" statusBarTranslucent onRequestClose={close}>
         <Pressable style={styles.backdrop} accessibilityLabel="Fermer le menu" onPress={close}>
