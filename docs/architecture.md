@@ -161,6 +161,29 @@ The profile half of the document is written by the app itself, at first sign-in 
 
 The reservation is written *before* the profile, never in the same batch: `firestore.rules` checks the profile's `username` against this collection with a `get()`, and rules evaluate each write of a batch against the state that preceded it — a reservation created in the same batch would still be invisible. The two writes are therefore sequential, and re-writing a reservation one already holds is allowed so a retry after a failed profile write goes through. An abandoned onboarding can leave a reservation with no profile behind it; freeing one is a backend job, alongside account deletion.
 
+### `v1_user_friends`
+
+`packages/models/src/v1_user_friend.ts` — sub-collection of `v1_users`, path `v1_users/{user_id}/v1_user_friends/{friend_id}`, one half of a friendship (`docs/prd.md` §4.1).
+
+| Field | Type | Notes |
+|---|---|---|
+| `user_id` | `string` | Auth UID of the list's owner, denormalized from the parent id — the side this half is seen from |
+| `friend_id` | `string` | Auth UID of the friend, same value as the document id |
+| `status` | `'pending' \| 'accepted'` | no `declined` and no `blocked`: refusing deletes the pair, blocking is out of scope (`docs/prd.md` §7) |
+| `requested_by` | `string` | Auth UID of whoever sent the invitation — **the same value on both halves** |
+| `created_at` | `UniversalTimestamp` | when the invitation was sent |
+| `accepted_at` | `UniversalTimestamp \| null` | `null` while pending |
+
+The document id is the *other* user's Auth UID, which makes "at most one friendship per pair" a property of the path: inviting the same person twice is a write to an existing document, and there is nothing to query to find out.
+
+**Why two documents, both written at the invitation.** A friendship is reciprocal (`docs/prd.md` §4.1 — no asymmetric follow), so it is mirrored under each user. The PRD sketches the mirror as written *at acceptance*; it is written from the invitation instead, because otherwise "who invited me" would be a collection-group query over everybody's friends — and a `list` rule loose enough to allow it would also let anyone browse who is friends with whom. With the mirror, the invitee's own list is enough, and reading stays `isOwner(user_id)`.
+
+**Why direction is not stored.** `requested_by` is identical on both halves and `friendshipDirectionOf()` derives `outgoing` / `incoming` from it, so the two mirrors cannot end up disagreeing on who invited whom — the failure mode a per-side `direction` field would invite. It is also what the rules check to reject accepting one's own invitation.
+
+**Who writes.** The acting client, both halves in one batch — the inviter at creation, the invitee at acceptance — with no backend involved, like the `v1_usernames` reservation. `firestore.rules` lets a signed-in user write the entry in their own list *and* the entry carrying their own UID as its id, which is exactly the two halves of a pair they are part of: an invitation always starts `pending` and always from its sender, an update only moves `pending` → `accepted` and never by the sender, and a refusal, a cancellation and a removal are the same `delete`. A client that writes only one half of a pair leaves a cosmetic desync — one side accepted, the other pending — that a repair job can reconcile; it cannot forge a friendship anybody else can see.
+
+**Nothing is denormalized onto the edge.** The friend list shows avatar, `@handle` and streak (`docs/prd.md` §5.3), and the streak moves every day: a copy would be stale on sight, so the list reads the friends' `v1_users` documents, which any signed-in user may read. No composite index either — a friend list is small enough to be read whole and filtered on `status` client-side.
+
 Two things to keep straight about the options:
 
 - **An option's identity is its `id`, never its position in the array.** An answer stores an `option_id`, and `v1_questions.answer_counts` increments `answer_counts.{option_id}` via `FieldValue.increment()` on a fixed path — that map stays keyed by option id precisely so two simultaneous answers can't overwrite each other. Reordering or reformulating an option must leave its `id` alone; use `findQuestionOption()` to resolve one, never an index.
@@ -322,12 +345,12 @@ The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=�
 
 ## What's deliberately not here yet
 
-- The StatOwrel card of docs/prd.md §5.5 renders what the data carries, and the data carries no picture: there is no **illustration** encart, because an option is a `{ id, label, stat_label }` and nothing else, and no **edition number** (« #142 »), because nothing counts the days since launch. The **share button** of §4.4 and its generated image are not built either, nor are the **friends** of §4.5 under the card — friendships are still unmodelled. The ultra-rare card takes a violet liseré where §5.5 asks for a holographic ground animated on device tilt.
+- The StatOwrel card of docs/prd.md §5.5 renders what the data carries, and the data carries no picture: there is no **illustration** encart, because an option is a `{ id, label, stat_label }` and nothing else, and no **edition number** (« #142 »), because nothing counts the days since launch. The **share button** of §4.4 and its generated image are not built either, nor are the **friends** of §4.5 under the card — the friendships are modelled now, but nothing writes or reads one yet. The ultra-rare card takes a violet liseré where §5.5 asks for a holographic ground animated on device tilt.
 - The question sheet stays dismissable — grabber included — where §5.4 pins it open on today's unanswered question. That is now the only piece missing from that section, and it is a navigator concern (`gestureEnabled`, the Android back button) rather than a screen one. A question long enough to overflow the tallest sheet would still need a detent array plus `sheetExpandsWhenScrolledToEdge`, not a nested scroll view — and the sheet now grows again when it flips to the card, which `fitToContents` re-measures.
 - The app no longer guesses when the answer trigger has caught up: it subscribes to `v1_users/{uid}` and to the current calendar month, so the counters and the cell fill in on their own. `answerStore` still covers the one beat between the app's write and the trigger's, for the Stats banner alone — it reads the projection, not the answer.
 - No way to rebuild a calendar month from its answers. The projection is derived data with no repair path: if the answer trigger exhausts its retries on one answer, that day is missing from the user's calendar until somebody replays it by hand. An admin endpoint replaying `v1_daily_question_answers` for one user and month is the missing piece.
 - No migration for documents written before the daily question was folded into `v1_questions`. A question broadcast under the old model has no `broadcast_on` / `closes_at` / `answer_counts`, and its answers still sit under a `v1_daily_questions/{date}` that nothing reads any more. Nothing rewrites either: the fix is a one-off backfill script, or wiping the collection while the app is pre-launch.
-- Every collection the PRD asks for exists but `v1_users/{id}/friends`, still to be modelled — so a handle resolves to an account, but nothing befriends it yet — see `docs/prd.md` §6. The two monthly documents are extra to that list: read models the PRD does not describe, because it describes what the app shows, not what it costs to show it.
+- Every collection the PRD sketches now exists, `v1_user_friends` included — but nothing in the app writes or reads a friendship yet: no invitation link, no 6-character code, no screen to add a friend by handle, and no account-deletion pass to drop the friendships it leaves behind (`docs/prd.md` §4.1). The two monthly documents are extra to that list: read models the PRD does not describe, because it describes what the app shows, not what it costs to show it.
 - The daily cycle's back half is half there: the answer trigger increments `answer_counts`, projects the day into the calendar and moves the streak, but no midnight closer resets the streak of whoever didn't answer (docs/prd.md §6 "Backend"). The app works around that at display time — `resolveStreakCount` shows 0 when the last on-time answer is older than yesterday — so the counter is right on screen even while the stored value is stale. The push `dailyQuestions-notifyDailyQuestion` sends is still a stub: the task fires, it just doesn't notify anyone yet.
 - Design-system primitives are added as screens need them — `Button`, `TextField`, `Card`, `IconButton`, `Calendar` so far. No dark-mode theming either (light only).
 - No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.

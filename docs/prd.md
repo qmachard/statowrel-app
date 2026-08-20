@@ -83,7 +83,7 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 - **Liaison d'identités** (`linkWithCredential`) — un même e-mail arrivant par deux providers crée aujourd'hui deux comptes distincts ; l'app affiche un message expliquant quelle méthode utiliser au lieu de lier.
 - **Choix de l'avatar** — la sheet d'onboarding ne demande que le nom d'utilisateur ; l'avatar reste celui du provider, sans moyen d'en changer.
 - **Changement de nom d'utilisateur** — impossible aujourd'hui : libérer une réservation demande un passage côté backend, comme la suppression de compte.
-- **Ajout d'ami par handle** — la résolution `@handle` → compte est en place côté données ; il n'y a encore ni amitiés, ni écran pour s'en servir.
+- **Ajout d'ami par handle** — la résolution `@handle` → compte et le modèle d'amitié (`v1_users/{id}/v1_user_friends`, §6) sont en place côté données, règles Firestore comprises ; il n'y a encore ni écran pour s'en servir, ni lien d'invitation, ni code à 6 caractères.
 - **Suppression de compte** — non implémentée.
 
 ### 4.2 Question du jour
@@ -249,7 +249,7 @@ Conventions : collections préfixées `v1_`, champs en `snake_case`, champs opti
 |---|---|
 | `v1_users` | `username`, `photo_url`, `created_at`, `updated_at`, `email`, `auth_providers[]` (`password` / `google.com` / `facebook.com` / `apple.com`), `streak_count`, `streak_best` (meilleur streak, §5.3), `streak_last_answered_on`, `invite_code` |
 | `v1_usernames` | une par nom d'utilisateur pris, **id de document = le handle lui-même** : `user_id`, `created_at`. C'est cette collection qui porte l'unicité (§4.1) et qui résout un `@handle` vers un compte |
-| `v1_users/{id}/friends` | une entrée par ami (écrite des deux côtés à l'acceptation) |
+| `v1_users/{id}/v1_user_friends` | une entrée par ami, **id de document = l'UID de l'ami** (rend « au plus une amitié par paire » structurel) : `user_id`, `friend_id`, `friend_username` (recopié de `v1_users`, pour qu'une liste d'amis ne coûte pas une lecture de profil par ligne), `status` (`pending` / `accepted`), `requested_by`, `created_at`, `accepted_at`. Écrite **des deux côtés dès l'invitation**, pas seulement à l'acceptation : c'est ce qui met l'invitation en attente dans la liste de l'invité sans requête de groupe. `requested_by` porte le sens de la relation et vaut la même chose des deux côtés, donc les deux miroirs ne peuvent pas se contredire. Un refus, une annulation et un retrait sont la même suppression, des deux moitiés |
 | `v1_questions` | le pot de modération **et** le journal de diffusion : `label`, `options` (**tableau ordonné** de `{ id: ULID, label, stat_label }`), `status` (`pending` / `approved` / `rejected` / `used`), `author_id`, `rejection_reason`, `broadcast_at` (instant de diffusion, `null` tant que non tirée), `broadcast_on` (jour Paris `AAAA-MM-JJ` correspondant), `closes_at` (minuit à Paris), `answer_counts` (map `option_id` → total ; pas de total scalaire, il se somme depuis la map) |
 | `v1_questions/{id}/v1_daily_question_answers` | une par utilisateur, **id de document = UID de l'auteur** (rend « une réponse par personne et par jour » structurel) : `user_id`, `question_id` (recopié du parent), `date` (le `broadcast_on` du parent), `option_id`, `answered_at`, `late` (réponse de rattrapage, §4.2) |
 
