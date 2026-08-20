@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Card, CardContent } from '@/components/Card';
 import { AnswerShareRow } from '@/daily-question/components/AnswerShareRow';
-import { type StatOwrel, statLabelOf } from '@/daily-question/helpers/statowrel';
+import type { StatOwrel } from '@/daily-question/helpers/statowrel';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
 const styles = StyleSheet.create({
@@ -30,9 +30,7 @@ export interface AnswerRecapProps {
 /**
  * What was asked and how the day answered it: the question, then every option
  * with its share, one row each, the picked one in yellow behind its tick
- * (docs/prd.md §5.5). A row is named by its StatOwrel rather than by its option
- * label — the recap says which kind of person the day made, not what was
- * clicked.
+ * (docs/prd.md §5.5).
  *
  * It is the only framed surface of an answered day — the phrase above it sits
  * straight on the sheet. The shares are the `answer_counts` shape at display
@@ -47,7 +45,7 @@ export const AnswerRecap = ({ questionLabel, statOwrel }: AnswerRecapProps) => (
         {statOwrel.shares.map((entry) => (
           <AnswerShareRow
             key={entry.option.id}
-            label={statLabelOf(entry.option)}
+            label={entry.option.label}
             share={entry.share}
             picked={entry.picked}
           />
