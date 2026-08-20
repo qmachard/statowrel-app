@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "expo start",
-    "dev:ios": "expo start --ios",
-    "dev:android": "expo start --android",
-    "prebuild": "expo prebuild",
+    "dev": "APP_VARIANT=development expo start",
+    "dev:ios": "APP_VARIANT=development expo start --ios",
+    "dev:android": "APP_VARIANT=development expo start --android",
+    "prebuild": "APP_VARIANT=development expo prebuild",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "eas-build-post-install": "cd ../.. && npm run build:models",
@@ -17,8 +17,8 @@
     "build:preview:android": "eas build --profile preview --platform android",
     "build:prod:ios": "eas build --profile production --platform ios",
     "build:prod:android": "eas build --profile production --platform android",
-    "submit:prod:ios": "eas submit --profile production --platform ios",
-    "submit:prod:android": "eas submit --profile production --platform android",
+    "submit:prod:ios": "APP_VARIANT=production eas submit --profile production --platform ios",
+    "submit:prod:android": "APP_VARIANT=production eas submit --profile production --platform android",
     "submit:prod": "npm run submit:prod:ios && npm run submit:prod:android"
   },
   "dependencies": {

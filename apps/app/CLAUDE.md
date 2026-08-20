@@ -43,7 +43,7 @@ The authentication flow exists (Google, Apple, email + password, the username sh
 - `src/lib/dates.ts` — local-calendar helpers keyed on the model's `YYYY-MM-DD` strings, plus the French month/weekday labels. No UTC round-trip: `toISOString()` would move the day.
 - `src/lib/firebase.ts` — Firebase client SDK (`firebase` npm package, not `@react-native-firebase`) init: `app`, `auth` (persisted via `@react-native-async-storage/async-storage`), `db`, plus the Auth and Firestore emulator hookups. Same client SDK the rest of the monorepo uses, so `@statowrel/models` converters work unchanged.
 - `src/lib/firestore.ts` — `getDocumentRef` / `getSubDocumentRef` / `getCollectionRef` / `getSubCollectionRef`, each wired with a `@statowrel/models` converter. Use these rather than calling `doc()`/`collection()` directly.
-- `app.config.ts` — dynamic Expo config. Carries the icon and the native splash (their backgrounds, the images, and the smaller width Android's masked canvas caps them at) — `ICON_BACKGROUND` and `SPLASH_BACKGROUND` are written out by hand, since the Expo CLI reads this file outside Metro and cannot resolve an import of the token module. Reads `APP_VARIANT` (`development` | `preview` | `production`, set per EAS build profile in `eas.json`) to pick app name / bundle identifier / package name, so dev/preview/prod can be installed side-by-side on a device.
+- `app.config.ts` — dynamic Expo config. Carries the icon and the native splash (their backgrounds, the images, and the smaller width Android's masked canvas caps them at) — `BRAND_YELLOW` is written out by hand, since the Expo CLI reads this file outside Metro and cannot resolve an import of the token module. Reads `APP_VARIANT` (`development` | `preview` | `production`, set per EAS build profile in `eas.json`) to pick app name / bundle identifier / package name, so dev/preview/prod can be installed side-by-side on a device. **It throws when `APP_VARIANT` is missing or unknown, and never defaults**: a default is the one failure this file can have that leaves no trace — a `--profile production` build would go green from end to end carrying the `.dev` bundle identifier. Which is why `dev`, `prebuild` and `submit:*` set the variant inline in `package.json`, and why anything else run by hand has to pass it (`APP_VARIANT=production npx expo config`).
 - `eas.json` — EAS Build & Submit profiles: `development` (dev client, internal), `preview` (internal), `production` (store-ready, auto-incremented build number).
 
 ## Conventions
@@ -69,14 +69,34 @@ npm run dev:app          # or: npm run dev --workspace=@statowrel/app
 
 Requires a dev client build (`npm run build:dev:ios` / `build:dev:android`) to run on a device/simulator — `expo-dev-client` is installed, so Expo Go is no longer the supported target. Firebase itself needs no native linking (this app uses the JS `firebase` SDK), but Google and Apple sign-in do (`@react-native-google-signin/google-signin`, `expo-apple-authentication`), so the dev client must be rebuilt after changing their config.
 
-Google sign-in needs three public OAuth identifiers: `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (the one Firebase mints id tokens for), `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, and `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` (the reversed iOS client id). Leave them empty and the Google button hides itself; the rest of the app still runs.
+## Environment variables
 
-They have to be declared **twice**, because two different processes read them and neither sees the other's source:
+Every value has to be declared **twice**, because two different processes read them and neither sees the other's source:
 
 - `.env.local` — read by Metro when you run the app locally.
-- the build profile's `env` block in `eas.json` — read when EAS builds the binary. `.env.local` is gitignored, and EAS excludes gitignored files from the upload, so a value that only lives there is simply absent on the builder.
+- one of the two EAS sources below — read when EAS builds the binary. `.env.local` is gitignored, and EAS excludes gitignored files from the upload, so a value that only lives there is simply absent on the builder.
 
-That distinction matters most for `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`: `app.config.ts` reads it at **config-evaluation** time to register the URL scheme natively. Miss it on the builder and the binary ships without the scheme while the JS bundle still believes Google is configured — the native SDK then fails on tap with "Your app is missing support for the following URL schemes". Changing it always requires a new build, never just a Metro restart.
+EAS itself has three sources, in increasing order of precedence: the build profile's `env` block in `eas.json`, then `.env` files, then the **EAS environment variables** stored on Expo's servers. A same-named variable higher in that list wins — which is why nothing important should be defined in two of them at once. All three are applied on the worker *and* when the EAS CLI evaluates `app.config.ts` locally to resolve credentials, so a build cannot resolve one bundle identifier and sign another.
+
+Which EAS environment a build reads is derived from the profile unless the profile names one with an `environment` field: `production` when `distribution` is `store`, `development` when `developmentClient` is true, `preview` for everything else. Here that lands on the environment of the same name as each profile.
+
+The split between the two EAS sources follows whether the value changes between environments:
+
+| Variable | Lives in | Why |
+|---|---|---|
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `…_IOS_CLIENT_ID`, `…_IOS_URL_SCHEME` | `eas.json` `env` | Public OAuth identifiers, committed on purpose — the reviewer of a diff should see which client a profile signs against. |
+| `EXPO_PUBLIC_FIREBASE_*` | EAS environment variables (`eas env:create --environment <env>`) | Per-environment by nature: `.firebaserc` points both the `default` and `production` aliases at `statowrel-app` today, so the six values are the same in the three EAS environments, but they are what has to diverge the day the production project splits off. Not secrets — the Firebase web config is public — just environment-shaped. |
+
+Verify what a profile actually resolves to before trusting it: `npx eas config --profile production --platform ios` prints both the loaded variables and the resulting config, and `npx eas env:list --environment production` (add `--scope account` for the account-wide ones) prints what the servers hold.
+
+Two things fail loudly rather than silently, both because their silent version cost a wasted build:
+
+- `app.config.ts` throws when `APP_VARIANT` is missing or unknown — see the file's own comment.
+- `src/lib/firebase.ts` throws when `EXPO_PUBLIC_FIREBASE_API_KEY`, `…_PROJECT_ID` or `…_APP_ID` is missing, instead of letting `initializeApp()` accept `undefined` and surfacing it later as an `auth/invalid-api-key` from whatever screen touched Auth first.
+
+Google sign-in needs three public OAuth identifiers: `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (the one Firebase mints id tokens for), `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, and `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` (the reversed iOS client id). Leave them empty and the Google button hides itself; the rest of the app still runs.
+
+That last one is the one to watch: `app.config.ts` reads it at **config-evaluation** time to register the URL scheme natively. Miss it on the builder and the binary ships without the scheme while the JS bundle still believes Google is configured — the native SDK then fails on tap with "Your app is missing support for the following URL schemes". Changing it always requires a new build, never just a Metro restart.
 
 The iOS client id and its URL scheme are bound to a bundle identifier, so each variant needs its own pair. Only `development` has one today; `preview` and `production` carry the (project-wide) web client id alone, which keeps the button hidden there until their own iOS OAuth clients exist.
 
