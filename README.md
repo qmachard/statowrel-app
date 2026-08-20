@@ -1,12 +1,13 @@
 # StatOwrel
 
-Turborepo monorepo — mobile app (React Native + Expo + EAS) and backend (Firebase Cloud Functions).
+Turborepo monorepo — mobile app (React Native + Expo + EAS), question moderation console (Vite), and backend (Firebase Cloud Functions).
 
 See [`CLAUDE.md`](./CLAUDE.md) for conventions and [`docs/architecture.md`](./docs/architecture.md) for the architecture.
 
 ## Structure
 
 - `apps/app` — mobile app (iOS + Android), React Native + Expo
+- `apps/admin` — question moderation console, React + Vite (the pot in a table, write / edit / approve)
 - `apps/functions` — backend, Firebase Cloud Functions + Express
 - `packages/models` — `@statowrel/models`, shared TypeScript models + Firestore converters
 - `packages/firestore-config` — `@statowrel/firestore-config`, Firestore/Storage rules + indexes
@@ -19,6 +20,7 @@ npm install
 
 ```bash
 npm run dev:app          # mobile app (Expo dev server)
+npm run dev:admin        # question moderation console (Vite, :3003)
 npm run dev:functions    # backend (Firebase emulators + tsc --watch)
 ```
 

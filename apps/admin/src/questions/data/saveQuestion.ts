@@ -1,0 +1,81 @@
+import { updateDoc, setDoc } from 'firebase/firestore';
+import { ulid } from 'ulid';
+
+import {
+  QUESTION_COLLECTION,
+  type QuestionData,
+  type QuestionOptionData,
+  type QuestionStatus,
+  questionConverter,
+} from '@statowrel/models';
+
+import { getDocumentRef } from '@/lib/firestore';
+
+import type { QuestionValues } from '../schemas';
+
+const questionRef = (id: string) => getDocumentRef(QUESTION_COLLECTION, id, questionConverter);
+
+/**
+ * Never regenerates an id an option already carries: a recorded answer and its
+ * `answer_counts` entry both point at it, so reordering or reformulating an
+ * option must not repoint what people picked.
+ */
+const withOptionIds = (options: QuestionValues['options']): QuestionOptionData[] => (
+  options.map((option) => ({
+    id: option.id || ulid(),
+    label: option.label,
+    stat_label: option.stat_label,
+  }))
+);
+
+/**
+ * Drops a proposal into the moderation pot (docs/prd.md §4.7).
+ *
+ * The document id is a ULID. Everything a drawn question carries stays null:
+ * the daily scheduler owns `broadcast_at` / `broadcast_on` / `closes_at`, and
+ * `firestore.rules` denies a create that pre-fills them. `answer_counts` is
+ * seeded empty and never written by hand — the answer trigger owns that map.
+ */
+export const createQuestion = async (authorId: string, values: QuestionValues): Promise<void> => {
+  const question: QuestionData = {
+    label: values.label,
+    options: withOptionIds(values.options),
+    status: 'pending',
+    author_id: authorId,
+    rejection_reason: null,
+    broadcast_at: null,
+    broadcast_on: null,
+    closes_at: null,
+    answer_counts: {},
+    created_at: new Date().toISOString(),
+  };
+
+  await setDoc(questionRef(ulid()), question);
+};
+
+/**
+ * Rewrites the wording of an existing question, and nothing else — an `update()`
+ * on the two fields a moderator edits rather than a whole-document `set()`,
+ * which would carry back the `answer_counts` and the broadcast stamps read a
+ * moment ago and revert whatever the backend wrote in between.
+ */
+export const updateQuestion = async (id: string, values: QuestionValues): Promise<void> => {
+  await updateDoc(questionRef(id), {
+    label: values.label,
+    options: withOptionIds(values.options),
+  });
+};
+
+/**
+ * Moderation verdict (docs/prd.md §4.7). An approved question joins the common
+ * pot and becomes eligible for the daily draw; a rejected one carries the reason
+ * sent back to its author, which is the one field the model requires alongside
+ * that status.
+ */
+export const setQuestionStatus = async (
+  id: string,
+  status: QuestionStatus,
+  rejectionReason: string | null = null,
+): Promise<void> => {
+  await updateDoc(questionRef(id), { status, rejection_reason: rejectionReason });
+};
