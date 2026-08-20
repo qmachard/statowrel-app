@@ -85,7 +85,7 @@ The split between the two EAS sources follows whether the value changes between 
 | Variable | Lives in | Why |
 |---|---|---|
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `…_IOS_CLIENT_ID`, `…_IOS_URL_SCHEME` | `eas.json` `env` | Public OAuth identifiers, committed on purpose — the reviewer of a diff should see which client a profile signs against. |
-| `EXPO_PUBLIC_FIREBASE_*` | EAS environment variables (`eas env:create --environment <env>`) | They differ between the default and the production Firebase project, which is exactly what an EAS environment is for. Not secrets — the Firebase web config is public — but per-environment. |
+| `EXPO_PUBLIC_FIREBASE_*` | EAS environment variables (`eas env:create --environment <env>`) | Per-environment by nature: `.firebaserc` points both the `default` and `production` aliases at `statowrel-app` today, so the six values are the same in the three EAS environments, but they are what has to diverge the day the production project splits off. Not secrets — the Firebase web config is public — just environment-shaped. |
 
 Verify what a profile actually resolves to before trusting it: `npx eas config --profile production --platform ios` prints both the loaded variables and the resulting config, and `npx eas env:list --environment production` (add `--scope account` for the account-wide ones) prints what the servers hold.
 
