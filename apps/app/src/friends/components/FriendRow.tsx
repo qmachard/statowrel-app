@@ -1,8 +1,8 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
-import { shadows } from '@/design/shadows';
-import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
+import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
 export interface FriendRowProps {
   /** The friend's handle, rendered with its `@` — docs/prd.md §4.1. */
@@ -11,6 +11,8 @@ export interface FriendRowProps {
   photoUrl?: string | null;
   /** What this line is waiting on, when it is waiting on something. */
   note?: string;
+  /** The row's actions, pushed to the right — the accept button and the menu. */
+  children?: ReactNode;
 }
 
 const styles = StyleSheet.create({
@@ -18,15 +20,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(3),
-    borderRadius: radius.DEFAULT,
-    borderWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    paddingHorizontal: spacing(4),
+    paddingHorizontal: spacing(5),
     paddingVertical: spacing(3),
   },
   body: {
-    flexShrink: 1,
+    flex: 1,
     gap: spacing(0.5),
   },
   username: {
@@ -39,11 +37,22 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors['muted-foreground'],
   },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(2),
+  },
 });
 
-/** One line of the friend list: avatar, handle, and what it is waiting on if it is. */
-export const FriendRow = ({ username, photoUrl, note }: FriendRowProps) => (
-  <View style={[ styles.root, shadows.sm ]}>
+/**
+ * One line of the friend list: avatar, handle, what it is waiting on if it is,
+ * and its actions on the right.
+ *
+ * It carries no surface of its own — the card around the list is the surface,
+ * and the rows are cut out of it by separators.
+ */
+export const FriendRow = ({ username, photoUrl, note, children }: FriendRowProps) => (
+  <View style={styles.root}>
     <Avatar size="lg" name={username} uri={photoUrl} />
 
     <View style={styles.body}>
@@ -52,5 +61,7 @@ export const FriendRow = ({ username, photoUrl, note }: FriendRowProps) => (
       </Text>
       {note === undefined ? null : <Text style={styles.note}>{note}</Text>}
     </View>
+
+    {children === undefined ? null : <View style={styles.actions}>{children}</View>}
   </View>
 );
