@@ -5,7 +5,6 @@ import { X } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { SuccessCheck } from '@/components/animations';
@@ -14,6 +13,7 @@ import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { inviteFriend } from '@/friends/data/inviteFriend';
 import { type InviteFailure, inviteFailure } from '@/friends/errors';
 import { type InviteFriendValues, inviteFriendSchema } from '@/friends/schemas';
+import { useSheetBottomInset } from '@/lib/useSheetBottomInset';
 
 /** What the handle is asked for, said once above the field (docs/prd.md §4.1). */
 const HELP = 'Tape son nom d’utilisateur exact : il n’y a ni recherche, ni annuaire.';
@@ -98,6 +98,7 @@ const styles = StyleSheet.create({
  */
 export const InviteFriendScreen = () => {
   const navigation = useNavigation();
+  const bottomInset = useSheetBottomInset();
   const [ failure, setFailure ] = useState<InviteFailure | null>(null);
   const [ result, setResult ] = useState<InviteFriendResult | null>(null);
 
@@ -124,62 +125,60 @@ export const InviteFriendScreen = () => {
   const formError = failure?.scope === 'form' ? failure.message : null;
 
   return (
-    <SafeAreaView edges={[ 'bottom' ]}>
-      <View style={styles.content}>
-        <View style={styles.close}>
-          <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
-        </View>
-
-        {result === null ? (
-          <>
-            <View style={styles.header}>
-              <Text style={styles.title}>Invite un pote</Text>
-              <Text style={styles.help}>{HELP}</Text>
-            </View>
-
-            <View style={styles.form}>
-              <Controller
-                control={control}
-                name="username"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextField
-                    label="Nom d’utilisateur"
-                    prefix="@"
-                    placeholder="lou.martin"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="off"
-                    returnKeyType="send"
-                    value={value}
-                    onBlur={onBlur}
-                    // Lowercased as it is typed, not only on submit: a handle
-                    // exists in one single form, and the field has to show the
-                    // one that will actually be looked up.
-                    onChangeText={(next) => {
-                      setFailure(null);
-                      onChange(next.toLowerCase());
-                    }}
-                    onSubmitEditing={onSubmit}
-                    error={fieldError}
-                  />
-                )}
-              />
-
-              {formError === null ? null : <Text style={styles.error}>{formError}</Text>}
-
-              <Button label="Envoyer l’invitation" loading={isSubmitting} onPress={onSubmit} />
-            </View>
-          </>
-        ) : (
-          <View style={styles.outcome}>
-            {result.outcome === 'invited' ? <SuccessCheck size="2xl" /> : null}
-
-            <Text style={styles.outcomeMessage}>{OUTCOME_MESSAGES[result.outcome](result.username)}</Text>
-
-            <Button label="Fermer" onPress={() => navigation.goBack()} />
-          </View>
-        )}
+    <View style={[ styles.content, { paddingBottom: spacing(6) + bottomInset } ]}>
+      <View style={styles.close}>
+        <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
       </View>
-    </SafeAreaView>
+
+      {result === null ? (
+        <>
+          <View style={styles.header}>
+            <Text style={styles.title}>Invite un pote</Text>
+            <Text style={styles.help}>{HELP}</Text>
+          </View>
+
+          <View style={styles.form}>
+            <Controller
+              control={control}
+              name="username"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextField
+                  label="Nom d’utilisateur"
+                  prefix="@"
+                  placeholder="lou.martin"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="off"
+                  returnKeyType="send"
+                  value={value}
+                  onBlur={onBlur}
+                  // Lowercased as it is typed, not only on submit: a handle
+                  // exists in one single form, and the field has to show the
+                  // one that will actually be looked up.
+                  onChangeText={(next) => {
+                    setFailure(null);
+                    onChange(next.toLowerCase());
+                  }}
+                  onSubmitEditing={onSubmit}
+                  error={fieldError}
+                />
+              )}
+            />
+
+            {formError === null ? null : <Text style={styles.error}>{formError}</Text>}
+
+            <Button label="Envoyer l’invitation" loading={isSubmitting} onPress={onSubmit} />
+          </View>
+        </>
+      ) : (
+        <View style={styles.outcome}>
+          {result.outcome === 'invited' ? <SuccessCheck size="2xl" /> : null}
+
+          <Text style={styles.outcomeMessage}>{OUTCOME_MESSAGES[result.outcome](result.username)}</Text>
+
+          <Button label="Fermer" onPress={() => navigation.goBack()} />
+        </View>
+      )}
+    </View>
   );
 };

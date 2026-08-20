@@ -3,7 +3,6 @@ import { dailyQuestionDateKey } from '@statowrel/models';
 import { X } from 'lucide-react-native';
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { SuccessCircle } from '@/components/animations';
@@ -20,6 +19,7 @@ import { FOREGROUND, SURFACE, type Surface } from '@/daily-question/helpers/surf
 import { useAuth } from '@/auth/AuthContext';
 import { fontSize, fonts, spacing } from '@/design/tokens';
 import { hapticSelection, hapticValidation } from '@/lib/haptics';
+import { useSheetBottomInset } from '@/lib/useSheetBottomInset';
 import { formatDayLabel, fromDateKey, toDateKey } from '@/lib/dates';
 import type { RootStackParamList } from '@/navigation/types';
 
@@ -130,6 +130,7 @@ export const DailyQuestionScreen = () => {
   const navigation = useNavigation();
   const { params } = useRoute<RouteProp<RootStackParamList, 'DailyQuestion'>>();
   const { user } = useAuth();
+  const bottomInset = useSheetBottomInset();
 
   // No param means today, and today is Paris' day, not the device's — the day
   // key *is* the document id (docs/architecture.md).
@@ -228,8 +229,8 @@ export const DailyQuestionScreen = () => {
   const friends = useFriendAnswers(questionId, answer !== null);
 
   return (
-    <SafeAreaView style={SURFACE[surface]} edges={[ 'bottom' ]}>
-      <View style={styles.content}>
+    <View style={SURFACE[surface]}>
+      <View style={[ styles.content, { paddingBottom: spacing(6) + bottomInset } ]}>
         <View style={styles.prompt}>
           <View style={styles.close}>
             <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
@@ -290,6 +291,6 @@ export const DailyQuestionScreen = () => {
           </View>
         ) : null}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };

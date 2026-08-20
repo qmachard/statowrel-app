@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 
 import { shadows } from '@/design/shadows';
+import { useSheetBottomInset } from '@/lib/useSheetBottomInset';
 import { borderWidth, colors, radius, spacing } from '@/design/tokens';
 
 export interface BottomSheetProps {
@@ -43,18 +44,28 @@ const styles = StyleSheet.create({
  * design, and it is navigation that opens it. This one is opened by state —
  * nothing ever pushes or pops it, it is up exactly while its condition holds.
  */
-export const BottomSheet = ({ visible, label, children }: BottomSheetProps) => (
-  <Modal
-    visible={visible}
-    animationType="slide"
-    transparent
-    statusBarTranslucent
-    onRequestClose={() => undefined}
-  >
-    <View style={styles.scrim}>
-      <View accessibilityViewIsModal accessibilityLabel={label} style={[ styles.sheet, shadows.up ]}>
-        {children}
+export const BottomSheet = ({ visible, label, children }: BottomSheetProps) => {
+  // The sheet ends flush against the bottom of the screen, and its last row —
+  // the way out of the onboarding sheet — sits right on it.
+  const bottomInset = useSheetBottomInset();
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      statusBarTranslucent
+      onRequestClose={() => undefined}
+    >
+      <View style={styles.scrim}>
+        <View
+          accessibilityViewIsModal
+          accessibilityLabel={label}
+          style={[ styles.sheet, shadows.up, { paddingBottom: bottomInset } ]}
+        >
+          {children}
+        </View>
       </View>
-    </View>
-  </Modal>
-);
+    </Modal>
+  );
+};
