@@ -12,7 +12,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       Stats: '',
       DailyQuestion: 'question/:date?',
       InviteFriend: 'invite',
-      Profile: 'profile',
+      Menu: 'menu',
     },
   },
 };

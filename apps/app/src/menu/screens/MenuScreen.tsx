@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export const ProfileScreen = () => {
+export const MenuScreen = () => {
   const navigation = useNavigation();
   const { user, profile } = useAuth();
 
@@ -79,7 +79,7 @@ export const ProfileScreen = () => {
             way back to Stats has to live in the screen. */}
         <View style={styles.head}>
           <Button label="Retour" variant="outline" size="icon-sm" icon={ChevronLeft} onPress={() => navigation.goBack()} />
-          <Text style={styles.heading}>Profil</Text>
+          <Text style={styles.heading}>Menu</Text>
         </View>
 
         <View style={[ styles.card, shadows.md ]}>

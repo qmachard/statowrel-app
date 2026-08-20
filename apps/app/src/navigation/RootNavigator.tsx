@@ -1,12 +1,12 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useAuth } from '@/auth/AuthContext';
-import { ProfileScreen } from '@/auth/screens/ProfileScreen';
 import { SignInScreen } from '@/auth/screens/SignInScreen';
 import { SignUpScreen } from '@/auth/screens/SignUpScreen';
 import { DailyQuestionScreen } from '@/daily-question/screens/DailyQuestionScreen';
 import { colors } from '@/design/tokens';
 import { InviteFriendScreen } from '@/friends/screens/InviteFriendScreen';
+import { MenuScreen } from '@/menu/screens/MenuScreen';
 import { StatsScreen } from '@/stats/screens/StatsScreen';
 
 import type { RootStackParamList } from './types';
@@ -24,8 +24,9 @@ export const RootNavigator = () => {
   // the onboarding sheet (`src/auth/OnboardingSheet.tsx`) is rendered beside
   // this navigator and covers the app until it has.
   //
-  // There is no tab bar (docs/prd.md §5.1): Stats is the root, and the profile
-  // opens from the header button on top of it.
+  // There is no tab bar (docs/prd.md §5.1): Stats is the root, and the menu —
+  // profile today, settings and friends later — opens from the header button
+  // on top of it.
   return (
     <Stack.Navigator
       screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
@@ -66,7 +67,7 @@ export const RootNavigator = () => {
               sheetGrabberVisible: true,
             }}
           />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="Menu" component={MenuScreen} />
         </>
       ) : (
         <>
