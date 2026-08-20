@@ -23,8 +23,8 @@ const VARIANT_CONFIG: Record<Variant, { name: string; iosBundleIdentifier: strin
   },
   preview: {
     name: 'StatOwrel (Preview)',
-    iosBundleIdentifier: 'fr.quentinmachard.statowrel.preview',
-    androidPackage: 'fr.quentinmachard.statowrel.preview',
+    iosBundleIdentifier: 'fr.quentinmachard.statowrel',
+    androidPackage: 'fr.quentinmachard.statowrel',
   },
   production: {
     name: 'StatOwrel',
