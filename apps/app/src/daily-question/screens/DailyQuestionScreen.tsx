@@ -2,19 +2,23 @@ import { type RouteProp, useNavigation, useRoute } from '@react-navigation/nativ
 import { dailyQuestionDateKey } from '@statowrel/models';
 import { X } from 'lucide-react-native';
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { SuccessCircle } from '@/components/animations';
+import { AnswerRecap } from '@/daily-question/components/AnswerRecap';
+import { FriendAnswers } from '@/daily-question/components/FriendAnswers';
 import { QuestionOption } from '@/daily-question/components/QuestionOption';
-import { StatOwrelCard } from '@/daily-question/components/StatOwrelCard';
+import { StatOwrelHeadline } from '@/daily-question/components/StatOwrelHeadline';
 import { rememberAnswer } from '@/daily-question/data/answerStore';
 import { submitAnswer } from '@/daily-question/data/submitAnswer';
 import { type DailyQuestionStatus, useDailyQuestion } from '@/daily-question/data/useDailyQuestion';
+import { useFriendAnswers } from '@/daily-question/data/useFriendAnswers';
 import { buildStatOwrel } from '@/daily-question/helpers/statowrel';
+import { FOREGROUND, SURFACE, type Surface } from '@/daily-question/helpers/surface';
 import { useAuth } from '@/auth/AuthContext';
-import { colors, fontSize, fonts, spacing } from '@/design/tokens';
+import { fontSize, fonts, spacing } from '@/design/tokens';
 import { hapticSelection, hapticValidation } from '@/lib/haptics';
 import { formatDayLabel, fromDateKey, toDateKey } from '@/lib/dates';
 import type { RootStackParamList } from '@/navigation/types';
@@ -33,18 +37,6 @@ const DEAD_END: Partial<Record<DailyQuestionStatus, string>> = {
  * answer nobody can undo.
  */
 const VALIDATION_DELAY_MS = 150;
-
-/**
- * The sheet wears the colour of the day it shows: the accent red of today, the
- * primary yellow of a past one.
- *
- * Deliberately **not** a function of the answer. Flipping the whole sheet from
- * red to yellow under the success animation reads as a second event competing
- * with it, and the content flipping to the StatOwrel card is already what says
- * the answer landed. The calendar cell behind still goes yellow — that is the
- * calendar's own story about the day, told once the sheet is gone.
- */
-type Surface = 'accent' | 'primary';
 
 /** `A`, `B`, `C`… for the option at that rank — a question carries 2 to 6 (docs/prd.md §4.2). */
 const letterOf = (index: number) => String.fromCharCode('A'.charCodeAt(0) + index);
@@ -104,16 +96,6 @@ const styles = StyleSheet.create({
   },
 });
 
-const SURFACE = StyleSheet.create({
-  accent: { backgroundColor: colors.accent },
-  primary: { backgroundColor: colors.primary },
-}) satisfies Record<Surface, ViewStyle>;
-
-const FOREGROUND = StyleSheet.create({
-  accent: { color: colors['accent-foreground'] },
-  primary: { color: colors['primary-foreground'] },
-}) satisfies Record<Surface, TextStyle>;
-
 const Message = ({ children, surface }: { children: ReactNode; surface: Surface }) => (
   <Text style={[ styles.message, FOREGROUND[surface] ]}>{children}</Text>
 );
@@ -136,11 +118,13 @@ const Message = ({ children, surface }: { children: ReactNode; surface: Surface 
  * property of the data. There is no « Valider » button; tapping another option
  * only moves the selection.
  *
- * **An answered day is the StatOwrel card of §5.5**, not a row of dimmed
- * options: the sheet's content flips to it the moment the answer lands, with
- * the success animation playing over it, and reopening the day from the
- * calendar lands straight on it. The question moves inside the card then — it
- * carries its own recap — so the sheet never shows it twice.
+ * **An answered day is the result of §5.5**, not a row of dimmed options: the
+ * sheet's content flips to it the moment the answer lands, with the success
+ * animation playing over it, and reopening the day from the calendar lands
+ * straight on it. Three blocks, in that order — the phrase and its StatOwrel
+ * straight on the sheet, the recap of the question and its shares in the only
+ * card left, then the friends of §4.5. The question moves inside the recap
+ * then, so the sheet never shows it twice.
  */
 export const DailyQuestionScreen = () => {
   const navigation = useNavigation();
@@ -233,11 +217,15 @@ export const DailyQuestionScreen = () => {
   const answerable = status === 'ready' && user !== null && answer === null && !submitting;
 
   // The reward of docs/prd.md §5.5, recomputed on every `answer_counts` the
-  // question subscription hands over: the card's rarity is that map's shape at
-  // display time, so it keeps moving while the day's answers come in.
+  // question subscription hands over: the rarity is that map's shape at display
+  // time, so it keeps moving while the day's answers come in.
   const statOwrel = question === null || answer === null
     ? null
     : buildStatOwrel(question, question.answer_counts, answer.option_id);
+
+  // The friends of docs/prd.md §4.5, unlocked by one's own answer — which is
+  // what the flag says, and why nothing is read before it flips.
+  const friends = useFriendAnswers(questionId, answer !== null);
 
   return (
     <SafeAreaView style={SURFACE[surface]} edges={[ 'bottom' ]}>
@@ -256,13 +244,24 @@ export const DailyQuestionScreen = () => {
 
         {deadEnd ? <Message surface={surface}>{deadEnd}</Message> : null}
 
-        {statOwrel === null || question === null ? null : (
-          <StatOwrelCard
-            statOwrel={statOwrel}
-            questionLabel={question.label}
-            dateLabel={formatDayLabel(fromDateKey(date))}
-            authorName={authorName}
-          />
+        {statOwrel === null || question === null || answer === null ? null : (
+          <>
+            <StatOwrelHeadline
+              statOwrel={statOwrel}
+              surface={surface}
+              dateLabel={formatDayLabel(fromDateKey(date))}
+            />
+
+            <AnswerRecap questionLabel={question.label} statOwrel={statOwrel} />
+
+            <FriendAnswers
+              status={friends.status}
+              friends={friends.friends}
+              question={question}
+              pickedOptionId={answer.option_id}
+              surface={surface}
+            />
+          </>
         )}
 
         {question === null || answer !== null ? null : (
@@ -281,7 +280,7 @@ export const DailyQuestionScreen = () => {
 
         {failure === null ? null : <Message surface={surface}>{failure}</Message>}
 
-        {authorName === null || answer !== null ? null : (
+        {authorName === null ? null : (
           <Text style={[ styles.credit, FOREGROUND[surface] ]}>proposée par @{authorName}</Text>
         )}
 
