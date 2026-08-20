@@ -88,3 +88,6 @@ export const formatMonthLabel = (month: Date) => capitalize(`${MONTHS[month.getM
 export const formatDayLabel = (date: Date) => (
   capitalize(`${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`)
 );
+
+/** « 14h32 » — the hour a friend answered (docs/prd.md §4.5), on the device's own clock. */
+export const formatTimeLabel = (date: Date) => `${date.getHours()}h${pad(date.getMinutes())}`;
