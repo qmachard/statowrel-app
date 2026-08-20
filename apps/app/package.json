@@ -10,6 +10,7 @@
     "prebuild": "expo prebuild",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "eas-build-post-install": "cd ../.. && npm run build:models",
     "build:dev:ios": "eas build --profile development --platform ios",
     "build:dev:android": "eas build --profile development --platform android",
     "build:preview:ios": "eas build --profile preview --platform ios",
