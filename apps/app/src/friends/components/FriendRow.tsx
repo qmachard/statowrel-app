@@ -48,6 +48,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
+    flexWrap: 'wrap',
     gap: spacing(2),
     marginTop: spacing(2),
   },

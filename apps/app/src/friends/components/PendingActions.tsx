@@ -1,5 +1,4 @@
 import type { UserFriendData } from '@statowrel/models';
-import { Check, X } from 'lucide-react-native';
 
 import { Button } from '@/components/Button';
 import { ACTIONS } from '@/friends/copy';
@@ -22,14 +21,17 @@ export interface PendingActionsProps {
  * invitation is the one line in the app waiting on an answer, so both answers
  * are on the row — the menu is left to the friendships that have nothing
  * pressing to say.
+ *
+ * Two words, no icons, on the smallest step of the scale: the pair has to fit
+ * beside an avatar inside a card that scrolls, and a label spilling out of its
+ * own border is the one thing this design cannot absorb.
  */
 export const PendingActions = ({ friendship, incoming, busy, running, run }: PendingActionsProps) => (
   <>
     {incoming ? (
       <Button
         label={ACTIONS.accept}
-        icon={Check}
-        size="sm"
+        size="xs"
         loading={busy && running === acceptFriendship}
         disabled={busy}
         onPress={() => run(friendship.friend_id, acceptFriendship)}
@@ -38,9 +40,8 @@ export const PendingActions = ({ friendship, incoming, busy, running, run }: Pen
 
     <Button
       label={incoming ? ACTIONS.refuse : ACTIONS.cancel}
-      icon={X}
       variant="outline"
-      size="sm"
+      size="xs"
       loading={busy && running === removeFriendship}
       disabled={busy}
       onPress={() => run(friendship.friend_id, removeFriendship)}
