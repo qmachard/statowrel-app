@@ -2,8 +2,6 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 type Variant = 'development' | 'preview' | 'production';
 
-const APP_VARIANT = (process.env.APP_VARIANT as Variant | undefined) ?? 'development';
-
 /**
  * The yellow the native chrome is painted with — `colors.primary` of
  * `src/design/tokens.ts`, written out rather than imported: the Expo CLI reads
@@ -35,7 +33,36 @@ const VARIANT_CONFIG: Record<Variant, { name: string; iosBundleIdentifier: strin
   },
 };
 
-const variant = VARIANT_CONFIG[APP_VARIANT];
+/**
+ * The variant is **required**, never defaulted.
+ *
+ * It used to fall back to `development` when `APP_VARIANT` was missing, which
+ * is the one failure this config can have that produces no error at all: a
+ * `--profile production` build would go green from end to end and ship
+ * `fr.quentinmachard.statowrel.dev`, indistinguishable from a dev build except
+ * by reading the bundle identifier back off the artefact.
+ *
+ * The value comes from the build profile's `env` block in `eas.json` on a
+ * build — EAS applies it both on the worker and when the CLI evaluates this
+ * file locally to resolve credentials — and from the npm script itself for
+ * anything run by hand (`dev`, `prebuild`, `submit:*` in `package.json`).
+ * Outside those, pass it explicitly: `APP_VARIANT=production npx expo config`.
+ */
+const resolveVariant = (): Variant => {
+  const value = process.env.APP_VARIANT;
+
+  if (value && value in VARIANT_CONFIG) {
+    return value as Variant;
+  }
+
+  throw new Error(
+    `[app.config] APP_VARIANT is ${value ? `"${value}"` : 'not set'}, expected one of ` +
+      `${Object.keys(VARIANT_CONFIG).join(' | ')}. An EAS build reads it from the profile's ` +
+      `\`env\` block in eas.json; anything else has to pass it (APP_VARIANT=development …).`,
+  );
+};
+
+const variant = VARIANT_CONFIG[resolveVariant()];
 
 /**
  * Reversed Google OAuth iOS client id (`com.googleusercontent.apps.…`), taken

@@ -300,6 +300,10 @@ Three build profiles in `eas.json`, mapped to root-level npm scripts:
 
 `submit:prod` runs `eas submit --profile production` for both platforms. Store credentials (Apple/Google) are configured once via `eas credentials` and stored by EAS, not in this repo.
 
+**`APP_VARIANT` is required, never defaulted.** `app.config.ts` throws when it is missing or unknown. A default is the one misconfiguration this pipeline can have that produces no error at all: `--profile production` would build green from end to end and ship the `.dev` bundle identifier, indistinguishable from a dev build until somebody reads the identifier back off the artefact — or until the store rejects it. A build gets the value from its profile's `env` block; `dev`, `prebuild` and `submit:*` set it inline in `apps/app/package.json`; anything else run by hand has to pass it.
+
+**Three env sources, in increasing precedence: `eas.json`'s `env`, `.env` files, then the EAS environment variables held on Expo's servers.** All three are applied on the worker *and* when the EAS CLI evaluates `app.config.ts` locally for credentials, so a build cannot resolve one bundle identifier and sign another. The environment a profile reads is derived from it — `production` for `distribution: store`, `development` for `developmentClient`, `preview` otherwise — which here matches the profile names. The public Google OAuth identifiers stay committed in `eas.json` (they are the same everywhere, and a diff should show which client a profile signs against); the `EXPO_PUBLIC_FIREBASE_*` values live in the EAS environments, since they differ between the default and the production Firebase project. `src/lib/firebase.ts` throws on a missing api key / project id / app id rather than handing `initializeApp()` an `undefined` it accepts without complaint.
+
 ### Authentication
 
 Firebase Auth, three methods offered at the same level (`docs/prd.md` §4.1). The JS `firebase` SDK owns the *session* everywhere; the two social providers only exist to hand it a credential:
