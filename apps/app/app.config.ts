@@ -5,19 +5,17 @@ type Variant = 'development' | 'preview' | 'production';
 const APP_VARIANT = (process.env.APP_VARIANT as Variant | undefined) ?? 'development';
 
 /**
- * The two colours the native chrome is painted with, written out rather than
- * imported from `src/design/tokens.ts`: the Expo CLI reads this file on its own,
- * outside Metro, and gets no further than the config module itself — an import
- * of the token file fails to resolve there.
+ * The yellow the native chrome is painted with — `colors.primary` of
+ * `src/design/tokens.ts`, written out rather than imported: the Expo CLI reads
+ * this file on its own, outside Metro, and gets no further than the config
+ * module itself, where an import of the token file fails to resolve.
  *
- * Each one belongs to the asset it stands behind, and moves with it.
- * `ICON_BACKGROUND` is `colors.primary`, the yellow `assets/icon.png` is drawn
- * on, so Android's second icon layer carries on where the art stops.
- * `SPLASH_BACKGROUND` is the white of `assets/splash-icon.png`, which is an
- * opaque square: anything else here would frame it.
+ * It is the yellow `assets/icon.png` is drawn on, which is what makes it the
+ * right one twice over: under Android's icon layers, where it carries on where
+ * the foreground art stops, and behind the launch screen, whose star is cut out
+ * of its own background so this shows through.
  */
-const ICON_BACKGROUND = '#ffdc59';
-const SPLASH_BACKGROUND = '#ffffff';
+const BRAND_YELLOW = '#ffdc59';
 
 const VARIANT_CONFIG: Record<Variant, { name: string; iosBundleIdentifier: string; androidPackage: string }> = {
   development: {
@@ -61,16 +59,16 @@ const plugins: NonNullable<ExpoConfig['plugins']> = [
     'expo-splash-screen',
     {
       /*
-       * The launch screen: the star of `assets/splash-icon.png` on the white it
-       * is drawn on. The art keeps three quarters of its square empty, so the
-       * width below is the *square's*, not the star's — the star itself lands
-       * at a bit under a third of it.
+       * The launch screen: the star of `assets/splash-icon.png`, cut out, on the
+       * brand yellow.
        *
-       * Android composes the icon into a canvas of its own and masks it to a
-       * circle, which caps that width at 288; iOS gets a size that still fits
-       * across the narrowest phone.
+       * The star takes a bit under half of its square, so these widths size the
+       * *square*, not the star — it comes out around 147pt on iOS and 132dp on
+       * Android. 288 is a ceiling there rather than a choice: Android composes
+       * the splash icon into a canvas of its own and masks it to a circle, and
+       * the star is framed to fill that circle at exactly this width.
        */
-      backgroundColor: SPLASH_BACKGROUND,
+      backgroundColor: BRAND_YELLOW,
       image: './assets/splash-icon.png',
       imageWidth: 320,
       android: {
@@ -113,8 +111,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       // The star alone, on its own layer, over the yellow `icon.png` is drawn
       // on: a launcher masks the two together and moves them apart on a press,
       // which is why the background is a flat colour rather than part of the art.
+      // The art is framed so the star clears that mask — the trail is what runs
+      // past it, as it runs past the edge of the icon.
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: ICON_BACKGROUND,
+      backgroundColor: BRAND_YELLOW,
     },
   },
   plugins,
