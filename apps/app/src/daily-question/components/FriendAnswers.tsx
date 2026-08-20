@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/Card';
 import type { FriendAnswer, FriendAnswersStatus } from '@/daily-question/data/useFriendAnswers';
+import { statLabelOf } from '@/daily-question/helpers/statowrel';
 import { FOREGROUND, type Surface } from '@/daily-question/helpers/surface';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 import { FriendRow } from '@/friends/components/FriendRow';
@@ -41,7 +42,7 @@ const styles = StyleSheet.create({
     borderTopWidth: borderWidth,
     borderTopColor: colors.border,
   },
-  // What they picked, as a bordered chip — capped, so a long option never
+  // The StatOwrel they earned, as a bordered chip — capped, so a long one never
   // squeezes the handle beside it.
   chip: {
     maxWidth: CHIP_MAX_WIDTH,
@@ -78,8 +79,8 @@ interface Row {
   friendId: string;
   username: string;
   photoUrl: string | null | undefined;
-  /** The label of what they picked, `null` for a friend who hasn't answered. */
-  optionLabel: string | null;
+  /** The StatOwrel of what they picked, `null` for a friend who hasn't answered. */
+  statLabel: string | null;
   timeLabel: string | null;
   /** They picked the same option as this user. */
   same: boolean;
@@ -91,7 +92,7 @@ interface Row {
  * the friends still to answer close the list.
  */
 const rank = (row: Row) => {
-  if (row.optionLabel === null) {
+  if (row.statLabel === null) {
     return 2;
   }
 
@@ -107,7 +108,7 @@ const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: strin
         friendId: friend.friendId,
         username: friend.username,
         photoUrl: friend.photoUrl,
-        optionLabel: option?.label ?? null,
+        statLabel: option === null ? null : statLabelOf(option),
         timeLabel: friend.answeredAt === null ? null : formatTimeLabel(new Date(friend.answeredAt)),
         same: friend.optionId === pickedId,
       };
@@ -127,8 +128,8 @@ export interface FriendAnswersProps {
 
 /**
  * The friends' answers of docs/prd.md §4.5, under the recap: `@handle`, the
- * option they picked and the hour they picked it, the ones who answered like me
- * first, the ones who haven't yet at the end.
+ * StatOwrel their answer earned them and the hour they picked it, the ones who
+ * answered like me first, the ones who haven't yet at the end.
  *
  * It only ever renders on an answered day — the screen doesn't mount it before,
  * and `useFriendAnswers` reads nothing before either: unlocking your friends by
@@ -175,11 +176,11 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
                 photoUrl={row.photoUrl}
                 note={row.timeLabel ?? undefined}
               >
-                {row.optionLabel === null ? (
+                {row.statLabel === null ? (
                   <Text style={styles.pending}>n’a pas encore répondu</Text>
                 ) : (
                   <Text style={[ styles.chip, row.same ? styles.chipSame : null ]} numberOfLines={1}>
-                    {row.optionLabel}
+                    {row.statLabel}
                   </Text>
                 )}
               </FriendRow>
