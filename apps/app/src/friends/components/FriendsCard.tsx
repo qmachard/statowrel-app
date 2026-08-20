@@ -1,5 +1,5 @@
 import type { UserFriendData } from '@statowrel/models';
-import { Check, UserRoundPlus, X } from 'lucide-react-native';
+import { UserRoundPlus, X } from 'lucide-react-native';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -7,8 +7,9 @@ import { Card } from '@/components/Card';
 import { DropdownMenu } from '@/components/DropdownMenu';
 import { borderWidth, colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendRow } from '@/friends/components/FriendRow';
-import { EMPTY, FAILURE, NOTES, REMOVE_LABELS } from '@/friends/copy';
-import { acceptFriendship, removeFriendship } from '@/friends/data/friendships';
+import { PendingActions } from '@/friends/components/PendingActions';
+import { EMPTY, FAILURE, NOTES, REMOVE_LABEL } from '@/friends/copy';
+import { removeFriendship } from '@/friends/data/friendships';
 import { useFriendAvatars } from '@/friends/data/useFriendAvatars';
 import { useFriends } from '@/friends/data/useFriends';
 import { useFriendshipWrite } from '@/friends/data/useFriendshipWrite';
@@ -61,12 +62,10 @@ const styles = StyleSheet.create({
   },
 });
 
-/** A friendship as the list renders it — the entry plus what can be done to it. */
+/** A friendship as the list renders it — the entry plus what it currently is. */
 interface Line {
   friendship: UserFriendData;
-  note?: string;
-  removeLabel: string;
-  acceptable: boolean;
+  kind: 'incoming' | 'accepted' | 'outgoing';
 }
 
 /**
@@ -80,32 +79,20 @@ interface Line {
  * and hiding it until it resolves would lose it. The ones waiting on this user
  * come first, since they are the only lines with something to do.
  *
- * Accepting is one button under the row's note — the answer sits under what it
- * answers; refusing, cancelling and removing sit in the row's menu, because
- * they are the same delete and none of them is the obvious tap.
+ * A pending invitation carries its two answers as buttons under the row's note
+ * — « Accepter » / « Refuser » on one received, « Annuler » on one sent — the
+ * answer sitting under what it answers. The row's menu is left to the accepted
+ * friendships, where « Retirer ce pote » is the only thing to do and nothing is
+ * waiting: a `ghost` trigger, so it does not compete with those buttons.
  */
 export const FriendsCard = ({ onInvite }: FriendsCardProps) => {
   const { accepted, incoming, outgoing, loading } = useFriends();
-  const { busy, failed, run } = useFriendshipWrite();
+  const { busy, running, failed, run } = useFriendshipWrite();
 
   const lines: Line[] = [
-    ...incoming.map((friendship) => ({
-      friendship,
-      note: NOTES.incoming,
-      removeLabel: REMOVE_LABELS.incoming,
-      acceptable: true,
-    })),
-    ...accepted.map((friendship) => ({
-      friendship,
-      removeLabel: REMOVE_LABELS.accepted,
-      acceptable: false,
-    })),
-    ...outgoing.map((friendship) => ({
-      friendship,
-      note: NOTES.outgoing,
-      removeLabel: REMOVE_LABELS.outgoing,
-      acceptable: false,
-    })),
+    ...incoming.map((friendship): Line => ({ friendship, kind: 'incoming' })),
+    ...accepted.map((friendship): Line => ({ friendship, kind: 'accepted' })),
+    ...outgoing.map((friendship): Line => ({ friendship, kind: 'outgoing' })),
   ];
 
   const avatars = useFriendAvatars(lines.map((line) => line.friendship.friend_id));
@@ -135,29 +122,32 @@ export const FriendsCard = ({ onInvite }: FriendsCardProps) => {
             <FriendRow
               username={line.friendship.friend_username}
               photoUrl={avatars[line.friendship.friend_id]}
-              note={line.note}
-              action={line.acceptable ? (
-                <Button
-                  label="Accepter"
-                  icon={Check}
-                  size="sm"
-                  loading={busy === line.friendship.friend_id}
-                  onPress={() => run(line.friendship.friend_id, acceptFriendship)}
+              note={line.kind === 'accepted' ? undefined : NOTES[line.kind]}
+              action={line.kind === 'accepted' ? undefined : (
+                <PendingActions
+                  friendship={line.friendship}
+                  incoming={line.kind === 'incoming'}
+                  busy={busy === line.friendship.friend_id}
+                  running={running}
+                  run={run}
                 />
-              ) : undefined}
+              )}
             >
-              <DropdownMenu
-                label={`Gérer @${line.friendship.friend_username}`}
-                disabled={busy === line.friendship.friend_id}
-                items={[
-                  {
-                    label: line.removeLabel,
-                    icon: X,
-                    variant: 'destructive',
-                    onPress: () => run(line.friendship.friend_id, removeFriendship),
-                  },
-                ]}
-              />
+              {line.kind === 'accepted' ? (
+                <DropdownMenu
+                  label={`Gérer @${line.friendship.friend_username}`}
+                  variant="ghost"
+                  disabled={busy === line.friendship.friend_id}
+                  items={[
+                    {
+                      label: REMOVE_LABEL,
+                      icon: X,
+                      variant: 'destructive',
+                      onPress: () => run(line.friendship.friend_id, removeFriendship),
+                    },
+                  ]}
+                />
+              ) : null}
             </FriendRow>
           </View>
         ))}

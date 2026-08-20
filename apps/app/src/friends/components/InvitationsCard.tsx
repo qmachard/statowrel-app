@@ -1,42 +1,43 @@
-import { Check, X } from 'lucide-react-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
-import { DropdownMenu } from '@/components/DropdownMenu';
-import { borderWidth, colors, fontSize, fonts, spacing } from '@/design/tokens';
+import { colors, fontSize, fonts, pagePadding, spacing } from '@/design/tokens';
 import { FriendRow } from '@/friends/components/FriendRow';
-import { FAILURE, NOTES, REMOVE_LABELS } from '@/friends/copy';
-import { acceptFriendship, removeFriendship } from '@/friends/data/friendships';
+import { PendingActions } from '@/friends/components/PendingActions';
+import { FAILURE, NOTES } from '@/friends/copy';
 import { useFriendAvatars } from '@/friends/data/useFriendAvatars';
 import { useFriends } from '@/friends/data/useFriends';
 import { useFriendshipWrite } from '@/friends/data/useFriendshipWrite';
 
+/**
+ * Share of the screen one invitation takes when it is not alone — what is left
+ * is the peek of the next one, which is what says the line scrolls. The same
+ * device as the stats strip right under it.
+ */
+const SCREEN_SHARE = 0.85;
+
 const styles = StyleSheet.create({
-  root: {
-    gap: spacing(3),
+  strip: {
+    // Bleeds back through the screen's padding so the line runs edge to edge:
+    // an invitation scrolling out is cut by the screen, not by a gutter.
+    marginHorizontal: -pagePadding,
   },
-  title: {
-    fontFamily: fonts.head,
-    fontSize: fontSize.xl,
-    textTransform: 'uppercase',
-    color: colors.foreground,
+  content: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing(4),
+    paddingHorizontal: pagePadding,
+    // The hard offset shadows fall outside the cards — without this the strip
+    // would clip them at the bottom.
+    paddingBottom: spacing(2),
   },
-  list: {
-    gap: 0,
+  card: {
     paddingVertical: 0,
-    overflow: 'hidden',
-  },
-  separated: {
-    borderTopWidth: borderWidth,
-    borderTopColor: colors.border,
   },
   error: {
     fontFamily: fonts.sans,
     fontSize: fontSize.sm,
     color: colors.destructive,
-    paddingHorizontal: spacing(5),
-    paddingVertical: spacing(5),
   },
 });
 
@@ -47,58 +48,53 @@ const styles = StyleSheet.create({
  * invitation is the one thing in the app waiting on an answer, and the Menu is
  * a screen the user has no reason to open. Here it is unmissable — and it
  * renders nothing at all once there is nothing to answer, so the home screen
- * only carries it when it has something to say.
+ * only carries it when it has something to say. No title either: an invitation
+ * says what it is, and a heading over one card would only push the day down.
+ *
+ * One card per invitation on a scrolling line rather than a list, so several
+ * of them cost the screen the height of one.
  */
 export const InvitationsCard = () => {
   const { incoming } = useFriends();
-  const { busy, failed, run } = useFriendshipWrite();
+  const { busy, running, failed, run } = useFriendshipWrite();
   const avatars = useFriendAvatars(incoming.map((friendship) => friendship.friend_id));
+  const { width } = useWindowDimensions();
 
   if (incoming.length === 0) {
     return null;
   }
 
-  return (
-    <View style={styles.root}>
-      <Text style={styles.title}>
-        {incoming.length === 1 ? 'Invitation' : 'Invitations'}
-      </Text>
+  const cardWidth = incoming.length === 1 ? width - pagePadding * 2 : width * SCREEN_SHARE;
 
-      <Card style={styles.list}>
-        {incoming.map((friendship, index) => (
-          <View key={friendship.friend_id} style={index === 0 ? null : styles.separated}>
+  return (
+    <View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.strip}
+        contentContainerStyle={styles.content}
+      >
+        {incoming.map((friendship) => (
+          <Card key={friendship.friend_id} style={[ styles.card, { width: cardWidth } ]}>
             <FriendRow
               username={friendship.friend_username}
               photoUrl={avatars[friendship.friend_id]}
               note={NOTES.incoming}
               action={(
-                <Button
-                  label="Accepter"
-                  icon={Check}
-                  size="sm"
-                  loading={busy === friendship.friend_id}
-                  onPress={() => run(friendship.friend_id, acceptFriendship)}
+                <PendingActions
+                  friendship={friendship}
+                  incoming
+                  busy={busy === friendship.friend_id}
+                  running={running}
+                  run={run}
                 />
               )}
-            >
-              <DropdownMenu
-                label={`Gérer @${friendship.friend_username}`}
-                disabled={busy === friendship.friend_id}
-                items={[
-                  {
-                    label: REMOVE_LABELS.incoming,
-                    icon: X,
-                    variant: 'destructive',
-                    onPress: () => run(friendship.friend_id, removeFriendship),
-                  },
-                ]}
-              />
-            </FriendRow>
-          </View>
+            />
+          </Card>
         ))}
+      </ScrollView>
 
-        {failed ? <Text style={[ styles.error, styles.separated ]}>{FAILURE}</Text> : null}
-      </Card>
+      {failed ? <Text style={styles.error}>{FAILURE}</Text> : null}
     </View>
   );
 };

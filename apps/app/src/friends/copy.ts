@@ -5,15 +5,18 @@ export const NOTES = {
 };
 
 /**
- * Refusing, cancelling and removing are the same delete (see
- * `data/friendships.ts`) — only what the user is doing differs, so only the
- * wording does.
+ * What answers those notes. Accepting is one write, refusing and cancelling are
+ * the same delete of both halves (see `data/friendships.ts`) — only what the
+ * user is doing differs, so only the wording does.
  */
-export const REMOVE_LABELS = {
-  accepted: 'Retirer ce pote',
-  incoming: 'Refuser l’invitation',
-  outgoing: 'Annuler l’invitation',
+export const ACTIONS = {
+  accept: 'Accepter',
+  refuse: 'Refuser',
+  cancel: 'Annuler',
 };
+
+/** Removing a friend is that same delete, and the only one left in a menu. */
+export const REMOVE_LABEL = 'Retirer ce pote';
 
 /** docs/prd.md §5.3 — the empty state takes the place of the list, verbatim. */
 export const EMPTY = 'Sans potes, StatOwrel c’est juste des chiffres.';

@@ -11,7 +11,7 @@ export interface FriendRowProps {
   photoUrl?: string | null;
   /** What this line is waiting on, when it is waiting on something. */
   note?: string;
-  /** The line's own answer to its note — rendered under it, in the same column. */
+  /** The line's own answer to its note — one or more buttons, rendered under it in the same column. */
   action?: ReactNode;
   /** The row's actions, pushed to the right — the row's menu. */
   children?: ReactNode;
@@ -24,6 +24,11 @@ const styles = StyleSheet.create({
     gap: spacing(3),
     paddingHorizontal: spacing(5),
     paddingVertical: spacing(3),
+  },
+  // A row carrying an action is taller than its avatar, and an avatar floating
+  // in the middle of it reads as a second column: it belongs to the handle.
+  stacked: {
+    alignItems: 'flex-start',
   },
   body: {
     flex: 1,
@@ -40,7 +45,10 @@ const styles = StyleSheet.create({
     color: colors['muted-foreground'],
   },
   action: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
+    gap: spacing(2),
     marginTop: spacing(2),
   },
   actions: {
@@ -55,14 +63,14 @@ const styles = StyleSheet.create({
  * what to do about it under that, and its menu on the right.
  *
  * The action sits under the note rather than beside the handle: it answers the
- * note (« T'a envoyé une invitation. » → « Accepter »), and reading the two in
- * that order is what makes the row make sense.
+ * note (« T'a envoyé une invitation. » → « Accepter » / « Refuser »), and
+ * reading the two in that order is what makes the row make sense.
  *
  * It carries no surface of its own — the card around the list is the surface,
  * and the rows are cut out of it by separators.
  */
 export const FriendRow = ({ username, photoUrl, note, action, children }: FriendRowProps) => (
-  <View style={styles.root}>
+  <View style={[ styles.root, action === undefined ? null : styles.stacked ]}>
     <Avatar size="lg" name={username} uri={photoUrl} />
 
     <View style={styles.body}>
@@ -73,6 +81,6 @@ export const FriendRow = ({ username, photoUrl, note, action, children }: Friend
       {action === undefined ? null : <View style={styles.action}>{action}</View>}
     </View>
 
-    {children === undefined ? null : <View style={styles.actions}>{children}</View>}
+    {children === undefined || children === null ? null : <View style={styles.actions}>{children}</View>}
   </View>
 );
