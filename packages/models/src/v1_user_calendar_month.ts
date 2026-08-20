@@ -25,8 +25,8 @@ export interface UserCalendarMonthDayFirebaseData {
    *
    * This is the whole point of the projection: the calendar renders it inside
    * the answered cell (docs/prd.md §5.2), and without the copy each answered
-   * day would cost two more reads — the day's `v1_daily_questions` document to
-   * find the question, then the question itself to resolve the option.
+   * day would cost one more read — the answer's `v1_questions` document, to
+   * resolve the option it points at.
    *
    * A display cache, not the truth: the card (docs/prd.md §5.5) reads the real
    * question anyway. Editing a question's `stat_label` in the backoffice leaves
@@ -42,10 +42,10 @@ export interface UserCalendarMonthDayFirebaseData {
  * read model behind the Stats calendar (docs/prd.md §5.2).
  *
  * Derived, never the source of truth: the answers themselves live in
- * `v1_daily_questions/{date}/v1_daily_question_answers/{user_id}`, where the
+ * `v1_questions/{question_id}/v1_daily_question_answers/{user_id}`, where the
  * document id is what makes "one answer per person per day" a property of the
  * data. This document only exists so that displaying a month costs one read
- * instead of one per answered day plus the two joins each of them would need.
+ * instead of one per answered day plus the question each of them joins to.
  *
  * Written by the answer trigger, in the transaction that also bumps the user's
  * counters — and the presence of a day's entry is what makes that transaction

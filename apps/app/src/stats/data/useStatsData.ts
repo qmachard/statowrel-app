@@ -53,10 +53,10 @@ const monthRefsOf = (userId: string, monthKey: string) => ({
  * move on their own. Only the displayed month is fetched.
  *
  * **A month costs two documents, and that is the point.** Read from the answers
- * themselves, the same month costs one read per answered day, plus the day
- * document and the question behind each of them to resolve its `stat_label`,
- * plus a month of `v1_daily_questions` to tell a missed day from a day that
- * never had a question — around ninety reads, and again on every chevron.
+ * themselves, the same month costs one read per answered day, plus the question
+ * behind each of them to resolve its `stat_label`, plus a lookup per day to
+ * tell a missed day from a day that never had a question — dozens of reads, and
+ * again on every chevron.
  *
  * How those two documents are read depends on the month:
  *
