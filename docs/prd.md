@@ -182,9 +182,9 @@ La racine de l'app. De haut en bas :
 
 | État | Rendu | Tap |
 |---|---|---|
-| **Répondu** | Case `primary`, ombre dure, le `stat_label` du jour en micro-texte (tronqué) | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
+| **Répondu** | Case `primary`, ombre dure, un **check** central à la place du numéro du jour | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
 | **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
-| **Aujourd'hui** | Case `accent` — le même traitement qu'un jour répondu, bordure, ombre dure et `stat_label` compris une fois la journée jouée : seule la couleur change. Aujourd'hui reste `accent` quoi qu'il arrive, répondu ou non — c'est le jour dont l'écran parle, et le voir virer au jaune comme les autres le dissolvait dans le mois | Ouvre la modale question du jour (§5.4), ou la carte StatOwrel (§5.5) une fois répondu |
+| **Aujourd'hui** | Case `accent` — le même traitement qu'un jour répondu, bordure, ombre dure et check compris une fois la journée jouée : seule la couleur change. Aujourd'hui reste `accent` quoi qu'il arrive, répondu ou non — c'est le jour dont l'écran parle, et le voir virer au jaune comme les autres le dissolvait dans le mois | Ouvre la modale question du jour (§5.4), ou la carte StatOwrel (§5.5) une fois répondu |
 | **Futur, ou sans question** | Case `muted`, sans bordure | Inerte |
 
 - Navigation mois par mois (chevrons gauche/droite), bornée au **premier mois où une question a été diffusée** d'un côté et au mois courant de l'autre. La borne basse est la même pour tout le monde : les jours antérieurs à l'inscription sont des jours ratés comme les autres, rattrapables en mode late (§4.2).

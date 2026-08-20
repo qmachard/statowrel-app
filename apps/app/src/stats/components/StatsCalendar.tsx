@@ -55,7 +55,7 @@ export const StatsCalendar = ({ month, onMonthChange, calendar, archiveStart }: 
             return (
               <CalendarDay
                 date={date}
-                statLabel={answer?.stat_label ?? null}
+                answered={answer !== undefined}
                 state={getCalendarDayState({
                   day: dayKey,
                   today: todayKey,
