@@ -1,44 +1,22 @@
 import type { UserFriendData } from '@statowrel/models';
 import { Check, UserRoundPlus, X } from 'lucide-react-native';
-import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { useAuth } from '@/auth/AuthContext';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { DropdownMenu } from '@/components/DropdownMenu';
 import { borderWidth, colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendRow } from '@/friends/components/FriendRow';
+import { EMPTY, FAILURE, NOTES, REMOVE_LABELS } from '@/friends/copy';
 import { acceptFriendship, removeFriendship } from '@/friends/data/friendships';
 import { useFriendAvatars } from '@/friends/data/useFriendAvatars';
 import { useFriends } from '@/friends/data/useFriends';
+import { useFriendshipWrite } from '@/friends/data/useFriendshipWrite';
 
 export interface FriendsCardProps {
   /** Opens the `InviteFriend` sheet — docs/prd.md §4.1. */
   onInvite: () => void;
 }
-
-/** What each side of a still-pending invitation is waiting on. */
-const NOTES = {
-  incoming: 'T’a envoyé une invitation.',
-  outgoing: 'Invitation envoyée, en attente.',
-};
-
-/**
- * Refusing, cancelling and removing are the same delete (see
- * `data/friendships.ts`) — only what the user is doing differs, so only the
- * wording does.
- */
-const REMOVE_LABELS = {
-  accepted: 'Retirer ce pote',
-  incoming: 'Refuser l’invitation',
-  outgoing: 'Annuler l’invitation',
-};
-
-/** docs/prd.md §5.3 — the empty state takes the place of the list, verbatim. */
-const EMPTY = 'Sans potes, StatOwrel c’est juste des chiffres.';
-
-const FAILURE = 'Ça n’a pas marché. Vérifie ta connexion et réessaie.';
 
 const styles = StyleSheet.create({
   root: {
@@ -102,15 +80,13 @@ interface Line {
  * and hiding it until it resolves would lose it. The ones waiting on this user
  * come first, since they are the only lines with something to do.
  *
- * Accepting is one button on the row; refusing, cancelling and removing sit in
- * the row's menu, because they are the same delete and none of them is the
- * obvious tap.
+ * Accepting is one button under the row's note — the answer sits under what it
+ * answers; refusing, cancelling and removing sit in the row's menu, because
+ * they are the same delete and none of them is the obvious tap.
  */
 export const FriendsCard = ({ onInvite }: FriendsCardProps) => {
-  const { user } = useAuth();
   const { accepted, incoming, outgoing, loading } = useFriends();
-  const [ busy, setBusy ] = useState<string | null>(null);
-  const [ failed, setFailed ] = useState(false);
+  const { busy, failed, run } = useFriendshipWrite();
 
   const lines: Line[] = [
     ...incoming.map((friendship) => ({
@@ -133,26 +109,6 @@ export const FriendsCard = ({ onInvite }: FriendsCardProps) => {
   ];
 
   const avatars = useFriendAvatars(lines.map((line) => line.friendship.friend_id));
-
-  // The list is a subscription, so nothing is applied optimistically here: the
-  // row is held busy until the write lands and the snapshot says what happened.
-  const run = async (friendId: string, write: (userId: string, friend: string) => Promise<void>) => {
-    if (user === null) {
-      return;
-    }
-
-    setBusy(friendId);
-    setFailed(false);
-
-    try {
-      await write(user.uid, friendId);
-    } catch (error: unknown) {
-      console.warn('[friends] could not write the friendship', friendId, error);
-      setFailed(true);
-    } finally {
-      setBusy(null);
-    }
-  };
 
   return (
     <View style={styles.root}>
@@ -180,8 +136,7 @@ export const FriendsCard = ({ onInvite }: FriendsCardProps) => {
               username={line.friendship.friend_username}
               photoUrl={avatars[line.friendship.friend_id]}
               note={line.note}
-            >
-              {line.acceptable ? (
+              action={line.acceptable ? (
                 <Button
                   label="Accepter"
                   icon={Check}
@@ -189,8 +144,8 @@ export const FriendsCard = ({ onInvite }: FriendsCardProps) => {
                   loading={busy === line.friendship.friend_id}
                   onPress={() => run(line.friendship.friend_id, acceptFriendship)}
                 />
-              ) : null}
-
+              ) : undefined}
+            >
               <DropdownMenu
                 label={`Gérer @${line.friendship.friend_username}`}
                 disabled={busy === line.friendship.friend_id}

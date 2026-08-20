@@ -11,7 +11,9 @@ export interface FriendRowProps {
   photoUrl?: string | null;
   /** What this line is waiting on, when it is waiting on something. */
   note?: string;
-  /** The row's actions, pushed to the right — the accept button and the menu. */
+  /** The line's own answer to its note — rendered under it, in the same column. */
+  action?: ReactNode;
+  /** The row's actions, pushed to the right — the row's menu. */
   children?: ReactNode;
 }
 
@@ -37,6 +39,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors['muted-foreground'],
   },
+  action: {
+    alignSelf: 'flex-start',
+    marginTop: spacing(2),
+  },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -46,12 +52,16 @@ const styles = StyleSheet.create({
 
 /**
  * One line of the friend list: avatar, handle, what it is waiting on if it is,
- * and its actions on the right.
+ * what to do about it under that, and its menu on the right.
+ *
+ * The action sits under the note rather than beside the handle: it answers the
+ * note (« T'a envoyé une invitation. » → « Accepter »), and reading the two in
+ * that order is what makes the row make sense.
  *
  * It carries no surface of its own — the card around the list is the surface,
  * and the rows are cut out of it by separators.
  */
-export const FriendRow = ({ username, photoUrl, note, children }: FriendRowProps) => (
+export const FriendRow = ({ username, photoUrl, note, action, children }: FriendRowProps) => (
   <View style={styles.root}>
     <Avatar size="lg" name={username} uri={photoUrl} />
 
@@ -60,6 +70,7 @@ export const FriendRow = ({ username, photoUrl, note, children }: FriendRowProps
         @{username}
       </Text>
       {note === undefined ? null : <Text style={styles.note}>{note}</Text>}
+      {action === undefined ? null : <View style={styles.action}>{action}</View>}
     </View>
 
     {children === undefined ? null : <View style={styles.actions}>{children}</View>}

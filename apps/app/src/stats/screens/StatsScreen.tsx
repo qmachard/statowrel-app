@@ -4,6 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, pagePadding, spacing } from '@/design/tokens';
+import { InvitationsCard } from '@/friends/components/InvitationsCard';
 import { DailyQuestionBanner } from '@/stats/components/DailyQuestionBanner';
 import { StatTile } from '@/stats/components/StatTile';
 import { StatsCalendar } from '@/stats/components/StatsCalendar';
@@ -14,9 +15,10 @@ import { useStatsData } from '@/stats/data/useStatsData';
 import { resolveStreakCount } from '@/stats/helpers/streak';
 
 /**
- * The root of the app (docs/prd.md §5.1, §5.2), from top to bottom: the day's
- * question when it is still open, the streak and its counters on a scrolling
- * strip, then the calendar. The daily question sheet lands on top of it (§5.4).
+ * The root of the app (docs/prd.md §5.1, §5.2), from top to bottom: the
+ * invitations waiting on an answer, the day's question when it is still open,
+ * the streak and its counters on a scrolling strip, then the calendar. The
+ * daily question sheet lands on top of it (§5.4).
  */
 const styles = StyleSheet.create({
   safeArea: {
@@ -75,6 +77,8 @@ export const StatsScreen = () => {
           onInvite={() => navigation.navigate('InviteFriend')}
           onOpenMenu={() => navigation.navigate('Menu')}
         />
+
+        <InvitationsCard />
 
         {pendingQuestion ? (
           <DailyQuestionBanner
