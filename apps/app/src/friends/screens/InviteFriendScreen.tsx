@@ -8,7 +8,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
-import { SuccessCircle } from '@/components/animations';
+import { SuccessCheck } from '@/components/animations';
 import { TextField } from '@/components/TextField';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { inviteFriend } from '@/friends/data/inviteFriend';
@@ -24,7 +24,7 @@ const HELP = 'Tape son nom d’utilisateur exact : il n’y a ni recherche, ni a
  * are stated rather than celebrated.
  */
 const OUTCOME_MESSAGES: Record<InviteFriendOutcome, (username: string) => string> = {
-  invited: (username) => `Invitation envoyée à @${username}. Il ne reste plus qu’à ce qu’il ou elle accepte.`,
+  invited: (username) => `Invitation envoyée à @${username}.`,
   already_invited: (username) => `Une invitation est déjà en attente avec @${username}.`,
   already_friends: (username) => `Tu es déjà pote avec @${username}.`,
 };
@@ -172,7 +172,7 @@ export const InviteFriendScreen = () => {
           </>
         ) : (
           <View style={styles.outcome}>
-            {result.outcome === 'invited' ? <SuccessCircle size="lg" /> : null}
+            {result.outcome === 'invited' ? <SuccessCheck size="2xl" /> : null}
 
             <Text style={styles.outcomeMessage}>{OUTCOME_MESSAGES[result.outcome](result.username)}</Text>
 
