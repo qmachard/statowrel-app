@@ -1,6 +1,6 @@
 # StatOwrel — PRD
 
-Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Cinq sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil), les §5.1–5.2 (l'écran Stats, branché sur Firestore), le §5.4 (la sheet question, dismissable au lieu d'être bloquante, mais qui bascule bien sur la carte après validation), le §4.3 (le double tap, complet) et le §5.5 (la carte StatOwrel, sans son illustration, son bouton de partage ni les réponses des amis) — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
+Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Cinq sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil), les §5.1–5.2 (l'écran Stats, branché sur Firestore), le §5.4 (la sheet question, dismissable au lieu d'être bloquante, mais qui bascule bien sur la carte après validation), le §4.3 (le double tap, complet), le §5.5 (la carte StatOwrel, sans son illustration, son bouton de partage ni les réponses des amis) et l'ajout d'ami par handle du §4.1 (la sheet d'invitation, sans la liste d'amis qui répond à l'invitation) — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
 
 ## 1. Vision
 
@@ -83,7 +83,7 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 - **Liaison d'identités** (`linkWithCredential`) — un même e-mail arrivant par deux providers crée aujourd'hui deux comptes distincts ; l'app affiche un message expliquant quelle méthode utiliser au lieu de lier.
 - **Choix de l'avatar** — la sheet d'onboarding ne demande que le nom d'utilisateur ; l'avatar reste celui du provider, sans moyen d'en changer.
 - **Changement de nom d'utilisateur** — impossible aujourd'hui : libérer une réservation demande un passage côté backend, comme la suppression de compte.
-- **Ajout d'ami par handle** — la résolution `@handle` → compte et le modèle d'amitié (`v1_users/{id}/v1_user_friends`, §6) sont en place côté données, règles Firestore comprises ; il n'y a encore ni écran pour s'en servir, ni lien d'invitation, ni code à 6 caractères.
+- **Ajout d'ami par handle** — fait : le bouton « Inviter un pote » de l'en-tête Stats (§5.1) ouvre une sheet où l'on tape le nom d'utilisateur exact du pote. Elle appelle le callable `friends-inviteFriend`, qui résout le handle contre `v1_usernames` et écrit les deux moitiés de l'amitié en `pending` ; un handle inconnu répond « Utilisateur introuvable. » sous le champ. Restent à faire : le **lien d'invitation** et le **code à 6 caractères**, ainsi que la liste d'amis d'où l'invitation reçue s'accepte ou se refuse (§5.3) — rien ne lit encore `v1_user_friends`.
 - **Suppression de compte** — non implémentée.
 
 ### 4.2 Question du jour
@@ -161,7 +161,7 @@ Pas de tabbar. L'écran **Stats** (§5.2) *est* l'app : il s'ouvre au lancement,
 
 | Bouton | Ouvre |
 |---|---|
-| **Inviter un pote** | Le partage du lien d'invitation et du code à 6 caractères (§4.1) |
+| **Inviter un pote** | La sheet d'invitation par nom d'utilisateur (§4.1) — le lien d'invitation et le code à 6 caractères s'y ajouteront |
 | **Modifier le profil** | L'écran Profil (§5.3) — identité, amis, questions proposées, réglages |
 
 - Les deux boutons sont carrés, bordure noire épaisse, ombre dure décalée. Le bouton d'invitation est plein `primary`, celui du profil sur fond `card` : inviter est l'action qu'on veut voir en premier.

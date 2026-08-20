@@ -199,6 +199,7 @@ Each domain under `src/domains/` is self-contained:
 ```
 domains/{domain-name}/
 ├── api/{handlers,middlewares,index.ts}   # HTTP routes — Express app + onRequest export
+├── callables/                              # onCall functions — one file per callable
 ├── triggers/{steps,onXxxCreated.ts}       # Firestore triggers → step handlers
 ├── helpers/                                # business logic
 ├── tasks/                                  # Cloud Tasks handlers
@@ -207,6 +208,8 @@ domains/{domain-name}/
 ```
 
 `src/index.ts` re-exports each domain as a namespace (`export * as health from './domains/health'`), so Firebase names functions `<domain>-<exportName>` (e.g. `health-healthApi`). `src/domains/health` is a minimal working example (`GET /ping`) proving the wiring end-to-end; it's a template to copy, not a real feature.
+
+`api/` and `callables/` are two ways out of the same domain, and the client decides which. An **HTTP route** is for a caller that is not the app — a webhook, a browser, `curl`. A **callable** is for the app: the ID token travels with the call and is verified by the runtime, so `request.auth` is already there and no token middleware has to be written; failures come back as `HttpsError` codes the client reads as `functions/*`. A callable's wire shape (name, payload, result) lives in `@statowrel/models`'s `callables.ts` — the only module of that package describing no Firestore collection — so both sides compile against the same type.
 
 ### `daily-questions`
 
@@ -228,6 +231,22 @@ Drawing and publishing happen in the same run: everyone gets the same question a
 Deploying this domain needs the scheduler's service account to hold `cloudtasks.enqueuer` and to be allowed to `actAs` the task function's service account — the notification is enqueued from code, not by an IAM-free trigger.
 
 `src/libs/firebase-admin.ts` centralizes all Firestore/Storage access (`getDocumentRef`, `getSubCollectionRef`, `createWriteBatch`, `getAdminStorageSignedUrl`, …) — every ref is created with a `@statowrel/models` converter, never read untyped.
+
+### `friends`
+
+Adding a friend by handle — docs/prd.md §4.1. One Cloud Function:
+
+| Function | Kind | Role |
+|---|---|---|
+| `friends-inviteFriend` | Callable (`onCall`) | Resolves an exact handle and writes both halves of the friendship, `pending` |
+
+A callable rather than a trigger, and rather than a client-side write. The screen asks a question — "does this handle exist?" — which a Firestore trigger cannot answer: it fires *after* a write, and an unknown handle produces none. `firestore.rules` would in fact let the app resolve the handle itself (`v1_usernames` is `get`-able) and write both halves (`v1_user_friends` is writable from either side of the pair), but that spreads the invariants — no self-invite, no second invitation over an existing pair — across a client nobody can hold to them.
+
+The app reads the `v1_usernames` reservation before calling, and skips the call when there is none — one document read instead of an invocation on the likeliest outcome of that screen, a typo. The callable resolves the handle again all the same: the client-side read is a shortcut, never the check.
+
+The pair is written in one batch, both halves `pending` from the moment the invitation is sent, so the invitee sees it in their own list without a collection-group query (see `v1_user_friend.ts`). An existing pair comes back as an outcome (`already_invited` / `already_friends`) rather than an error, since nothing failed; an unknown handle, one's own handle and a malformed one are `HttpsError`s, since none of them wrote anything.
+
+Nothing reads `v1_user_friends` yet — accepting or refusing an invitation is the friend list of docs/prd.md §5.3, still to build.
 
 ### Building the deployable artifact
 

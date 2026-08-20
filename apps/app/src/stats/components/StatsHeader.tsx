@@ -7,7 +7,7 @@ import { formatDayLabel } from '@/lib/dates';
 
 export interface StatsHeaderProps {
   displayName: string;
-  /** Invite a friend — docs/prd.md §4.1. Inert until the invite flow exists. */
+  /** Invite a friend by handle — docs/prd.md §4.1, the `InviteFriend` sheet. */
   onInvite?: () => void;
   /** Edit the profile — docs/prd.md §5.3. */
   onEditProfile?: () => void;

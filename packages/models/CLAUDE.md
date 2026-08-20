@@ -13,6 +13,10 @@ Shared infrastructure — do not duplicate it in a model file:
 - `removeMissingFields` — strips `undefined` before a write; Firestore rejects `undefined` values.
 - `Identifiable<T>` — `T & { id: string }`, the shape returned by `parseData` in `libs/firebase-admin`.
 
+## `src/callables.ts`
+
+The wire contracts of the callable Cloud Functions — the one module here describing no Firestore collection. It carries each callable's deployed name (`INVITE_FRIEND_CALLABLE`), its payload and its result, because this package is the only one both `apps/app` and `apps/functions` depend on: a callable's payload has a converter's problem — two sides serialising the same shape with no compiler between them unless it is written down once. Fields stay `snake_case` like everywhere else, even though nothing here is stored.
+
 ## Models (`src/`)
 
 One file per Firestore collection, **named after the collection but singular**: `v1_questions` → `src/v1_question.ts`, `v1_users` → `src/v1_user.ts`. The collection's own (plural) name lives in the file's `<NAME>_COLLECTION` constant — never hardcode it at a call site.
