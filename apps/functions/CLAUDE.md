@@ -12,6 +12,7 @@ domains/{domain-name}/
 │   ├── handlers/       # One file per HTTP route (handleXxx.ts)
 │   ├── middlewares/     # Express middleware
 │   └── index.ts        # Express app + onRequest export
+├── callables/          # One file per onCall function (xxx.ts)
 ├── triggers/
 │   ├── steps/          # One handler per event type (onXxx.ts)
 │   └── onXxxCreated.ts # Firestore trigger → dispatches to steps
@@ -22,6 +23,8 @@ domains/{domain-name}/
 ```
 
 Top-level `src/index.ts` uses namespace re-exports (`export * as health from './domains/health'`) — this produces function names like `health-healthApi` in Firebase.
+
+**`api/` or `callables/`?** A caller that is not the app — a webhook, a browser, `curl` — takes an HTTP route. The app takes a **callable**: the ID token rides along and is verified by the runtime, so `request.auth` is already there and there is no token middleware to write. Validate `request.data` with a zod `.safeParse()` all the same — it is untrusted input like any body — and raise an `HttpsError` rather than throwing: its code is what the client reads. The payload and result types live in `@statowrel/models`'s `callables.ts`, alongside the constant naming the callable, so the app compiles against the same shape.
 
 ## `src/libs/firebase-admin.ts`
 
