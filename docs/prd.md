@@ -1,6 +1,6 @@
 # StatOwrel — PRD
 
-Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Cinq sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil), les §5.1–5.2 (l'écran Stats, branché sur Firestore), le §5.4 (la sheet question, dismissable au lieu d'être bloquante, mais qui bascule bien sur la carte après validation), le §4.3 (le double tap, complet), le §5.5 (la carte StatOwrel, sans son illustration, son bouton de partage ni les réponses des amis) et l'ajout d'ami par handle du §4.1 (la sheet d'invitation, sans la liste d'amis qui répond à l'invitation) — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
+Status: **draft initial**. Ce document décrit le produit visé, pas l'état du code. Cinq sections sont partiellement implémentées : le §4.1 (connexion Google / Apple / e-mail + mot de passe et création du profil), les §5.1–5.2 (l'écran Stats, branché sur Firestore), le §5.4 (la sheet question, dismissable au lieu d'être bloquante, mais qui bascule bien sur la carte après validation), le §4.3 (le double tap, complet), le §5.5 (le résultat d'une journée répondue — la phrase, la carte de récap et les réponses des amis du §4.5 — sans l'illustration de l'option ni le bouton de partage) et l'ajout d'ami par handle du §4.1 (la sheet d'invitation, sans la liste d'amis qui répond à l'invitation) — tout le reste est à faire, voir `docs/architecture.md` pour l'état technique réel.
 
 ## 1. Vision
 
@@ -133,6 +133,8 @@ Immédiatement après avoir répondu :
 - Liste des amis : avatar, nom d'utilisateur, réponse choisie, heure de réponse.
 - Les amis qui n'ont pas encore répondu apparaissent en attente (« n'a pas encore répondu »), sans notion de retard ou de temps de réaction en v1.
 
+**État d'implémentation.** La liste existe, sous la carte de récap du §5.5 : `@handle`, l'option choisie en puce et l'heure, ceux qui ont répondu comme moi en tête, ceux qui n'ont pas encore répondu en fin de liste. Seules les amitiés `accepted` y figurent, et rien n'est lu tant qu'on n'a pas répondu soi-même — c'est la mécanique, pas une optimisation. L'**avatar** manque : le modèle de profil n'en porte pas encore.
+
 ### 4.6 Streak
 
 - +1 à chaque journée où l'on a répondu avant minuit.
@@ -182,9 +184,9 @@ La racine de l'app. De haut en bas :
 
 | État | Rendu | Tap |
 |---|---|---|
-| **Répondu** | Case `primary`, ombre dure, un **check** central à la place du numéro du jour | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
+| **Répondu** | Case `primary`, ombre dure, un **check** central à la place du numéro du jour | Ouvre le résultat StatOwrel de ce jour (§5.5), en lecture seule |
 | **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
-| **Aujourd'hui** | Case `accent` — le même traitement qu'un jour répondu, bordure, ombre dure et check compris une fois la journée jouée : seule la couleur change. Aujourd'hui reste `accent` quoi qu'il arrive, répondu ou non — c'est le jour dont l'écran parle, et le voir virer au jaune comme les autres le dissolvait dans le mois | Ouvre la modale question du jour (§5.4), ou la carte StatOwrel (§5.5) une fois répondu |
+| **Aujourd'hui** | Case `accent` — le même traitement qu'un jour répondu, bordure, ombre dure et check compris une fois la journée jouée : seule la couleur change. Aujourd'hui reste `accent` quoi qu'il arrive, répondu ou non — c'est le jour dont l'écran parle, et le voir virer au jaune comme les autres le dissolvait dans le mois | Ouvre la modale question du jour (§5.4), ou le résultat StatOwrel (§5.5) une fois répondu |
 | **Futur, ou sans question** | Case `muted`, sans bordure | Inerte |
 
 - Navigation mois par mois (chevrons gauche/droite), bornée au **premier mois où une question a été diffusée** d'un côté et au mois courant de l'autre. La borne basse est la même pour tout le monde : les jours antérieurs à l'inscription sont des jours ratés comme les autres, rattrapables en mode late (§4.2).
@@ -213,30 +215,29 @@ Contenu, de haut en bas :
 3. Les **options**, empilées verticalement, une par ligne, pleine largeur : carte `card`, bordure noire, ombre dure, label en `font-sans` gras. De 2 à 6 selon la question, dans leur ordre fixe (§4.2). Au-delà de 4 options, la liste défile — le titre reste épinglé en haut.
 4. Le **crédit auteur** en bas (« proposée par @handle ») quand la question vient d'un utilisateur.
 
-L'interaction est le **double tap** décrit en §4.3 : premier tap = sélection (l'option se soulève, les autres s'estompent), deuxième tap = validation. Après validation, la sheet ne se ferme pas : son contenu **bascule** sur la carte StatOwrel (§5.5), sans changement d'écran ni retour au calendrier.
+L'interaction est le **double tap** décrit en §4.3 : premier tap = sélection (l'option se soulève, les autres s'estompent), deuxième tap = validation. Après validation, la sheet ne se ferme pas : son contenu **bascule** sur le résultat (§5.5), sans changement d'écran ni retour au calendrier.
 
-### 5.5 Écran résultat — la carte StatOwrel
+### 5.5 Écran résultat — la StatOwrel
 
-L'écran de récompense. Il reprend délibérément les codes d'une **carte Pokémon** : c'est un objet qu'on collectionne, qu'on compare et qu'on screenshote.
+L'écran de récompense. **La phrase est la récompense** : elle se lit à plat sur la sheet, pas dans un cadre. Le cadre à codes « carte Pokémon » a été essayé et retiré — encadrée, la phrase se battait avec la récap sous elle au lieu de la porter.
 
-Anatomie de la carte, dans l'ordre vertical :
+Anatomie, dans l'ordre vertical :
 
-| Zone | Contenu | Traitement carte |
+| Zone | Contenu | Traitement |
 |---|---|---|
-| **Cadre** | — | Double encadrement : bordure noire épaisse + liseré intérieur `primary`, ombre `2xl`, proportions portrait ~2:3 |
-| **Bandeau haut** | Le `stat_label` en très gros (« Efficace ») à gauche, le **pourcentage** à droite | Le pourcentage tient la place des PV d'une carte Pokémon |
-| **Illustration** | Encart carré bordé : l'emoji/visuel de l'option choisie sur aplat de couleur | La « fenêtre d'illustration » de la carte |
-| **Phrase** | « Comme **68%** des utilisateurs, tu es un.e **efficace**. » | Corps de texte de la carte |
-| **Encart question** | La question du jour + l'option choisie, sur fond `muted` | L'équivalent du bloc « attaque » |
-| **Barre de stats** | La répartition complète des options en barres horizontales bordées, la sienne mise en avant | Le bas de carte, chiffré |
-| **Pied** | Date, numéro du jour (« #142 »), nom d'utilisateur de l'auteur de la question | Le pied d'une carte : édition + illustrateur |
+| **Ligne du jour** | La date en micro-texte à gauche, la mention de rareté à droite quand il y en a une | À même la sheet, au-dessus de la phrase |
+| **Phrase** | « Comme **10%** des gens, tu es un.e » puis le `stat_label` en très gros (« Bordélique ») | À même la sheet : le pourcentage dans la phrase, la StatOwrel sur sa propre ligne, dans le plus gros corps de l'app |
+| **Illustration** | Encart carré bordé : l'emoji/visuel de l'option choisie sur aplat de couleur | Sous la phrase |
+| **Carte de récap** | La question du jour, puis **chaque option avec son pourcentage**, la sienne en `primary` derrière un tick | La seule surface encadrée de l'écran : bordure noire, ombre dure, remplissage proportionnel derrière chaque libellé |
+| **Amis** | Les réponses des amis (§4.5) | Sous la récap, hors cadre |
+| **Pied** | Nom d'utilisateur de l'auteur de la question | Ligne de crédit centrée, en bas de la sheet |
 
-- **Rareté.** Plus l'option choisie est minoritaire, plus la carte est rare : au-delà de 50% la carte est `common` (aplat `primary`), sous 25% elle passe `rare` (liseré doré), sous 10% `ultra rare` (fond holographique animé au tilt de l'appareil). C'est ce qui rend intéressant de répondre honnêtement plutôt que comme tout le monde. La rareté est calculée à l'affichage depuis `answer_counts`, elle n'est pas figée : elle bouge tant que les réponses arrivent, et se stabilise à la clôture.
-- **Bouton « Partager »** sous la carte : génère l'image de la carte seule (sans les amis) — §4.4.
-- **Les amis, sous la carte** (§4.5) : hors du cadre, en liste simple — avatar, `@handle`, l'option choisie et l'heure. Les amis qui ont répondu comme moi sont regroupés en tête sous « Comme toi », les autres suivent, les non-répondants ferment la liste en `muted`.
-- Cette carte est **rejouable à volonté** : tap sur un jour répondu dans le calendrier (§5.2) la rouvre à l'identique, avec les stats à jour et les réponses des amis arrivées depuis.
+- **Rareté.** Plus l'option choisie est minoritaire, plus le résultat est rare : au-delà de 25% il est `common` et ne dit rien, sous 25% il passe `rare` (mention dorée), sous 10% `ultra rare` (mention violette, fond holographique animé au tilt de l'appareil). C'est ce qui rend intéressant de répondre honnêtement plutôt que comme tout le monde. La rareté est calculée à l'affichage depuis `answer_counts`, elle n'est pas figée : elle bouge tant que les réponses arrivent, et se stabilise à la clôture.
+- **Bouton « Partager »** sous la récap : génère l'image du résultat seul (sans les amis) — §4.4.
+- **Les amis, sous la récap** (§4.5) : hors du cadre, en liste simple — avatar, `@handle`, l'option choisie et l'heure. Les amis qui ont répondu comme moi ouvrent la liste, les autres suivent, les non-répondants la ferment en `muted` — l'ordre et la puce jaune disent « comme toi » sans qu'un intitulé ait à le faire.
+- Ce résultat est **rejouable à volonté** : tap sur un jour répondu dans le calendrier (§5.2) le rouvre à l'identique, avec les stats à jour et les réponses des amis arrivées depuis.
 
-**État d'implémentation.** La carte existe et remplace le contenu de la sheet dès que la réponse est écrite — cadre double, bandeau `stat_label` + pourcentage, phrase « Comme x% des utilisateurs, tu es un.e … », encart question, barres de répartition et pied daté. La rareté est bien calculée à l'affichage depuis `answer_counts`, en trois paliers (`commune` sans mention, `rare` liseré doré, `ultra rare` liseré violet). Un jour déjà répondu, rouvert depuis le calendrier, ouvre directement la carte au lieu de la question. Restent à faire : l'**encart illustration** (le modèle d'option ne porte ni emoji ni visuel), le **numéro d'édition** « #142 » (rien ne compte les jours depuis le lancement), le **bouton Partager** et son image générée (§4.4), les **réponses des amis** sous la carte (§4.5, les amitiés ne sont pas modélisées) et le **fond holographique animé au tilt** de la carte ultra rare — le liseré tient sa place.
+**État d'implémentation.** Le résultat existe et remplace le contenu de la sheet dès que la réponse est écrite : la ligne du jour, la phrase « Comme x% des gens, tu es un.e … » suivie du `stat_label` en très gros, la carte de récap (question + une ligne par option, la sienne en jaune derrière son tick) et les réponses des amis dessous. La rareté est calculée à l'affichage depuis `answer_counts`, en trois paliers (`commune` sans mention, `rare` doré, `ultra rare` violet) et se lit désormais comme une mention à côté de la date, le cadre qui la portait n'existant plus. Un jour déjà répondu, rouvert depuis le calendrier, ouvre directement le résultat au lieu de la question. Restent à faire : l'**encart illustration** (le modèle d'option ne porte ni emoji ni visuel), le **numéro d'édition** « #142 » (rien ne compte les jours depuis le lancement), le **bouton Partager** et son image générée (§4.4), l'**avatar** des amis (§4.5) et le **fond holographique animé au tilt** de l'ultra rare.
 
 ### 5.6 Ce qui n'existe pas
 
