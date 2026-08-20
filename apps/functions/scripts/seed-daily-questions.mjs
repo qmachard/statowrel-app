@@ -10,19 +10,24 @@
 // calendar day to its question. Two differences with the scheduler:
 //
 //   - nobody is notified — the publication push belongs to the day it drops;
-//   - each seeded day gets a plausible `answer_counts` tally, so the card of
+//   - `--answers <n>` fabricates a tally on the days it seeds, so the card of
 //     docs/prd.md §5.5 reads « Comme 23% des gens… » instead of putting the
-//     first answer at 100%. Those are counters only: no answer document is
-//     forged under anybody's UID, and a real answer keeps incrementing them.
+//     first answer at 100% on a database nobody else has answered in. Off by
+//     default: a seeded day otherwise carries only true data. Those are
+//     counters on the question and nothing else — no answer document is forged
+//     under anybody's UID, and a real answer keeps incrementing them.
 //
-// When the approved pot runs short, the missing days are minted from the
-// built-in catalogue below (labels already in Firestore are never minted
-// twice), so the script is useful on a project where nothing was moderated yet.
+// When the approved pot runs short, the missing days are minted straight from
+// `scripts/questions.seed.json` — the same catalogue `npm run seed-questions`
+// fills the moderation pot with, and a question already in Firestore is never
+// minted twice — so the script is useful on a project where nothing has been
+// moderated yet.
 //
 //   npm run seed-daily-questions                                   # the 5 days before today
 //   npm run seed-daily-questions -- --days 10 --include-today
-//   npm run seed-daily-questions -- --answers 0                    # no tally, days left at zero
-//   npm run seed-daily-questions -- --author <uid>                 # credit the questions to an account
+//   npm run seed-daily-questions -- --answers 120                  # fabricate a tally on each seeded day
+//   npm run seed-daily-questions -- --author <uid>                 # credit the minted questions to an account
+//   npm run seed-daily-questions -- ./other-questions.json         # mint from another catalogue
 //   npm run seed-daily-questions -- --dry-run
 //   npm run seed-daily-questions -- --production
 //   npm run seed-daily-questions -- --project <id>
@@ -36,105 +41,44 @@
 // A day already indexed in its month is left alone, so the script can be run
 // again — it only ever fills the holes.
 
+import { resolve } from 'node:path';
+
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { GeoPoint, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { ulid } from 'ulid';
 
 import { die, resolveProjectId } from './lib/firebase-project.mjs';
+import {
+  DEFAULT_SEED_FILE,
+  labelKeyOf,
+  readSeedEntries,
+  seedOptionsOf,
+} from './lib/questions-seed.mjs';
 
-const USAGE = `Usage: npm run seed-daily-questions -- [--days <n>] [--include-today] [--answers <n>] [--author <uid>] [--production | --project <id>] [--dry-run]`;
+const USAGE = `Usage: npm run seed-daily-questions -- [file.json] [--days <n>] [--include-today] [--answers <n>] [--author <uid>] [--production | --project <id>] [--dry-run]`;
 
 /** Days seeded when `--days` is not given — the week one just missed, roughly. */
 const DEFAULT_DAYS = 5;
 
-/** Answers a seeded day is given, spread over its options. `--answers 0` leaves the day at zero. */
-const DEFAULT_ANSWERS = 120;
+/**
+ * Fabricated answers per seeded day, spread over its options — none unless
+ * `--answers <n>` asks for them, so what the script writes stays true by default.
+ */
+const DEFAULT_ANSWERS = 0;
+
+/** A year of backfill, past which this is no longer seeding but rewriting history. */
+const MAX_DAYS = 366;
 
 /**
- * Author credited on a minted question when `--author` is not given. It is a
- * UID that matches no `v1_users` document, which the day screen renders as no
- * credit line at all — rather than crediting a real user with a fixture.
+ * Author credited on a minted question when `--author` is not given — blank,
+ * like `seed-questions`: a question typed into a fixture has nobody to credit,
+ * and the day screen leaves the credit line out on an empty `author_id`.
  */
-const DEFAULT_AUTHOR_ID = 'seed-script';
-
-/**
- * The pot the script mints from when moderation has not filled the real one —
- * docs/prd.md §1, same register: personal, absurd, never moralising. One
- * StatOwrel per option, since that is what the result card is made of.
- */
-const CATALOGUE = [
-  [ 'Ton dentifrice, tu le presses…', [
-    [ 'Par le bout', 'méthodique' ],
-    [ 'Au milieu', 'sauvage' ],
-    [ "Je l'écrase n'importe comment", 'anarchiste' ],
-  ] ],
-  [ 'Caca : combien de temps ?', [
-    [ 'Moins de 2 min', 'efficace' ],
-    [ 'Plus de 10 min', 'résident.e' ],
-  ] ],
-  [ 'Tes plantes ?', [
-    [ 'Je les arrose', 'arroseur.euse' ],
-    [ 'Je les tue', 'killer.euse' ],
-  ] ],
-  [ 'Ta serviette après la douche ?', [
-    [ 'Sur le radiateur', 'rangé.e' ],
-    [ 'Sur la porte', 'pragmatique' ],
-    [ 'Par terre', 'libre' ],
-    [ "Je n'en ai qu'une, partout", 'survivaliste' ],
-  ] ],
-  [ 'Ton réveil du matin ?', [
-    [ 'Un seul, je me lève', 'machine' ],
-    [ 'Snooze trois fois', 'négociateur.rice' ],
-    [ 'Douze alarmes de 6h à 7h30', 'stratège' ],
-  ] ],
-  [ 'La vaisselle du soir ?', [
-    [ 'Direct après manger', 'irréprochable' ],
-    [ 'Demain matin', 'optimiste' ],
-    [ "Quand il n'y a plus d'assiette", 'joueur.euse' ],
-  ] ],
-  [ 'Ton téléphone, la nuit ?', [
-    [ 'Dans une autre pièce', 'sage' ],
-    [ 'Sur la table de nuit', 'normal.e' ],
-    [ 'Dans le lit, sur ma tête', 'accro' ],
-  ] ],
-  [ 'Les messages vocaux ?', [
-    [ "J'adore, j'en envoie des longs", 'bavard.e' ],
-    [ "J'écoute en accéléré", 'pressé.e' ],
-    [ 'Je ne les écoute jamais', 'fantôme' ],
-  ] ],
-  [ 'Le pain de mie, tu manges la croûte ?', [
-    [ 'Évidemment', 'entier.ère' ],
-    [ 'Jamais', 'délicat.e' ],
-  ] ],
-  [ 'Ton frigo ?', [
-    [ 'Rangé par catégories', 'archiviste' ],
-    [ 'Un peu au hasard', 'humain.e' ],
-    [ 'Une expérience scientifique', 'chercheur.euse' ],
-  ] ],
-  [ 'Quand tu regardes une série ?', [
-    [ 'Un épisode par soir', 'raisonnable' ],
-    [ 'La saison entière', 'insatiable' ],
-    [ "Je m'endors au générique", 'dormeur.euse' ],
-  ] ],
-  [ 'Tes chaussettes propres ?', [
-    [ 'Pliées par paires', 'appairé.e' ],
-    [ 'En vrac dans le tiroir', 'pêcheur.euse' ],
-    [ 'Encore dans le panier de linge', 'nomade' ],
-  ] ],
-  [ 'Le papier toilette, le sens du rouleau ?', [
-    [ 'Vers le mur', 'discret.ète' ],
-    [ 'Vers toi', 'orthodoxe' ],
-    [ 'Posé sur le réservoir', 'chaotique' ],
-  ] ],
-  [ 'Tu arrives au cinéma…', [
-    [ 'Avant les pubs', 'prévoyant.e' ],
-    [ 'Pile au film', 'précis.e' ],
-    [ 'Après le début', 'tardif.ve' ],
-  ] ],
-];
+const DEFAULT_AUTHOR_ID = '';
 
 const parseArgs = (argv) => {
   const parsed = {
+    file: null,
     days: DEFAULT_DAYS,
     includeToday: false,
     answers: DEFAULT_ANSWERS,
@@ -171,18 +115,22 @@ const parseArgs = (argv) => {
       parsed.author = argv[i += 1] ?? die(`--author needs a UID.\n${USAGE}`);
     } else if (arg === '--project') {
       parsed.project = argv[i += 1] ?? die(`--project needs a project id.\n${USAGE}`);
+    } else if (arg.startsWith('-')) {
+      die(`Unknown flag "${arg}".\n${USAGE}`);
+    } else if (parsed.file) {
+      die(`Only one catalogue at a time (got "${parsed.file}" and "${arg}").\n${USAGE}`);
     } else {
-      die(`Unknown argument "${arg}".\n${USAGE}`);
+      parsed.file = resolve(process.cwd(), arg);
     }
   }
 
   if (parsed.days < 1) die(`--days needs at least one day.\n${USAGE}`);
-  if (parsed.days > CATALOGUE.length * 4) die(`--days is capped at ${CATALOGUE.length * 4} — seed a smaller window.\n${USAGE}`);
+  if (parsed.days > MAX_DAYS) die(`--days is capped at ${MAX_DAYS} — seed a smaller window.\n${USAGE}`);
 
-  return parsed;
+  return { ...parsed, file: parsed.file ?? DEFAULT_SEED_FILE };
 };
 
-const { days, includeToday, answers, author, dryRun, ...selector } = parseArgs(process.argv.slice(2));
+const { file, days, includeToday, answers, author, dryRun, ...selector } = parseArgs(process.argv.slice(2));
 const projectId = resolveProjectId(selector);
 const emulator = process.env.FIRESTORE_EMULATOR_HOST;
 
@@ -199,6 +147,8 @@ const {
   previousDateKey,
   publicationTimeOf,
   QUESTION_COLLECTION,
+  QUESTION_MAX_OPTIONS,
+  QUESTION_MIN_OPTIONS,
   questionConverter,
 } = await import('@statowrel/models').catch(() => (
   die('Could not load @statowrel/models — run `npm run build:models` first.')
@@ -243,12 +193,13 @@ const shuffle = (items) => {
 };
 
 /**
- * A plausible tally over a question's options, totalling `answers`.
+ * A plausible tally over a question's options, totalling `--answers`.
  *
  * Every option gets at least one answer — an option at 0% reads as a bug on the
  * result card — and the rest is split on random weights, so the days do not all
- * come out of the seeding with the same shape. `--answers 0` returns `null`:
- * the day keeps the empty map the model starts with.
+ * come out of the seeding with the same shape. Returns `null` without
+ * `--answers`, which is the default: the day keeps the empty map the model
+ * starts with, and the first real answer is simply 100% of one answer.
  */
 const buildAnswerCounts = (options) => {
   if (answers === 0) {
@@ -269,13 +220,6 @@ const buildAnswerCounts = (options) => {
     return { ...counts, [option.id]: 1 + extra };
   }, {});
 };
-
-/** A catalogue entry turned into the options a question carries — one ULID per option, minted once. */
-const buildOptions = (options) => options.map(([ label, statLabel ]) => ({
-  id: ulid(),
-  label,
-  stat_label: statLabel,
-}));
 
 const seedDay = async (date, pick) => {
   const publishedAt = publicationTimeOf(date);
@@ -342,8 +286,25 @@ const dates = dateKeysToSeed();
 const pot = await questionsRef.get();
 const drawable = shuffle(pot.docs.filter((document) => document.data().status === 'approved'))
   .map((document) => ({ id: document.id, ref: document.ref, ...document.data() }));
-const knownLabels = new Set(pot.docs.map((document) => document.data().label));
-const mintable = CATALOGUE.filter(([ label ]) => !knownLabels.has(label));
+
+// Minting is keyed on the label alone, where `seed-questions` keys on the label
+// *and* its options: the catalogue poses several variants of the same question
+// (« Tu prends ta douche… »), and a calendar week showing the same wording twice
+// reads as a bug. So a question already in the pot is never minted again,
+// whatever its status, and the first variant of a label wins the run.
+const mintedLabels = new Set(pot.docs.map((document) => labelKeyOf(document.data().label ?? '')));
+const mintable = readSeedEntries(file, { minOptions: QUESTION_MIN_OPTIONS, maxOptions: QUESTION_MAX_OPTIONS })
+  .filter((entry) => {
+    const key = labelKeyOf(entry.question);
+
+    if (mintedLabels.has(key)) {
+      return false;
+    }
+
+    mintedLabels.add(key);
+
+    return true;
+  });
 
 // The months the seeded days fall in, read once: a day already indexed in its
 // month has already been broadcast, and is left exactly as it is.
@@ -367,9 +328,13 @@ const pickQuestion = () => {
     return null;
   }
 
-  const [ label, options ] = entry;
-
-  return { id: ulid(), ref: null, label, options: buildOptions(options), answer_counts: {} };
+  return {
+    id: ulid(),
+    ref: null,
+    label: entry.question.trim(),
+    options: seedOptionsOf(entry),
+    answer_counts: {},
+  };
 };
 
 console.log(`→ ${dryRun ? 'Dry run on' : 'Seeding'} ${projectId}${emulator ? ` (emulator ${emulator})` : ''}: ${dates[0]} → ${dates[dates.length - 1]}`);
@@ -391,7 +356,7 @@ for (const [ index, date ] of dates.entries()) {
   // the same thing, so it is said once and the run stops there.
   if (question === null) {
     uncovered = dates.slice(index).filter((day) => !seededMonths.get(monthKeyOf(day))?.has(monthDayKeyOf(day))).length;
-    console.error(`  ✖ ${date} — no approved question left, and the catalogue is exhausted`);
+    console.error(`  ✖ ${date} — no approved question left, and every question of the catalogue is already in the pot`);
     break;
   }
 
@@ -403,7 +368,7 @@ for (const [ index, date ] of dates.entries()) {
 console.log(`✔ ${dryRun ? 'Would seed' : 'Seeded'} ${seeded} day${seeded === 1 ? '' : 's'}${kept > 0 ? `, ${kept} left alone` : ''}.`);
 
 if (uncovered > 0) {
-  console.log(`  ${uncovered} day${uncovered === 1 ? '' : 's'} left without a question — approve more of them in the console before running this again.`);
+  console.log(`  ${uncovered} day${uncovered === 1 ? '' : 's'} left without a question — approve more of them in the console (or \`npm run seed-questions -- --status approved\`) and run this again.`);
 }
 
 if (dryRun) {

@@ -86,6 +86,16 @@ Seeds the moderation pot. Questions land as `pending`, so a batch goes through t
 
 Reads Firestore rather than Auth, so the emulator variable here is `FIRESTORE_EMULATOR_HOST`. The npm script at the repo root builds `@statowrel/models` first; run it from `apps/functions` and that build is on you.
 
+```bash
+npm run seed-daily-questions                  # broadcast the 5 days before today
+npm run seed-daily-questions -- --days 10 --include-today
+npm run seed-daily-questions -- --answers 120 --dry-run
+```
+
+Fills the days already gone, so a fresh project does not open on an empty calendar. It replays the batch `scheduleDailyQuestion` commits every morning — draw an `approved` question, stamp `status` / `broadcast_at` (07:00 Paris) / `broadcast_on` / `closes_at` (the following Paris midnight), index the day in `v1_daily_question_months` — with two differences: nobody is notified, and the days the approved pot cannot cover are minted straight from `scripts/questions.seed.json`. Minting is keyed on the label alone where `seed-questions` keys on the label *and* its options: the catalogue poses several variants of the same wording, and a calendar week showing one twice reads as a bug. A day already indexed in its month is left alone, so the script only ever fills holes and is safe to re-run.
+
+`--answers <n>` is the one thing it writes that is not true: a fabricated tally on the days it seeds, so the result card reads « Comme 23% des gens… » on a database nobody else has answered in. Off by default, and counters on the question only — no answer document is forged under anybody's UID, and a real answer keeps incrementing them. It never overwrites a tally a question already has.
+
 ## Deploy
 
 ```bash
