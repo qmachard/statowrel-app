@@ -88,9 +88,9 @@ export const StatsScreen = () => {
           <StatTile icon={Trophy} label="Record" value={profile?.streak_best ?? 0} unit="jours d’affilée" />
           <StatTile
             icon={CalendarCheck}
-            label="Jours répondus"
+            label="Total"
             value={profile?.answers_count ?? 0}
-            unit="au total"
+            unit="jours"
           />
         </StatsStrip>
 
