@@ -35,6 +35,17 @@ export const EXPO_PUSH_TOKEN_PATTERN = /^Expo(nent)?PushToken\[[^\s[\]]+\]$/;
 export const isExpoPushToken = (value: string): boolean => EXPO_PUSH_TOKEN_PATTERN.test(value);
 
 /**
+ * Android notification channel the day's question is posted in.
+ *
+ * Android drops a notification naming a channel the device has not declared,
+ * so the app creates it at registration and the backend names it on every
+ * message. It lives here, next to the token, because it is the one other thing
+ * both sides have to spell identically — and this package is the only place
+ * they share.
+ */
+export const DAILY_QUESTION_CHANNEL_ID = 'daily-question';
+
+/**
  * One push destination of one account — the device the day's question is
  * pushed to at 07:00 (docs/prd.md §4.2).
  *
