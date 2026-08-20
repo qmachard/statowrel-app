@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { CalendarCheck, Trophy } from 'lucide-react-native';
-import { ScrollView, StyleSheet } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, pagePadding, spacing } from '@/design/tokens';
@@ -32,7 +32,18 @@ const styles = StyleSheet.create({
 
 export const StatsScreen = () => {
   const navigation = useNavigation();
-  const { profile, today, month, selectMonth, calendar, todayQuestion, answeredToday, archiveStart } = useStatsData();
+  const {
+    profile,
+    today,
+    month,
+    selectMonth,
+    calendar,
+    todayQuestion,
+    answeredToday,
+    archiveStart,
+    refreshing,
+    refresh,
+  } = useStatsData();
 
   // The profile is null while it loads, and stays null until the onboarding
   // sheet has created it. Zeros rather than nothing invented, nothing crashing.
@@ -44,7 +55,21 @@ export const StatsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[ 'top' ]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        // The calendar is fetched, not subscribed to (see `useStatsData`), so
+        // the screen owes the user a way of asking for it again — the gesture
+        // everybody already tries on a screen that looks stale.
+        refreshControl={(
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { void refresh(); }}
+            tintColor={colors.foreground}
+            colors={[ colors.foreground ]}
+            progressBackgroundColor={colors.card}
+          />
+        )}
+      >
         <StatsHeader
           displayName={profile?.username ?? ''}
           onInvite={() => navigation.navigate('InviteFriend')}
