@@ -24,8 +24,10 @@ const PALETTE: Record<string, string> = {
   fabricCColor: 'FF68B5,9723C9',
 };
 
+// The comma between two colours of a ramp stays a comma: DiceBear reads a
+// percent-encoded one as part of the value, not as the separator.
 const QUERY = Object.entries(PALETTE)
-  .map(([ option, value ]) => `${option}=${encodeURIComponent(value)}`)
+  .map(([ option, value ]) => `${option}=${value}`)
   .join('&');
 
 /** The generated avatar of a handle — an SVG URL, stable for a given seed. */
