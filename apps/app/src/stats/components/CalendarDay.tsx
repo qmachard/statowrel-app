@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
 
 import { shadows } from '@/design/shadows';
@@ -8,6 +9,11 @@ import { Hatch } from './Hatch';
 
 /** The `?` on a missed day is an ornament, sized below the smallest scale step. */
 const MISSED_GLYPH_SIZE = 9;
+
+/** The check that stands in for an answered day's number — the cell is small, so it is too. */
+const CHECK_SIZE = 20;
+
+const CHECK_STROKE_WIDTH = 3;
 
 /** How far a raised day travels when pressed — the offset of the `sm` shadow it drops. */
 const SUNK_BY = 2;
@@ -32,12 +38,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: fontSize.sm,
-  },
-  statLabel: {
-    maxWidth: '100%',
-    fontFamily: fonts.sans,
-    fontSize: fontSize['2xs'],
-    textTransform: 'uppercase',
   },
   missedGlyph: {
     fontFamily: fonts.head,
@@ -83,26 +83,23 @@ const LABEL = StyleSheet.create({
   idle: { fontFamily: fonts.sans, color: colors['muted-foreground'] },
 }) satisfies Record<CalendarDayState, TextStyle>;
 
-// The `stat_label` shows on both cells that can carry one, so it takes its
-// surface's own foreground — black on the yellow of a past answered day, white
-// on the accent of today. The two flat states never render it.
-const STAT_LABEL = StyleSheet.create({
-  answered: { color: colors['primary-foreground'] },
-  today: { color: colors['accent-foreground'] },
-  missed: {},
-  idle: {},
-}) satisfies Record<CalendarDayState, TextStyle>;
+// The check takes its surface's own foreground, like the number it replaces —
+// black on the yellow of a past answered day, white on the accent of today.
+const CHECK_COLOR: Record<CalendarDayState, string> = {
+  answered: colors['primary-foreground'],
+  today: colors['accent-foreground'],
+  missed: colors['muted-foreground'],
+  idle: colors['muted-foreground'],
+};
 
 export interface CalendarDayProps {
   date: Date;
   state: CalendarDayState;
   /**
-   * The `stat_label` earned that day, on a cell that has one — docs/prd.md §5.2
-   * asks for it in micro-text, truncated. It comes copied on the calendar month
-   * itself, so rendering it costs no extra read. Today carries it too once
-   * answered: it stays accent, but it is an answered day like the others.
+   * The user answered that day's question. An answered cell shows a check
+   * instead of its number — today included, once it has been played.
    */
-  statLabel?: string | null;
+  answered?: boolean;
   /** Opens that day (docs/prd.md §5.2). An `idle` day stays inert whatever is passed. */
   onPress?: () => void;
 }
@@ -116,7 +113,7 @@ export interface CalendarDayProps {
  * A raised day sinks into its own shadow when pressed, like the buttons do —
  * `shadows.sm` is a 2px offset, so that is exactly how far it travels.
  */
-export const CalendarDay = ({ date, state, statLabel = null, onPress }: CalendarDayProps) => {
+export const CalendarDay = ({ date, state, answered = false, onPress }: CalendarDayProps) => {
   const isInert = state === 'idle' || onPress === undefined;
 
   return (
@@ -130,10 +127,11 @@ export const CalendarDay = ({ date, state, statLabel = null, onPress }: Calendar
           ]}
         >
           {state === 'missed' ? <Hatch /> : null}
-          <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
-          {(state === 'answered' || state === 'today') && statLabel ? (
-            <Text style={[ styles.statLabel, STAT_LABEL[state] ]} numberOfLines={1}>{statLabel}</Text>
-          ) : null}
+          {answered ? (
+            <Check size={CHECK_SIZE} strokeWidth={CHECK_STROKE_WIDTH} color={CHECK_COLOR[state]} />
+          ) : (
+            <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
+          )}
           {state === 'missed' ? <Text style={styles.missedGlyph}>?</Text> : null}
         </View>
       )}

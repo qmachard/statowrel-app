@@ -29,8 +29,8 @@ export interface CalendarDayStateInput {
  * **Today is `today` whatever happens to it**, answered or not: it is the one
  * day the screen is about, and letting it turn yellow like any other answered
  * day dissolved it into the month the moment one had played. It keeps the
- * treatment of an answered cell — `stat_label` included — and only its colour
- * differs (docs/prd.md §5.2).
+ * treatment of an answered cell — the check included, once it is played — and
+ * only its colour differs (docs/prd.md §5.2).
  */
 export const getCalendarDayState = ({ day, today, published, answered }: CalendarDayStateInput): CalendarDayState => {
   if (answered) {
