@@ -12,6 +12,7 @@
     "deploy": "firebase deploy --only functions -f",
     "logs": "firebase functions:log",
     "set-admin": "node scripts/set-admin.mjs",
+    "seed-questions": "node scripts/seed-questions.mjs",
     "dev": "npm run build && NODE_ENV=development NODE_OPTIONS=--enable-source-maps concurrently --kill-others \"npm run start:emulators\" \"npm run build:watch\""
   },
   "engines": {
