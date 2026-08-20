@@ -166,26 +166,23 @@ const buildQuestionsCollection = (user: User | null) => buildCollection<Question
       mode: 'date_time',
       name: 'Diffusée le',
       description: 'Moment où la question est poussée dans l\'app, 7h à Paris. Vide tant qu\'elle n\'a pas été tirée.',
+      readOnly: true,
     }),
     broadcast_on: buildProperty({
       dataType: 'string',
       name: 'Jour de diffusion',
       description: 'Format AAAA-MM-JJ, fuseau Europe/Paris — le jour du calendrier. C\'est lui que les règles comparent à la date d\'une réponse. Vide tant que la question n\'a pas été tirée.',
       validation: { matches: BROADCAST_ON_PATTERN },
+      readOnly: true,
     }),
     closes_at: buildProperty({
       dataType: 'date',
       mode: 'date_time',
       name: 'Clôturée le',
       description: 'Minuit à Paris. Passé ce délai, une réponse est un rattrapage et ne compte plus pour le streak.',
-    }),
-    answer_counts: buildProperty({
-      dataType: 'map',
-      name: 'Réponses par option',
-      description: 'Total par ULID d\'option, incrémenté par le backend à chaque réponse. Une option sans réponse est absente.',
-      keyValue: true,
       readOnly: true,
     }),
+    answer_counts: () => null, // Hide the field in the backoffice, but keep it in the database.
     created_at: buildProperty({
       dataType: 'date',
       name: 'Créée le',
