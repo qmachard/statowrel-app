@@ -158,6 +158,69 @@ service cloud.firestore {
         allow read: if isOwner(user_id);
         allow write: if false;
       }
+
+      // One half of a friendship, keyed by the *other* user's UID
+      // (docs/prd.md §4.1). A friendship is reciprocal, and it is stored as two
+      // documents — one under each user — both written from the moment the
+      // invitation is sent, so the invitee sees it in their own list without a
+      // collection-group query nobody could be allowed to run.
+      //
+      // Reading is the owner's alone: a friend list is private, and it is the
+      // only place the app can learn who is friends with whom.
+      //
+      // Writing is open to *both* sides of the pair — `isOwner(user_id)` for
+      // the entry in one's own list, `isOwner(friend_id)` for the entry that
+      // carries one's own UID as its id — which is exactly the two halves the
+      // acting client writes in a single batch. Nothing wider: the id being the
+      // friend's UID is what keeps a signed-in user out of a friendship they
+      // are not part of.
+      match /v1_user_friends/{friend_id} {
+        function isPartOfPair() {
+          return isOwner(user_id) || isOwner(friend_id);
+        }
+
+        // The two halves mirror each other, so both carry the same shape: the
+        // ids match the path they sit on, and `requested_by` is one of them.
+        function isValidHalf() {
+          return request.resource.data.user_id == user_id
+                 && request.resource.data.friend_id == friend_id
+                 && user_id != friend_id
+                 && (request.resource.data.requested_by == user_id
+                     || request.resource.data.requested_by == friend_id);
+        }
+
+        allow read: if isOwner(user_id);
+
+        // An invitation always starts pending, and always from its sender: a
+        // client cannot forge an invitation it claims to have received, which
+        // is what would otherwise let it accept its own — see the `update`
+        // below.
+        allow create: if isPartOfPair()
+                      && isValidHalf()
+                      && request.resource.data.status == 'pending'
+                      && request.resource.data.requested_by == request.auth.uid
+                      && request.resource.data.accepted_at == null;
+
+        // Accepting, and nothing else: a half only ever moves from `pending` to
+        // `accepted`, never back, and never by whoever sent the invitation.
+        // Removing a friend and refusing an invitation are the same operation,
+        // handled by `delete` below.
+        allow update: if isPartOfPair()
+                      && isValidHalf()
+                      && resource.data.status == 'pending'
+                      && request.resource.data.status == 'accepted'
+                      && request.resource.data.requested_by == resource.data.requested_by
+                      && request.resource.data.requested_by != request.auth.uid
+                      && request.resource.data.created_at == resource.data.created_at
+                      && request.resource.data.accepted_at is timestamp;
+
+        // Refusing an invitation, cancelling one's own, and removing a friend:
+        // the same delete, of both halves, from either side of the pair
+        // (docs/prd.md §4.1 — the friendship disappears on both sides). A
+        // refused invitation leaves nothing behind, so the sender is never
+        // shown a "declined" state and re-inviting later starts over.
+        allow delete: if isPartOfPair();
+      }
     }
 
     // The other half of the calendar: which days actually had a question, one

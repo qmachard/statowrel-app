@@ -3,6 +3,7 @@ import { buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
 import { AUTH_PROVIDER_IDS, USER_COLLECTION, UserData, isValidUsername, normalizeUsername } from '@statowrel/models';
 
 import userCalendarMonthsCollection from './v1_user_calendar_months';
+import userFriendsCollection from './v1_user_friends';
 
 /**
  * FireCMS reads Firestore documents through its own data source, which maps
@@ -52,7 +53,7 @@ const usersCollection = buildCollection<UserEntity>({
     create: false,
     edit: false,
   },
-  subcollections: [ userCalendarMonthsCollection ],
+  subcollections: [ userFriendsCollection, userCalendarMonthsCollection ],
   properties: {
     username: buildProperty({
       dataType: 'string',
