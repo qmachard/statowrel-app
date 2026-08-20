@@ -296,6 +296,8 @@ Three build profiles in `eas.json`, mapped to root-level npm scripts:
 | `preview` | internal | `build:preview:ios`, `build:preview:android` |
 | `production` | store submission | `build:prod:ios`, `build:prod:android` |
 
+**`@statowrel/models` is compiled on the EAS worker.** The root-level scripts prefix `npm run build:models`, but that only compiles the machine starting the build: EAS uploads the repository as git sees it — `packages/models/dist` is ignored — then installs and bundles, never running a workspace build of its own. Metro followed the package's `main` to a `dist/index.js` that did not exist and failed to resolve `@statowrel/models`. The `eas-build-post-install` hook in `apps/app/package.json` (`cd ../.. && npm run build:models`) fills that hole: EAS runs it right after the install, before bundling.
+
 `submit:prod` runs `eas submit --profile production` for both platforms. Store credentials (Apple/Google) are configured once via `eas credentials` and stored by EAS, not in this repo.
 
 ### Authentication
@@ -308,7 +310,7 @@ Firebase Auth, three methods offered at the same level (`docs/prd.md` §4.1). Th
 | Google | `@react-native-google-signin/google-signin` → `idToken` → `GoogleAuthProvider.credential()` |
 | Apple | `expo-apple-authentication` → `identityToken` → `new OAuthProvider('apple.com').credential()` |
 
-**Why the native Google SDK and not `expo-auth-session`.** `signInWithPopup` has no meaning in React Native, so a credential has to come from somewhere else. `expo-auth-session` would drive the OAuth dance in a web view; the native SDK is what Expo's own Google-authentication guide recommends, gives a first-party account picker, and returns an id token directly. The cost is a config plugin (`iosUrlScheme`, the reversed iOS client id) — acceptable since CNG and `expo-dev-client` are already in place. The plugin is added only when `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` is set, so a checkout without Google credentials still runs; the button then hides itself.
+**Why the native Google SDK and not `expo-auth-session`.** `signInWithPopup` has no meaning in React Native, so a credential has to come from somewhere else. `expo-auth-session` would drive the OAuth dance in a web view; the native SDK is what Expo's own Google-authentication guide recommends, gives a first-party account picker, and returns an id token directly. The cost is a config plugin (`iosUrlScheme`, the reversed iOS client id) — acceptable since CNG and `expo-dev-client` are already in place. The plugin is added only when `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` is set, so a checkout without Google credentials still runs; the button then hides itself. The scheme is set in the `development` and `production` profiles of `eas.json`; `preview` does not carry one yet, so the Google button stays hidden there on iOS.
 
 **Apple and the nonce.** A raw nonce is generated with `expo-crypto`; its SHA-256 goes to Apple, the raw one to Firebase, which re-hashes it to check the token was minted for this request. Only the email scope is requested: Apple's `fullName` would be of no use, since the username is never pre-filled from a provider.
 
