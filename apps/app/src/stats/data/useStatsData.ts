@@ -1,36 +1,25 @@
 import {
   DAILY_QUESTION_MONTH_COLLECTION,
-  type DailyQuestionMonthDayData,
   dailyQuestionMonthConverter,
   monthDayKeyOf,
   monthKeyOf,
-  USER_CALENDAR_MONTH_COLLECTION,
-  USER_COLLECTION,
-  type UserCalendarMonthDayData,
-  userCalendarMonthConverter,
 } from '@statowrel/models';
-import { getDoc, getDocs, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useAuth } from '@/auth/AuthContext';
-import { readAnswer, subscribeToAnswers } from '@/daily-question/data/answerStore';
+import { getAnswersVersion, readAnswer, readAnswerDays, subscribeToAnswers } from '@/daily-question/data/answerStore';
 import { startOfDay, startOfMonth, toDateKey } from '@/lib/dates';
-import { getCollectionRef, getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
+import { getCollectionRef } from '@/lib/firestore';
+import {
+  emptyCalendarMonth,
+  loadCalendarMonth,
+  readCalendarMonth,
+  subscribeToCalendarCache,
+} from '@/stats/data/calendarCache';
 
-/**
- * One month of the Stats calendar, as the screen consumes it — the two halves
- * of docs/prd.md §5.2, keyed the same way so a day of the month reads both.
- */
-export interface CalendarMonth {
-  /** `YYYY-MM` — always the month currently displayed, even while it is still loading. */
-  key: string;
-  /** Days that had a question broadcast, from `v1_daily_question_months`. */
-  published: Record<string, DailyQuestionMonthDayData>;
-  /** Days this user answered, from `v1_users/{uid}/v1_user_calendar_months`. */
-  answered: Record<string, UserCalendarMonthDayData>;
-}
-
-const emptyMonth = (key: string): CalendarMonth => ({ key, published: {}, answered: {} });
+export type { CalendarMonth } from '@/stats/data/calendarCache';
 
 /**
  * The `YYYY-MM` of the very first month a question was ever broadcast in — how
@@ -49,44 +38,31 @@ const readArchiveStart = async (): Promise<string | null> => {
   return snapshot.docs[0]?.id ?? null;
 };
 
-const cacheKeyOf = (userId: string, monthKey: string) => `${userId}:${monthKey}`;
-
-const monthRefsOf = (userId: string, monthKey: string) => ({
-  published: getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKey, dailyQuestionMonthConverter),
-  answered: getSubDocumentRef(
-    USER_COLLECTION,
-    userId,
-    USER_CALENDAR_MONTH_COLLECTION,
-    monthKey,
-    userCalendarMonthConverter,
-  ),
-});
-
 /**
  * Where the Stats screen gets its data.
  *
  * The profile comes from `AuthContext`, which subscribes to `v1_users/{uid}` —
  * so the streak, the record and the answered-days total cost nothing here and
- * move on their own. Only the displayed month is fetched.
+ * move on their own. Only the displayed month is read here, and it is **read**:
+ * two `getDoc` through `calendarCache`, never a subscription.
  *
- * **A month costs two documents, and that is the point.** Read from the answers
- * themselves, the same month costs one read per answered day, plus the question
- * behind each of them to resolve its `stat_label`, plus a lookup per day to
- * tell a missed day from a day that never had a question — dozens of reads, and
- * again on every chevron.
+ * **Why no listener on the calendar.** Nothing writes into a calendar month on
+ * its own behalf while the screen is up. The two things that move it are both
+ * this user's own doing — they answered a day, or the 07:00 draw landed while
+ * the app was in the background — and each has a moment it can be picked up at,
+ * for two reads, rather than holding two open connections per visited month
+ * through the hours nothing happens. So the refresh policy is three rules, and
+ * `calendarCache` is what makes them cheap:
  *
- * How those two documents are read depends on the month:
- *
- * - **The current month is subscribed to.** It is the only one that changes —
- *   the scheduler adds a day to it at 07:00, and the answer trigger writes the
- *   user's half a beat after the app writes an answer. A subscription is what
- *   makes the calendar fill in behind the sheet instead of waiting for a guess
- *   about when the trigger has caught up, and it costs the same first read a
- *   `getDoc` would, plus one per change.
- * - **A past month is read once and kept.** It is frozen — nothing writes into
- *   a month that is over — so a chevron back to March costs two reads the first
- *   time and nothing afterwards. Leaving a listener open on each visited month
- *   would hold a connection per month to learn about changes that never come.
+ * - **A month is read once and kept**, for as long as the app runs. Walking
+ *   back to March and returning costs nothing the second time.
+ * - **Answering drops the month it belongs to** (`rememberAnswer` →
+ *   `invalidateCalendarMonth`), so a copy taken before the answer existed is
+ *   never shown again. Until the answer trigger has projected the day, the
+ *   session's own answers are laid over the month — see `calendar` below.
+ * - **Coming back to the screen, and pulling it down, re-read.** The first
+ *   covers the answer just given and the day that dropped overnight; the second
+ *   is the way out whenever anything else looks stale.
  */
 export const useStatsData = () => {
   const { user, profile } = useAuth();
@@ -96,18 +72,51 @@ export const useStatsData = () => {
   const todayKey = toDateKey(today);
   const [ month, selectMonth ] = useState(() => startOfMonth(today));
   const monthKey = monthKeyOf(toDateKey(month));
-  const cacheKey = cacheKeyOf(userId ?? '', monthKey);
-  const isCurrentMonth = monthKey === monthKeyOf(todayKey);
+  // Read from its own clock rather than derived from `today`, which is handed
+  // back to the screen: a value that leaves the hook cannot be a dependency the
+  // React compiler is willing to memoize `reload` on.
+  const currentMonthKey = useMemo(() => monthKeyOf(toDateKey(startOfDay(new Date()))), []);
 
   const [ archiveStart, setArchiveStart ] = useState<string | null>(null);
-  const [ months, setMonths ] = useState<Record<string, CalendarMonth>>({});
-  // Past months whose read has been started, so flipping back and forth between
-  // two of them while the first is still in flight does not fetch it twice.
-  const requested = useRef(new Set<string>());
+  const [ refreshing, setRefreshing ] = useState(false);
 
-  // The banner falls the moment an answer is written, whether or not the month
-  // index behind it has caught up — see `answeredToday` below.
-  useSyncExternalStore(subscribeToAnswers, () => readAnswer(userId, todayKey));
+  // The two module stores this screen is built on: the months already read, and
+  // the answers this session wrote. Both move from outside a render — a fetch
+  // landing, an answer written in the question sheet — which is exactly what
+  // `useSyncExternalStore` is for.
+  //
+  // A cached month is handed over by reference and keeps it until the cache
+  // moves, which is the snapshot the store owes React. The answers have no such
+  // snapshot to offer — the overlay below is built per read — so that one is
+  // subscribed to for the re-render alone, the way the banner already did.
+  const stored = useSyncExternalStore(
+    subscribeToCalendarCache,
+    () => readCalendarMonth(userId, monthKey),
+  );
+  const currentMonth = useSyncExternalStore(
+    subscribeToCalendarCache,
+    () => readCalendarMonth(userId, currentMonthKey),
+  );
+
+  useSyncExternalStore(subscribeToAnswers, getAnswersVersion);
+
+  /**
+   * Reads the months the screen is showing: the displayed one, and the current
+   * one whenever it is another — the banner reads the current month, not the
+   * displayed one, so browsing back to March must not stop today's question
+   * from appearing at the top of the screen.
+   */
+  const reload = useCallback(async (force: boolean) => {
+    if (userId === null) {
+      return;
+    }
+
+    await loadCalendarMonth(userId, monthKey, force);
+
+    if (monthKey !== currentMonthKey) {
+      await loadCalendarMonth(userId, currentMonthKey, force);
+    }
+  }, [ userId, monthKey, currentMonthKey ]);
 
   useEffect(() => {
     if (userId === null) {
@@ -133,65 +142,63 @@ export const useStatsData = () => {
     };
   }, [ userId ]);
 
+  // Mount, sign-in, and every chevron. A month already in the cache is shown
+  // without a round trip, and the answer that dropped it from the cache is what
+  // turns this back into a real read.
   useEffect(() => {
-    if (userId === null) {
-      return;
+    void reload(false);
+  }, [ reload ]);
+
+  // Coming back to the screen re-reads, whatever the cache holds: the sheet
+  // just closed may have written an answer, and a night in the background may
+  // have crossed 07:00. The first focus is the mount above.
+  //
+  // `reload` is reached through a ref rather than closed over, so this effect's
+  // identity never moves: React Navigation re-runs a focus effect whose callback
+  // changed, and depending on `reload` would turn every chevron into a forced
+  // re-read.
+  const focused = useRef(false);
+  const latestReload = useRef(reload);
+
+  useEffect(() => {
+    latestReload.current = reload;
+  }, [ reload ]);
+
+  useFocusEffect(useCallback(() => {
+    if (focused.current) {
+      void latestReload.current(true);
     }
 
-    const refs = monthRefsOf(userId, monthKey);
+    focused.current = true;
+  }, []));
 
-    const merge = (half: Partial<Omit<CalendarMonth, 'key'>>) => {
-      setMonths((current) => ({
-        ...current,
-        [cacheKey]: { ...(current[cacheKey] ?? emptyMonth(monthKey)), ...half },
-      }));
-    };
+  /** Pull to refresh — the same read, with the spinner the gesture owes the user. */
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
 
-    const complain = (error: unknown) => {
-      // An unreachable month must not take the screen down with it: the streak
-      // and the counters above the calendar are already on screen.
-      console.warn('[stats] could not load the calendar month', monthKey, error);
-    };
-
-    if (isCurrentMonth) {
-      const stopPublished = onSnapshot(
-        refs.published,
-        (snapshot) => merge({ published: snapshot.data()?.days ?? {} }),
-        complain,
-      );
-      const stopAnswered = onSnapshot(
-        refs.answered,
-        (snapshot) => merge({ answered: snapshot.data()?.days ?? {} }),
-        complain,
-      );
-
-      return () => {
-        stopPublished();
-        stopAnswered();
-      };
+    try {
+      await reload(true);
+    } finally {
+      setRefreshing(false);
     }
+  }, [ reload ]);
 
-    if (requested.current.has(cacheKey)) {
-      return;
-    }
-
-    requested.current.add(cacheKey);
-
-    Promise.all([ getDoc(refs.published), getDoc(refs.answered) ])
-      .then(([ published, answered ]) => {
-        merge({ published: published.data()?.days ?? {}, answered: answered.data()?.days ?? {} });
-      })
-      .catch((error: unknown) => {
-        // Dropping the month from the requested set lets a later visit retry.
-        requested.current.delete(cacheKey);
-        complain(error);
-      });
-
-    return undefined;
-  }, [ userId, monthKey, cacheKey, isCurrentMonth ]);
-
-  const currentMonth = months[cacheKeyOf(userId ?? '', monthKeyOf(todayKey))];
   const todayMonthDayKey = monthDayKeyOf(todayKey);
+
+  /**
+   * The displayed month, with this session's own answers laid over it.
+   *
+   * The overlay is what replaces the subscription: the app writes the answer,
+   * the answer trigger projects it into the month a beat later, and a refresh
+   * fired in between would otherwise come back saying the day is unanswered.
+   * Once the trigger has landed both halves say the same thing and the merge is
+   * a no-op.
+   */
+  const read = stored ?? emptyCalendarMonth(monthKey);
+  const answeredThisSession = readAnswerDays(userId, monthKey);
+  const calendar = Object.keys(answeredThisSession).length === 0
+    ? read
+    : { ...read, answered: { ...read.answered, ...answeredThisSession } };
 
   return {
     /** `v1_users/{uid}`, live — see `AuthContext`. Null while it loads, and until the onboarding sheet has created it. */
@@ -208,10 +215,10 @@ export const useStatsData = () => {
      * The displayed month. Empty until its read lands, which renders as an
      * inert month rather than as a wrong one — the key always follows `month`.
      */
-    calendar: months[cacheKey] ?? emptyMonth(monthKey),
+    calendar,
     /**
      * Today's question, straight off the month index — `null` before the 07:00
-     * drop, and appearing on its own when the drop lands while the app is open.
+     * drop, and until the screen is next refreshed after it.
      *
      * The banner reads the *current* month, not the displayed one: browsing
      * back to March must not make today's question disappear from the top of
@@ -223,6 +230,10 @@ export const useStatsData = () => {
     // answer given during this session counts on its own.
     answeredToday: currentMonth?.answered[todayMonthDayKey] !== undefined
       || readAnswer(userId, todayKey) !== null,
-    loading: userId !== null && months[cacheKey] === undefined,
+    loading: userId !== null && stored === null,
+    /** True while a pull to refresh is out — the `RefreshControl`'s own state. */
+    refreshing,
+    /** Re-reads the displayed month and the current one, cache bypassed. */
+    refresh,
   };
 };

@@ -6,7 +6,7 @@ import { Calendar } from '@/components/Calendar';
 import { Card, CardContent } from '@/components/Card';
 import { fromDateKey, startOfDay, startOfMonth, toDateKey } from '@/lib/dates';
 import { CalendarDay } from '@/stats/components/CalendarDay';
-import type { CalendarMonth } from '@/stats/data/useStatsData';
+import type { CalendarMonth } from '@/stats/data/calendarCache';
 import { getCalendarDayState } from '@/stats/helpers/calendarState';
 
 export interface StatsCalendarProps {

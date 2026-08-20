@@ -199,9 +199,10 @@ export const DailyQuestionScreen = () => {
       const written = await submitAnswer({ userId: user.uid, questionId, question, optionId });
 
       // The sheet flips on its own answer subscription; this is for the Stats
-      // banner underneath, which reads the calendar month the trigger has not
-      // written yet.
-      rememberAnswer(written);
+      // screen underneath, which no longer subscribes to the calendar: it drops
+      // the answered month from its cache and carries the day until the answer
+      // trigger has projected it.
+      rememberAnswer(written, question.options.find((option) => option.id === optionId)?.stat_label ?? '');
       setSelectedId(null);
       setArmed(false);
       setCelebrating(true);
