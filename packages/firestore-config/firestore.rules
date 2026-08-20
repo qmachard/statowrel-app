@@ -159,6 +159,33 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Where a push lands: one document per install, keyed by the Expo push
+      // token itself (docs/prd.md §4.2). Re-registering the same install is
+      // then a write to the same document rather than a duplicate, the same
+      // way `v1_usernames` makes uniqueness a property of the path.
+      //
+      // Private to its owner in every direction, and there is deliberately no
+      // collection-group block for it: the only reader of everybody's tokens
+      // is the daily fan-out, which runs admin-side through the wildcard at
+      // the top. Deleting is the owner's too — signing out drops the token,
+      // otherwise the account would keep pushing to a phone somebody else now
+      // holds.
+      //
+      // The token's own shape is not checked here: a malformed one is filtered
+      // out by the fan-out (`isExpoPushToken`) before it can poison the batch
+      // it travels in, and rules cannot import the pattern the model carries.
+      match /v1_user_devices/{push_token} {
+        function isValidDevice() {
+          return request.resource.data.user_id == user_id
+                 && request.resource.data.push_token == push_token
+                 && request.resource.data.platform in [ 'ios', 'android' ];
+        }
+
+        allow read: if isOwner(user_id);
+        allow create, update: if isOwner(user_id) && isValidDevice();
+        allow delete: if isOwner(user_id);
+      }
+
       // One half of a friendship, keyed by the *other* user's UID
       // (docs/prd.md §4.1). A friendship is reciprocal, and it is stored as two
       // documents — one under each user — both written from the moment the
