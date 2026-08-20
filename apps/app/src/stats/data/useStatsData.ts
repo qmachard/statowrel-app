@@ -9,13 +9,13 @@ import {
   type UserCalendarMonthDayData,
   userCalendarMonthConverter,
 } from '@statowrel/models';
-import { getDoc, onSnapshot } from 'firebase/firestore';
+import { getDoc, getDocs, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useAuth } from '@/auth/AuthContext';
 import { readAnswer, subscribeToAnswers } from '@/daily-question/data/answerStore';
 import { startOfDay, startOfMonth, toDateKey } from '@/lib/dates';
-import { getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
+import { getCollectionRef, getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
 
 /**
  * One month of the Stats calendar, as the screen consumes it — the two halves
@@ -31,6 +31,23 @@ export interface CalendarMonth {
 }
 
 const emptyMonth = (key: string): CalendarMonth => ({ key, published: {}, answered: {} });
+
+/**
+ * The `YYYY-MM` of the very first month a question was ever broadcast in — how
+ * far back the calendar lets one walk (docs/prd.md §5.2), and `null` while it
+ * loads or when nothing has ever been published.
+ *
+ * The archive is bounded by the questions, not by the account: a user arriving
+ * today can catch up on everything that came before them (docs/prd.md §4.2), so
+ * the lower bound is the same for everybody. One read, once per session — the
+ * first month never moves.
+ */
+const readArchiveStart = async (): Promise<string | null> => {
+  const months = getCollectionRef(DAILY_QUESTION_MONTH_COLLECTION, dailyQuestionMonthConverter);
+  const snapshot = await getDocs(query(months, orderBy('month'), limit(1)));
+
+  return snapshot.docs[0]?.id ?? null;
+};
 
 const cacheKeyOf = (userId: string, monthKey: string) => `${userId}:${monthKey}`;
 
@@ -82,6 +99,7 @@ export const useStatsData = () => {
   const cacheKey = cacheKeyOf(userId ?? '', monthKey);
   const isCurrentMonth = monthKey === monthKeyOf(todayKey);
 
+  const [ archiveStart, setArchiveStart ] = useState<string | null>(null);
   const [ months, setMonths ] = useState<Record<string, CalendarMonth>>({});
   // Past months whose read has been started, so flipping back and forth between
   // two of them while the first is still in flight does not fetch it twice.
@@ -90,6 +108,30 @@ export const useStatsData = () => {
   // The banner falls the moment an answer is written, whether or not the month
   // index behind it has caught up — see `answeredToday` below.
   useSyncExternalStore(subscribeToAnswers, () => readAnswer(userId, todayKey));
+
+  useEffect(() => {
+    if (userId === null) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    readArchiveStart()
+      .then((firstMonth) => {
+        if (!cancelled) {
+          setArchiveStart(firstMonth);
+        }
+      })
+      .catch((error: unknown) => {
+        // Without it the calendar simply stays on the current month rather than
+        // opening onto an archive it cannot bound.
+        console.warn('[stats] could not read the first published month', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ userId ]);
 
   useEffect(() => {
     if (userId === null) {
@@ -157,6 +199,11 @@ export const useStatsData = () => {
     today,
     month,
     selectMonth,
+    /**
+     * `YYYY-MM` of the oldest month the calendar can reach — the first month a
+     * question was broadcast in, whether or not the account existed then.
+     */
+    archiveStart,
     /**
      * The displayed month. Empty until its read lands, which renders as an
      * inert month rather than as a wrong one — the key always follows `month`.

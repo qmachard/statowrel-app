@@ -96,6 +96,7 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 - L'ordre des options est **fixe** (celui défini à la création), identique pour tous — c'est ce qui rend les captures d'écran comparables entre potes.
 - La question **ferme à minuit** : passé ce délai elle ne compte plus pour le streak (§4.6) et n'est plus poussée en modale bloquante.
 - Une journée manquée reste **rattrapable** depuis le calendrier de l'écran Stats (§5.2) : on peut répondre après coup pour compléter sa collection de cartes et voir les réponses de ses amis. Le rattrapage **ne restaure jamais le streak** — le streak récompense la régularité, la carte récompense la collection.
+- Le rattrapage n'est **pas borné par la date d'inscription** : un utilisateur qui arrive aujourd'hui voit l'intégralité des questions déjà posées et peut y répondre. L'archive appartient aux questions, pas au compte — c'est ce qui donne à un nouvel arrivant une collection à construire dès le premier jour, sans jamais lui offrir de streak rétroactif.
 - Une réponse de rattrapage compte dans les compteurs agrégés (`answer_counts`) au même titre qu'une réponse à l'heure ; elle est marquée `late: true` pour pouvoir distinguer les deux plus tard.
 - Réponse **définitive** : pas de modification après validation (c'est ce qui rend la stat crédible).
 
@@ -184,9 +185,9 @@ La racine de l'app. De haut en bas :
 | **Répondu** | Case `primary`, ombre dure, le `stat_label` du jour en micro-texte (tronqué) | Ouvre la carte StatOwrel de ce jour (§5.5), en lecture seule |
 | **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
 | **Aujourd'hui** | Case `accent` — le même traitement qu'un jour répondu, bordure, ombre dure et `stat_label` compris une fois la journée jouée : seule la couleur change. Aujourd'hui reste `accent` quoi qu'il arrive, répondu ou non — c'est le jour dont l'écran parle, et le voir virer au jaune comme les autres le dissolvait dans le mois | Ouvre la modale question du jour (§5.4), ou la carte StatOwrel (§5.5) une fois répondu |
-| **Futur, ou antérieur à l'inscription** | Case `muted`, sans bordure | Inerte |
+| **Futur, ou sans question** | Case `muted`, sans bordure | Inerte |
 
-- Navigation mois par mois (chevrons gauche/droite), bornée à la date d'inscription d'un côté et au mois courant de l'autre.
+- Navigation mois par mois (chevrons gauche/droite), bornée au **premier mois où une question a été diffusée** d'un côté et au mois courant de l'autre. La borne basse est la même pour tout le monde : les jours antérieurs à l'inscription sont des jours ratés comme les autres, rattrapables en mode late (§4.2).
 - Le calendrier **est** l'historique : c'est le seul endroit où l'on retrouve les questions passées et ses propres cartes.
 - Un jour sans question diffusée (avant le lancement, ou incident de publication) est rendu comme « futur » : inerte, non rattrapable.
 
@@ -202,7 +203,7 @@ La racine de l'app. De haut en bas :
 La question ne vit **jamais** dans un écran à elle : c'est toujours une **bottom sheet** posée par-dessus l'écran Stats.
 
 - **Question du jour non répondue** → la sheet s'ouvre **automatiquement** au lancement de l'app (ou à l'ouverture de la notification) et **reste ouverte tant qu'on n'a pas répondu** : pas de poignée de fermeture, pas de tap sur le fond, retour Android intercepté. On ne peut pas consulter l'app en évitant la question. Hauteur pleine, coins supérieurs arrondis (`rounded`), bordure haute noire épaisse, ombre dure vers le haut.
-- **Rattrapage depuis le calendrier** → même sheet, mais **fermable** (poignée + tap sur le fond) : on a le droit de regarder une vieille question et de repartir sans répondre.
+- **Rattrapage depuis le calendrier** → même sheet, mais **fermable** (poignée + tap sur le fond) : on a le droit de regarder une vieille question et de repartir sans répondre. Tant que le jour est ouvert à une réponse, une ligne sous les options rappelle que le rattrapage complète la collection sans compter pour le streak (§4.2).
 
 Contenu, de haut en bas :
 
