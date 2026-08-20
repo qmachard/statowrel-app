@@ -30,7 +30,7 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 
 - **Le joueur** — 16-35 ans, déjà sur BeReal / Snap. Vient pour la vanne quotidienne et le classement implicite avec ses potes.
 - **L'auteur** — le même joueur, mais qui propose ses propres questions et veut voir la sienne tirée au sort.
-- **Le modérateur** — équipe StatOwrel, via le backoffice FireCMS. Valide ou rejette les questions proposées.
+- **Le modérateur** — équipe StatOwrel, via un backoffice d'administration. Valide ou rejette les questions proposées.
 
 ## 3. Boucle produit
 
@@ -144,7 +144,7 @@ Immédiatement après avoir répondu :
 
 - N'importe quel utilisateur peut proposer une question : intitulé + **2 à 6** options, chacune avec son « tu es un.e ... ».
 - La question part en file de modération (statut `pending`).
-- Le modérateur valide, édite ou rejette depuis le backoffice FireCMS. Une raison de rejet est renvoyée à l'auteur.
+- Le modérateur valide, édite ou rejette depuis le backoffice d'administration. Une raison de rejet est renvoyée à l'auteur.
 - Une question validée rejoint le **pot commun** et devient éligible au tirage au sort.
 - L'auteur est notifié quand sa question est validée, puis quand elle est effectivement tirée. Son nom d'utilisateur est crédité sur l'écran de la question.
 - Une question déjà tirée ne peut pas ressortir (v1 : jamais de rediffusion).

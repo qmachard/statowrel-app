@@ -18,8 +18,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.9.0",
-    "firebase": "^12.16.0",
-    "firebase-admin": "^14.0.0",
+    "firebase": "^12.18.0",
+    "firebase-admin": "^14.3.0",
     "typescript": "^5.4.5"
   }
 }

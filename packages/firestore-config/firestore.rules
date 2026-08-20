@@ -22,7 +22,7 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == user_id;
     }
 
-    // Admins (FireCMS backoffice) have full access. Every collection-level
+    // Admins have full access. Every collection-level
     // rule below only needs to describe the mobile app's access.
     match /{document=**} {
       allow read, write: if isAdmin();

@@ -9,5 +9,5 @@ Firestore security rules, Firestore indexes, and Storage security rules. No appl
 ## Conventions
 
 - Every collection rule mirrors its `v1_` prefix in `@statowrel/models`.
-- Admins (FireCMS, via a custom `admin` auth claim) bypass all rules — see the top-level `isAdmin()` wildcard match in `firestore.rules`. App-facing rules only need to describe what an authenticated end user may do.
+- Admins (via a custom `admin` auth claim) bypass all rules — see the top-level `isAdmin()` wildcard match in `firestore.rules`. App-facing rules only need to describe what an authenticated end user may do.
 - New collections always get an explicit `match` block; never widen the top-level wildcard.
