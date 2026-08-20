@@ -62,6 +62,22 @@ export interface UserFriendFirebaseData {
   /** Firebase Auth UID of the friend, same value as the document id. Carried as a field so a read never has to go back to the snapshot's path. */
   friend_id: string;
   /**
+   * The friend's `username`, copied from their profile at write time so that
+   * rendering a friend list costs one collection read instead of one profile
+   * read per line.
+   *
+   * A display cache, not the truth — `v1_users/{friend_id}.username` stays it,
+   * and `v1_usernames` stays what makes it unique. `firestore.rules` checks the
+   * copy against that reservation, so a client cannot invite somebody under a
+   * borrowed handle; nothing else about the friend is copied, precisely because
+   * nothing else can be checked that way, and because a streak (docs/prd.md
+   * §5.3) moves every day and would be stale on sight.
+   *
+   * Renaming is not implemented yet (docs/prd.md §4.1); the day it is, freeing
+   * the old reservation is what has to backfill these copies.
+   */
+  friend_username: string;
+  /**
    * `pending` until the invitee accepts, `accepted` afterwards. Kept in step on
    * both halves by the batch that writes them.
    *
@@ -99,6 +115,7 @@ export const userFriendConverter: FirestoreConverter<UserFriendData, UserFriendF
   toFirestore: (data) => removeMissingFields({
     user_id: data.user_id,
     friend_id: data.friend_id,
+    friend_username: data.friend_username,
     status: data.status,
     requested_by: data.requested_by,
     created_at: TimestampClass.fromDate(new Date(data.created_at)),
@@ -110,6 +127,7 @@ export const userFriendConverter: FirestoreConverter<UserFriendData, UserFriendF
     return {
       user_id: data.user_id ?? '',
       friend_id: data.friend_id ?? '',
+      friend_username: data.friend_username ?? '',
       status: typeof data.status === 'string' && isFriendshipStatus(data.status) ? data.status : 'pending',
       requested_by: data.requested_by ?? '',
       created_at: parseTimestamp(data.created_at ?? null, 'now'),

@@ -40,6 +40,12 @@ const userFriendsCollection = buildCollection<UserFriendEntity>({
       description: 'UID Firebase Auth de l\'ami. Sert aussi d\'identifiant au document.',
       readOnly: true,
     }),
+    friend_username: buildProperty({
+      dataType: 'string',
+      name: 'Handle de l\'ami',
+      description: 'Recopié du profil de l\'ami à l\'écriture, pour qu\'une liste d\'amis ne coûte pas une lecture de profil par ligne. v1_usernames fait autorité ; les règles vérifient la copie contre la réservation.',
+      readOnly: true,
+    }),
     status: buildProperty({
       dataType: 'string',
       name: 'État',

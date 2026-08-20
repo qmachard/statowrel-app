@@ -169,6 +169,7 @@ The reservation is written *before* the profile, never in the same batch: `fires
 |---|---|---|
 | `user_id` | `string` | Auth UID of the list's owner, denormalized from the parent id — the side this half is seen from |
 | `friend_id` | `string` | Auth UID of the friend, same value as the document id |
+| `friend_username` | `string` | the friend's handle, copied from their profile at write time |
 | `status` | `'pending' \| 'accepted'` | no `declined` and no `blocked`: refusing deletes the pair, blocking is out of scope (`docs/prd.md` §7) |
 | `requested_by` | `string` | Auth UID of whoever sent the invitation — **the same value on both halves** |
 | `created_at` | `UniversalTimestamp` | when the invitation was sent |
@@ -182,7 +183,7 @@ The document id is the *other* user's Auth UID, which makes "at most one friends
 
 **Who writes.** The acting client, both halves in one batch — the inviter at creation, the invitee at acceptance — with no backend involved, like the `v1_usernames` reservation. `firestore.rules` lets a signed-in user write the entry in their own list *and* the entry carrying their own UID as its id, which is exactly the two halves of a pair they are part of: an invitation always starts `pending` and always from its sender, an update only moves `pending` → `accepted` and never by the sender, and a refusal, a cancellation and a removal are the same `delete`. A client that writes only one half of a pair leaves a cosmetic desync — one side accepted, the other pending — that a repair job can reconcile; it cannot forge a friendship anybody else can see.
 
-**Nothing is denormalized onto the edge.** The friend list shows avatar, `@handle` and streak (`docs/prd.md` §5.3), and the streak moves every day: a copy would be stale on sight, so the list reads the friends' `v1_users` documents, which any signed-in user may read. No composite index either — a friend list is small enough to be read whole and filtered on `status` client-side.
+**Only the handle is denormalized.** `friend_username` is copied onto the edge so rendering a friend list costs one collection read instead of one profile read per line — the same trade the calendar's `stat_label` makes. It is safe to copy because it is *checkable*: `firestore.rules` runs the same `get()` on `v1_usernames` that a profile's own `ownsUsername()` runs, so a client cannot introduce itself to somebody under a borrowed handle. Nothing else follows it — an avatar has no reservation to be checked against, and a streak (`docs/prd.md` §5.3) moves every day and would be stale on sight, so the screens that show either read the friends' `v1_users` documents, which any signed-in user may read. Renaming is not implemented yet (`docs/prd.md` §4.1); the day it is, freeing the old reservation is what has to backfill these copies. No composite index either — a friend list is small enough to be read whole and filtered on `status` client-side.
 
 Two things to keep straight about the options:
 

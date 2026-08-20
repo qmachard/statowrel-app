@@ -179,6 +179,20 @@ service cloud.firestore {
           return isOwner(user_id) || isOwner(friend_id);
         }
 
+        // The handle carried on the entry is a copy of the friend's, kept so a
+        // friend list costs one collection read instead of one profile read per
+        // line. The reservation is the authority on who holds a handle, so the
+        // copy has to agree with it — same `get()` the profile's own
+        // `ownsUsername()` runs. Without this check the inviter, who writes the
+        // entry landing in the invitee's list, could introduce themselves under
+        // somebody else's handle. A handle that was never reserved has no
+        // document, so this expression errors and the write is denied.
+        function friendUsernameIsTheirs() {
+          return get(
+            /databases/$(database)/documents/v1_usernames/$(request.resource.data.friend_username)
+          ).data.user_id == friend_id;
+        }
+
         // The two halves mirror each other, so both carry the same shape: the
         // ids match the path they sit on, and `requested_by` is one of them.
         function isValidHalf() {
@@ -186,7 +200,8 @@ service cloud.firestore {
                  && request.resource.data.friend_id == friend_id
                  && user_id != friend_id
                  && (request.resource.data.requested_by == user_id
-                     || request.resource.data.requested_by == friend_id);
+                     || request.resource.data.requested_by == friend_id)
+                 && friendUsernameIsTheirs();
         }
 
         allow read: if isOwner(user_id);
