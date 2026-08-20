@@ -6,8 +6,6 @@ export type CalendarDayState = 'answered' | 'today' | 'missed' | 'idle';
 export interface CalendarDayStateInput {
   day: DateKey;
   today: DateKey;
-  /** Day the account was created — everything before it is inert. */
-  registeredOn: DateKey;
   /** A question was broadcast that day — read off `v1_daily_question_months`. */
   published: boolean;
   /** The user answered it — read off `v1_users/{uid}/v1_user_calendar_months`. */
@@ -23,18 +21,23 @@ export interface CalendarDayStateInput {
  * is nothing there to catch up on. Which is also true of today before the 07:00
  * drop.
  *
+ * **The account's own age is not a bound.** Every broadcast day is catch-up-able,
+ * including the ones that predate the account: somebody arriving today opens the
+ * whole archive and answers it in late mode (docs/prd.md §4.2) — the answers are
+ * `late: true`, so they build the collection without ever moving a streak.
+ *
  * **Today is `today` whatever happens to it**, answered or not: it is the one
  * day the screen is about, and letting it turn yellow like any other answered
  * day dissolved it into the month the moment one had played. It keeps the
  * treatment of an answered cell — `stat_label` included — and only its colour
  * differs (docs/prd.md §5.2).
  */
-export const getCalendarDayState = ({ day, today, registeredOn, published, answered }: CalendarDayStateInput): CalendarDayState => {
+export const getCalendarDayState = ({ day, today, published, answered }: CalendarDayStateInput): CalendarDayState => {
   if (answered) {
     return day === today ? 'today' : 'answered';
   }
 
-  if (!published || day > today || day < registeredOn) {
+  if (!published || day > today) {
     return 'idle';
   }
 

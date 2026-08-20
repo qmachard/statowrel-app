@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 
 import { Calendar } from '@/components/Calendar';
 import { Card, CardContent } from '@/components/Card';
-import { startOfDay, startOfMonth, toDateKey } from '@/lib/dates';
+import { fromDateKey, startOfDay, startOfMonth, toDateKey } from '@/lib/dates';
 import { CalendarDay } from '@/stats/components/CalendarDay';
 import type { CalendarMonth } from '@/stats/data/useStatsData';
 import { getCalendarDayState } from '@/stats/helpers/calendarState';
@@ -15,20 +15,29 @@ export interface StatsCalendarProps {
   onMonthChange: (month: Date) => void;
   /** The displayed month's two halves. Empty while it loads, which renders as an inert month. */
   calendar: CalendarMonth;
-  /** `UserData.created_at` — the calendar's lower bound, nothing before it ever existed. */
-  registeredAt: string;
+  /**
+   * `YYYY-MM` of the first month a question was broadcast in — the calendar's
+   * lower bound. Deliberately not the registration month: the archive belongs to
+   * the questions, and a day older than the account is answerable in late mode
+   * (docs/prd.md §4.2). `null` while it loads, which holds the calendar on the
+   * current month rather than opening onto an unbounded past.
+   */
+  archiveStart: string | null;
 }
 
 /**
  * The month calendar of docs/prd.md §5.2 — the app's whole history, and the way
  * back to a past question or card.
  */
-export const StatsCalendar = ({ month, onMonthChange, calendar, registeredAt }: StatsCalendarProps) => {
+export const StatsCalendar = ({ month, onMonthChange, calendar, archiveStart }: StatsCalendarProps) => {
   const navigation = useNavigation();
   const today = useMemo(() => startOfDay(new Date()), []);
 
   const todayKey = toDateKey(today);
-  const registeredOn = useMemo(() => toDateKey(new Date(registeredAt)), [ registeredAt ]);
+  const minMonth = useMemo(
+    () => (archiveStart === null ? startOfMonth(today) : fromDateKey(`${archiveStart}-01`)),
+    [ archiveStart, today ],
+  );
 
   return (
     <Card>
@@ -36,7 +45,7 @@ export const StatsCalendar = ({ month, onMonthChange, calendar, registeredAt }: 
         <Calendar
           month={month}
           onMonthChange={onMonthChange}
-          minMonth={startOfMonth(new Date(registeredAt))}
+          minMonth={minMonth}
           maxMonth={startOfMonth(today)}
           renderDay={(date) => {
             const dayKey = toDateKey(date);
@@ -50,7 +59,6 @@ export const StatsCalendar = ({ month, onMonthChange, calendar, registeredAt }: 
                 state={getCalendarDayState({
                   day: dayKey,
                   today: todayKey,
-                  registeredOn,
                   published: calendar.published[monthDayKey] !== undefined,
                   answered: answer !== undefined,
                 })}

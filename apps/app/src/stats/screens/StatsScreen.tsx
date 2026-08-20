@@ -32,13 +32,11 @@ const styles = StyleSheet.create({
 
 export const StatsScreen = () => {
   const navigation = useNavigation();
-  const { profile, today, month, selectMonth, calendar, todayQuestion, answeredToday } = useStatsData();
+  const { profile, today, month, selectMonth, calendar, todayQuestion, answeredToday, archiveStart } = useStatsData();
 
   // The profile is null while it loads, and stays null until the onboarding
-  // sheet has created it. Zeros and a calendar bounded to today: nothing
-  // invented, nothing crashing.
+  // sheet has created it. Zeros rather than nothing invented, nothing crashing.
   const streakCount = profile === null ? 0 : resolveStreakCount(profile, today);
-  const registeredAt = profile?.created_at ?? today.toISOString();
 
   // The banner announces a question that is still waiting: once the day is
   // answered it has nothing left to say, and the calendar carries the day.
@@ -66,7 +64,7 @@ export const StatsScreen = () => {
             icon={CalendarCheck}
             label="Jours répondus"
             value={profile?.answers_count ?? 0}
-            unit="depuis l’inscription"
+            unit="au total"
           />
         </StatsStrip>
 
@@ -74,7 +72,7 @@ export const StatsScreen = () => {
           month={month}
           onMonthChange={selectMonth}
           calendar={calendar}
-          registeredAt={registeredAt}
+          archiveStart={archiveStart}
         />
       </ScrollView>
     </SafeAreaView>
