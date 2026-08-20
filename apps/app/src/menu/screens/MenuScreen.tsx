@@ -5,16 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/AuthContext';
 import { signOut } from '@/auth/providers';
+import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
-import { shadows } from '@/design/shadows';
-import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
-
-const PROVIDER_LABELS: Record<string, string> = {
-  'password': 'E-mail',
-  'google.com': 'Google',
-  'apple.com': 'Apple',
-  'facebook.com': 'Facebook',
-};
+import { colors, fontSize, fonts, spacing } from '@/design/tokens';
+import { FriendsCard } from '@/friends/components/FriendsCard';
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -37,29 +31,21 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.foreground,
   },
-  card: {
-    gap: spacing(2),
-    borderRadius: radius.md,
-    borderWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    paddingHorizontal: spacing(6),
-    paddingVertical: spacing(5),
+  // The account leads the screen, on the page itself: no card, no border — the
+  // avatar is the surface, and it carries its own.
+  identity: {
+    alignItems: 'center',
+    gap: spacing(3),
   },
   name: {
     fontFamily: fonts.head,
     fontSize: fontSize['2xl'],
     textTransform: 'uppercase',
-    color: colors['card-foreground'],
+    color: colors.foreground,
   },
-  detail: {
+  email: {
     fontFamily: fonts.sans,
     fontSize: fontSize.sm,
-    color: colors['muted-foreground'],
-  },
-  uid: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.xs,
     color: colors['muted-foreground'],
   },
 });
@@ -82,16 +68,20 @@ export const MenuScreen = () => {
           <Text style={styles.heading}>Menu</Text>
         </View>
 
-        <View style={[ styles.card, shadows.md ]}>
-          <Text style={styles.name}>
+        <View style={styles.identity}>
+          <Avatar
+            size="xl"
+            name={profile?.username ?? user.email ?? '?'}
+            uri={profile?.photo_url ?? user.photoURL}
+          />
+
+          <Text style={styles.name} numberOfLines={1}>
             {profile ? `@${profile.username}` : 'Profil en cours de création…'}
           </Text>
-          <Text style={styles.detail}>{profile?.email ?? user.email ?? '—'}</Text>
-          <Text style={styles.detail}>
-            Connecté via {profile?.auth_providers.map((provider) => PROVIDER_LABELS[provider] ?? provider).join(', ') || '—'}
-          </Text>
-          <Text style={styles.uid}>UID {user.uid}</Text>
+          <Text style={styles.email}>{profile?.email ?? user.email ?? '—'}</Text>
         </View>
+
+        <FriendsCard onInvite={() => navigation.navigate('InviteFriend')} />
 
         <Button label="Se déconnecter" variant="secondary" onPress={() => signOut()} />
       </ScrollView>
