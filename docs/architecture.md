@@ -211,7 +211,7 @@ domains/{domain-name}/
 
 `src/index.ts` re-exports each domain as a namespace (`export * as health from './domains/health'`), so Firebase names functions `<domain>-<exportName>` (e.g. `health-healthApi`). `src/domains/health` is a minimal working example (`GET /ping`) proving the wiring end-to-end; it's a template to copy, not a real feature.
 
-`api/` and `callables/` are two ways out of the same domain, and the client decides which. An **HTTP route** is for a caller that is not the app — a webhook, a browser, `curl`. A **callable** is for the app: the ID token travels with the call and is verified by the runtime, so `request.auth` is already there and no token middleware has to be written; failures come back as `HttpsError` codes the client reads as `functions/*`. A callable's wire shape (name, payload, result) lives in `@statowrel/models`'s `callables.ts` — the only module of that package describing no Firestore collection — so both sides compile against the same type.
+`api/` and `callables/` are two ways out of the same domain, and the client decides which. An **HTTP route** is for a caller that is not the app — a webhook, a browser, `curl`. A **callable** is for the app: the ID token travels with the call and is verified by the runtime, so `request.auth` is already there and no token middleware has to be written; failures come back as `HttpsError` codes the client reads as `functions/*`. A callable's wire shape (name, payload, result) lives in `@statowrel/models`'s `callables.ts` — one of the two modules of that package describing no Firestore collection, with `daily_question_time.ts` — so both sides compile against the same type.
 
 ### `daily-questions`
 
@@ -228,7 +228,9 @@ Drawing and publishing happen in the same run: everyone gets the same question a
 
 **Every step is idempotent**, because Cloud Scheduler retries. The month entry is read before a draw and is written in the same batch as it, so a retry reuses the committed draw rather than burning a second question; the notification task carries a day-derived id, so a re-enqueue is rejected by Cloud Tasks as a duplicate instead of notifying twice.
 
-`helpers/parisTime.ts` converts a Paris wall-clock time to an instant in two passes — the offset can only be read *from* an instant, and a single pass lands on the wrong side of a DST switch. That is what keeps 07:00 and the midnight close on the right side of a DST day, which is 23 or 25 hours long.
+`@statowrel/models`'s `daily_question_time.ts` converts a Paris wall-clock time to an instant in two passes — the offset can only be read *from* an instant, and a single pass lands on the wrong side of a DST switch. That is what keeps 07:00 and the midnight close on the right side of a DST day, which is 23 or 25 hours long. It sits in the shared package rather than in this domain because the drop hour and the midnight close are what `broadcast_at` and `closes_at` *mean*, and the seeding script below stamps them from outside the functions runtime.
+
+`apps/functions/scripts/seed-daily-questions.mjs` (`npm run seed-daily-questions`) is that outside caller: it replays this same batch for the days already gone — by default the five before today — so a fresh project or a reset emulator does not open on an empty calendar. It draws from the approved pot first and mints from a built-in catalogue for what the pot cannot cover, skips a day already indexed in its month (so it only ever fills holes), notifies nobody, and gives each seeded day a plausible `answer_counts` tally, which is counters only — no answer document is forged under anybody's UID.
 
 Deploying this domain needs the scheduler's service account to hold `cloudtasks.enqueuer` and to be allowed to `actAs` the task function's service account — the notification is enqueued from code, not by an IAM-free trigger.
 

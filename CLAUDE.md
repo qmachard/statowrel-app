@@ -58,6 +58,9 @@ npm run submit:prod         # eas submit, iOS then Android, --profile production
 npm run typecheck        # TypeScript check all (turbo)
 npm run lint              # Lint all
 
+npm run set-admin -- <email>          # grant the `admin` claim (apps/functions/scripts)
+npm run seed-daily-questions          # backfill the 5 days before today so the app is not empty
+
 npm run deploy:functions             # firebase deploy --only functions (default project)
 npm run deploy:functions:production
 npm run deploy:firestore             # firebase deploy --only firestore:rules,indexes,storage

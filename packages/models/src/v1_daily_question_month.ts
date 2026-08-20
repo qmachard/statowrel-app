@@ -41,6 +41,29 @@ export const monthDayKeyOf = (dateKey: string): string => dateKey.slice(8, 10);
 /** The `YYYY-MM-DD` day key a month key and a day-of-month key point back at. */
 export const dateKeyOf = (monthKey: string, monthDayKey: string): string => `${monthKey}-${monthDayKey}`;
 
+/**
+ * The `[ year, monthIndex, day ]` a `YYYY-MM-DD` key stands for, in the shape
+ * `Date.UTC` takes — `monthIndex` is zero-based, as everything `Date` is.
+ *
+ * Read by slices rather than by splitting on `-`, so each part is a `number`
+ * and not a `number | undefined` the callers have to defend against.
+ */
+export const dateKeyParts = (dateKey: string): [ number, number, number ] => [
+  Number(dateKey.slice(0, 4)),
+  Number(dateKey.slice(5, 7)) - 1,
+  Number(dateKey.slice(8, 10)),
+];
+
+/** The `YYYY-MM-DD` Paris day `count` days before `dateKey` — `previousDateKey('2026-03-01', 1)` is `'2026-02-28'`. */
+export const previousDateKey = (dateKey: string, count = 1): string => {
+  const [ year, monthIndex, day ] = dateKeyParts(dateKey);
+
+  // Day keys are calendar days, not instants: walking them through UTC keeps
+  // the arithmetic exact across a DST switch, where subtracting 24 hours from
+  // a Paris instant would land on the same day twice.
+  return new Date(Date.UTC(year, monthIndex, day - count)).toISOString().slice(0, 10);
+};
+
 export interface DailyQuestionMonthDayFirebaseData {
   /**
    * Document id in `v1_questions` — the question that was broadcast that day.

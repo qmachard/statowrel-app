@@ -1,4 +1,4 @@
-import { DAILY_QUESTION_TIME_ZONE } from '@statowrel/models';
+import { DAILY_QUESTION_TIME_ZONE, dateKeyParts } from './v1_daily_question_month';
 
 /**
  * Offset between Europe/Paris and UTC at a given instant, in milliseconds.
@@ -47,10 +47,30 @@ const parisOffsetMs = (instant: Date): number => {
  * closing that day.
  */
 export const parisTimeToInstant = (dateKey: string, hour: number, minute = 0): Date => {
-  const [ year, month, day ] = dateKey.split('-').map(Number);
+  const [ year, monthIndex, day ] = dateKeyParts(dateKey);
 
-  const naive = Date.UTC(year, month - 1, day, hour, minute);
+  const naive = Date.UTC(year, monthIndex, day, hour, minute);
   const firstGuess = new Date(naive - parisOffsetMs(new Date(naive)));
 
   return new Date(naive - parisOffsetMs(firstGuess));
 };
+
+/** The daily question drops at 07:00 Paris, the same hour for everyone — docs/prd.md §4.2. */
+export const PUBLICATION_HOUR = 7;
+
+/**
+ * The instant a day's question drops: 07:00 Europe/Paris, every day.
+ *
+ * Derived from the day key rather than read off the clock so a retried
+ * scheduler run recomputes the exact same value, and so a run delayed by a
+ * few seconds still stamps the round hour it was meant to publish at.
+ */
+export const publicationTimeOf = (dateKey: string): Date => (
+  parisTimeToInstant(dateKey, PUBLICATION_HOUR)
+);
+
+/**
+ * Paris midnight closing a day — past it an answer no longer counts for the
+ * streak and is flagged `late` (docs/prd.md §4.6).
+ */
+export const closingTimeOf = (dateKey: string): Date => parisTimeToInstant(dateKey, 24);
