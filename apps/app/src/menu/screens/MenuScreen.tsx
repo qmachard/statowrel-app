@@ -5,9 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/auth/AuthContext';
 import { signOut } from '@/auth/providers';
+import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { shadows } from '@/design/shadows';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
+import { FriendsCard } from '@/friends/components/FriendsCard';
 
 const PROVIDER_LABELS: Record<string, string> = {
   'password': 'E-mail',
@@ -38,13 +40,19 @@ const styles = StyleSheet.create({
     color: colors.foreground,
   },
   card: {
-    gap: spacing(2),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(4),
     borderRadius: radius.md,
     borderWidth,
     borderColor: colors.border,
     backgroundColor: colors.card,
     paddingHorizontal: spacing(6),
     paddingVertical: spacing(5),
+  },
+  identity: {
+    flexShrink: 1,
+    gap: spacing(2),
   },
   name: {
     fontFamily: fonts.head,
@@ -83,15 +91,25 @@ export const MenuScreen = () => {
         </View>
 
         <View style={[ styles.card, shadows.md ]}>
-          <Text style={styles.name}>
-            {profile ? `@${profile.username}` : 'Profil en cours de création…'}
-          </Text>
-          <Text style={styles.detail}>{profile?.email ?? user.email ?? '—'}</Text>
-          <Text style={styles.detail}>
-            Connecté via {profile?.auth_providers.map((provider) => PROVIDER_LABELS[provider] ?? provider).join(', ') || '—'}
-          </Text>
-          <Text style={styles.uid}>UID {user.uid}</Text>
+          <Avatar
+            size="lg"
+            name={profile?.username ?? user.email ?? '?'}
+            uri={profile?.photo_url ?? user.photoURL}
+          />
+
+          <View style={styles.identity}>
+            <Text style={styles.name} numberOfLines={1}>
+              {profile ? `@${profile.username}` : 'Profil en cours de création…'}
+            </Text>
+            <Text style={styles.detail}>{profile?.email ?? user.email ?? '—'}</Text>
+            <Text style={styles.detail}>
+              Connecté via {profile?.auth_providers.map((provider) => PROVIDER_LABELS[provider] ?? provider).join(', ') || '—'}
+            </Text>
+            <Text style={styles.uid}>UID {user.uid}</Text>
+          </View>
         </View>
+
+        <FriendsCard onInvite={() => navigation.navigate('InviteFriend')} />
 
         <Button label="Se déconnecter" variant="secondary" onPress={() => signOut()} />
       </ScrollView>

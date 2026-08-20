@@ -53,3 +53,20 @@ export const getSubDocumentRef = <TModelData extends DocumentData, TFirebaseData
   doc(db, collectionPath, identifier, subCollectionPath, subIdentifier)
     .withConverter(withConverter(converter))
 );
+
+/**
+ * A whole sub-collection —
+ * `getSubCollectionRef('v1_users', uid, 'v1_user_friends', userFriendConverter)`.
+ *
+ * Same flat-segments contract as `getSubDocumentRef` above, and for the same
+ * reason: the parent ref would only have to be cast back.
+ */
+export const getSubCollectionRef = <TModelData extends DocumentData, TFirebaseData extends DocumentData = TModelData>(
+  collectionPath: string,
+  identifier: string,
+  subCollectionPath: string,
+  converter: FirestoreConverter<TModelData, TFirebaseData>,
+) => (
+  collection(db, collectionPath, identifier, subCollectionPath)
+    .withConverter(withConverter(converter))
+);
