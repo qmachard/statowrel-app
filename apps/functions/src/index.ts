@@ -7,4 +7,5 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 export * as dailyQuestions from './domains/daily-questions';
+export * as friends from './domains/friends';
 export * as health from './domains/health';

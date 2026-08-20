@@ -2,6 +2,8 @@ export type RootStackParamList = {
   Stats: undefined;
   /** One day's question — omit `date` for today's (docs/prd.md §5.4). */
   DailyQuestion: { date?: string } | undefined;
+  /** Invite a friend by their exact handle (docs/prd.md §4.1). */
+  InviteFriend: undefined;
   Profile: undefined;
   SignIn: undefined;
   SignUp: undefined;

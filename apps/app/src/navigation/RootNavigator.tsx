@@ -6,6 +6,7 @@ import { SignInScreen } from '@/auth/screens/SignInScreen';
 import { SignUpScreen } from '@/auth/screens/SignUpScreen';
 import { DailyQuestionScreen } from '@/daily-question/screens/DailyQuestionScreen';
 import { colors } from '@/design/tokens';
+import { InviteFriendScreen } from '@/friends/screens/InviteFriendScreen';
 import { StatsScreen } from '@/stats/screens/StatsScreen';
 
 import type { RootStackParamList } from './types';
@@ -51,6 +52,18 @@ export const RootNavigator = () => {
               // The surface is set by the screen itself, which is the only
               // place that knows whether the day has been answered — see
               // `DailyQuestionScreen`.
+            }}
+          />
+          {/* Inviting a friend is the same kind of sheet as the question: a
+              short form posed over Stats, sized by its own content, and
+              dismissable — nothing is blocked on it (docs/prd.md §4.1, §5.1). */}
+          <Stack.Screen
+            name="InviteFriend"
+            component={InviteFriendScreen}
+            options={{
+              presentation: 'formSheet',
+              sheetAllowedDetents: 'fitToContents',
+              sheetGrabberVisible: true,
             }}
           />
           <Stack.Screen name="Profile" component={ProfileScreen} />

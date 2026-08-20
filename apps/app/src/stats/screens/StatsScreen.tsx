@@ -47,6 +47,7 @@ export const StatsScreen = () => {
       <ScrollView contentContainerStyle={styles.content}>
         <StatsHeader
           displayName={profile?.username ?? ''}
+          onInvite={() => navigation.navigate('InviteFriend')}
           onEditProfile={() => navigation.navigate('Profile')}
         />
 
