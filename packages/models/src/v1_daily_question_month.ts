@@ -8,6 +8,23 @@ import {
 
 export const DAILY_QUESTION_MONTH_COLLECTION = 'v1_daily_question_months';
 
+/** Everyone is on Europe/Paris — the day rolls over at Paris midnight, not UTC's (docs/prd.md §7). */
+export const DAILY_QUESTION_TIME_ZONE = 'Europe/Paris';
+
+/**
+ * The `YYYY-MM-DD` key of the day a `Date` falls on, in Europe/Paris.
+ *
+ * This is the `date` of every answer, the `broadcast_on` of the question that
+ * was drawn that day, and — through `monthKeyOf` / `monthDayKeyOf` below — the
+ * pair of coordinates a day is indexed under. Never derive it with
+ * `toISOString().slice(0, 10)`: that reads the UTC day, so anything between
+ * Paris midnight and 2am lands on the day before.
+ */
+export const dailyQuestionDateKey = (date: Date): string => (
+  // 'en-CA' is the locale whose short date format is already YYYY-MM-DD.
+  new Intl.DateTimeFormat('en-CA', { timeZone: DAILY_QUESTION_TIME_ZONE }).format(date)
+);
+
 /**
  * `YYYY-MM` month key of a `YYYY-MM-DD` day key — the document id of a month.
  *
@@ -25,7 +42,12 @@ export const monthDayKeyOf = (dateKey: string): string => dateKey.slice(8, 10);
 export const dateKeyOf = (monthKey: string, monthDayKey: string): string => `${monthKey}-${monthDayKey}`;
 
 export interface DailyQuestionMonthDayFirebaseData {
-  /** Document id in `v1_questions` — the question that was broadcast that day. */
+  /**
+   * Document id in `v1_questions` — the question that was broadcast that day.
+   *
+   * The day's only pointer to its question, and the parent of every answer to
+   * it (`v1_questions/{question_id}/v1_daily_question_answers`).
+   */
   question_id: string;
   /**
    * The question's `label`, copied at publication.
@@ -43,19 +65,23 @@ export interface DailyQuestionMonthDayFirebaseData {
 }
 
 /**
- * One document per calendar month, shared by every user: which days actually
- * had a question — see docs/prd.md §5.2.
+ * One document per calendar month, shared by every user: which question ran
+ * which day — see docs/prd.md §5.2 and §6.
  *
- * The Stats calendar has to tell a **missed** day (a question was broadcast and
- * the user let it go) from an **inert** one (no question was ever broadcast —
- * before the launch, or a publication incident). Without this document that
- * answer costs one read per day of the month on `v1_daily_questions`, for every
- * user and every month browsed; with it, it costs one read for the whole month,
- * the same one for everybody.
+ * **This is the calendar of the daily cycle**, and the only thing that maps a
+ * day to its question: there is no per-day document. Reading today's question
+ * is one read here — `days[monthDayKeyOf(today)].question_id` — then the
+ * `v1_questions` document it points at, which carries the drop time, the
+ * closing time and the running tally of answers.
  *
- * Written by the daily scheduler in the same batch that creates the day, so a
- * day can never exist without its month entry. The document id is the month
- * key, and each entry is keyed by its day of the month — a merge on
+ * It is also what lets the Stats calendar tell a **missed** day (a question was
+ * broadcast and the user let it go) from an **inert** one (no question was ever
+ * broadcast — before the launch, or a publication incident), for one read a
+ * month rather than one a day.
+ *
+ * Written by the daily scheduler in the same batch that stamps the question, so
+ * a broadcast question can never be missing from its month. The document id is
+ * the month key, and each entry is keyed by its day of the month — a merge on
  * `days.{DD}` never rewrites the rest of the month.
  *
  * A past month is never modified again, which makes it safe to cache

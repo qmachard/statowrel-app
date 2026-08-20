@@ -2,7 +2,7 @@ import { logger } from 'firebase-functions/v2';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
-  DAILY_QUESTION_COLLECTION,
+  QUESTION_COLLECTION,
   dailyQuestionAnswerConverter,
 } from '@statowrel/models';
 
@@ -11,7 +11,7 @@ import { parseSnapshotData, REGION_CLOUD } from '@/libs/firebase-admin';
 import { onAnswerCreated } from './steps/onAnswerCreated';
 
 /**
- * Fires on every answer written under a day — docs/prd.md §6.
+ * Fires on every answer written under a question — docs/prd.md §6.
  *
  * An answer is created and never updated nor deleted (docs/prd.md §4.2), so
  * `onDocumentCreated` covers the whole lifecycle: there is no later edit to
@@ -23,7 +23,7 @@ import { onAnswerCreated } from './steps/onAnswerCreated';
  */
 export const onDailyQuestionAnswerCreated = onDocumentCreated({
   region: REGION_CLOUD,
-  document: `${DAILY_QUESTION_COLLECTION}/{date}/${DAILY_QUESTION_ANSWER_COLLECTION}/{user_id}`,
+  document: `${QUESTION_COLLECTION}/{question_id}/${DAILY_QUESTION_ANSWER_COLLECTION}/{user_id}`,
 }, async (event) => {
   if (event.data === undefined) {
     logger.error('Answer created event without a document', { params: event.params });

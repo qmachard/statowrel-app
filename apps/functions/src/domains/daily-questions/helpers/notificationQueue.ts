@@ -12,7 +12,7 @@ export const NOTIFY_DAILY_QUESTION_FUNCTION = 'dailyQuestions-notifyDailyQuestio
 const TASK_ALREADY_EXISTS = 'functions/task-already-exists';
 
 export interface NotifyDailyQuestionPayload {
-  /** `YYYY-MM-DD` id of the `v1_daily_questions` document to publish. */
+  /** `YYYY-MM-DD` Paris day the question is published on. */
   date: string;
   /** Document id in `v1_questions`, carried so the handler skips a read. */
   question_id: string;

@@ -1,4 +1,4 @@
-import { EnumValues, User, buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
+import { CMSType, EnumValues, User, buildCollection, buildEntityCallbacks, buildProperty } from 'firecms';
 import { ulid } from 'ulid';
 
 import {
@@ -8,6 +8,7 @@ import {
   QuestionData,
 } from '@statowrel/models';
 
+import dailyQuestionAnswersCollection from './v1_daily_question_answers';
 import { ulidEntityId } from './entityId';
 
 /**
@@ -15,8 +16,16 @@ import { ulidEntityId } from './entityId';
  * Firestore `Timestamp`s to `Date` — not through `questionConverter` (that one
  * is for `apps/app` and `apps/functions`, where timestamps become ISO strings).
  */
-type QuestionEntity = Omit<QuestionData, 'broadcast_at' | 'created_at'> & {
+type QuestionEntity = Omit<QuestionData, 'broadcast_at' | 'closes_at' | 'answer_counts' | 'created_at'> & {
   broadcast_at: Date | null;
+  closes_at: Date | null;
+  /**
+   * `Record<string, number>` in the model. FireCMS can only type a map whose
+   * keys are known up front, and these are option ULIDs — its `keyValue` map is
+   * typed `Record<string, CMSType>`, so the collection widens the value type
+   * here rather than dropping the field from the backoffice.
+   */
+  answer_counts: Record<string, CMSType>;
   created_at: Date;
 };
 
@@ -55,7 +64,17 @@ const callbacks = buildEntityCallbacks<QuestionEntity>({
       throw new Error('Une question rejetée doit porter une raison de rejet, renvoyée à son auteur.');
     }
 
-    return { ...values, author_id, options, broadcast_at: values.broadcast_at ?? null };
+    // `answer_counts` is never seeded by hand: the answer trigger owns that
+    // map, and an edit here would silently falsify every card's stat bar.
+    return {
+      ...values,
+      author_id,
+      options,
+      broadcast_at: values.broadcast_at ?? null,
+      broadcast_on: values.broadcast_on ?? null,
+      closes_at: values.closes_at ?? null,
+      answer_counts: values.answer_counts ?? {},
+    };
   },
 });
 
@@ -67,14 +86,18 @@ const authorEnumValues = (user: User | null): EnumValues => (
   user ? { [user.uid]: 'Moi' } : {}
 );
 
+/** `YYYY-MM-DD`, the Paris day a question was broadcast on. */
+const BROADCAST_ON_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 const buildQuestionsCollection = (user: User | null) => buildCollection<QuestionEntity>({
   path: QUESTION_COLLECTION,
   name: 'Questions',
   singularName: 'Question',
   group: 'Contenu',
   icon: 'HelpOutline',
-  description: 'File de modération des questions proposées par les utilisateurs. Rien n\'est public : un auteur ne relit que ses propres propositions.',
+  description: 'File de modération des questions proposées par les utilisateurs, et journal de leur diffusion : une question tirée porte son jour, sa clôture, son décompte de réponses et les réponses elles-mêmes.',
   callbacks,
+  subcollections: [ dailyQuestionAnswersCollection ],
   properties: {
     label: buildProperty({
       dataType: 'string',
@@ -142,7 +165,26 @@ const buildQuestionsCollection = (user: User | null) => buildCollection<Question
       dataType: 'date',
       mode: 'date_time',
       name: 'Diffusée le',
-      description: 'Jour et heure de diffusion. L\'heure varie d\'un jour à l\'autre, elle fait donc partie de la programmation. Vide tant que la question n\'est pas programmée.',
+      description: 'Moment où la question est poussée dans l\'app, 7h à Paris. Vide tant qu\'elle n\'a pas été tirée.',
+    }),
+    broadcast_on: buildProperty({
+      dataType: 'string',
+      name: 'Jour de diffusion',
+      description: 'Format AAAA-MM-JJ, fuseau Europe/Paris — le jour du calendrier. C\'est lui que les règles comparent à la date d\'une réponse. Vide tant que la question n\'a pas été tirée.',
+      validation: { matches: BROADCAST_ON_PATTERN },
+    }),
+    closes_at: buildProperty({
+      dataType: 'date',
+      mode: 'date_time',
+      name: 'Clôturée le',
+      description: 'Minuit à Paris. Passé ce délai, une réponse est un rattrapage et ne compte plus pour le streak.',
+    }),
+    answer_counts: buildProperty({
+      dataType: 'map',
+      name: 'Réponses par option',
+      description: 'Total par ULID d\'option, incrémenté par le backend à chaque réponse. Une option sans réponse est absente.',
+      keyValue: true,
+      readOnly: true,
     }),
     created_at: buildProperty({
       dataType: 'date',

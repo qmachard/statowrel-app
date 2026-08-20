@@ -3,14 +3,15 @@ import { useEffect, useState } from 'react';
 
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
-  DAILY_QUESTION_COLLECTION,
+  DAILY_QUESTION_MONTH_COLLECTION,
   type DailyQuestionAnswerData,
-  type DailyQuestionData,
   QUESTION_COLLECTION,
   type QuestionData,
   USER_COLLECTION,
   dailyQuestionAnswerConverter,
-  dailyQuestionConverter,
+  dailyQuestionMonthConverter,
+  monthDayKeyOf,
+  monthKeyOf,
   questionConverter,
   userConverter,
 } from '@statowrel/models';
@@ -23,19 +24,22 @@ import { getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
  * the screen as the question itself (docs/prd.md §5.2, §5.4):
  *
  * - `missing` — no question was ever drawn for that day (before launch, or a
- *   publication incident). The calendar already renders such a day as inert.
- * - `unpublished` — the day document exists but its 07:00 drop time hasn't
- *   come. The scheduler draws and publishes in the same run, so this only shows
- *   up on a clock a few seconds ahead of the server's — the model still allows
- *   a `published_at` in the future, and reading the question then would be
- *   denied by `firestore.rules` anyway.
+ *   publication incident), so the month index has no entry for it. The calendar
+ *   already renders such a day as inert.
+ * - `unpublished` — the month points at a question whose 07:00 drop time hasn't
+ *   come. The scheduler stamps and indexes in the same batch, so this only
+ *   shows up on a clock a few seconds ahead of the server's — the model still
+ *   allows a `broadcast_at` in the future, and reading the question then would
+ *   be denied by `firestore.rules` anyway.
  */
 export type DailyQuestionStatus = 'loading' | 'ready' | 'unpublished' | 'missing' | 'error';
 
 export interface DailyQuestionView {
   status: DailyQuestionStatus;
-  dailyQuestion: DailyQuestionData | null;
+  /** The day's question, live — `answer_counts` moves on it as answers come in. */
   question: QuestionData | null;
+  /** Document id of that question, and the parent an answer is written under. */
+  questionId: string | null;
   /** The current user's answer, or `null` while the day is still theirs to answer. */
   answer: DailyQuestionAnswerData | null;
   /** Pseudo of whoever proposed the question — the credit of docs/prd.md §5.4. */
@@ -50,16 +54,16 @@ export interface DailyQuestionView {
  */
 interface DayState {
   date: string;
-  dailyQuestion: DailyQuestionData | null;
-  /** Whether the 07:00 drop time has come — decided in the subscription, where the clock is worth reading. */
-  published: boolean;
+  /** The question broadcast that day, from the month index — `null` for a day that never had one. */
+  questionId: string | null;
   failed: boolean;
 }
 
 interface QuestionState {
   questionId: string;
   question: QuestionData | null;
-  authorName: string | null;
+  /** Whether the 07:00 drop time has come — decided here, where the clock is worth reading. */
+  published: boolean;
   failed: boolean;
 }
 
@@ -72,12 +76,8 @@ const statusOf = (day: DayState | null, question: QuestionState | null): DailyQu
     return 'error';
   }
 
-  if (day.dailyQuestion === null) {
+  if (day.questionId === null) {
     return 'missing';
-  }
-
-  if (!day.published) {
-    return 'unpublished';
   }
 
   if (question === null) {
@@ -88,7 +88,11 @@ const statusOf = (day: DayState | null, question: QuestionState | null): DailyQu
     return 'error';
   }
 
-  return question.question === null ? 'missing' : 'ready';
+  if (question.question === null) {
+    return 'missing';
+  }
+
+  return question.published ? 'ready' : 'unpublished';
 };
 
 /**
@@ -112,24 +116,23 @@ const readAuthorName = async (authorId: string): Promise<string | null> => {
 /**
  * Everything one day's question screen needs, from Firestore.
  *
- * Three documents, because the model deliberately doesn't denormalize the
- * question into the day (docs/architecture.md): the day
- * (`v1_daily_questions/{date}`), the question it points at, and the current
- * user's answer — whose document id *is* their UID, so "already answered" is a
- * single document rather than a query.
+ * Three documents, and none of them is a per-day one — there isn't any. The
+ * month index (`v1_daily_question_months/{YYYY-MM}`) is what says which
+ * question ran a day, that `v1_questions` document is the day, and the current
+ * user's answer sits under it — with their UID as its document id, so "already
+ * answered" is a single document rather than a query.
  *
  * Two of the three are **subscribed to**, the third is read once:
  *
- * - **The day**, because `answer_counts` moves every time anybody answers, and
- *   the StatOwrel card's rarity is that map's shape at display time
+ * - **The question**, because `answer_counts` moves every time anybody answers,
+ *   and the StatOwrel card's rarity is that map's shape at display time
  *   (docs/prd.md §5.5). It also makes the 07:00 drop land on a screen that is
  *   already open, instead of on the next time it is opened.
  * - **The answer**, because it is what flips the sheet to its answered state.
  *   Firestore hands a local write to its own listeners before the round trip,
  *   so the flip happens on the tap rather than on the server.
- * - **The question** is read once: `firestore.rules` lets nobody but a
- *   moderator write one, and a question that has been broadcast is settled —
- *   there is nothing to wait for.
+ * - **The month index** is read once: an entry is written when the day is drawn
+ *   and never rewritten, so a day's question never changes under the screen.
  */
 export const useDailyQuestion = (date: string): DailyQuestionView => {
   const { user } = useAuth();
@@ -137,70 +140,98 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
 
   const [ dayState, setDayState ] = useState<DayState | null>(null);
   const [ questionState, setQuestionState ] = useState<QuestionState | null>(null);
+  const [ authorState, setAuthorState ] = useState<{ authorId: string; name: string | null } | null>(null);
   const [ answerState, setAnswerState ] = useState<{ key: string; answer: DailyQuestionAnswerData | null } | null>(null);
 
-  useEffect(() => onSnapshot(
-    getDocumentRef(DAILY_QUESTION_COLLECTION, date, dailyQuestionConverter),
-    (snapshot) => {
-      const dailyQuestion = snapshot.data() ?? null;
-
-      setDayState({
-        date,
-        dailyQuestion,
-        published: dailyQuestion !== null && new Date(dailyQuestion.published_at) <= new Date(),
-        failed: false,
-      });
-    },
-    (error) => {
-      console.warn('[daily-question] lost the day subscription', date, error);
-      setDayState({ date, dailyQuestion: null, published: false, failed: true });
-    },
-  ), [ date ]);
-
-  const day = dayState?.date === date ? dayState : null;
-  const questionId = day?.published === true ? day.dailyQuestion?.question_id ?? null : null;
-
   useEffect(() => {
-    if (questionId === null) {
-      return undefined;
-    }
-
     let cancelled = false;
 
-    // Read once — see this hook's own doc: a broadcast question is settled.
-    getDoc(getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter))
-      .then(async (snapshot) => {
-        const question = snapshot.data() ?? null;
-        const authorName = question === null ? null : await readAuthorName(question.author_id);
-
+    // Read once — see this hook's own doc: a day's entry never changes.
+    getDoc(getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKeyOf(date), dailyQuestionMonthConverter))
+      .then((snapshot) => {
         if (!cancelled) {
-          setQuestionState({ questionId, question, authorName, failed: false });
+          setDayState({
+            date,
+            questionId: snapshot.data()?.days[monthDayKeyOf(date)]?.question_id ?? null,
+            failed: false,
+          });
         }
       })
       .catch((error: unknown) => {
-        console.warn('[daily-question] could not load the question', questionId, error);
+        console.warn('[daily-question] could not load the day\'s month', date, error);
 
         if (!cancelled) {
-          setQuestionState({ questionId, question: null, authorName: null, failed: true });
+          setDayState({ date, questionId: null, failed: true });
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [ questionId ]);
+  }, [ date ]);
 
-  const answerKey = `${date}:${userId ?? ''}`;
+  const day = dayState?.date === date ? dayState : null;
+  const questionId = day?.questionId ?? null;
 
   useEffect(() => {
-    if (userId === null) {
+    if (questionId === null) {
+      return undefined;
+    }
+
+    return onSnapshot(
+      getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter),
+      (snapshot) => {
+        const question = snapshot.data() ?? null;
+
+        setQuestionState({
+          questionId,
+          question,
+          published: question?.broadcast_at != null && new Date(question.broadcast_at) <= new Date(),
+          failed: false,
+        });
+      },
+      (error) => {
+        console.warn('[daily-question] lost the question subscription', questionId, error);
+        setQuestionState({ questionId, question: null, published: false, failed: true });
+      },
+    );
+  }, [ questionId ]);
+
+  const question = questionState?.questionId === questionId ? questionState : null;
+  const authorId = question?.question?.author_id ?? null;
+
+  // The credit is its own read, keyed by the author rather than by the day: the
+  // author of a broadcast question never changes, so it survives every
+  // `answer_counts` snapshot the subscription above hands over.
+  useEffect(() => {
+    if (authorId === null) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    void readAuthorName(authorId).then((name) => {
+      if (!cancelled) {
+        setAuthorState({ authorId, name });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ authorId ]);
+
+  const answerKey = `${questionId ?? ''}:${userId ?? ''}`;
+
+  useEffect(() => {
+    if (userId === null || questionId === null) {
       return undefined;
     }
 
     return onSnapshot(
       getSubDocumentRef(
-        DAILY_QUESTION_COLLECTION,
-        date,
+        QUESTION_COLLECTION,
+        questionId,
         DAILY_QUESTION_ANSWER_COLLECTION,
         userId,
         dailyQuestionAnswerConverter,
@@ -213,15 +244,13 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
         console.warn('[daily-question] lost the answer subscription', date, error);
       },
     );
-  }, [ date, userId, answerKey ]);
-
-  const question = questionState?.questionId === questionId ? questionState : null;
+  }, [ date, userId, questionId, answerKey ]);
 
   return {
     status: statusOf(day, question),
-    dailyQuestion: day?.dailyQuestion ?? null,
     question: question?.question ?? null,
+    questionId,
     answer: answerState?.key === answerKey ? answerState.answer : null,
-    authorName: question?.authorName ?? null,
+    authorName: authorState?.authorId === authorId ? authorState.name : null,
   };
 };
