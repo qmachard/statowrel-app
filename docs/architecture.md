@@ -36,7 +36,7 @@ statowrel-app/
 │   └── firestore-config/      # @statowrel/firestore-config — rules + indexes
 ├── docs/
 │   └── architecture.md        # this file
-├── firebase.json              # functions + firestore + storage config
+├── firebase.json              # functions + firestore + storage + hosting config
 ├── .firebaserc                # `default` / `production` Firebase project aliases
 ├── turbo.json
 └── package.json
@@ -276,7 +276,9 @@ The create/edit modal is a native `<dialog>`: the focus trap, the inert backgrou
 
 `src/lib/firebase.ts` and `src/lib/firestore.ts` are the browser twins of the app's: same converter wiring, minus the React Native persistence dance — the browser build persists in `indexedDB` on its own. `src/index.css` carries the neobrutalism tokens as CSS custom properties, ported from `apps/app/src/design/tokens.ts`, which stays the source of truth.
 
-**It has no deploy path.** `firebase.json` lost its `hosting` block when FireCMS was removed, so the bundle builds and nothing serves it; wiring it back needs a Hosting site and its target.
+**It deploys to Firebase Hosting**, on the project's default site. The `hosting` block in `firebase.json` serves `apps/admin/dist` and builds it itself — its `predeploy` runs `npm run build:admin` — behind the `**` → `/index.html` rewrite an SPA needs to survive a page reload. Its cache headers follow Vite's output: `/assets/**` is content-hashed, so it ships `immutable` for a year, while `**/*.html` stays `no-cache` and revalidates, without which a deploy would sit invisible behind Hosting's hour-long default on the entry document. `npm run deploy:admin` / `:production` switch project with `firebase use` like the functions and firestore scripts. No Hosting *target* is declared: there is one site, so the default one is it — a second surface (a landing page, a preview site) is what would make a target worth its `.firebaserc` entry.
+
+The build inlines the Firebase web config, so the deploy needs `apps/admin/.env.production.local` — Vite's precedence puts it ahead of `.env.local`, which is what keeps a dev session's values out of a deployed bundle. Without it the bundle ships empty vars and the page dies on `auth/invalid-api-key`. Emulator hosts cannot leak in either: `src/lib/firebase.ts` only wires them under `import.meta.env.DEV`, which `vite build` compiles to `false`.
 
 ## `apps/app` — mobile
 
@@ -385,6 +387,6 @@ The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=�
 - A friendship is now written, read and answered — invited through the callable, listed on the Menu screen, accepted or deleted from its row. Still missing from §4.1: the invitation link, the 6-character code, and the account-deletion pass that would drop the friendships an account leaves behind. The two monthly documents are extra to that list: read models the PRD does not describe, because it describes what the app shows, not what it costs to show it.
 - The daily cycle's back half is half there: the answer trigger increments `answer_counts`, projects the day into the calendar and moves the streak, but no midnight closer resets the streak of whoever didn't answer (docs/prd.md §6 "Backend"). The app works around that at display time — `resolveStreakCount` shows 0 when the last on-time answer is older than yesterday — so the counter is right on screen even while the stored value is stale. The push `dailyQuestions-notifyDailyQuestion` sends is still a stub: the task fires, it just doesn't notify anyone yet.
 - Design-system primitives are added as screens need them — `Button`, `TextField`, `Card`, `IconButton`, `Calendar`, `Avatar`, `DropdownMenu` so far. No dark-mode theming either (light only).
-- **The backoffice is one screen wide.** `apps/admin` covers the moderation flow of `docs/prd.md` §4.7 and stops there — no view over `v1_users`, `v1_usernames`, the answers or the monthly read models, where the FireCMS SPA had one over each. Inspecting or fixing any of those means the Firebase console. Rejecting a question is missing from the screen too, since it owes its author a reason. And nothing serves the bundle: `firebase.json` has no `hosting` block since FireCMS left.
+- **The backoffice is one screen wide.** `apps/admin` covers the moderation flow of `docs/prd.md` §4.7 and stops there — no view over `v1_users`, `v1_usernames`, the answers or the monthly read models, where the FireCMS SPA had one over each. Inspecting or fixing any of those means the Firebase console. Rejecting a question is missing from the screen too, since it owes its author a reason.
 - No shared React-hooks package (a `@repo/firebase-react` equivalent). `apps/admin` is the first place duplication actually bites: its `lib/firebase.ts` and `lib/firestore.ts` are near-copies of the app's, and its `auth/errors.ts` is the app's message table minus Apple. Small enough to live twice for now; extracting a package is the move the next time either side changes.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.

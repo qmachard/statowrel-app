@@ -26,7 +26,9 @@
     "deploy:functions": "firebase use default && npm run deploy --workspace=@statowrel/functions",
     "deploy:functions:production": "firebase use production && npm run deploy --workspace=@statowrel/functions && firebase use default",
     "deploy:firestore": "firebase use default && npm run deploy --workspace=@statowrel/firestore-config",
-    "deploy:firestore:production": "firebase use production && npm run deploy --workspace=@statowrel/firestore-config && firebase use default"
+    "deploy:firestore:production": "firebase use production && npm run deploy --workspace=@statowrel/firestore-config && firebase use default",
+    "deploy:admin": "firebase use default && npm run deploy --workspace=@statowrel/admin",
+    "deploy:admin:production": "firebase use production && npm run deploy --workspace=@statowrel/admin && firebase use default"
   },
   "devDependencies": {
     "prettier": "^3.2.5",
