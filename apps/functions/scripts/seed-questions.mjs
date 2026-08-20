@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 //
-// Fills `v1_questions` from a JSON file — the starting moderation pot, the one
-// the daily draw picks from (docs/prd.md §4.7).
+// Fills `v1_questions` from a JSON file — the starting moderation pot.
+//
+// Seeded questions land as `pending`, so they go through the moderation console
+// like any proposal (docs/prd.md §4.7): the daily draw only picks from the
+// approved pot, so nothing goes out before someone has been through the batch.
+// Pass `--status approved` to skip that pass.
 //
 // The JSON is an array of `{ question, options: [{ label, stat_label }] }` —
 // see scripts/questions.seed.json. An entry's numeric `id`, when it has one, is
@@ -10,7 +14,7 @@
 //   npm run seed-questions                                  # default project (.firebaserc)
 //   npm run seed-questions -- --production                  # production project (.firebaserc)
 //   npm run seed-questions -- ./my-questions.json
-//   npm run seed-questions -- --status pending --author <uid>
+//   npm run seed-questions -- --status approved --author <uid>
 //   npm run seed-questions -- --dry-run                     # writes nothing, says what it would do
 //
 // The script is re-runnable: a question whose label and option labels are
@@ -43,13 +47,17 @@ const BATCH_SIZE = 400;
 // statuses a drawn question owns — `used`, `rejected` — are not seedable.
 const SEEDABLE_STATUSES = [ 'pending', 'approved' ];
 
+// `pending` and not `approved`: a seeded batch is a proposal like any other, and
+// the moderation pass is what turns it into something the daily draw can pick.
+const DEFAULT_STATUS = 'pending';
+
 const die = (message) => {
   console.error(`✖ ${message}`);
   process.exit(1);
 };
 
 const parseArgs = (argv) => {
-  const parsed = { file: null, project: null, alias: 'default', status: 'approved', author: '', dryRun: false };
+  const parsed = { file: null, project: null, alias: 'default', status: DEFAULT_STATUS, author: '', dryRun: false };
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];

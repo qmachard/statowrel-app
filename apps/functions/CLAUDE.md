@@ -76,6 +76,16 @@ npm run set-admin -- <email> --revoke
 
 Authenticates with Application Default Credentials (`gcloud auth application-default login`), or hits the emulator when `FIREBASE_AUTH_EMULATOR_HOST` is set.
 
+```bash
+npm run seed-questions                        # fill v1_questions from scripts/questions.seed.json
+npm run seed-questions -- --dry-run           # ... writing nothing, listing what it would write
+npm run seed-questions -- ./other.json --production --status approved --author <uid>
+```
+
+Seeds the moderation pot. Questions land as `pending`, so a batch goes through the moderation console before the daily draw — which only picks from the approved pot — can reach it; `--status approved` skips that pass. The script mints a ULID per document and per option and writes through `questionConverter`, so it cannot drift from the model: everything a drawn question owns (`broadcast_at`, `broadcast_on`, `closes_at`, `answer_counts`) stays empty, and `author_id` is blank, which the app reads as "no credit line". It is re-runnable — a question whose label and option labels are already in the collection is skipped, never rewritten, since a rewrite would repoint the answers recorded against its option ids.
+
+Reads Firestore rather than Auth, so the emulator variable here is `FIRESTORE_EMULATOR_HOST`. The npm script at the repo root builds `@statowrel/models` first; run it from `apps/functions` and that build is on you.
+
 ## Deploy
 
 ```bash

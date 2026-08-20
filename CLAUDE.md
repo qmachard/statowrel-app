@@ -67,7 +67,7 @@ npm run deploy:admin                 # firebase deploy --only hosting, apps/admi
 npm run deploy:admin:production
 
 npm run set-admin -- <email>         # grants the `admin` claim (add --production)
-npm run seed-questions               # fills v1_questions from apps/functions/scripts/questions.seed.json
+npm run seed-questions               # fills v1_questions from apps/functions/scripts/questions.seed.json, as `pending`
 npm run seed-questions -- --dry-run  # ... writing nothing (also --production, --status, --author)
 ```
 
