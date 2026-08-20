@@ -65,6 +65,10 @@ npm run deploy:firestore:production
 
 npm run deploy:admin                 # firebase deploy --only hosting, apps/admin/dist (default project)
 npm run deploy:admin:production
+
+npm run set-admin -- <email>         # grants the `admin` claim (add --production)
+npm run seed-questions               # fills v1_questions from apps/functions/scripts/questions.seed.json
+npm run seed-questions -- --dry-run  # ... writing nothing (also --production, --status, --author)
 ```
 
 **IMPORTANT**: After modifying any file in `packages/models`, ALWAYS run `npm run typecheck` to verify no type errors were introduced across the monorepo.

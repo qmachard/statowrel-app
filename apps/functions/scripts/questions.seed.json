@@ -1,0 +1,998 @@
+[
+  {
+    "id": 1,
+    "question": "Tu prends ta douche...",
+    "options": [
+      { "label": "Face au jet", "stat_label": "Affronteur·se" },
+      { "label": "Dos au jet", "stat_label": "Esquiveur·se" }
+    ]
+  },
+  {
+    "id": 2,
+    "question": "Tu fais pipi...",
+    "options": [
+      { "label": "Assis, par prudence", "stat_label": "Prudent·e" },
+      { "label": "Debout, comme un guerrier", "stat_label": "Guerrier·ère" },
+      { "label": "Allongé, comme un super-héros", "stat_label": "Super-héros·ïne" }
+    ]
+  },
+  {
+    "id": 3,
+    "question": "Combien de temps passes-tu en moyenne pour faire caca ?",
+    "options": [
+      { "label": "Moins de deux minutes", "stat_label": "Efficace" },
+      { "label": "Plus de deux minutes", "stat_label": "Occupé·e" }
+    ]
+  },
+  {
+    "id": 4,
+    "question": "Te laves-tu sous la douche...",
+    "options": [
+      { "label": "Avec un gant de toilette", "stat_label": "Équipé·e" },
+      { "label": "Avec les mains", "stat_label": "Manuel·le" }
+    ]
+  },
+  {
+    "id": 5,
+    "question": "Tu prends ta douche...",
+    "options": [
+      { "label": "Avec du savon", "stat_label": "Mousseux·se" },
+      { "label": "Sans savon", "stat_label": "Rincé·e" }
+    ]
+  },
+  {
+    "id": 6,
+    "question": "Tu dors avec...",
+    "options": [
+      { "label": "Un oreiller", "stat_label": "Classique" },
+      { "label": "Un traversin", "stat_label": "Nostalgique" }
+    ]
+  },
+  {
+    "id": 7,
+    "question": "Tu manges dans...",
+    "options": [
+      { "label": "Une assiette creuse", "stat_label": "Contenant·e" },
+      { "label": "Une assiette plate", "stat_label": "À plat" }
+    ]
+  },
+  {
+    "id": 8,
+    "question": "Tu verses...",
+    "options": [
+      { "label": "Le lait avant les céréales", "stat_label": "Précurseur·se" },
+      { "label": "Le lait après les céréales", "stat_label": "Traditionaliste" }
+    ]
+  },
+  {
+    "id": 9,
+    "question": "Avec les plantes, tu es plutôt...",
+    "options": [
+      { "label": "Main verte", "stat_label": "Jardinier·ère" },
+      { "label": "Tueur·se en série", "stat_label": "Cimetière ambulant·e" }
+    ]
+  },
+  {
+    "id": 10,
+    "question": "Tu prends ta douche...",
+    "options": [
+      { "label": "Le matin", "stat_label": "Matinal·e" },
+      { "label": "Le soir", "stat_label": "Nocturne" }
+    ]
+  },
+  {
+    "id": 11,
+    "question": "Si on te touche le nombril, ça te fait mal...",
+    "options": [
+      { "label": "Aux couilles", "stat_label": "Connecté·e" },
+      { "label": "Au ventre", "stat_label": "Sensible" },
+      { "label": "Nulle part", "stat_label": "Blindé·e" }
+    ]
+  },
+  {
+    "id": 12,
+    "question": "Tu te sèches...",
+    "options": [
+      { "label": "Dans la douche", "stat_label": "Précautionneux·se" },
+      { "label": "En dehors de la douche", "stat_label": "Dégoulinant·e" }
+    ]
+  },
+  {
+    "id": 13,
+    "question": "Tu te laves les mains...",
+    "options": [
+      { "label": "Avant les toilettes", "stat_label": "Anticipateur·rice" },
+      { "label": "Après les toilettes", "stat_label": "Classique" }
+    ]
+  },
+  {
+    "id": 14,
+    "question": "Tu tires la chasse d'eau, cuvette...",
+    "options": [
+      { "label": "Fermée", "stat_label": "Discret·ète" },
+      { "label": "Ouverte", "stat_label": "Sans-gêne" }
+    ]
+  },
+  {
+    "id": 15,
+    "question": "Te brosses-tu les dents sous la douche ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Multitâche" },
+      { "label": "Non", "stat_label": "Séquentiel·le" }
+    ]
+  },
+  {
+    "id": 16,
+    "question": "Fais-tu pipi sous la douche ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Pratique·e" },
+      { "label": "Non", "stat_label": "Intègre" }
+    ]
+  },
+  {
+    "id": 17,
+    "question": "Le papier toilette se déroule...",
+    "options": [
+      { "label": "Par-dessus", "stat_label": "Dessus·se" },
+      { "label": "Par-dessous", "stat_label": "Dessous·se" }
+    ]
+  },
+  {
+    "id": 18,
+    "question": "Le rouleau de PQ vide, tu le changes...",
+    "options": [
+      { "label": "Toujours", "stat_label": "Civique" },
+      { "label": "Jamais", "stat_label": "Négligent·e" }
+    ]
+  },
+  {
+    "id": 19,
+    "question": "La télécommande, elle vit...",
+    "options": [
+      { "label": "À côté de la TV", "stat_label": "Rangé·e" },
+      { "label": "Sur le canapé", "stat_label": "Nomade" }
+    ]
+  },
+  {
+    "id": 20,
+    "question": "L'éponge, tu la laisses...",
+    "options": [
+      { "label": "Dans l'évier", "stat_label": "Flottant·e" },
+      { "label": "Essorée", "stat_label": "Rigoureux·se" }
+    ]
+  },
+  {
+    "id": 21,
+    "question": "La croûte de pizza, tu la...",
+    "options": [
+      { "label": "Manges", "stat_label": "Zéro-déchet" },
+      { "label": "Laisses", "stat_label": "Élitiste" }
+    ]
+  },
+  {
+    "id": 22,
+    "question": "Ananas sur la pizza ?",
+    "options": [
+      { "label": "Pour", "stat_label": "Hawaïen·ne" },
+      { "label": "Contre", "stat_label": "Puriste" }
+    ]
+  },
+  {
+    "id": 23,
+    "question": "La croûte de fromage, tu la...",
+    "options": [
+      { "label": "Manges", "stat_label": "Audacieux·se" },
+      { "label": "Laisses", "stat_label": "Prudent·e" }
+    ]
+  },
+  {
+    "id": 24,
+    "question": "Le taboulé, tu...",
+    "options": [
+      { "label": "Tries les ingrédients", "stat_label": "Chirurgien·ne" },
+      { "label": "Manges tout mélangé", "stat_label": "Zen" }
+    ]
+  },
+  {
+    "id": 25,
+    "question": "Feu rouge, personne autour, tu...",
+    "options": [
+      { "label": "Traverses", "stat_label": "Rebelle" },
+      { "label": "Attends", "stat_label": "Civique" }
+    ]
+  },
+  {
+    "id": 26,
+    "question": "Un truc tombe par terre, tu le manges...",
+    "options": [
+      { "label": "Dans les 5 secondes", "stat_label": "Chronométreur·se" },
+      { "label": "Peu importe le temps", "stat_label": "Bactérie-proof" }
+    ]
+  },
+  {
+    "id": 27,
+    "question": "Le beurre, tu le ranges...",
+    "options": [
+      { "label": "Au frigo", "stat_label": "Prudent·e" },
+      { "label": "Dehors", "stat_label": "Tartinable" }
+    ]
+  },
+  {
+    "id": 28,
+    "question": "Tu es plutôt...",
+    "options": [
+      { "label": "Sucré", "stat_label": "Gourmand·e" },
+      { "label": "Salé", "stat_label": "Corsé·e" }
+    ]
+  },
+  {
+    "id": 29,
+    "question": "Transpiration pendant le sexe ?",
+    "options": [
+      { "label": "Pour", "stat_label": "Naturel·le" },
+      { "label": "Contre", "stat_label": "Chlorophylle" }
+    ]
+  },
+  {
+    "id": 30,
+    "question": "Scène de cul dans un film avec tes parents ?",
+    "options": [
+      { "label": "Gêné·e", "stat_label": "Rouge tomate" },
+      { "label": "Pas gêné·e", "stat_label": "Stoïque" }
+    ]
+  },
+  {
+    "id": 31,
+    "question": "Vidéo de ta conception, ça te tente ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Curieux·se" },
+      { "label": "Non", "stat_label": "Innocent·e" }
+    ]
+  },
+  {
+    "id": 32,
+    "question": "Vidéo de ta naissance, ça te tente ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Curieux·se" },
+      { "label": "Non", "stat_label": "Pudique" }
+    ]
+  },
+  {
+    "id": 33,
+    "question": "Contraception ?",
+    "options": [
+      { "label": "Pour", "stat_label": "Responsable" },
+      { "label": "Contre", "stat_label": "Fataliste" }
+    ]
+  },
+  {
+    "id": 34,
+    "question": "Tu dors...",
+    "options": [
+      { "label": "Nu·e", "stat_label": "Libre" },
+      { "label": "Habillé·e", "stat_label": "Prêt·e à sortir" }
+    ]
+  },
+  {
+    "id": 35,
+    "question": "Jean porté dehors, tu t'assois sur le lit avec ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Décontracté·e" },
+      { "label": "Non", "stat_label": "Gardien·ne du linge" }
+    ]
+  },
+  {
+    "id": 36,
+    "question": "Tu te laves les mains...",
+    "options": [
+      { "label": "Souvent", "stat_label": "Hygiéniste" },
+      { "label": "Rarement", "stat_label": "Sauvage" }
+    ]
+  },
+  {
+    "id": 37,
+    "question": "Le sexe doit être...",
+    "options": [
+      { "label": "Propre", "stat_label": "Chirurgical·e" },
+      { "label": "Pas forcément", "stat_label": "Spontané·e" }
+    ]
+  },
+  {
+    "id": 38,
+    "question": "Douche...",
+    "options": [
+      { "label": "Avant le sexe", "stat_label": "Préparateur·rice" },
+      { "label": "Après le sexe", "stat_label": "Réparateur·rice" }
+    ]
+  },
+  {
+    "id": 39,
+    "question": "Nourriture pendant le sexe ?",
+    "options": [
+      { "label": "Pour", "stat_label": "Gourmand·e" },
+      { "label": "Contre", "stat_label": "Focus" }
+    ]
+  },
+  {
+    "id": 40,
+    "question": "Dragibus bleus ?",
+    "options": [
+      { "label": "Pour", "stat_label": "Fan absolu·e" },
+      { "label": "Contre", "stat_label": "Hérétique" }
+    ]
+  },
+  {
+    "id": 41,
+    "question": "Glaçon pendant le sexe ?",
+    "options": [
+      { "label": "Pour", "stat_label": "Frisson·né·e" },
+      { "label": "Contre", "stat_label": "Chaleureux·se" }
+    ]
+  },
+  {
+    "id": 42,
+    "question": "Faux ongles ?",
+    "options": [
+      { "label": "Pour", "stat_label": "Griffé·e" },
+      { "label": "Contre", "stat_label": "Nature" }
+    ]
+  },
+  {
+    "id": 43,
+    "question": "Ourlet au pantalon ?",
+    "options": [
+      { "label": "Toujours", "stat_label": "Ajusté·e" },
+      { "label": "Jamais", "stat_label": "Roulé·e" }
+    ]
+  },
+  {
+    "id": 44,
+    "question": "Tes clés vivent...",
+    "options": [
+      { "label": "Toujours dans la même poche", "stat_label": "Millimétré·e" },
+      { "label": "N'importe où", "stat_label": "Aventurier·ère" }
+    ]
+  },
+  {
+    "id": 45,
+    "question": "Tu te retiens de péter devant l'autre ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Diplomate" },
+      { "label": "Non", "stat_label": "Libéré·e" }
+    ]
+  },
+  {
+    "id": 46,
+    "question": "Cravate ou nœud pap ?",
+    "options": [
+      { "label": "Cravate", "stat_label": "Classique" },
+      { "label": "Nœud pap", "stat_label": "Élégant·e" }
+    ]
+  },
+  {
+    "id": 47,
+    "question": "Ta carte bancaire, tu l'utilises...",
+    "options": [
+      { "label": "Sur le téléphone", "stat_label": "Connecté·e" },
+      { "label": "Physique", "stat_label": "Vintage" }
+    ]
+  },
+  {
+    "id": 48,
+    "question": "Tu paies plutôt...",
+    "options": [
+      { "label": "En carte", "stat_label": "Sans-contact" },
+      { "label": "En espèces", "stat_label": "Old school" }
+    ]
+  },
+  {
+    "id": 49,
+    "question": "Pour un logement, tu préfères...",
+    "options": [
+      { "label": "Rénover", "stat_label": "Visionnaire" },
+      { "label": "Du neuf", "stat_label": "Clé-en-main" }
+    ]
+  },
+  {
+    "id": 50,
+    "question": "Les gamins des autres ?",
+    "options": [
+      { "label": "J'adore", "stat_label": "Tonton·tata poule" },
+      { "label": "Je fuis", "stat_label": "Zone sans enfant" }
+    ]
+  },
+  {
+    "id": 51,
+    "question": "Puer des pieds, c'est un red flag ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Nez sensible" },
+      { "label": "Non", "stat_label": "Tolérant·e" }
+    ]
+  },
+  {
+    "id": 52,
+    "question": "Es-tu pour ou contre le fémur ?",
+    "options": [
+      { "label": "Pour, comme tous les os", "stat_label": "Fému-riste" },
+      { "label": "Contre", "stat_label": "Fému-raciste" }
+    ]
+  },
+  {
+    "id": 53,
+    "question": "Ton lobe d'oreille est...",
+    "options": [
+      { "label": "Collé", "stat_label": "Adhérent·e" },
+      { "label": "Décollé", "stat_label": "Aérodynamique" }
+    ]
+  },
+  {
+    "id": 54,
+    "question": "Tu préfères les bisous...",
+    "options": [
+      { "label": "Avec la langue", "stat_label": "Langoureux·se" },
+      { "label": "Sans la langue", "stat_label": "Langouste" }
+    ]
+  },
+  {
+    "id": 55,
+    "question": "Tu embrasses les yeux...",
+    "options": [
+      { "label": "Ouverts", "stat_label": "Observateur·rice" },
+      { "label": "Fermés", "stat_label": "Immersif·ve" }
+    ]
+  },
+  {
+    "id": 56,
+    "question": "Faire l'amour avec la lumière...",
+    "options": [
+      { "label": "Allumée", "stat_label": "Exposé·e" },
+      { "label": "Éteinte", "stat_label": "Mystérieux·se" }
+    ]
+  },
+  {
+    "id": 57,
+    "question": "Pendant le bisou, ton nez va...",
+    "options": [
+      { "label": "À droite", "stat_label": "Droitier·ère" },
+      { "label": "À gauche", "stat_label": "Gaucher·ère" }
+    ]
+  },
+  {
+    "id": 58,
+    "question": "Tu commences la bise...",
+    "options": [
+      { "label": "À droite", "stat_label": "Droitier·ère" },
+      { "label": "À gauche", "stat_label": "Gaucher·ère" }
+    ]
+  },
+  {
+    "id": 59,
+    "question": "Tu fais...",
+    "options": [
+      { "label": "Une bise", "stat_label": "Minimaliste" },
+      { "label": "Deux bises", "stat_label": "Standard" },
+      { "label": "Trois bises ou plus", "stat_label": "Généreux·se" }
+    ]
+  },
+  {
+    "id": 60,
+    "question": "Croissant ou pain au chocolat ?",
+    "options": [
+      { "label": "Croissant", "stat_label": "Beurré·e" },
+      { "label": "Pain au chocolat", "stat_label": "Chocolatine-friendly" }
+    ]
+  },
+  {
+    "id": 61,
+    "question": "Chat ou chien ?",
+    "options": [
+      { "label": "Chat", "stat_label": "Indépendant·e" },
+      { "label": "Chien", "stat_label": "Fidèle" }
+    ]
+  },
+  {
+    "id": 62,
+    "question": "Chaussettes dépareillées ?",
+    "options": [
+      { "label": "Ça passe", "stat_label": "Freestyle" },
+      { "label": "Jamais", "stat_label": "Assorti·e" }
+    ]
+  },
+  {
+    "id": 63,
+    "question": "Tu étends tes chaussettes...",
+    "options": [
+      { "label": "Par paires", "stat_label": "Organisé·e" },
+      { "label": "En vrac", "stat_label": "Chaotique" }
+    ]
+  },
+  {
+    "id": 64,
+    "question": "Sous-vêtement, tu portes...",
+    "options": [
+      { "label": "Un parachute", "stat_label": "Ample" },
+      { "label": "Un boxer/caleçon", "stat_label": "Ajusté·e" }
+    ]
+  },
+  {
+    "id": 65,
+    "question": "Tanga ou string ?",
+    "options": [
+      { "label": "Tanga", "stat_label": "Confort" },
+      { "label": "String", "stat_label": "Minimaliste" }
+    ]
+  },
+  {
+    "id": 66,
+    "question": "Tu es plutôt...",
+    "options": [
+      { "label": "Plante verte", "stat_label": "Décoratif·ve" },
+      { "label": "Plante des pieds", "stat_label": "Terre-à-terre" }
+    ]
+  },
+  {
+    "id": 67,
+    "question": "Tu regardes ton mouchoir après t'être mouché ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Inspecteur·rice" },
+      { "label": "Non", "stat_label": "Indifférent·e" }
+    ]
+  },
+  {
+    "id": 68,
+    "question": "Tu regardes le papier toilette après usage ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Contrôleur·se qualité" },
+      { "label": "Non", "stat_label": "Confiant·e" }
+    ]
+  },
+  {
+    "id": 69,
+    "question": "Tu utilises...",
+    "options": [
+      { "label": "Le PQ", "stat_label": "Traditionaliste" },
+      { "label": "La douchette", "stat_label": "Frais·che" }
+    ]
+  },
+  {
+    "id": 70,
+    "question": "Tu sens tes chaussettes pour vérifier si elles sont sales ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Détective" },
+      { "label": "Non", "stat_label": "Confiant·e" }
+    ]
+  },
+  {
+    "id": 71,
+    "question": "Vêtement porté mais pas sale, tu le remets...",
+    "options": [
+      { "label": "Dans le placard", "stat_label": "Économe" },
+      { "label": "Au sale", "stat_label": "Précautionneux·se" }
+    ]
+  },
+  {
+    "id": 72,
+    "question": "Un t-shirt, tu le portes...",
+    "options": [
+      { "label": "Une fois", "stat_label": "Impeccable" },
+      { "label": "Plusieurs fois", "stat_label": "Pragmatique" }
+    ]
+  },
+  {
+    "id": 73,
+    "question": "Un pantalon, tu le portes...",
+    "options": [
+      { "label": "Une fois", "stat_label": "Impeccable" },
+      { "label": "Plusieurs fois", "stat_label": "Pragmatique" }
+    ]
+  },
+  {
+    "id": 74,
+    "question": "Vêtements neufs, tu les laves avant de porter ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Précautionneux·se" },
+      { "label": "Non", "stat_label": "Impatient·e" }
+    ]
+  },
+  {
+    "id": 75,
+    "question": "Tu préfères l'odeur...",
+    "options": [
+      { "label": "De lessive", "stat_label": "Propre" },
+      { "label": "De parfum", "stat_label": "Sophistiqué·e" }
+    ]
+  },
+  {
+    "id": 76,
+    "question": "Tu mets du parfum ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Parfumé·e" },
+      { "label": "Non", "stat_label": "Nature" }
+    ]
+  },
+  {
+    "id": 77,
+    "question": "Tu pourrais bosser chez Sephora ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Vendeur·se né·e" },
+      { "label": "Non", "stat_label": "Pas mon rayon" }
+    ]
+  },
+  {
+    "id": 78,
+    "question": "Déo à bille ou en spray ?",
+    "options": [
+      { "label": "À bille", "stat_label": "Roulant·e" },
+      { "label": "En spray", "stat_label": "Nuage parfumé" }
+    ]
+  },
+  {
+    "id": 79,
+    "question": "Le stress te donne envie d'aller aux toilettes ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Stress-caca" },
+      { "label": "Non", "stat_label": "Zen intestinal" }
+    ]
+  },
+  {
+    "id": 80,
+    "question": "Le stress te donne envie de manger ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Stress-mangeur·se" },
+      { "label": "Non", "stat_label": "Coupe-faim naturel" }
+    ]
+  },
+  {
+    "id": 81,
+    "question": "Le café te donne envie d'aller aux toilettes ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Café-caca" },
+      { "label": "Non", "stat_label": "Immunisé·e" }
+    ]
+  },
+  {
+    "id": 82,
+    "question": "Tu dors avec les volets...",
+    "options": [
+      { "label": "Ouverts", "stat_label": "Amoureux·se du soleil" },
+      { "label": "Fermés", "stat_label": "Grotte protectrice" }
+    ]
+  },
+  {
+    "id": 83,
+    "question": "Boules Quiès pour dormir ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Équipé·e" },
+      { "label": "Non", "stat_label": "Oreilles libres" }
+    ]
+  },
+  {
+    "id": 84,
+    "question": "Un podcast pour t'endormir ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Bercé·e" },
+      { "label": "Non", "stat_label": "Silence d'or" }
+    ]
+  },
+  {
+    "id": 85,
+    "question": "Ascenseur ou escaliers ?",
+    "options": [
+      { "label": "Ascenseur", "stat_label": "Flemmard·e assumé·e" },
+      { "label": "Escaliers", "stat_label": "Sportif·ve" }
+    ]
+  },
+  {
+    "id": 86,
+    "question": "Petite session solo avant de dormir ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Détendu·e" },
+      { "label": "Non", "stat_label": "Direct au sommeil" }
+    ]
+  },
+  {
+    "id": 87,
+    "question": "Tongs, Crocs ou Birks ?",
+    "options": [
+      { "label": "Tongs", "stat_label": "Estival·e" },
+      { "label": "Crocs", "stat_label": "Assumé·e" },
+      { "label": "Birks", "stat_label": "Confort avant tout" }
+    ]
+  },
+  {
+    "id": 88,
+    "question": "Ton boss a un truc entre les dents, tu lui dis ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Honnête" },
+      { "label": "Non", "stat_label": "Diplomate" }
+    ]
+  },
+  {
+    "id": 89,
+    "question": "Une odeur qui te dérange chez l'autre, tu le dis ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Franc·he du collier" },
+      { "label": "Non", "stat_label": "Discret·ète" }
+    ]
+  },
+  {
+    "id": 90,
+    "question": "Tu manges tes crottes de nez ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Sans filtre" },
+      { "label": "Non", "stat_label": "Civilisé·e" }
+    ]
+  },
+  {
+    "id": 91,
+    "question": "Jeux de société ?",
+    "options": [
+      { "label": "Pour", "stat_label": "Compétiteur·rice" },
+      { "label": "Contre", "stat_label": "Spectateur·rice" }
+    ]
+  },
+  {
+    "id": 92,
+    "question": "Téléphone aux toilettes ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Connecté·e" },
+      { "label": "Non", "stat_label": "Zen" }
+    ]
+  },
+  {
+    "id": 93,
+    "question": "Tu mets ta vidéo en pause pour t'essuyer ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Concentré·e" },
+      { "label": "Non", "stat_label": "Multitâche" }
+    ]
+  },
+  {
+    "id": 94,
+    "question": "Tu chantes en voiture ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Chanteur·se de bagnole" },
+      { "label": "Non", "stat_label": "Silencieux·se" }
+    ]
+  },
+  {
+    "id": 95,
+    "question": "Insulter les autres conducteurs ?",
+    "options": [
+      { "label": "Pour", "stat_label": "Expressif·ve" },
+      { "label": "Contre", "stat_label": "Zen au volant" }
+    ]
+  },
+  {
+    "id": 96,
+    "question": "Tu tutoies ou vouvoies ta belle-famille ?",
+    "options": [
+      { "label": "Tutoiement", "stat_label": "Proche" },
+      { "label": "Vouvoiement", "stat_label": "Respectueux·se" }
+    ]
+  },
+  {
+    "id": 97,
+    "question": "Un surnom pour tes parties génitales ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Créatif·ve" },
+      { "label": "Non", "stat_label": "Littéral·e" }
+    ]
+  },
+  {
+    "id": 98,
+    "question": "Un doudou après 20 ans ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Nostalgique" },
+      { "label": "Non", "stat_label": "Adulte accompli·e" }
+    ]
+  },
+  {
+    "id": 99,
+    "question": "Tu dis \"je t'aime\" à tes parents ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Tendre" },
+      { "label": "Non", "stat_label": "Pudique" }
+    ]
+  },
+  {
+    "id": 100,
+    "question": "Tu dis \"je t'aime\" à tes potes ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Affectueux·se" },
+      { "label": "Non", "stat_label": "Retenu·e" }
+    ]
+  },
+  {
+    "id": 101,
+    "question": "L'anglais rend les choses plus fluides à dire ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Bilingue de cœur" },
+      { "label": "Non", "stat_label": "Fidèle au français" }
+    ]
+  },
+  {
+    "id": 102,
+    "question": "Musique pendant le sexe ?",
+    "options": [
+      { "label": "Pour", "stat_label": "DJ de chambre" },
+      { "label": "Contre", "stat_label": "Silence recommandé" }
+    ]
+  },
+  {
+    "id": 103,
+    "question": "Fou rire pendant le sexe, déjà vécu ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Complice" },
+      { "label": "Non", "stat_label": "Sérieux·se" }
+    ]
+  },
+  {
+    "id": 104,
+    "question": "Tu parles pendant le sexe ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Commentateur·rice" },
+      { "label": "Non", "stat_label": "Silencieux·se" }
+    ]
+  },
+  {
+    "id": 105,
+    "question": "Dans les Sims, tu recrées ta vraie vie ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Méta" },
+      { "label": "Non", "stat_label": "Évasion totale" }
+    ]
+  },
+  {
+    "id": 106,
+    "question": "Marque-page ou tu plies la page ?",
+    "options": [
+      { "label": "Marque-page", "stat_label": "Respectueux·se du livre" },
+      { "label": "Pliage", "stat_label": "Barbare assumé·e" }
+    ]
+  },
+  {
+    "id": 107,
+    "question": "Tu gardes tes chaussures dans la maison ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Prêt·e à sortir" },
+      { "label": "Non", "stat_label": "Pieds libres" }
+    ]
+  },
+  {
+    "id": 108,
+    "question": "Films ou séries ?",
+    "options": [
+      { "label": "Films", "stat_label": "Format court" },
+      { "label": "Séries", "stat_label": "Binge-watcheur·se" }
+    ]
+  },
+  {
+    "id": 109,
+    "question": "Tu lis les avis pour choisir un resto ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Méthodique" },
+      { "label": "Non", "stat_label": "Aventurier·ère" }
+    ]
+  },
+  {
+    "id": 110,
+    "question": "Tes vacances, tu les réserves...",
+    "options": [
+      { "label": "3 mois à l'avance", "stat_label": "Planificateur·rice" },
+      { "label": "Au dernier moment", "stat_label": "Impulsif·ve" }
+    ]
+  },
+  {
+    "id": 111,
+    "question": "Dans une capitale, tu préfères...",
+    "options": [
+      { "label": "Les incontournables", "stat_label": "Classique" },
+      { "label": "Ce que personne ne fait", "stat_label": "Hors des sentiers" }
+    ]
+  },
+  {
+    "id": 112,
+    "question": "Tu ramènes des souvenirs de voyage ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Collectionneur·se" },
+      { "label": "Non", "stat_label": "Voyageur·se léger·ère" }
+    ]
+  },
+  {
+    "id": 113,
+    "question": "Cartes postales en voyage ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Romantique" },
+      { "label": "Non", "stat_label": "Digital·e" }
+    ]
+  },
+  {
+    "id": 114,
+    "question": "Bibelots chez toi ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Décorateur·rice" },
+      { "label": "Non", "stat_label": "Minimaliste" }
+    ]
+  },
+  {
+    "id": 115,
+    "question": "Cadeau qui te plaît pas, tu le dis ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Franc·he" },
+      { "label": "Non", "stat_label": "Diplomate" }
+    ]
+  },
+  {
+    "id": 116,
+    "question": "Les livres que tu offres, tu les as lus ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Curateur·rice" },
+      { "label": "Non", "stat_label": "Pari risqué" }
+    ]
+  },
+  {
+    "id": 117,
+    "question": "T'offres des trucs que toi t'aimerais recevoir ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Égocentré·e assumé·e" },
+      { "label": "Non", "stat_label": "À l'écoute" }
+    ]
+  },
+  {
+    "id": 118,
+    "question": "T'habiter près de ta famille, ça te tente ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Cocon familial" },
+      { "label": "Non", "stat_label": "Indépendant·e" }
+    ]
+  },
+  {
+    "id": 119,
+    "question": "Un date sort un truc raciste, tu te barres...",
+    "options": [
+      { "label": "Immédiatement", "stat_label": "Sans compromis" },
+      { "label": "Après en avoir discuté", "stat_label": "Diplomate" }
+    ]
+  },
+  {
+    "id": 120,
+    "question": "Niveau sonore pendant le sexe ?",
+    "options": [
+      { "label": "Discret", "stat_label": "Chuchoteur·se" },
+      { "label": "Sans retenue", "stat_label": "Haut-parleur" }
+    ]
+  },
+  {
+    "id": 121,
+    "question": "Tu es plutôt...",
+    "options": [
+      { "label": "Rouge", "stat_label": "Passionné·e" },
+      { "label": "Jaune", "stat_label": "Solaire" }
+    ]
+  },
+  {
+    "id": 122,
+    "question": "Ton réveil, c'est...",
+    "options": [
+      { "label": "La radio", "stat_label": "Vintage" },
+      { "label": "Une sonnerie de portable", "stat_label": "Moderne" }
+    ]
+  },
+  {
+    "id": 123,
+    "question": "Tu as un répondeur ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Old school" },
+      { "label": "Non", "stat_label": "Manqué d'appel" }
+    ]
+  },
+  {
+    "id": 124,
+    "question": "Tu laisses des messages vocaux ?",
+    "options": [
+      { "label": "Oui", "stat_label": "Bavard·e" },
+      { "label": "Non", "stat_label": "Texto only" }
+    ]
+  }
+]
