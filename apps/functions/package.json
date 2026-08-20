@@ -15,14 +15,13 @@
     "dev": "npm run build && NODE_ENV=development NODE_OPTIONS=--enable-source-maps concurrently --kill-others \"npm run start:emulators\" \"npm run build:watch\""
   },
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "firebase": "^12.16.0",
-    "firebase-admin": "^13.10.0",
-    "firebase-functions": "^7.2.5",
+    "firebase-admin": "^14.3.0",
+    "firebase-functions": "^7.3.2",
     "ulid": "^2.3.0",
     "zod": "^3.23.8"
   },
@@ -35,6 +34,7 @@
     "dotenv": "^16.6.1",
     "esbuild": "^0.25.0",
     "eslint": "^10.8.0",
+    "firebase": "^12.18.0",
     "globals": "^16.4.0",
     "typescript": "^5.4.5",
     "typescript-eslint": "^8.65.0"

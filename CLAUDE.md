@@ -1,6 +1,6 @@
 # StatOwrel
 
-Turborepo monorepo with npm workspaces. Node 20, TypeScript 5.4+.
+Turborepo monorepo with npm workspaces. Node 22, TypeScript 5.4+.
 
 **NEVER** use yarn, pnpm, or bun. Always use **npm**.
 
@@ -11,7 +11,6 @@ Turborepo monorepo with npm workspaces. Node 20, TypeScript 5.4+.
 | Directory   | Description                        | Tech                                             |
 |-------------|-------------------------------------|---------------------------------------------------|
 | `app`       | Mobile app (iOS + Android)          | React Native + Expo (managed) + EAS               |
-| `firecms`   | Admin backoffice                    | React 18 + Vite (SPA) + FireCMS v2 + MUI          |
 | `functions` | Backend                             | Firebase Cloud Functions v2 + Express 5           |
 
 ### Packages (`packages/`)
@@ -24,25 +23,23 @@ Turborepo monorepo with npm workspaces. Node 20, TypeScript 5.4+.
 ### Dependencies
 
 ```
-app, firecms, functions → @statowrel/models
+app, functions → @statowrel/models
 ```
 
-There is no shared React hooks package yet (no `@repo/firebase-react` equivalent) — `app` and `firecms` each call the Firebase client SDK directly for now. Extract shared hooks into a package once real duplication shows up between the two.
+There is **no backoffice**: the FireCMS admin SPA that used to live in `apps/firecms` was removed. The `isAdmin()` rules, the custom `admin` auth claim and `npm run set-admin` all remain — question moderation just has no UI behind them, and happens in the Firebase console until a replacement exists.
 
 ## Status
 
-Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus seven domain models — `v1_questions` (the moderation pot *and* the day a drawn question ran: `broadcast_at`, `broadcast_on`, `closes_at`, `answer_counts`), its `v1_daily_question_answers` sub-collection, `v1_users` (profile, sign-in identities, streak stats), `v1_usernames` (the reservation that makes a handle unique), `v1_users/{uid}/v1_user_friends` (one half of a reciprocal friendship, keyed by the friend's UID and carrying their handle, mirrored under both users from the invitation onwards — modelled and ruled, but nothing writes one yet) and the calendar's two monthly read models, `v1_daily_question_months` and `v1_users/{uid}/v1_user_calendar_months` — all but `v1_usernames` surfaced in `apps/firecms`. There is no per-day document: `v1_daily_question_months` is what maps a calendar day to the question that ran it. `apps/functions` owns its first real domain, `daily-questions`: the daily scheduler runs at 07:00 Paris, draws the day's question, stamps its broadcast, indexes it in its month and queues the publication notification for immediate dispatch (whose sending is still a stub); the answer trigger increments the question's `answer_counts`, projects the day into the author's calendar month and moves their streak. No midnight closer yet. `apps/app` has its authentication flow (Google, Apple, email/password, then the blocking sheet that asks for a unique username — `src/auth/`) and two product screens. Stats (`src/stats/`) is the root of the app — streak, record, days answered and a month calendar, read from Firestore in two documents per month. Its banner and its calendar cells open the day's question: `src/daily-question/` is the `DailyQuestion` route (today's day by default, any past day through its `date` param) — it shows the question large above its options and **takes the answer**: the double tap of docs/prd.md §4.3 writes `v1_questions/{question_id}/v1_daily_question_answers/{uid}` — document id = the Firebase Auth UID — and the sheet then **flips to the StatOwrel card of §5.5**, « Comme 68% des utilisateurs, tu es un.e efficace. », its distribution bars and its rarity, all computed at display time from `answer_counts`. That card is also what an answered day reopens to from the calendar. Missing from it: the option's illustration, the share button, and the friends of §4.5. There is no tab bar; the profile opens from a header button. See `docs/architecture.md` for the intended shape going forward.
+Early. Workspaces, build tooling, and the app skeletons are wired up. `packages/models` ships its converter infrastructure (`commons.ts`) plus seven domain models — `v1_questions` (the moderation pot *and* the day a drawn question ran: `broadcast_at`, `broadcast_on`, `closes_at`, `answer_counts`), its `v1_daily_question_answers` sub-collection, `v1_users` (profile, sign-in identities, streak stats), `v1_usernames` (the reservation that makes a handle unique), `v1_users/{uid}/v1_user_friends` (one half of a reciprocal friendship, keyed by the friend's UID and carrying their handle, mirrored under both users from the invitation onwards — modelled and ruled, but nothing writes one yet) and the calendar's two monthly read models, `v1_daily_question_months` and `v1_users/{uid}/v1_user_calendar_months`. There is no per-day document: `v1_daily_question_months` is what maps a calendar day to the question that ran it. `apps/functions` owns its first real domain, `daily-questions`: the daily scheduler runs at 07:00 Paris, draws the day's question, stamps its broadcast, indexes it in its month and queues the publication notification for immediate dispatch (whose sending is still a stub); the answer trigger increments the question's `answer_counts`, projects the day into the author's calendar month and moves their streak. No midnight closer yet. `apps/app` has its authentication flow (Google, Apple, email/password, then the blocking sheet that asks for a unique username — `src/auth/`) and two product screens. Stats (`src/stats/`) is the root of the app — streak, record, days answered and a month calendar, read from Firestore in two documents per month. Its banner and its calendar cells open the day's question: `src/daily-question/` is the `DailyQuestion` route (today's day by default, any past day through its `date` param) — it shows the question large above its options and **takes the answer**: the double tap of docs/prd.md §4.3 writes `v1_questions/{question_id}/v1_daily_question_answers/{uid}` — document id = the Firebase Auth UID — and the sheet then **flips to the StatOwrel card of §5.5**, « Comme 68% des utilisateurs, tu es un.e efficace. », its distribution bars and its rarity, all computed at display time from `answer_counts`. That card is also what an answered day reopens to from the calendar. Missing from it: the option's illustration, the share button, and the friends of §4.5. There is no tab bar; the profile opens from a header button. See `docs/architecture.md` for the intended shape going forward.
 
 ## Commands
 
 ```bash
 npm run dev:app          # Dev mobile app (Expo dev server)
 npm run dev:functions    # Dev functions (emulators + tsc --watch)
-npm run dev:firecms      # Dev admin backoffice (Vite, port 3002)
 
 npm run build            # Build all
 npm run build:models
-npm run build:firecms
 npm run build:functions
 
 npm run build:dev:ios       # eas build --profile development --platform ios
@@ -60,8 +57,6 @@ npm run deploy:functions             # firebase deploy --only functions (default
 npm run deploy:functions:production
 npm run deploy:firestore             # firebase deploy --only firestore:rules,indexes,storage
 npm run deploy:firestore:production
-npm run deploy:firecms                # build + firebase deploy --only hosting
-npm run deploy:firecms:production
 ```
 
 **IMPORTANT**: After modifying any file in `packages/models`, ALWAYS run `npm run typecheck` to verify no type errors were introduced across the monorepo.
@@ -105,7 +100,7 @@ npm run deploy:firecms:production
   - Required with literal default: `parseTimestamp(data.xxx ?? null, '')`
   - Nullable field: `parseTimestamp(data.xxx ?? null)` → `string | null`
   - Why: legacy docs may have ISO-string timestamps written via raw `.update()` calls that bypass `toFirestore`. `parseTimestamp` accepts both `Timestamp` and `string`, so reads don't crash.
-- **Writing timestamps via raw `update()` / `set()`**: ALWAYS use `Timestamp.now()` or `Timestamp.fromDate(new Date())` from `firebase-admin/firestore` (functions) or `firebase/firestore` (app, firecms). NEVER `new Date().toISOString()`. Firestore converters' `toFirestore` is **NOT** invoked by `DocumentReference.update()` — only by `set()` and on reads. Writing ISO strings via `update()` corrupts the document.
+- **Writing timestamps via raw `update()` / `set()`**: ALWAYS use `Timestamp.now()` or `Timestamp.fromDate(new Date())` from `firebase-admin/firestore` (functions) or `firebase/firestore` (app). NEVER `new Date().toISOString()`. Firestore converters' `toFirestore` is **NOT** invoked by `DocumentReference.update()` — only by `set()` and on reads. Writing ISO strings via `update()` corrupts the document.
 
 ### Firebase Admin Helpers (`apps/functions`)
 

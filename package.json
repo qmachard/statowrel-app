@@ -4,7 +4,6 @@
   "scripts": {
     "build": "turbo build",
     "build:models": "turbo build --filter=@statowrel/models",
-    "build:firecms": "turbo build --filter=@statowrel/firecms",
     "build:functions": "turbo build --filter=@statowrel/functions",
     "build:dev:ios": "npm run build:models && npm run build:dev:ios --workspace=@statowrel/app",
     "build:dev:android": "npm run build:models && npm run build:dev:android --workspace=@statowrel/app",
@@ -18,7 +17,6 @@
     "dev": "turbo dev",
     "dev:app": "turbo dev --filter=@statowrel/app",
     "dev:functions": "turbo dev --filter=@statowrel/functions",
-    "dev:firecms": "turbo dev --filter=@statowrel/firecms",
     "set-admin": "node apps/functions/scripts/set-admin.mjs",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
@@ -26,9 +24,7 @@
     "deploy:functions": "firebase use default && npm run deploy --workspace=@statowrel/functions",
     "deploy:functions:production": "firebase use production && npm run deploy --workspace=@statowrel/functions && firebase use default",
     "deploy:firestore": "firebase use default && npm run deploy --workspace=@statowrel/firestore-config",
-    "deploy:firestore:production": "firebase use production && npm run deploy --workspace=@statowrel/firestore-config && firebase use default",
-    "deploy:firecms": "npm run build:firecms && firebase use default && firebase deploy --only hosting",
-    "deploy:firecms:production": "npm run build:firecms && firebase use production && firebase deploy --only hosting && firebase use default"
+    "deploy:firestore:production": "firebase use production && npm run deploy --workspace=@statowrel/firestore-config && firebase use default"
   },
   "devDependencies": {
     "prettier": "^3.2.5",
@@ -36,7 +32,7 @@
     "typescript": "^5.4.5"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "packageManager": "npm@10.7.0",
   "workspaces": [

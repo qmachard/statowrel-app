@@ -1,6 +1,6 @@
 # StatOwrel — Architecture
 
-Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's collections (`v1_questions`, its `v1_daily_question_answers` sub-collection, `v1_users`, `v1_usernames`) and their FireCMS collections exist, and the app has its sign-in flow; every other screen is still to come, and the backend owns the front half of the daily cycle (drawing and scheduling) but not yet the back half (answers, streaks, closing). The rest is added incrementally on top of this foundation.
+Status: **early**. This document describes the monorepo's tooling, structure, and conventions — not a finished product. Four of the PRD's collections (`v1_questions`, its `v1_daily_question_answers` sub-collection, `v1_users`, `v1_usernames`) exist, and the app has its sign-in flow; every other screen is still to come, and the backend owns the front half of the daily cycle (drawing and scheduling) but not yet the back half (answers, streaks, closing). The rest is added incrementally on top of this foundation.
 
 ## Stack
 
@@ -11,7 +11,6 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 | Mobile app | React Native + Expo (managed workflow) + EAS | iOS + Android from one codebase |
 | Mobile styling | React Native `StyleSheet` | Neobrutalism design tokens in `src/design/tokens.ts`; `Button` / `TextField` / `Card` / `Calendar` / `BottomSheet` primitives in `src/components/`, the rest added as screens need them |
 | Mobile routing | React Navigation 7 | Native stack only — no tab bar, Stats is the root (docs/prd.md §5.1) — declared in `apps/app/src/navigation/` |
-| Backoffice | React 18 + Vite (SPA) + FireCMS v2 + MUI | Firebase-Hosting-deployed admin UI |
 | Backend | Firebase Cloud Functions v2 (gen2) + Express 5 | Domain-driven structure, HTTP + Firestore triggers |
 | Database | Firebase Firestore | NoSQL, event-sourcing-friendly, `v1_` collection prefix |
 | Auth | Firebase Auth | Client SDK on mobile (`firebase`, not `@react-native-firebase`), Admin SDK in functions. Google/Apple credentials come from native SDKs — see "Authentication" below |
@@ -19,7 +18,7 @@ Status: **early**. This document describes the monorepo's tooling, structure, an
 
 ## Why the Firebase client SDK on mobile (not `@react-native-firebase`)
 
-`@statowrel/models`'s Firestore converters are written against the `firebase/firestore` (client) and `firebase-admin/firestore` (admin) type surfaces — see `UniversalTimestamp`/`UniversalGeoPoint`/`UniversalSnapshot` in `packages/models/src/commons.ts`. Using the JS `firebase` SDK in `apps/app` means the exact same converter file works unchanged on mobile, in `apps/firecms`, and (via the admin variant) in `apps/functions` — one model, one converter, three consumers. It also means Firestore/Auth themselves require no native module linking. Development nonetheless runs on a custom dev client (`expo-dev-client`, `development` EAS profile) rather than Expo Go.
+`@statowrel/models`'s Firestore converters are written against the `firebase/firestore` (client) and `firebase-admin/firestore` (admin) type surfaces — see `UniversalTimestamp`/`UniversalGeoPoint`/`UniversalSnapshot` in `packages/models/src/commons.ts`. Using the JS `firebase` SDK in `apps/app` means the exact same converter file works unchanged on mobile and (via the admin variant) in `apps/functions` — one model, one converter, two consumers. It also means Firestore/Auth themselves require no native module linking. Development nonetheless runs on a custom dev client (`expo-dev-client`, `development` EAS profile) rather than Expo Go.
 
 The tradeoff: no `@react-native-firebase`-specific features (e.g. some background/offline behaviors are weaker on the JS SDK). Revisit this decision if a specific feature requires it — the prebuild/dev-client requirement is already in place, so the cost would mainly be rewriting the converters' client type surface.
 
@@ -29,14 +28,13 @@ The tradeoff: no `@react-native-firebase`-specific features (e.g. some backgroun
 statowrel-app/
 ├── apps/
 │   ├── app/          # React Native + Expo + EAS — the mobile app
-│   ├── firecms/       # React + Vite + FireCMS v2 — backoffice
 │   └── functions/     # Firebase Cloud Functions v2 + Express 5 — backend
 ├── packages/
 │   ├── models/                # @statowrel/models — TS models + Firestore converters
 │   └── firestore-config/      # @statowrel/firestore-config — rules + indexes
 ├── docs/
 │   └── architecture.md        # this file
-├── firebase.json              # functions + firestore + storage + hosting (firecms) config
+├── firebase.json              # functions + firestore + storage config
 ├── .firebaserc                # `default` / `production` Firebase project aliases
 ├── turbo.json
 └── package.json
@@ -45,8 +43,8 @@ statowrel-app/
 ### Dependency graph
 
 ```
-apps/app ──┐
-apps/firecms ─┼──► @statowrel/models ──► firebase / firebase-admin (types only, per SDK)
+apps/app ──────┐
+               ├──► @statowrel/models ──► firebase / firebase-admin (types only, per SDK)
 apps/functions ┘
 ```
 
@@ -54,7 +52,7 @@ apps/functions ┘
 
 ## `@statowrel/models`
 
-Single source of truth for Firestore data shapes, shared by all three apps. `src/commons.ts` provides the SDK-agnostic infrastructure:
+Single source of truth for Firestore data shapes, shared by both apps. `src/commons.ts` provides the SDK-agnostic infrastructure:
 
 - `UniversalTimestamp` / `UniversalGeoPoint` / `UniversalSnapshot<T>` — union types spanning the client and admin SDKs, so one converter file works everywhere.
 - `FirestoreConverter<TData, TFirestoreData>` — the factory signature every model's converter follows, parameterized by the SDK's `Timestamp`/`GeoPoint` classes.
@@ -188,9 +186,9 @@ The document id is the *other* user's Auth UID, which makes "at most one friends
 Two things to keep straight about the options:
 
 - **An option's identity is its `id`, never its position in the array.** An answer stores an `option_id`, and `v1_questions.answer_counts` increments `answer_counts.{option_id}` via `FieldValue.increment()` on a fixed path — that map stays keyed by option id precisely so two simultaneous answers can't overwrite each other. Reordering or reformulating an option must leave its `id` alone; use `findQuestionOption()` to resolve one, never an index.
-- **Ids are ULIDs, minted client-side** — in the app as the author types, in the backoffice at save (`onPreSave`). No server round-trip for an id, and ids sort by creation date. FireCMS also uses ULIDs for the *document* ids of every collection, via the shared `ulidEntityId` callback.
+- **Ids are ULIDs, minted client-side** — in the app as the author types. No server round-trip for an id, and ids sort by creation date. Document ids follow the same rule, except where the collection is keyed by something else (`v1_users` by the Firebase Auth UID, the monthly read models by their `YYYY-MM`).
 
-`options` is a plain array rather than a map keyed by id: the array order *is* the display order, which removes the `position` field and lets FireCMS's built-in repeat field handle reordering.
+`options` is a plain array rather than a map keyed by id: the array order *is* the display order, which removes the `position` field.
 
 There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §7).
 
@@ -239,17 +237,9 @@ The indirection exists because `firebase deploy` uploads the functions source di
 
 That also makes `@statowrel/models` a *dev* dependency of `apps/functions` — it is consumed at build time and never at runtime. The emulator runs the same bundle as production, with `--enable-source-maps` so stack traces still point at `src/`.
 
-## `apps/firecms` — backoffice
+The client `firebase` SDK sits in that same *dev* slot, for the same reason: nothing in `src/` imports it, but `@statowrel/models`' declarations reference `firebase/firestore` for the client half of their universal types, so `tsc` needs it and the deployed manifest does not.
 
-FireCMS v2 SPA. `src/collections/index.ts` is an `EntityCollectionsBuilder` returning the `EntityCollection` definitions for the logged-in user. Each collection is added as its own file once the corresponding model exists in `@statowrel/models`, using that model's `*_COLLECTION` constant, then registered in the index. `src/collections/v1_questions.ts` is the first one; a collection file is named after the collection itself, plural.
-
-Two things to know when writing a collection:
-
-- **FireCMS does not use our converters.** It reads Firestore through its own data source, which maps `Timestamp` → `Date`. So a collection is typed against a local variant of the model's `*Data` type with `Date` timestamps, not against `*Data` itself.
-- **Document ids are ULIDs**, not Firestore auto-ids: wire `onIdUpdate: ulidEntityId` (from `src/collections/entityId.ts`) into every collection. The monthly read models are the exception — their id is their `YYYY-MM` key and they are read-only anyway. `v1_questions.answer_counts` is the first real instance of a dynamic-keyed map: it is keyed by option ULIDs, so the collection's local entity type widens FireCMS's `keyValue` map value type (`Record<string, CMSType>`) rather than dropping the field.
-- **Collection-level invariants live in `callbacks.onPreSave`.** The backoffice writes as an admin, and the wildcard `isAdmin()` rule lets those writes through unchecked — so the 2–6 options rule, "a rejected question needs a reason", and minting each option's ULID all happen there as well as in `firestore.rules`.
-
-`src/authenticator/admin.ts` is the sign-in gate: it refreshes the ID token and rejects anyone without the custom `admin` auth claim — the same claim `firestore.rules`' `isAdmin()` checks, so the backoffice UI and the rules agree on who is an admin. The claim itself is granted server-side; there is no client-side way to obtain it.
+The runtime is **nodejs22**, pinned in two places that must stay in step: `engines.node` in `apps/functions/package.json` (copied verbatim into the generated manifest, which is what Cloud Functions reads to pick the runtime) and esbuild's `target` in `scripts/build.mjs`. Node 22 is a floor, not a preference — `firebase-admin` v14 declares `engines.node >= 22` and dropped Node 18/20 outright.
 
 ## `apps/app` — mobile
 
@@ -327,7 +317,7 @@ Still deferred: shared component primitives (buttons, cards, inputs) built again
 
 ## Firestore rules & indexes
 
-`packages/firestore-config/firestore.rules` establishes the pattern: a wildcard `isAdmin()` bypass at the top (for the FireCMS backoffice, via a custom `admin` auth claim) followed by explicit per-collection rules for the mobile app's own access — collections are never left world-readable/writable by omission. Rules are OR'ed, so a per-collection rule only ever *adds* to what the `isAdmin()` bypass already grants — `allow update, delete: if false` under it means "moderators only", not "nobody". `v1_questions` shows the shape: an author may create their own proposal (`status` forced to `pending`, 2–6 options) and read it back — plus, since the app needs the day's question, any signed-in user may read a question whose `broadcast_at` has passed. That gate is the broadcast instant and not `status == 'used'`: the two coincide today, since a question is drawn and published in the same 07:00 run, but `used` only says a question left the pot — `broadcast_at` is the fact the rule is about. `v1_users` shows the other half of the pattern: a rule that keeps a field *still*, not just a document safe — the counters the answer trigger owns (`streak_count`, `streak_best`, `answers_count`, `streak_last_answered_on`) must come back unchanged from any client update, read through `data.get(field, default)` so a profile written before they existed stays editable. `firestore.indexes.json` holds the repo's first composite index — collection group `v1_daily_question_answers`, `user_id ASC, date ASC`, `queryScope: COLLECTION_GROUP` — backing a query over one user's own answers across days; add further ones as Firestore's emulator/console error messages require them (copy the definition from the error, don't hand-write it). The Stats calendar no longer runs that query — it reads the two monthly documents — but it is the one a rebuild of the projection replays, which is why the index and its recursive-wildcard rule stay.
+`packages/firestore-config/firestore.rules` establishes the pattern: a wildcard `isAdmin()` bypass at the top (via a custom `admin` auth claim) followed by explicit per-collection rules for the mobile app's own access — collections are never left world-readable/writable by omission. Rules are OR'ed, so a per-collection rule only ever *adds* to what the `isAdmin()` bypass already grants — `allow update, delete: if false` under it means "moderators only", not "nobody". `v1_questions` shows the shape: an author may create their own proposal (`status` forced to `pending`, 2–6 options) and read it back — plus, since the app needs the day's question, any signed-in user may read a question whose `broadcast_at` has passed. That gate is the broadcast instant and not `status == 'used'`: the two coincide today, since a question is drawn and published in the same 07:00 run, but `used` only says a question left the pot — `broadcast_at` is the fact the rule is about. `v1_users` shows the other half of the pattern: a rule that keeps a field *still*, not just a document safe — the counters the answer trigger owns (`streak_count`, `streak_best`, `answers_count`, `streak_last_answered_on`) must come back unchanged from any client update, read through `data.get(field, default)` so a profile written before they existed stays editable. `firestore.indexes.json` holds the repo's first composite index — collection group `v1_daily_question_answers`, `user_id ASC, date ASC`, `queryScope: COLLECTION_GROUP` — backing a query over one user's own answers across days; add further ones as Firestore's emulator/console error messages require them (copy the definition from the error, don't hand-write it). The Stats calendar no longer runs that query — it reads the two monthly documents — but it is the one a rebuild of the projection replays, which is why the index and its recursive-wildcard rule stay.
 
 A collection-group query is never covered by a nested `match`: it needs its own recursive-wildcard block (`match /{path=**}/v1_daily_question_answers/{user_id}`), and that block scopes reads to `resource.data.user_id` rather than the document id, because Firestore only accepts a query it can prove safe and that is the field such a query filters on. That block is also why the sub-collection's name has to be globally unique — it reaches every collection bearing it, wherever it sits. Worth remembering too: an answer's `date` and `late` are checked against the parent day document via a `get()` in the per-day rule, so neither can be forged.
 
@@ -342,7 +332,7 @@ Two Firebase projects, aliased in `.firebaserc`:
 
 One toll each project pays once: the first **Firestore trigger** deployed to it is an Eventarc trigger, and creating it is also what creates the project's Eventarc service agent — the deploy races that agent's own IAM grant and fails with `Permission denied while using the Eventarc Service Agent`. Retrying a few minutes later goes through. `apps/functions/CLAUDE.md` carries the details and the manual grant, for the day retrying is not enough.
 
-The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=…`) rather than through turbo. A deploy asks questions — enabling an API, setting an Artifact Registry cleanup policy — and turbo does not forward stdin to the tasks it runs, so those prompts hang unanswered. Turbo has an `interactive` task flag, but it only works under the full-screen `tui` renderer, which is not worth imposing on every `dev` and `build` run for this. It buys nothing here either: the deploy tasks were uncached and dependency-free, and `deploy:firecms` already called the CLI directly.
+The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=…`) rather than through turbo. A deploy asks questions — enabling an API, setting an Artifact Registry cleanup policy — and turbo does not forward stdin to the tasks it runs, so those prompts hang unanswered. Turbo has an `interactive` task flag, but it only works under the full-screen `tui` renderer, which is not worth imposing on every `dev` and `build` run for this. It buys nothing here either: the deploy tasks are uncached and dependency-free.
 
 ## What's deliberately not here yet
 
@@ -354,5 +344,5 @@ The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=�
 - Every collection the PRD sketches now exists, `v1_user_friends` included — but nothing in the app writes or reads a friendship yet: no invitation link, no 6-character code, no screen to add a friend by handle, and no account-deletion pass to drop the friendships it leaves behind (`docs/prd.md` §4.1). The two monthly documents are extra to that list: read models the PRD does not describe, because it describes what the app shows, not what it costs to show it.
 - The daily cycle's back half is half there: the answer trigger increments `answer_counts`, projects the day into the calendar and moves the streak, but no midnight closer resets the streak of whoever didn't answer (docs/prd.md §6 "Backend"). The app works around that at display time — `resolveStreakCount` shows 0 when the last on-time answer is older than yesterday — so the counter is right on screen even while the stored value is stale. The push `dailyQuestions-notifyDailyQuestion` sends is still a stub: the task fires, it just doesn't notify anyone yet.
 - Design-system primitives are added as screens need them — `Button`, `TextField`, `Card`, `IconButton`, `Calendar` so far. No dark-mode theming either (light only).
-- No shared React-hooks package (a `@repo/firebase-react` equivalent) — introduce one only once real duplication appears between `apps/app` and `apps/firecms`.
+- **No backoffice.** The FireCMS SPA that used to live in `apps/firecms` is gone, and with it the only UI a moderator had: the moderation flow of `docs/prd.md` §4.7 has rules (`isAdmin()`, the custom `admin` auth claim, `npm run set-admin`) and no screen behind them. Question moderation happens straight in the Firebase console until a replacement exists.
 - No tests — matches the rest of the org's convention; do not add test infrastructure without explicit discussion.

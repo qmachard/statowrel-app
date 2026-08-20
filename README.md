@@ -1,13 +1,12 @@
 # StatOwrel
 
-Turborepo monorepo — mobile app (React Native + Expo + EAS), admin backoffice (FireCMS), and backend (Firebase Cloud Functions).
+Turborepo monorepo — mobile app (React Native + Expo + EAS) and backend (Firebase Cloud Functions).
 
 See [`CLAUDE.md`](./CLAUDE.md) for conventions and [`docs/architecture.md`](./docs/architecture.md) for the architecture.
 
 ## Structure
 
 - `apps/app` — mobile app (iOS + Android), React Native + Expo
-- `apps/firecms` — admin backoffice, React + Vite + FireCMS
 - `apps/functions` — backend, Firebase Cloud Functions + Express
 - `packages/models` — `@statowrel/models`, shared TypeScript models + Firestore converters
 - `packages/firestore-config` — `@statowrel/firestore-config`, Firestore/Storage rules + indexes
@@ -20,7 +19,6 @@ npm install
 
 ```bash
 npm run dev:app          # mobile app (Expo dev server)
-npm run dev:firecms      # admin backoffice (Vite, :3002)
 npm run dev:functions    # backend (Firebase emulators + tsc --watch)
 ```
 
@@ -48,7 +46,6 @@ Requires `eas login` and an EAS project linked via `eas init` from `apps/app`.
 ```bash
 npm run deploy:functions
 npm run deploy:firestore
-npm run deploy:firecms
 ```
 
 Each has a `:production` variant that targets the `production` Firebase project (see `.firebaserc`).
