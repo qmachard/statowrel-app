@@ -25,7 +25,7 @@ s'accordent sur qui est admin. Sans lui, la session existe mais l'écran affich�
 
 ## Structure
 
-- `src/lib/firebase.ts` — `initializeApp` + `getAuth` + `getFirestore`, branchés sur les émulateurs quand les `VITE_FIREBASE_*_EMULATOR_*` sont posés. Pas de `initializeAuth` : la persistance `indexedDB` du build navigateur suffit, contrairement à `apps/app`.
+- `src/lib/firebase.ts` — `initializeApp` + `getAuth` + `getFirestore`, branchés sur les émulateurs quand les `VITE_FIREBASE_*_EMULATOR_*` sont posés — en `dev` seulement, `import.meta.env.DEV` gardant le déploiement à l'abri d'un `.env.local` oublié. Pas de `initializeAuth` : la persistance `indexedDB` du build navigateur suffit, contrairement à `apps/app`.
 - `src/lib/firestore.ts` — `getDocumentRef` / `getCollectionRef`, qui câblent les converters `@statowrel/models`. Jumeau de `apps/app/src/lib/firestore.ts`.
 - `src/auth/` — `AuthContext` (session + claim `admin`), `SignInScreen` (e-mail + mot de passe, Google), `AccessDeniedScreen`, `errors.ts` (jamais un code `auth/*` affiché), `schemas.ts`.
 - `src/questions/` — `QuestionsTable` (le pot, une ligne par question), `QuestionModal` (**la même modale pour créer et pour éditer**), `schemas.ts` (zod), `data/saveQuestion.ts` (`createQuestion` / `updateQuestion` / `setQuestionStatus`), `data/useQuestions.ts`.
@@ -75,9 +75,30 @@ Pointer les `VITE_FIREBASE_*_EMULATOR_HOST`/`_PORT` sur la suite d'émulateurs (
 travailler sur des données locales — `localhost:8080` pour Firestore, `localhost:9099` pour Auth.
 Sans `.env.local`, `getAuth` lève `auth/invalid-api-key` au chargement et la page reste blanche.
 
-**Pas de déploiement.** `firebase.json` n'a plus de bloc `hosting` depuis le retrait de FireCMS : le
-bundle se construit (`npm run build:admin`) mais rien ne le sert. Le rebrancher demande un site
-Firebase Hosting et sa cible, ce qui est un changement à part.
+## Déploiement
+
+Firebase Hosting, sur le site par défaut du projet :
+
+```bash
+npm run deploy:admin              # projet default
+npm run deploy:admin:production   # projet production
+```
+
+Rien à bâtir avant : le bloc `hosting` de `firebase.json` sert `apps/admin/dist` et le construit
+lui-même, son `predeploy` lançant `npm run build:admin`. La réécriture `**` → `/index.html` est ce
+qui fait tenir une SPA derrière un rechargement de page. Les assets portent leur hash dans leur nom,
+donc `/assets/**` part `immutable` pour un an, tandis que `**/*.html` reste `no-cache` — sans quoi
+un déploiement resterait invisible le temps du cache par défaut de Hosting sur le document d'entrée.
+
+**Le build inline la config Firebase**, donc le déploiement demande son propre fichier :
+`apps/admin/.env.production.local`, que Vite lit avant `.env.local` (et que `*.local` ignore déjà).
+Sans lui, le bundle part avec des variables vides et la page reste blanche sur
+`auth/invalid-api-key`. Les hôtes d'émulateur ne peuvent plus fuiter dans un déploiement :
+`src/lib/firebase.ts` ne les branche que sous `import.meta.env.DEV`, que `vite build` compile à
+`false`.
+
+Un domaine personnalisé s'ajoute à la main aux domaines autorisés de Firebase Auth ; le site Hosting
+du projet, lui, y est d'office.
 
 ## Validation
 
