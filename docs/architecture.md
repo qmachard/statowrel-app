@@ -194,6 +194,25 @@ Two things to keep straight about the options:
 
 There is no `is_multiple` flag: v1 is single-choice only, and multiple-answer questions are explicitly out of scope (`docs/prd.md` §7).
 
+### `v1_user_devices`
+
+`packages/models/src/v1_user_device.ts` — sub-collection of `v1_users`, path `v1_users/{user_id}/v1_user_devices/{push_token}`: where a notification is delivered (`docs/prd.md` §4.2).
+
+| Field | Type | Notes |
+|---|---|---|
+| `user_id` | `string` | Auth UID of the device's owner, denormalized from the parent id |
+| `push_token` | `string` | Expo push token, same value as the document id |
+| `platform` | `'ios' \| 'android'` | What the push has to be formatted for |
+| `created_at` / `updated_at` | `Timestamp` | `updated_at` is refreshed at every registration |
+
+**The document id is the token**, the same trick `v1_usernames` uses: re-registering an install is a write to the same document rather than a duplicate nobody queries for. The token belongs to an *install* and not to an account, so signing out deletes the document — otherwise the previous account would keep pushing to a phone somebody else now holds — and the daily fan-out deletes the ones Expo rejects as `DeviceNotRegistered`, which is the system's only self-healing.
+
+**Why Expo tokens and not FCM ones.** The app is managed Expo with no native Firebase — `app.config.ts` declares no `googleServicesFile` — so `expo-notifications` has no FCM/APNs registration to hand out and `firebase-admin`'s own messaging would have nothing to send to. Expo holds the store credentials EAS already manages and fans out to both platforms behind one endpoint.
+
+The file also carries the two constants both sides have to spell identically, because this package is the only place they share: `EXPO_PUSH_TOKEN_PATTERN`, and `DAILY_QUESTION_CHANNEL_ID` — Android drops a notification naming a channel the device never declared.
+
+Notification preferences (`docs/prd.md` §5.3, "Réglages") are not modelled: there is no settings screen to set them from. When they arrive they belong to the account, not to the device — one choice, however many phones.
+
 ## `apps/functions` — domain structure
 
 Each domain under `src/domains/` is self-contained:
@@ -220,7 +239,7 @@ The daily cycle's first half — docs/prd.md §6, "Backend". Two Cloud Functions
 | Function | Kind | Role |
 |---|---|---|
 | `dailyQuestions-scheduleDailyQuestion` | Cloud Scheduler, `0 7 * * *` Europe/Paris | Draws **today's** question and queues its publication |
-| `dailyQuestions-notifyDailyQuestion` | Cloud Tasks (`onTaskDispatched`) | Pushes it to everyone — **the push itself is not implemented yet** |
+| `dailyQuestions-notifyDailyQuestion` | Cloud Tasks (`onTaskDispatched`) | Pushes it to every registered device, through the `notifications` domain |
 
 The scheduler draws one `approved` question at random, flips it to `used` and stamps its broadcast — `broadcast_at` at 07:00 Paris, `broadcast_on` today's day key, `closes_at` at the following Paris midnight — then indexes it in `v1_daily_question_months`, both in **one batch**: a question is never consumed without the month entry that points a day at it, and never broadcast without the `broadcast_on` the rules check an answer against. Then it queues the notification task for immediate dispatch.
 
@@ -233,6 +252,22 @@ Drawing and publishing happen in the same run: everyone gets the same question a
 `apps/functions/scripts/seed-daily-questions.mjs` (`npm run seed-daily-questions`) is that outside caller: it replays this same batch for the days already gone — by default the five before today — so a fresh project or a reset emulator does not open on an empty calendar. It draws from the approved pot first and mints what the pot cannot cover from `scripts/questions.seed.json` — the same catalogue `seed-questions.mjs` fills the moderation pot with, skipping what is already in it — leaves alone a day already indexed in its month (so it only ever fills holes) and notifies nobody. `--answers <n>` additionally fabricates a tally on the days it seeds, off by default, and counters on the question only: no answer document is forged under anybody's UID.
 
 Deploying this domain needs the scheduler's service account to hold `cloudtasks.enqueuer` and to be allowed to `actAs` the task function's service account — the notification is enqueued from code, not by an IAM-free trigger.
+
+The task reads the question it was handed the id of, for the notification's body: the title is the PRD's own line — « La question du jour est tombée » — and the body is the question itself, because reading it is what makes somebody open the app. One document read a day against a payload that could have skipped it; a question that cannot be read still gets a notification, on a generic body, since the drop matters more than the teaser.
+
+### `notifications`
+
+How anything in this backend reaches a phone (`docs/prd.md` §4.2). The domain registers **no Cloud Function of its own**, which is why it is absent from `src/index.ts`: nothing pushes on its own schedule yet, and each caller owns its trigger — `dailyQuestions-notifyDailyQuestion` is the first. It is a service the other domains go through, not a boundary they call across a wire.
+
+Three helpers, one responsibility each:
+
+- `helpers/expoPush.ts` — the transport. POSTs to `exp.host/--/api/v2/push/send` in batches of 100, sequentially: Expo rate-limits on notifications per second and a once-a-day fan-out has no deadline worth racing it for. It returns **one ticket per message, in the same input order** — that alignment is the whole contract, since it is what maps a rejection back to the token that caused it. A refused request throws rather than being swallowed, so the surrounding Cloud Task retries it. An Expo ticket is an acceptance, not a delivery; the receipts that would confirm one (`/push/getReceipts`) are not polled yet, but the error that matters most — a token nobody holds any more — already comes back on the ticket.
+- `helpers/deviceTokens.ts` — reads every token as a collection group (the day's question goes to everyone, so there is nothing to filter by) and deletes the dead ones in batches of 500. Malformed tokens are dropped before sending rather than after: Expo rejects a whole request over one bad `to`, which would cost the hundred people sharing that batch their notification. The whole set is held in memory, the same bet `drawApprovedQuestion` makes on the question pot.
+- `helpers/sendPush.ts` — `sendPushToAllDevices`, the fan-out, plus the pruning of every `DeviceNotRegistered` it collects.
+
+Sending is not transactional and nothing tracks who got what: a push is a hint, and the app reads the day from Firestore on launch either way. So a retry re-sends the whole fan-out rather than resuming it — safe precisely because the duplicate cost is one extra banner.
+
+Set `EXPO_ACCESS_TOKEN` in the functions environment once "enhanced security for push notifications" is turned on for the Expo account; unset, Expo accepts the request unauthenticated.
 
 `src/libs/firebase-admin.ts` centralizes all Firestore/Storage access (`getDocumentRef`, `getSubCollectionRef`, `createWriteBatch`, `getAdminStorageSignedUrl`, …) — every ref is created with a `@statowrel/models` converter, never read untyped.
 
@@ -393,7 +428,8 @@ The deploy scripts run the Firebase CLI directly (`npm run deploy --workspace=�
 - No way to rebuild a calendar month from its answers. The projection is derived data with no repair path: if the answer trigger exhausts its retries on one answer, that day is missing from the user's calendar until somebody replays it by hand. An admin endpoint replaying `v1_daily_question_answers` for one user and month is the missing piece.
 - No migration for documents written before the daily question was folded into `v1_questions`. A question broadcast under the old model has no `broadcast_on` / `closes_at` / `answer_counts`, and its answers still sit under a `v1_daily_questions/{date}` that nothing reads any more. Nothing rewrites either: the fix is a one-off backfill script, or wiping the collection while the app is pre-launch.
 - A friendship is now written, read and answered — invited through the callable, listed on the Menu screen, accepted or deleted from its row. Still missing from §4.1: the invitation link, the 6-character code, and the account-deletion pass that would drop the friendships an account leaves behind. The two monthly documents are extra to that list: read models the PRD does not describe, because it describes what the app shows, not what it costs to show it.
-- The daily cycle's back half is half there: the answer trigger increments `answer_counts`, projects the day into the calendar and moves the streak, but no midnight closer resets the streak of whoever didn't answer (docs/prd.md §6 "Backend"). The app works around that at display time — `resolveStreakCount` shows 0 when the last on-time answer is older than yesterday — so the counter is right on screen even while the stored value is stale. The push `dailyQuestions-notifyDailyQuestion` sends is still a stub: the task fires, it just doesn't notify anyone yet.
+- The daily cycle's back half is half there: the answer trigger increments `answer_counts`, projects the day into the calendar and moves the streak, but no midnight closer resets the streak of whoever didn't answer (docs/prd.md §6 "Backend"). The app works around that at display time — `resolveStreakCount` shows 0 when the last on-time answer is older than yesterday — so the counter is right on screen even while the stored value is stale.
+- **The notification system has a backend and no front end.** `dailyQuestions-notifyDailyQuestion` really pushes now, but `v1_user_devices` is empty and stays empty: `apps/app` does not depend on `expo-notifications`, asks for no permission, registers no token, deletes none at sign-out and does nothing with a tap. That is the next slice, and it is the whole reason the fan-out currently reaches nobody. Behind it: the receipts poll (`/push/getReceipts`) that would catch a delivery failing after Expo accepted it, the notification preferences of `docs/prd.md` §5.3, and a paginated fan-out for the day the token set stops fitting in one function's memory.
 - Design-system primitives are added as screens need them — `Button`, `TextField`, `Card`, `IconButton`, `Calendar`, `Avatar`, `DropdownMenu` so far. No dark-mode theming either (light only).
 - **The backoffice is one screen wide.** `apps/admin` covers the moderation flow of `docs/prd.md` §4.7 and stops there — no view over `v1_users`, `v1_usernames`, the answers or the monthly read models, where the FireCMS SPA had one over each. Inspecting or fixing any of those means the Firebase console. Rejecting a question is missing from the screen too, since it owes its author a reason.
 - No shared React-hooks package (a `@repo/firebase-react` equivalent). `apps/admin` is the first place duplication actually bites: its `lib/firebase.ts` and `lib/firestore.ts` are near-copies of the app's, and its `auth/errors.ts` is the app's message table minus Apple. Small enough to live twice for now; extracting a package is the move the next time either side changes.

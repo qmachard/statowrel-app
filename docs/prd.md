@@ -100,6 +100,8 @@ Le ton est central : WTF, intime mais pas gênant, jamais moralisateur. Une ques
 - Une réponse de rattrapage compte dans les compteurs agrégés (`answer_counts`) au même titre qu'une réponse à l'heure ; elle est marquée `late: true` pour pouvoir distinguer les deux plus tard.
 - Réponse **définitive** : pas de modification après validation (c'est ce qui rend la stat crédible).
 
+**État d'implémentation (notification).** Le backend envoie réellement le push de 07:00 : la tâche `dailyQuestions-notifyDailyQuestion` lit tous les jetons enregistrés, poste à Expo par lots de 100 et supprime au passage ceux que l'appareil a révoqués. Le titre est celui du §3 — « La question du jour est tombée » — et le corps est la question elle-même. Il ne part encore chez personne : l'app ne demande pas la permission et n'enregistre aucun jeton, ce qui est la tranche suivante. Le reste du §4.2 est en place hors la **fermeture à minuit**, qui n'a toujours pas son planificateur.
+
 ### 4.3 Le double tap
 
 La micro-interaction signature de l'app : **répondre se fait en deux taps sur la même option**.
