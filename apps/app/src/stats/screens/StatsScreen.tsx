@@ -48,7 +48,7 @@ export const StatsScreen = () => {
         <StatsHeader
           displayName={profile?.username ?? ''}
           onInvite={() => navigation.navigate('InviteFriend')}
-          onEditProfile={() => navigation.navigate('Profile')}
+          onOpenMenu={() => navigation.navigate('Menu')}
         />
 
         {pendingQuestion ? (

@@ -1,4 +1,4 @@
-import { UserPen, UserRoundPlus } from 'lucide-react-native';
+import { Menu, UserRoundPlus } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -9,8 +9,8 @@ export interface StatsHeaderProps {
   displayName: string;
   /** Invite a friend by handle — docs/prd.md §4.1, the `InviteFriend` sheet. */
   onInvite?: () => void;
-  /** Edit the profile — docs/prd.md §5.3. */
-  onEditProfile?: () => void;
+  /** Open the menu — profile today, settings and friends later. */
+  onOpenMenu?: () => void;
 }
 
 const styles = StyleSheet.create({
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
 });
 
 /** Greeting on the left, the app's only two actions on the right (docs/prd.md §5.1). */
-export const StatsHeader = ({ displayName, onInvite, onEditProfile }: StatsHeaderProps) => (
+export const StatsHeader = ({ displayName, onInvite, onOpenMenu }: StatsHeaderProps) => (
   <View style={styles.root}>
     <View style={styles.greeting}>
       <Text style={styles.day}>{formatDayLabel(new Date())}</Text>
@@ -54,7 +54,7 @@ export const StatsHeader = ({ displayName, onInvite, onEditProfile }: StatsHeade
 
     <View style={styles.actions}>
       <Button label="Inviter un pote" icon={UserRoundPlus} size="icon" onPress={onInvite} />
-      <Button label="Modifier le profil" icon={UserPen} variant="outline" size="icon" onPress={onEditProfile} />
+      <Button label="Ouvrir le menu" icon={Menu} variant="outline" size="icon" onPress={onOpenMenu} />
     </View>
   </View>
 );

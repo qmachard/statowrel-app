@@ -153,7 +153,7 @@ Immédiatement après avoir répondu :
 
 L'app est en **neobrutalisme** : aplats de couleur francs, bordures noires épaisses, ombres portées dures et décalées (jamais de flou), coins franchement arrondis (`sm` = 8px sur les boutons, `DEFAULT` = 12px, jusqu'à 32px — jamais carrés), titres en `font-head` (Archivo Black) et textes en `font-sans` (Space Grotesk). Tous les tokens (palette, rayons, ombres, typo, bordures, espacements) sont déjà dans `apps/app/src/design/tokens.ts` — aucun écran ne définit sa propre palette.
 
-Toute l'app tient en **un écran, une modale et une carte**, plus le Profil qui s'ouvre par-dessus. Il n'y a ni barre d'onglets, ni menu, ni troisième niveau de navigation.
+Toute l'app tient en **un écran, une modale et une carte**, plus le Menu qui s'ouvre par-dessus. Il n'y a ni barre d'onglets ni troisième niveau de navigation.
 
 ### 5.1 Racine de l'app
 
@@ -162,10 +162,10 @@ Pas de tabbar. L'écran **Stats** (§5.2) *est* l'app : il s'ouvre au lancement,
 | Bouton | Ouvre |
 |---|---|
 | **Inviter un pote** | La sheet d'invitation par nom d'utilisateur (§4.1) — le lien d'invitation et le code à 6 caractères s'y ajouteront |
-| **Modifier le profil** | L'écran Profil (§5.3) — identité, amis, questions proposées, réglages |
+| **Menu** | Le Menu — identité et profil (§5.3), amis, questions proposées, réglages |
 
-- Les deux boutons sont carrés, bordure noire épaisse, ombre dure décalée. Le bouton d'invitation est plein `primary`, celui du profil sur fond `card` : inviter est l'action qu'on veut voir en premier.
-- Le Profil se pose **en pile** au-dessus de Stats et porte son propre bouton retour. On n'y navigue jamais latéralement : on l'ouvre, on le referme.
+- Les deux boutons sont carrés, bordure noire épaisse, ombre dure décalée. Le bouton d'invitation est plein `primary`, celui du menu sur fond `card` : inviter est l'action qu'on veut voir en premier.
+- Le Menu se pose **en pile** au-dessus de Stats et porte son propre bouton retour. On n'y navigue jamais latéralement : on l'ouvre, on le referme.
 - Pas de badge numérique ; l'état « question du jour non répondue » se signale par la modale (§5.4), pas par une pastille.
 
 ### 5.2 Écran Stats
