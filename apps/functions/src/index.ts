@@ -9,3 +9,4 @@
 export * as dailyQuestions from './domains/daily-questions';
 export * as friends from './domains/friends';
 export * as health from './domains/health';
+export * as users from './domains/users';

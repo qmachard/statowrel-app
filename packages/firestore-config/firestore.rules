@@ -77,8 +77,12 @@ service cloud.firestore {
       // moderation pot. A document predating those fields has none at all, so
       // the expression errors and the write is denied, same outcome.
       //
-      // An answer is final: no update, no delete (docs/prd.md §4.2). Only the
-      // backend rewrites one, to anonymise it when an account is deleted.
+      // An answer is final: no update, no delete (docs/prd.md §4.2). Deleting
+      // an account is what removes one, backend-side (`users-deleteAccount`) —
+      // and since the document id *is* its author's UID, the delete is what
+      // anonymising means: there is no field left to blank. The question's
+      // `answer_counts` are not decremented, so the answer keeps counting in
+      // the aggregate while belonging to nobody (docs/prd.md §4.1).
       match /v1_daily_question_answers/{user_id} {
         // Takes the parent question rather than reading it itself, so the whole
         // rule costs one `get()` however many of its fields it checks.
