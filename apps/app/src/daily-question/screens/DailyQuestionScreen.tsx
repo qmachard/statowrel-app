@@ -2,7 +2,7 @@ import { type RouteProp, useNavigation, useRoute } from '@react-navigation/nativ
 import { dailyQuestionDateKey } from '@statowrel/models';
 import { X } from 'lucide-react-native';
 import { type ReactNode, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { SuccessCircle } from '@/components/animations';
@@ -22,6 +22,7 @@ import { fontSize, fonts, spacing } from '@/design/tokens';
 import { hapticValidation } from '@/lib/haptics';
 import { markFriendAnswersSeen } from '@/stats/data/seenFriendAnswers';
 import { useSheetBottomInset } from '@/lib/useSheetBottomInset';
+import { useSheetMaxHeight } from '@/lib/useSheetMaxHeight';
 import { formatDayLabel, fromDateKey, toDateKey } from '@/lib/dates';
 import type { RootStackParamList } from '@/navigation/types';
 
@@ -35,7 +36,9 @@ const DEAD_END: Partial<Record<DailyQuestionStatus, string>> = {
 const styles = StyleSheet.create({
   // No `flex: 1` anywhere on the way down: the sheet's detent is
   // `fitToContents`, so it measures this column and a stretched child would
-  // make it measure the whole screen instead.
+  // make it measure the whole screen instead. The scroller above it carries a
+  // `maxHeight` rather than a height for that same reason — bounded, never
+  // stretched.
   content: {
     gap: spacing(5),
     padding: spacing(6),
@@ -75,7 +78,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
   },
   // Absolutely positioned so playing it never resizes the sheet: the detent is
-  // `fitToContents` and would otherwise jump the moment the answer lands.
+  // `fitToContents` and would otherwise jump the moment the answer lands. It
+  // sits beside the scroller rather than inside it, so it stays centred on the
+  // sheet instead of on a content column that may be taller than the screen.
   celebration: {
     position: 'absolute',
     top: 0,
@@ -97,10 +102,12 @@ const Message = ({ children, surface }: { children: ReactNode; surface: Surface 
  * as the sheet's title, then the options in their fixed order, each behind its
  * quizz letter. No label above the question saying it is one.
  *
- * The sheet is sized by this content (see `RootNavigator`), which is why the
- * options sit in a plain column rather than a scroll view: a short question
- * gets a short sheet. It wears accent for today and primary for a past day, and
- * keeps that colour through the answer.
+ * The sheet is sized by this content (see `RootNavigator`): a short question
+ * gets a short sheet. The column is bounded by `useSheetMaxHeight` and scrolls
+ * past it — an answered day carrying a long recap and a full list of friends
+ * measures taller than the screen, and a `fitToContents` detent cut off
+ * whatever it could not fit. It wears accent for today and primary for a past
+ * day, and keeps that colour through the answer.
  *
  * **Answering is the double tap of docs/prd.md §4.3**: the first tap selects,
  * the second one on the same option writes
@@ -122,6 +129,7 @@ export const DailyQuestionScreen = () => {
   const { params } = useRoute<RouteProp<RootStackParamList, 'DailyQuestion'>>();
   const { user } = useAuth();
   const bottomInset = useSheetBottomInset();
+  const maxHeight = useSheetMaxHeight();
 
   // No param means today, and today is Paris' day, not the device's — the day
   // key *is* the document id (docs/architecture.md).
@@ -206,7 +214,11 @@ export const DailyQuestionScreen = () => {
 
   return (
     <View style={SURFACE[surface]}>
-      <View style={[ styles.content, { paddingBottom: spacing(6) + bottomInset } ]}>
+      <ScrollView
+        style={{ maxHeight }}
+        contentContainerStyle={[ styles.content, { paddingBottom: spacing(6) + bottomInset } ]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.prompt}>
           <View style={styles.close}>
             <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
@@ -260,13 +272,13 @@ export const DailyQuestionScreen = () => {
         {authorName === null ? null : (
           <Text style={[ styles.credit, FOREGROUND[surface] ]}>proposée par @{authorName}</Text>
         )}
+      </ScrollView>
 
-        {celebrating ? (
-          <View style={styles.celebration} pointerEvents="none">
-            <SuccessCircle size="xl" onFinish={() => setCelebrating(false)} />
-          </View>
-        ) : null}
-      </View>
+      {celebrating ? (
+        <View style={styles.celebration} pointerEvents="none">
+          <SuccessCircle size="xl" onFinish={() => setCelebrating(false)} />
+        </View>
+      ) : null}
     </View>
   );
 };

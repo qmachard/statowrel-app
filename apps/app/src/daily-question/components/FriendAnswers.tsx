@@ -1,6 +1,6 @@
 import { findQuestionOption, type QuestionData } from '@statowrel/models';
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/Card';
 import type { FriendAnswer, FriendAnswersStatus } from '@/daily-question/data/useFriendAnswers';
@@ -9,14 +9,6 @@ import { FOREGROUND, type Surface } from '@/daily-question/helpers/surface';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 import { FriendRow } from '@/friends/components/FriendRow';
 import { formatTimeLabel } from '@/lib/dates';
-
-/**
- * The list scrolls inside itself past this height. The sheet's single detent is
- * `fitToContents` (see `RootNavigator`), so an unbounded list of friends would
- * measure taller than the screen and lose its own bottom rows — a bounded
- * scroller measures, a stretched one does not.
- */
-const MAX_LIST_HEIGHT = spacing(56);
 
 /** A picked option never takes more than this much of a row — the handle keeps the rest. */
 const CHIP_MAX_WIDTH = spacing(32);
@@ -135,6 +127,11 @@ export interface FriendAnswersProps {
  * and `useFriendAnswers` reads nothing before either: unlocking your friends by
  * answering yourself is the mechanic, not a loading state (§4.5).
  *
+ * The list carries no scroller of its own: the sheet's whole column is the
+ * scroller (`DailyQuestionScreen`), so however many friends there are they read
+ * as one list rather than through a three-row window, and dragging never has to
+ * pick between two scrollers stacked on each other.
+ *
  * With nobody to list it collapses to a single line on the sheet, card and
  * heading included: an account with no friends yet is the common case, and a
  * framed section holding one grey sentence looks like a section that broke.
@@ -168,25 +165,23 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
       <Text style={[ styles.heading, FOREGROUND[surface] ]}>Tes potes</Text>
 
       <Card style={styles.list}>
-        <ScrollView style={{ maxHeight: MAX_LIST_HEIGHT }}>
-          {rows.map((row, index) => (
-            <View key={row.friendId} style={index === 0 ? null : styles.separated}>
-              <FriendRow
-                username={row.username}
-                photoUrl={row.photoUrl}
-                note={row.timeLabel ?? undefined}
-              >
-                {row.statLabel === null ? (
-                  <Text style={styles.pending}>n’a pas encore répondu</Text>
-                ) : (
-                  <Text style={[ styles.chip, row.same ? styles.chipSame : null ]} numberOfLines={1}>
-                    {row.statLabel}
-                  </Text>
-                )}
-              </FriendRow>
-            </View>
-          ))}
-        </ScrollView>
+        {rows.map((row, index) => (
+          <View key={row.friendId} style={index === 0 ? null : styles.separated}>
+            <FriendRow
+              username={row.username}
+              photoUrl={row.photoUrl}
+              note={row.timeLabel ?? undefined}
+            >
+              {row.statLabel === null ? (
+                <Text style={styles.pending}>n’a pas encore répondu</Text>
+              ) : (
+                <Text style={[ styles.chip, row.same ? styles.chipSame : null ]} numberOfLines={1}>
+                  {row.statLabel}
+                </Text>
+              )}
+            </FriendRow>
+          </View>
+        ))}
       </Card>
     </View>
   );
