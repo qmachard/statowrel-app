@@ -16,9 +16,10 @@ import { resolveStreakCount } from '@/stats/helpers/streak';
 
 /**
  * The root of the app (docs/prd.md §5.1, §5.2), from top to bottom: the
- * invitations waiting on an answer, the day's question when it is still open,
- * the streak and its counters on a scrolling strip, then the calendar. The
- * daily question sheet lands on top of it (§5.4).
+ * invitations waiting on an answer, the day's banner — the question while it is
+ * still open, « RDV demain » once it has been answered — the streak and its
+ * counters on a scrolling strip, then the calendar. The daily question sheet
+ * lands on top of it (§5.4).
  */
 const styles = StyleSheet.create({
   safeArea: {
@@ -51,9 +52,11 @@ export const StatsScreen = () => {
   // sheet has created it. Zeros rather than nothing invented, nothing crashing.
   const streakCount = profile === null ? 0 : resolveStreakCount(profile, today);
 
-  // The banner announces a question that is still waiting: once the day is
-  // answered it has nothing left to say, and the calendar carries the day.
-  const pendingQuestion = answeredToday ? null : todayQuestion;
+  // The banner is the day's status line, whichever side of the answer one is
+  // on: the question while it waits, « RDV demain » once it has been given. It
+  // only steps aside on a day no question ever dropped on.
+  const bannerLabel = answeredToday ? null : todayQuestion?.label ?? null;
+  const showBanner = answeredToday || todayQuestion !== null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[ 'top' ]}>
@@ -80,9 +83,9 @@ export const StatsScreen = () => {
 
         <InvitationsCard />
 
-        {pendingQuestion ? (
+        {showBanner ? (
           <DailyQuestionBanner
-            label={pendingQuestion.label}
+            label={bannerLabel}
             onPress={() => navigation.navigate('DailyQuestion')}
           />
         ) : null}
