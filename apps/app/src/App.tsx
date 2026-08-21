@@ -19,6 +19,7 @@ import { linking } from '@/navigation/linking';
 import { navigationRef } from '@/navigation/navigationRef';
 import { navigationTheme } from '@/navigation/theme';
 import { usePushNotifications } from '@/notifications/data/usePushNotifications';
+import { usePushPermissionNudge } from '@/notifications/data/usePushPermissionNudge';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -41,6 +42,9 @@ const SessionGate = () => {
   // session tells it whose device to register, and a tapped notification has a
   // navigator to open the day on.
   usePushNotifications();
+  // The catch-up for a session that was already signed in when the carousel's
+  // notification slide shipped: it never asked them, and nothing else did.
+  usePushPermissionNudge();
   // The other half of the onboarding demo: the pick made before there was an
   // account, written once there is one.
   useDemoAnswerFlush();
