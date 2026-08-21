@@ -28,6 +28,10 @@
     ],
     "rewrites": [
       {
+        "source": "/legal/assistance",
+        "destination": "/legal/assistance.html"
+      },
+      {
         "source": "/legal/cgu",
         "destination": "/legal/cgu.html"
       },
