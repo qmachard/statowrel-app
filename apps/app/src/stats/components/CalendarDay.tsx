@@ -60,9 +60,9 @@ const styles = StyleSheet.create({
   // tucked in. Absolute, so the number or the check stays centred whether or
   // not the day carries one.
   //
-  // The one surface here without the thick border — a 2px outline on a 12px
-  // bead is half of it, and what is left no longer reads as a colour. It is
-  // small enough, and far enough off the surface, to carry itself.
+  // It keeps the border every other surface wears, and it needs it more than
+  // they do: hanging off the cell, it lands half on the page's own sand, where
+  // an unoutlined bead simply disappears.
   badge: {
     position: 'absolute',
     top: -BADGE_OVERHANG,
@@ -70,6 +70,8 @@ const styles = StyleSheet.create({
     height: BADGE_SIZE,
     width: BADGE_SIZE,
     borderRadius: radius.full,
+    borderWidth,
+    borderColor: colors.border,
   },
 });
 
