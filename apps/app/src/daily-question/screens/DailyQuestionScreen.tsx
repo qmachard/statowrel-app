@@ -1,24 +1,25 @@
 import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { dailyQuestionDateKey } from '@statowrel/models';
 import { X } from 'lucide-react-native';
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type ReactNode, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { SuccessCircle } from '@/components/animations';
 import { AnswerRecap } from '@/daily-question/components/AnswerRecap';
 import { FriendAnswers } from '@/daily-question/components/FriendAnswers';
-import { QuestionOption } from '@/daily-question/components/QuestionOption';
+import { QuestionOption, letterOf } from '@/daily-question/components/QuestionOption';
 import { StatOwrelHeadline } from '@/daily-question/components/StatOwrelHeadline';
 import { rememberAnswer } from '@/daily-question/data/answerStore';
 import { submitAnswer } from '@/daily-question/data/submitAnswer';
 import { type DailyQuestionStatus, useDailyQuestion } from '@/daily-question/data/useDailyQuestion';
 import { useFriendAnswers } from '@/daily-question/data/useFriendAnswers';
 import { buildStatOwrel } from '@/daily-question/helpers/statowrel';
+import { useDoubleTapAnswer } from '@/daily-question/helpers/useDoubleTapAnswer';
 import { FOREGROUND, SURFACE, type Surface } from '@/daily-question/helpers/surface';
 import { useAuth } from '@/auth/AuthContext';
 import { fontSize, fonts, spacing } from '@/design/tokens';
-import { hapticSelection, hapticValidation } from '@/lib/haptics';
+import { hapticValidation } from '@/lib/haptics';
 import { useSheetBottomInset } from '@/lib/useSheetBottomInset';
 import { formatDayLabel, fromDateKey, toDateKey } from '@/lib/dates';
 import type { RootStackParamList } from '@/navigation/types';
@@ -29,17 +30,6 @@ const DEAD_END: Partial<Record<DailyQuestionStatus, string>> = {
   missing: 'Pas de question ce jour-là.',
   error: 'Impossible de charger la question. Réessaie dans un instant.',
 };
-
-/**
- * The guard of docs/prd.md §4.3: a second tap landing sooner than this is an
- * accidental double tap, not a validation. The answer is final, so the cost of
- * ignoring one real tap is a tap; the cost of taking a stray one is a wrong
- * answer nobody can undo.
- */
-const VALIDATION_DELAY_MS = 150;
-
-/** `A`, `B`, `C`… for the option at that rank — a question carries 2 to 6 (docs/prd.md §4.2). */
-const letterOf = (index: number) => String.fromCharCode('A'.charCodeAt(0) + index);
 
 const styles = StyleSheet.create({
   // No `flex: 1` anywhere on the way down: the sheet's detent is
@@ -137,19 +127,9 @@ export const DailyQuestionScreen = () => {
   const date = params?.date ?? dailyQuestionDateKey(new Date());
   const { status, question, questionId, answer, authorName } = useDailyQuestion(date);
 
-  const [ selectedId, setSelectedId ] = useState<string | null>(null);
-  // False for the first `VALIDATION_DELAY_MS` of a selection — the guard above.
-  const [ armed, setArmed ] = useState(false);
   const [ submitting, setSubmitting ] = useState(false);
   const [ celebrating, setCelebrating ] = useState(false);
   const [ failure, setFailure ] = useState<string | null>(null);
-  const armTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => {
-    if (armTimer.current !== null) {
-      clearTimeout(armTimer.current);
-    }
-  }, []);
 
   const isToday = date === toDateKey(new Date());
   const deadEnd = DEAD_END[status];
@@ -180,8 +160,6 @@ export const DailyQuestionScreen = () => {
       // the answered month from its cache and carries the day until the answer
       // trigger has projected it.
       rememberAnswer(written, question.options.find((option) => option.id === optionId)?.stat_label ?? '');
-      setSelectedId(null);
-      setArmed(false);
       setCelebrating(true);
     } catch (error) {
       console.warn('[daily-question] could not save the answer', date, error);
@@ -191,27 +169,9 @@ export const DailyQuestionScreen = () => {
     }
   };
 
-  const pick = (optionId: string) => {
-    if (selectedId !== optionId) {
-      // Changing one's mind never validates — it only moves the selection, and
-      // re-arms the guard from scratch.
-      setSelectedId(optionId);
-      setArmed(false);
-      hapticSelection();
-
-      if (armTimer.current !== null) {
-        clearTimeout(armTimer.current);
-      }
-
-      armTimer.current = setTimeout(() => setArmed(true), VALIDATION_DELAY_MS);
-
-      return;
-    }
-
-    if (armed) {
-      void validate(optionId);
-    }
-  };
+  const { selectedId, pick } = useDoubleTapAnswer((optionId) => {
+    void validate(optionId);
+  });
 
   // The choice is final (docs/prd.md §4.2), so an answered day stops taking
   // taps — and so does a day still writing one.

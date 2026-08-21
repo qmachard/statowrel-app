@@ -1,0 +1,166 @@
+import { useRef, useState } from 'react';
+import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { Button } from '@/components/Button';
+import { colors, pagePadding, spacing } from '@/design/tokens';
+import { navigationRef } from '@/navigation/navigationRef';
+
+import { DemoQuestionSheet } from '../components/DemoQuestionSheet';
+import { OnboardingDots } from '../components/OnboardingDots';
+import { OnboardingSlide } from '../components/OnboardingSlide';
+import { OnboardingVisual } from '../components/OnboardingVisual';
+import { NEXT, SIGN_UP, SKIP, SLIDES, TRY } from '../copy';
+import { useDemoQuestion } from '../data/useDemoQuestion';
+
+const styles = StyleSheet.create({
+  // Laid over the whole app rather than pushed as a route: the carousel comes
+  // before there is a session, and the navigator underneath already holds the
+  // sign-in screen it hands over to.
+  root: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: colors.background,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  // Bounded by the column it sits in, so each slide's own `flex: 1` has a
+  // height to fill rather than collapsing onto its content.
+  pager: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: pagePadding,
+    paddingTop: spacing(2),
+  },
+  footer: {
+    gap: spacing(6),
+    paddingHorizontal: pagePadding,
+    paddingBottom: spacing(6),
+    paddingTop: spacing(4),
+  },
+});
+
+export interface OnboardingCarouselProps {
+  /** Marks the carousel seen for good — the only way it ever closes. */
+  onDone: () => void;
+}
+
+/**
+ * What StatOwrel is, in three slides and one real question — the first thing a
+ * fresh install shows, before the sign-in screen behind it.
+ *
+ * It is driven by state, not by a route: `src/App.tsx` renders it beside the
+ * navigator the way it renders the username sheet, because there is no session
+ * yet to navigate under. Every way out of it is the same one — `onDone`, which
+ * remembers this install has been through it (`useOnboardingSeen`) — and the
+ * two calls to action differ only in where they leave the visitor: « Passer »
+ * on the sign-in screen already mounted underneath, « Créer mon compte » on the
+ * sign-up one.
+ *
+ * The last slide is where the demo of `DemoQuestionSheet` pops from. It is
+ * offered only when there is one to pose: a question that could not be read is
+ * a carousel that ends on its sign-up button instead, never a step somebody is
+ * stuck on.
+ */
+export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
+  const { width } = useWindowDimensions();
+  const { question } = useDemoQuestion();
+
+  const scroller = useRef<ScrollView>(null);
+  const [ current, setCurrent ] = useState(0);
+  const [ demoOpen, setDemoOpen ] = useState(false);
+
+  const last = SLIDES.length - 1;
+  const isLast = current === last;
+
+  const finish = (destination: 'SignIn' | 'SignUp') => {
+    // Navigating first: the stack underneath is the signed-out one, so the
+    // screen is already there — this only picks which of its two the visitor
+    // lands on once the carousel is gone. Two calls rather than one on the
+    // union: `navigate` resolves its params from the screen name, which a
+    // union of names cannot narrow.
+    if (navigationRef.isReady()) {
+      if (destination === 'SignUp') {
+        navigationRef.navigate('SignUp');
+      } else {
+        navigationRef.navigate('SignIn');
+      }
+    }
+
+    onDone();
+  };
+
+  const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setCurrent(Math.round(event.nativeEvent.contentOffset.x / width));
+  };
+
+  const advance = () => {
+    if (!isLast) {
+      scroller.current?.scrollTo({ x: width * (current + 1), animated: true });
+
+      return;
+    }
+
+    if (question === null) {
+      finish('SignUp');
+
+      return;
+    }
+
+    setDemoOpen(true);
+  };
+
+  return (
+    <View style={styles.root}>
+      <SafeAreaView edges={[ 'top', 'bottom' ]} style={styles.safeArea}>
+        <View style={styles.header}>
+          <Button label={SKIP} variant="ghost" size="sm" onPress={() => finish('SignIn')} />
+        </View>
+
+        <ScrollView
+          ref={scroller}
+          style={styles.pager}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onMomentumScrollEnd}
+        >
+          {SLIDES.map((slide) => (
+            <OnboardingSlide
+              key={slide.key}
+              width={width}
+              title={slide.title}
+              body={slide.body}
+              visual={<OnboardingVisual slideKey={slide.key} />}
+            />
+          ))}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <OnboardingDots count={SLIDES.length} current={current} />
+
+          <Button
+            label={isLast ? (question === null ? SIGN_UP : TRY) : NEXT}
+            onPress={advance}
+          />
+        </View>
+      </SafeAreaView>
+
+      {question === null ? null : (
+        <DemoQuestionSheet
+          visible={demoOpen}
+          question={question}
+          onClose={() => setDemoOpen(false)}
+          onSignUp={() => finish('SignUp')}
+        />
+      )}
+    </View>
+  );
+};
