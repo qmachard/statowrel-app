@@ -1,8 +1,8 @@
 /**
  * What the carousel says about StatOwrel, in the order it says it — docs/prd.md
- * §1, cut into the four things somebody who has just signed up has to
- * understand: the daily question, the StatOwrel it gives back, the friends it
- * unlocks, and why the notification is worth accepting.
+ * §1, cut into the four things somebody who has never opened the app has to
+ * understand before signing up: the daily question, the StatOwrel it gives
+ * back, the friends it unlocks, and why the notification is worth accepting.
  *
  * `key` is what the carousel hangs each slide's illustration on, so the wording
  * and the drawing stay in two places that can each be changed alone.
@@ -53,8 +53,8 @@ export const SKIP = 'Passer';
  * refusal is the dialog's own « Ne pas autoriser », not a second button here.
  */
 export const NEXT = 'Suivant';
-/** What closes the demo question, and the carousel with it — the app is behind. */
-export const DONE = 'C’est parti';
+/** What closes the demo question, and the carousel with it — the sign-up screen is behind. */
+export const SIGN_UP = 'Créer mon compte';
 
 /** Said on the demo's result, where a real day would show the friends. */
 export const DEMO_DISCLAIMER = 'Celle-là ne compte pas. Les vraies arrivent chaque jour, avec tes potes en face.';

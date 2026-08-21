@@ -152,6 +152,40 @@ const fetchExpoPushToken = async (notifications: Notifications): Promise<string 
   }
 };
 
+/**
+ * The permission dialog, raised on its own and ahead of any account — what the
+ * onboarding carousel's notification slide asks for once it has said why
+ * (docs/prd.md §5.6).
+ *
+ * Asking before there is a UID is the whole point: the alternative is the cold
+ * system prompt at the first launch of a signed-in session, with nothing on
+ * screen explaining what it is for, and a refusal is final on both platforms.
+ * Nothing is registered here — there is no account to register under yet — but
+ * `registerDeviceForPush` finds the permission already granted at sign-in and
+ * goes straight to the token, so the dialog is never raised twice.
+ *
+ * **Never throws**, like everything else in this module: a build without the
+ * native module, or a platform that has no such dialog, is « the user did not
+ * grant it », not a broken carousel.
+ */
+export const requestPushPermission = async (): Promise<boolean> => {
+  const notifications = loadNotifications();
+
+  if (notifications === null || devicePlatform() === null) {
+    return false;
+  }
+
+  try {
+    await ensureAndroidChannels(notifications);
+
+    return await ensurePermission(notifications, true);
+  } catch (error: unknown) {
+    console.warn('[notifications] could not ask for the push permission', error);
+
+    return false;
+  }
+};
+
 const deviceRef = (userId: string, token: string) => getSubDocumentRef(
   USER_COLLECTION,
   userId,

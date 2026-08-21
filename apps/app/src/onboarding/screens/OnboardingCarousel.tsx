@@ -2,10 +2,10 @@ import { useRef, useState } from 'react';
 import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAuth } from '@/auth/AuthContext';
 import { Button } from '@/components/Button';
 import { colors, pagePadding, spacing } from '@/design/tokens';
-import { registerDeviceForPush } from '@/notifications/data/deviceRegistration';
+import { navigationRef } from '@/navigation/navigationRef';
+import { requestPushPermission } from '@/notifications/data/deviceRegistration';
 
 import { DemoQuestionSheet } from '../components/DemoQuestionSheet';
 import { OnboardingDots } from '../components/OnboardingDots';
@@ -15,9 +15,9 @@ import { NEXT, SKIP, SLIDES } from '../copy';
 import { useDemoQuestion } from '../data/useDemoQuestion';
 
 const styles = StyleSheet.create({
-  // Laid over the whole app rather than pushed as a route: it is a first
-  // launch, not a destination — nothing pushes it, nothing pops it, and the
-  // Stats screen it hands over to is already mounted underneath.
+  // Laid over the whole app rather than pushed as a route: the carousel comes
+  // before there is a session, and the navigator underneath already holds the
+  // sign-in screen it hands over to.
   root: {
     position: 'absolute',
     top: 0,
@@ -54,23 +54,24 @@ export interface OnboardingCarouselProps {
 }
 
 /**
- * What StatOwrel is, in four slides and one real question — what a freshly
- * signed-in account meets, once it has a handle and before it sees the Stats
- * screen it is laid over (docs/prd.md §5.6).
+ * What StatOwrel is, in four slides and one real question — the first thing a
+ * fresh install shows, before the sign-in screen behind it.
  *
  * It is driven by state, not by a route: `src/App.tsx` renders it beside the
- * navigator the way it renders the username sheet, and for the same reason —
- * both are up exactly while their condition holds. Every way out of it is the
- * same one, `onDone`, which remembers this account has been through it
- * (`useOnboardingSeen`) and lands on the app underneath.
+ * navigator the way it renders the username sheet, because there is no session
+ * yet to navigate under. Every way out of it is the same one — `onDone`, which
+ * remembers this install has been through it (`useOnboardingSeen`) — and the
+ * two calls to action differ only in where they leave the visitor: « Passer »
+ * on the sign-in screen already mounted underneath, « Créer mon compte » on the
+ * sign-up one.
  *
  * The last two slides each do something rather than only say it. The
- * notification one **registers this phone for push on its own call to action** —
- * which is what raises the system dialog, and the point of the slide is that
- * the dialog is never sprung on somebody with nothing on screen explaining it,
- * a refusal being final on both platforms. `usePushNotifications` deliberately
- * never asks at launch for that reason; it registers silently once the
- * permission is there. Then the demo of `DemoQuestionSheet` pops behind it.
+ * notification one raises the system permission dialog on its own call to
+ * action — the point of the slide is that the dialog is never the first thing
+ * seen, since a refusal is final on both platforms — and the demo of
+ * `DemoQuestionSheet` pops right behind it. Neither needs an account: the
+ * permission belongs to the phone, and the demo's pick waits on it until there
+ * is one (`useDemoAnswerFlush`).
  *
  * The demo is offered only when there is one to pose: a question that could not
  * be read simply ends the carousel, never a step somebody is stuck on. The
@@ -79,7 +80,6 @@ export interface OnboardingCarouselProps {
  */
 export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
   const { width } = useWindowDimensions();
-  const { user } = useAuth();
   const { question } = useDemoQuestion();
 
   const scroller = useRef<ScrollView>(null);
@@ -90,30 +90,45 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
   const last = SLIDES.length - 1;
   const isLast = current === last;
 
+  const finish = (destination: 'SignIn' | 'SignUp') => {
+    // Navigating first: the stack underneath is the signed-out one, so the
+    // screen is already there — this only picks which of its two the visitor
+    // lands on once the carousel is gone. Two calls rather than one on the
+    // union: `navigate` resolves its params from the screen name, which a union
+    // of names cannot narrow.
+    if (navigationRef.isReady()) {
+      if (destination === 'SignUp') {
+        navigationRef.navigate('SignUp');
+      } else {
+        navigationRef.navigate('SignIn');
+      }
+    }
+
+    onDone();
+  };
+
   const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setCurrent(Math.round(event.nativeEvent.contentOffset.x / width));
   };
 
   /**
-   * What the last slide's button does: ask for the permission and register this
-   * phone with it, then move on whatever the answer was. A « non » is a
-   * legitimate answer — it costs the daily banner, not the app — and it is
-   * never asked twice (`canAskAgain` is false afterwards, so the dialog would
-   * not even show).
+   * What the last slide's button does: raise the permission dialog, then move
+   * on whatever the answer was. A « non » is a legitimate answer — it costs the
+   * daily banner, not the app — and it is never asked twice (`canAskAgain` is
+   * false afterwards, so the dialog would not even show). The token itself is
+   * registered at the first signed-in launch; there is no account here.
    */
   const askThenContinue = async () => {
     setAsking(true);
 
     try {
-      if (user !== null) {
-        await registerDeviceForPush(user.uid, { ask: true });
-      }
+      await requestPushPermission();
     } finally {
       setAsking(false);
     }
 
     if (question === null) {
-      onDone();
+      finish('SignUp');
 
       return;
     }
@@ -135,7 +150,7 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
     <View style={styles.root}>
       <SafeAreaView edges={[ 'top', 'bottom' ]} style={styles.safeArea}>
         <View style={styles.header}>
-          <Button label={SKIP} variant="ghost" size="sm" onPress={onDone} />
+          <Button label={SKIP} variant="ghost" size="sm" onPress={() => finish('SignIn')} />
         </View>
 
         <ScrollView
@@ -169,7 +184,7 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
           visible={demoOpen}
           question={question}
           onClose={() => setDemoOpen(false)}
-          onFinish={onDone}
+          onSignUp={() => finish('SignUp')}
         />
       )}
     </View>

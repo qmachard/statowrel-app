@@ -13,9 +13,11 @@ import { buildStatOwrel } from '@/daily-question/helpers/statowrel';
 import { FOREGROUND } from '@/daily-question/helpers/surface';
 import { useDoubleTapAnswer } from '@/daily-question/helpers/useDoubleTapAnswer';
 import { fontSize, fonts, spacing } from '@/design/tokens';
+
+import { rememberDemoAnswer } from '../data/demoAnswerStore';
 import { hapticValidation } from '@/lib/haptics';
 
-import { DEMO_DAY_LABEL, DEMO_DISCLAIMER, DONE } from '../copy';
+import { DEMO_DAY_LABEL, DEMO_DISCLAIMER, SIGN_UP } from '../copy';
 
 /** The demo wears the accent red of today's question — it is the one it imitates. */
 const SURFACE = 'accent';
@@ -56,8 +58,8 @@ export interface DemoQuestionSheetProps {
   visible: boolean;
   question: QuestionData;
   onClose: () => void;
-  /** The way out through the front door: it closes the carousel and lands on the app. */
-  onFinish: () => void;
+  /** The way out through the front door — the carousel's own call to action. */
+  onSignUp: () => void;
 }
 
 /**
@@ -66,19 +68,22 @@ export interface DemoQuestionSheetProps {
  * §5.5 under it — read from the real `demo` question in Firestore, shares and
  * all.
  *
- * **It writes nothing.** A demo question was never broadcast, so
- * `firestore.rules` would refuse an answer under it anyway; the pick stays in
- * this component's state and the StatOwrel is computed from the tally the
- * question already carries (`npm run seed-demo-question` is what puts one
- * there — an empty one would open the visitor on « 100% des gens »). Which is
- * also why nothing here goes near `answerStore` or the calendar: there is no
- * day, no streak and no account to move.
+ * **The pick is kept, not written.** There is no account here — the carousel
+ * runs before sign-up — and an answer's document id *is* its author's UID, so
+ * it waits on the phone (`demoAnswerStore`) and `useDemoAnswerFlush` writes it
+ * at the first sign-in. It then counts in the question's `answer_counts` and in
+ * nothing else: a demo is not a day, so no calendar entry, no streak, no
+ * `answers_count` — which is also why nothing here goes near `answerStore`.
  *
- * The friends of §4.5 are the one block missing, and on purpose: nobody has
- * answered a question that never ran, and the real ones are what the button at
- * the bottom lands on.
+ * The shares it shows come from the tally read with the question
+ * (`npm run seed-demo-question` is what seeds one; an empty map would open on
+ * « 100% des gens »), so the result is right whether or not the pick is ever
+ * flushed.
+ *
+ * The friends of §4.5 are the one block missing, and on purpose: they are what
+ * the sign-up at the bottom is for.
  */
-export const DemoQuestionSheet = ({ visible, question, onClose, onFinish }: DemoQuestionSheetProps) => {
+export const DemoQuestionSheet = ({ visible, question, onClose, onSignUp }: DemoQuestionSheetProps) => {
   const [ pickedId, setPickedId ] = useState<string | null>(null);
   const [ celebrating, setCelebrating ] = useState(false);
 
@@ -86,6 +91,10 @@ export const DemoQuestionSheet = ({ visible, question, onClose, onFinish }: Demo
     hapticValidation();
     setPickedId(optionId);
     setCelebrating(true);
+
+    // Not awaited: the result is already on screen, and this only decides
+    // whether the tally eventually carries this pick.
+    void rememberDemoAnswer(optionId);
   });
 
   const statOwrel = pickedId === null ? null : buildStatOwrel(question, question.answer_counts, pickedId);
@@ -121,7 +130,7 @@ export const DemoQuestionSheet = ({ visible, question, onClose, onFinish }: Demo
 
             <Text style={[ styles.disclaimer, FOREGROUND[SURFACE] ]}>{DEMO_DISCLAIMER}</Text>
 
-            <Button label={DONE} onPress={onFinish} />
+            <Button label={SIGN_UP} onPress={onSignUp} />
           </>
         )}
       </ScrollView>

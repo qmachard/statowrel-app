@@ -41,7 +41,7 @@ Every ref helper takes a `FirestoreConverter` from `@statowrel/models` — never
 
 ## Triggers are delivered at least once
 
-A Firestore trigger can fire twice for the same write, so anything it does has to be idempotent — and "increment a counter" never is on its own. Read a marker inside a transaction and bail out before writing, rather than adding a flag nobody else needs: `triggers/steps/onAnswerCreated.ts` uses the day's own entry in the author's calendar month, which the same transaction writes.
+A Firestore trigger can fire twice for the same write, so anything it does has to be idempotent — and "increment a counter" never is on its own. Read a marker inside a transaction and bail out before writing, rather than adding a flag nobody else needs: `triggers/steps/onAnswerCreated.ts` uses the day's own entry in the author's calendar month, which the same transaction writes. The onboarding demo is the exception that proves the rule — it is projected into no calendar, so it has no free marker, and `counted_at` on the answer document is the flag it had to grow.
 
 One more thing that catches people out: `DocumentReference.update()` does **not** run the converter (only `set()` and reads do), so a timestamp written through it must be a `Timestamp`, never an ISO string.
 
@@ -102,9 +102,9 @@ npm run seed-demo-question -- --answers 2500 --dry-run
 npm run seed-demo-question -- --production
 ```
 
-Writes the one question the onboarding carousel poses (`docs/prd.md` §5.6) — a fixed document id, so the app reads a single document and `firestore.rules` can open it up by status alone. It sits outside the moderation lifecycle: `demo`, never approved, never drawn, and it takes no answers, its null `broadcast_at` being what the answer rule refuses.
+Writes the one question the onboarding carousel poses (`docs/prd.md` §5.6) — a fixed document id, so the app reads a single document and `firestore.rules` can open it up by status alone. It sits outside the moderation lifecycle: `demo`, never approved, never drawn. It does take answers — the rules let one through on its status — but they count in its own `answer_counts` and nowhere else: no calendar, no streak, no `answers_count`, since a demo is not a day.
 
-So the tally is the point. The carousel's own answer never leaves the phone, and an empty `answer_counts` would put the visitor at « Comme 100% des gens… » — hence a fabricated one here, the same `fabricateAnswerCounts` the daily seeder uses. Non-destructive in both directions: a document already there keeps its wording and its options, only its status moves, and a tally it already carries is never overwritten. A question that has been broadcast is refused outright — turning a day of the calendar into the demo would leave that day pointing at something no screen can render as a day.
+So the starting tally still matters. The first visitor would otherwise land on « Comme 100% des gens… » — hence a fabricated one here, the same `fabricateAnswerCounts` the daily seeder uses, which real answers then add to. Non-destructive in both directions: a document already there keeps its wording and its options, only its status moves, and a tally it already carries is never overwritten. A question that has been broadcast is refused outright — turning a day of the calendar into the demo would leave that day pointing at something no screen can render as a day.
 
 ```bash
 npm run send-test-notification -- --email moi@exemple.fr   # every device of that account

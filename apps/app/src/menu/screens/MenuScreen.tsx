@@ -13,6 +13,7 @@ import { Button } from '@/components/Button';
 import { LegalLinks } from '@/components/LegalLinks';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendsCard } from '@/friends/components/FriendsCard';
+import { clearPendingDemoAnswer } from '@/onboarding/data/demoAnswerStore';
 import { resetOnboardingSeen } from '@/onboarding/data/useOnboardingSeen';
 
 const styles = StyleSheet.create({
@@ -129,17 +130,18 @@ export const MenuScreen = () => {
 
         <View style={styles.settings}>
           {/* Development only, and dropped from a release build by the `__DEV__`
-              branch: the carousel is shown once per account and there is no
+              branch: the carousel is shown once per install and there is no
               product reason to replay it, but testing it otherwise means
-              clearing the app's storage between every run. It closes the Menu
-              first, so the carousel lands on the screen it is meant to cover. */}
+              clearing the app's storage between every run. The demo pick goes
+              with it, so the next run starts from nothing — and since the
+              carousel only shows to a signed-out session, this also signs out. */}
           {__DEV__ ? (
             <Button
               label="Revoir l’intro (dev)"
               variant="ghost"
               onPress={() => {
-                navigation.goBack();
-                void resetOnboardingSeen(user.uid);
+                void Promise.all([ resetOnboardingSeen(), clearPendingDemoAnswer() ])
+                  .then(() => signOut());
               }}
             />
           ) : null}
