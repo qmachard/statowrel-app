@@ -96,6 +96,21 @@ Fills the days already gone, so a fresh project does not open on an empty calend
 
 `--answers <n>` is the one thing it writes that is not true: a fabricated tally on the days it seeds, so the result card reads « Comme 23% des gens… » on a database nobody else has answered in. Off by default, and counters on the question only — no answer document is forged under anybody's UID, and a real answer keeps incrementing them. It never overwrites a tally a question already has.
 
+```bash
+npm run send-test-notification -- --email moi@exemple.fr   # every device of that account
+npm run send-test-notification -- --uid <uid> --date 2026-08-19
+npm run send-test-notification -- --token 'ExponentPushToken[…]' --body 'Coucou'
+npm run send-test-notification -- --all --dry-run
+```
+
+Sends the day's notification by hand — the one part of the daily cycle no screen can show, since it leaves the backend and only comes back as a banner. It builds exactly what `notifyDailyQuestion` builds: the same title, the same body (the day's label, copied onto `v1_daily_question_months`), the same `DAILY_QUESTION_CHANNEL_ID` and the same `{ type: 'daily_question', date }` — so a tap routes through `apps/app/src/notifications/` the way the real one does, and a working test means a working 07:00.
+
+It then does the one thing the backend does not: it polls `/push/getReceipts`. An Expo ticket is an acceptance, not a delivery, and the difference is exactly what a test is for — `--no-receipts` skips the wait.
+
+**There is no emulator for Expo push.** `FIRESTORE_EMULATOR_HOST` (plus `FIREBASE_AUTH_EMULATOR_HOST` for `--email`) decides where the *tokens* are read from and nothing else: the token is real, the phone is real, the banner really lands. Hence a target is required rather than defaulted, and `--all` is refused on production without `--force`.
+
+Two failures it names rather than leaves to be guessed: no device at all (the app was never launched signed-in on a real phone — a simulator never gets a token), and a `--date` no question ran, whose tap would open a dead end.
+
 ## Deploy
 
 ```bash
