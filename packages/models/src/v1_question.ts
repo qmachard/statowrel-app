@@ -33,9 +33,10 @@ export type QuestionStatus = (typeof QUESTION_STATUSES)[number];
  * open it up by status alone.
  *
  * Written by `npm run seed-demo-question`, which is also what carries the
- * tally the sample StatOwrel is computed from: a demo question takes no
- * answers (`broadcast_at` is null, so the rules deny every write under it), and
- * an empty `answer_counts` would put the visitor at « 100% des gens ».
+ * tally the sample StatOwrel is computed from: a demo question does take
+ * answers — the pick made in the carousel is written at the first sign-in —
+ * but it starts with none, and an empty `answer_counts` would put the first
+ * visitors at « 100% des gens ».
  */
 export const DEMO_QUESTION_ID = '01M0HNM3RQMP2TDXPTW6ZSSM17';
 
