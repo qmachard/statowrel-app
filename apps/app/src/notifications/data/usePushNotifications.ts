@@ -4,8 +4,8 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { registerDeviceForPush } from '@/notifications/data/deviceRegistration';
 import { loadNotifications } from '@/notifications/helpers/nativeModule';
-import { openDailyQuestion } from '@/notifications/helpers/openDailyQuestion';
-import { parseDailyQuestionRoute } from '@/notifications/helpers/pushRoute';
+import { openPushRoute } from '@/notifications/helpers/openPushRoute';
+import { parsePushRoute } from '@/notifications/helpers/pushRoute';
 
 /*
  * What to do with a notification that arrives while the app is open.
@@ -28,8 +28,9 @@ loadNotifications()?.setNotificationHandler({
 
 /**
  * The app's whole notification wiring, mounted once from `src/App.tsx`:
- * registering this install as a push destination, and opening the day a tapped
- * notification points at.
+ * registering this install as a push destination, and opening whatever a
+ * tapped notification points at — the day's question, or the Menu when a pote
+ * has just sent an invitation.
  *
  * Both hang off the session — `useAuth()` rather than a subscription of its own
  * — because both need a UID: the token is stored under the account, and
@@ -79,10 +80,10 @@ export const usePushNotifications = (): void => {
 
       seen.add(identifier);
 
-      const date = parseDailyQuestionRoute(content.data);
+      const route = parsePushRoute(content.data);
 
-      if (date !== null) {
-        openDailyQuestion(date);
+      if (route !== null) {
+        openPushRoute(route);
       }
     };
 

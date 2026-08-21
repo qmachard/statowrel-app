@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import {
   DAILY_QUESTION_CHANNEL_ID,
   type DevicePlatform,
+  FRIEND_INVITE_CHANNEL_ID,
   USER_COLLECTION,
   USER_DEVICE_COLLECTION,
   isExpoPushToken,
@@ -54,12 +55,14 @@ const readProjectId = (): string | null => {
  * Android drops a notification naming a channel the device has not declared,
  * silently — so this runs before the token is even asked for, and it runs at
  * every launch: a channel is created once and updated for free afterwards, and
- * the backend names `DAILY_QUESTION_CHANNEL_ID` on every message it sends.
+ * the backend names one of these ids on every message it sends.
  *
- * The user can still tune the channel from the system settings; what is set
- * here is only its initial shape.
+ * One channel per kind of interruption, because that is the granularity
+ * Android gives its settings: silencing one's potes must leave the day's
+ * question alone. The user can still tune each of them from the system
+ * settings; what is set here is only their initial shape.
  */
-const ensureAndroidChannel = async (notifications: Notifications): Promise<void> => {
+const ensureAndroidChannels = async (notifications: Notifications): Promise<void> => {
   if (Platform.OS !== 'android') {
     return;
   }
@@ -69,6 +72,14 @@ const ensureAndroidChannel = async (notifications: Notifications): Promise<void>
     // The drop is the whole product loop (docs/prd.md §4.2): it is worth a
     // heads-up banner, not a silent line in the shade.
     importance: notifications.AndroidImportance.HIGH,
+    lightColor: colors.primary,
+  });
+
+  await notifications.setNotificationChannelAsync(FRIEND_INVITE_CHANNEL_ID, {
+    name: 'Invitations',
+    // An invitation waits — it is answered from the Menu whenever its owner
+    // gets there (docs/prd.md §5.3), so it earns the shade, not the screen.
+    importance: notifications.AndroidImportance.DEFAULT,
     lightColor: colors.primary,
   });
 };
@@ -177,7 +188,7 @@ export const registerDeviceForPush = async (userId: string): Promise<string | nu
   }
 
   try {
-    await ensureAndroidChannel(notifications);
+    await ensureAndroidChannels(notifications);
 
     if (!await ensurePermission(notifications)) {
       return null;

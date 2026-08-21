@@ -46,6 +46,16 @@ export const isExpoPushToken = (value: string): boolean => EXPO_PUSH_TOKEN_PATTE
 export const DAILY_QUESTION_CHANNEL_ID = 'daily-question';
 
 /**
+ * Android notification channel a received friend invitation is posted in
+ * (docs/prd.md §4.1).
+ *
+ * Its own channel rather than the day's: they are two unrelated interruptions,
+ * and Android's settings are per channel — somebody silencing their potes'
+ * invitations must not silence the question along with them.
+ */
+export const FRIEND_INVITE_CHANNEL_ID = 'friend-invite';
+
+/**
  * One push destination of one account — the device the day's question is
  * pushed to at 07:00 (docs/prd.md §4.2).
  *

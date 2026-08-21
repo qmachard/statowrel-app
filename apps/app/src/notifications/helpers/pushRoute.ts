@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
 /**
- * The `data` block the backend attaches to the day's push — written by
- * `apps/functions/src/domains/daily-questions/tasks/notifyDailyQuestion.ts`,
+ * The `data` block the backend attaches to a push — written by
+ * `apps/functions/src/domains/daily-questions/tasks/notifyDailyQuestion.ts` and
+ * `apps/functions/src/domains/friends/triggers/steps/onFriendshipCreated.ts`,
  * read here. It travels as JSON through APNs and FCM, so every value is a
  * string.
  *
@@ -10,18 +11,25 @@ import { z } from 'zod';
  * code before any screen does, so a push from an older backend — or a
  * malformed one — has to end in "nothing happens", never in a crash on launch.
  */
-const dailyQuestionRouteSchema = z.object({
-  type: z.literal('daily_question'),
-  /** `YYYY-MM-DD`, the day key `DailyQuestion`'s `date` param speaks. */
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-});
+const pushRouteSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('daily_question'),
+    /** `YYYY-MM-DD`, the day key `DailyQuestion`'s `date` param speaks. */
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }),
+  // An invitation carries nothing to route on: the Menu screen lists it, and
+  // the list is a live snapshot of `v1_user_friends` (docs/prd.md §5.3).
+  z.object({ type: z.literal('friend_invite') }),
+]);
+
+export type PushRoute = z.infer<typeof pushRouteSchema>;
 
 /**
- * The day a tapped notification points at, or null when it points at nothing
- * this app knows how to open.
+ * The screen a tapped notification points at, or null when it points at
+ * nothing this app knows how to open.
  */
-export const parseDailyQuestionRoute = (data: unknown): string | null => {
-  const parsed = dailyQuestionRouteSchema.safeParse(data);
+export const parsePushRoute = (data: unknown): PushRoute | null => {
+  const parsed = pushRouteSchema.safeParse(data);
 
-  return parsed.success ? parsed.data.date : null;
+  return parsed.success ? parsed.data : null;
 };
