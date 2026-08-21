@@ -10,6 +10,7 @@ import {
 import { Platform } from 'react-native';
 
 import { auth } from '@/lib/firebase';
+import { unregisterDeviceForPush } from '@/notifications/data/deviceRegistration';
 
 import { SignInCancelledError, SignInUnavailableError } from './errors';
 import { loadAppleAuthentication, loadCrypto, loadGoogleSignIn } from './nativeModules';
@@ -173,6 +174,17 @@ export const signUpWithEmail = async (email: string, password: string): Promise<
 );
 
 export const signOut = async (): Promise<void> => {
+  // Before Firebase's own sign-out, while the write is still the user's to
+  // make: the push token belongs to this *phone*, so an account leaving it
+  // behind would keep receiving the day's question on a device somebody else
+  // may now hold (`packages/models/src/v1_user_device.ts`). It swallows its own
+  // failures — a device that cannot be dropped must not keep the user signed in.
+  const uid = auth.currentUser?.uid;
+
+  if (uid) {
+    await unregisterDeviceForPush(uid);
+  }
+
   // Without this, Google's native SDK keeps the account selected and the next
   // sign-in skips the account picker entirely.
   if (googleConfigured) {

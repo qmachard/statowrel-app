@@ -99,6 +99,22 @@ if (!googleIosUrlScheme) {
 const plugins: NonNullable<ExpoConfig['plugins']> = [
   'expo-apple-authentication',
   [
+    /*
+     * The daily question's way in (docs/prd.md §4.2). The plugin is what adds
+     * the push entitlement on iOS and the `POST_NOTIFICATIONS` permission on
+     * Android, so a build without it takes the token and never shows a banner.
+     *
+     * `color` tints the Android status-bar icon and the notification's accent.
+     * The icon itself is left to Expo's default — a monochrome silhouette of
+     * the star, which Android needs and `assets/` has yet to carry, is the one
+     * thing still missing here.
+     */
+    'expo-notifications',
+    {
+      color: BRAND_YELLOW,
+    },
+  ],
+  [
     'expo-splash-screen',
     {
       /*

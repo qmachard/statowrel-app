@@ -15,6 +15,7 @@ import { RootNavigator } from '@/navigation/RootNavigator';
 import { linking } from '@/navigation/linking';
 import { navigationRef } from '@/navigation/navigationRef';
 import { navigationTheme } from '@/navigation/theme';
+import { usePushNotifications } from '@/notifications/data/usePushNotifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -26,6 +27,11 @@ const styles = StyleSheet.create({
 
 const SessionGate = () => {
   const { initializing } = useAuth();
+
+  // Inside the provider and inside the container, which is what it needs: the
+  // session tells it whose device to register, and a tapped notification has a
+  // navigator to open the day on.
+  usePushNotifications();
 
   useEffect(() => {
     if (!initializing) {
