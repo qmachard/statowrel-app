@@ -1,15 +1,22 @@
-import type { DocumentReference } from 'firebase-admin/firestore';
+import type { DocumentReference, QuerySnapshot } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 
 import {
   type DevicePlatform,
+  USER_COLLECTION,
   USER_DEVICE_COLLECTION,
   type UserDeviceData,
   isExpoPushToken,
+  userConverter,
   userDeviceConverter,
 } from '@statowrel/models';
 
-import { createWriteBatch, getCollectionGroupRef } from '@/libs/firebase-admin';
+import {
+  createWriteBatch,
+  getCollectionGroupRef,
+  getDocumentRef,
+  getSubCollectionRef,
+} from '@/libs/firebase-admin';
 
 /** A write batch takes at most 500 operations. */
 const DELETES_PER_BATCH = 500;
@@ -35,9 +42,7 @@ export interface RegisteredDevice {
  * few hundred bytes; a paginated fan-out is what a six-figure user count would
  * need.
  */
-export const listRegisteredDevices = async (): Promise<RegisteredDevice[]> => {
-  const snapshot = await getCollectionGroupRef(USER_DEVICE_COLLECTION, userDeviceConverter).get();
-
+const readDevices = (snapshot: QuerySnapshot<UserDeviceData>): RegisteredDevice[] => {
   const devices = snapshot.docs.reduce<RegisteredDevice[]>((registered, document) => {
     const data = document.data();
     // The document id is the token; the field is its copy. Reading the id keeps
@@ -59,6 +64,27 @@ export const listRegisteredDevices = async (): Promise<RegisteredDevice[]> => {
 
   return devices;
 };
+
+export const listRegisteredDevices = async (): Promise<RegisteredDevice[]> => (
+  readDevices(await getCollectionGroupRef(USER_DEVICE_COLLECTION, userDeviceConverter).get())
+);
+
+/**
+ * The push destinations of **one** account — what a notification addressed to
+ * somebody in particular goes to, a received friend invitation first
+ * (docs/prd.md §4.1).
+ *
+ * A sub-collection read rather than the collection group filtered on
+ * `user_id`: the tokens of one user are already a path, so this costs the
+ * documents it returns and needs no index at all.
+ */
+export const listUserDevices = async (userId: string): Promise<RegisteredDevice[]> => (
+  readDevices(await getSubCollectionRef(
+    getDocumentRef(USER_COLLECTION, userId, userConverter),
+    USER_DEVICE_COLLECTION,
+    userDeviceConverter,
+  ).get())
+);
 
 /**
  * Drops the tokens Expo says nobody holds any more. Deleting is the whole

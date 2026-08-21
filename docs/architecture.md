@@ -257,13 +257,13 @@ The task reads the question it was handed the id of, for the notification's body
 
 ### `notifications`
 
-How anything in this backend reaches a phone (`docs/prd.md` §4.2). The domain registers **no Cloud Function of its own**, which is why it is absent from `src/index.ts`: nothing pushes on its own schedule yet, and each caller owns its trigger — `dailyQuestions-notifyDailyQuestion` is the first. It is a service the other domains go through, not a boundary they call across a wire.
+How anything in this backend reaches a phone (`docs/prd.md` §4.2). The domain registers **no Cloud Function of its own**, which is why it is absent from `src/index.ts`: nothing pushes on its own schedule yet, and each caller owns its trigger — `dailyQuestions-notifyDailyQuestion` first, `friends-onFriendCreated` next. It is a service the other domains go through, not a boundary they call across a wire.
 
 Three helpers, one responsibility each:
 
 - `helpers/expoPush.ts` — the transport. POSTs to `exp.host/--/api/v2/push/send` in batches of 100, sequentially: Expo rate-limits on notifications per second and a once-a-day fan-out has no deadline worth racing it for. It returns **one ticket per message, in the same input order** — that alignment is the whole contract, since it is what maps a rejection back to the token that caused it. A refused request throws rather than being swallowed, so the surrounding Cloud Task retries it. An Expo ticket is an acceptance, not a delivery; the receipts that would confirm one (`/push/getReceipts`) are not polled yet, but the error that matters most — a token nobody holds any more — already comes back on the ticket.
-- `helpers/deviceTokens.ts` — reads every token as a collection group (the day's question goes to everyone, so there is nothing to filter by) and deletes the dead ones in batches of 500. Malformed tokens are dropped before sending rather than after: Expo rejects a whole request over one bad `to`, which would cost the hundred people sharing that batch their notification. The whole set is held in memory, the same bet `drawApprovedQuestion` makes on the question pot.
-- `helpers/sendPush.ts` — `sendPushToAllDevices`, the fan-out, plus the pruning of every `DeviceNotRegistered` it collects.
+- `helpers/deviceTokens.ts` — reads every token as a collection group (the day's question goes to everyone, so there is nothing to filter by), reads one account's own as a sub-collection (`listUserDevices`, what a notification addressed to somebody in particular goes to — no filter, no index, only the documents it returns) and deletes the dead ones in batches of 500. Malformed tokens are dropped before sending rather than after: Expo rejects a whole request over one bad `to`, which would cost the hundred people sharing that batch their notification. The whole set is held in memory, the same bet `drawApprovedQuestion` makes on the question pot.
+- `helpers/sendPush.ts` — `sendPushToAllDevices`, the fan-out, and `sendPushToUser`, the same send over one account's devices, plus the pruning of every `DeviceNotRegistered` either of them collects. An account with no registered device is nobody to push to, not a failure.
 
 Sending is not transactional and nothing tracks who got what: a push is a hint, and the app reads the day from Firestore on launch either way. So a retry re-sends the whole fan-out rather than resuming it — safe precisely because the duplicate cost is one extra banner.
 
@@ -275,17 +275,20 @@ Set `EXPO_ACCESS_TOKEN` in the functions environment once "enhanced security for
 
 ### `friends`
 
-Adding a friend by handle — docs/prd.md §4.1. One Cloud Function:
+Adding a friend by handle — docs/prd.md §4.1. Two Cloud Functions:
 
 | Function | Kind | Role |
 |---|---|---|
 | `friends-inviteFriend` | Callable (`onCall`) | Resolves an exact handle and writes both halves of the friendship, `pending` |
+| `friends-onFriendCreated` | Firestore trigger (`onDocumentCreated`) | Notifies the invitee that somebody just invited them |
 
 A callable rather than a trigger, and rather than a client-side write. The screen asks a question — "does this handle exist?" — which a Firestore trigger cannot answer: it fires *after* a write, and an unknown handle produces none. `firestore.rules` would in fact let the app resolve the handle itself (`v1_usernames` is `get`-able) and write both halves (`v1_user_friends` is writable from either side of the pair), but that spreads the invariants — no self-invite, no second invitation over an existing pair — across a client nobody can hold to them.
 
 The app reads the `v1_usernames` reservation before calling, and skips the call when there is none — one document read instead of an invocation on the likeliest outcome of that screen, a typo. The callable resolves the handle again all the same: the client-side read is a shortcut, never the check.
 
 The pair is written in one batch, both halves `pending` from the moment the invitation is sent, so the invitee sees it in their own list without a collection-group query (see `v1_user_friend.ts`). An existing pair comes back as an outcome (`already_invited` / `already_friends`) rather than an error, since nothing failed; an unknown handle, one's own handle and a malformed one are `HttpsError`s, since none of them wrote anything.
+
+The push is a trigger's and not the callable's, even though the callable is what writes the pair: the invitation sheet must not wait on Expo, and a refused batch must not fail an invitation that has already landed. It runs on **both** halves and notifies on the received one alone (`friendshipDirectionOf` — `incoming`), which is the whole recipient logic: nobody needs a banner for what they just did themselves. Title « Nouvelle invitation », body the inviter's handle off the half being read — one more reason `friend_username` is copied there — and a `{ type: 'friend_invite' }` payload the app routes to the Menu, where the invitation already sits with its « Accepter » / « Refuser ». At-least-once delivery makes a duplicate banner possible; the invitation is a live snapshot either way, so nothing is read twice.
 
 The friend list of docs/prd.md §5.3 now reads those halves, on the Menu screen (`src/friends/`) — the invitation included, since both halves exist from the moment it is sent. Answering one is written by the app rather than by a callable — there is nothing to resolve, both documents already exist, and `firestore.rules` carries the whole rule: the accept is `pending` → `accepted` on both halves, never by whoever sent the invitation, and refusing, cancelling and removing are one and the same delete of both halves.
 
