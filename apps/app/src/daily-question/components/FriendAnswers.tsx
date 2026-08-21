@@ -1,6 +1,6 @@
 import { findQuestionOption, type QuestionData } from '@statowrel/models';
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { Card } from '@/components/Card';
 import type { FriendAnswer, FriendAnswersStatus } from '@/daily-question/data/useFriendAnswers';
@@ -11,12 +11,20 @@ import { FriendRow } from '@/friends/components/FriendRow';
 import { formatTimeLabel } from '@/lib/dates';
 
 /**
- * The list scrolls inside itself past this height. The sheet's single detent is
- * `fitToContents` (see `RootNavigator`), so an unbounded list of friends would
- * measure taller than the screen and lose its own bottom rows — a bounded
- * scroller measures, a stretched one does not.
+ * The list scrolls inside itself past a share of the screen. The sheet's single
+ * detent is `fitToContents` (see `RootNavigator`), so an unbounded list of
+ * friends would measure taller than the screen and lose its own bottom rows —
+ * a bounded scroller measures, a stretched one does not, and the sheet itself
+ * cannot be the scroller for that same reason.
+ *
+ * A share rather than a flat height, because a flat one is two different
+ * things: generous on a small screen, where the blocks above already fill the
+ * sheet, and stingy on a tall one, where there is room for twice the rows. The
+ * floor is what that flat height used to be, so no screen reads fewer friends
+ * than it did.
  */
-const MAX_LIST_HEIGHT = spacing(56);
+const LIST_SCREEN_RATIO = 0.32;
+const MIN_LIST_HEIGHT = spacing(56);
 
 /** A picked option never takes more than this much of a row — the handle keeps the rest. */
 const CHIP_MAX_WIDTH = spacing(32);
@@ -145,6 +153,9 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
     [ friends, question, pickedOptionId ],
   );
 
+  const { height } = useWindowDimensions();
+  const maxListHeight = Math.max(MIN_LIST_HEIGHT, height * LIST_SCREEN_RATIO);
+
   // Nothing to list is not an empty card: a card with one grey sentence in it
   // reads as a section that failed to load. The sentence goes straight on the
   // sheet instead, in its foreground — `muted-foreground` is unreadable there —
@@ -168,7 +179,7 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
       <Text style={[ styles.heading, FOREGROUND[surface] ]}>Tes potes</Text>
 
       <Card style={styles.list}>
-        <ScrollView style={{ maxHeight: MAX_LIST_HEIGHT }}>
+        <ScrollView style={{ maxHeight: maxListHeight }}>
           {rows.map((row, index) => (
             <View key={row.friendId} style={index === 0 ? null : styles.separated}>
               <FriendRow
