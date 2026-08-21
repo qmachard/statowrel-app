@@ -28,12 +28,13 @@ const styles = StyleSheet.create({
 });
 
 const SessionGate = () => {
-  const { user, initializing } = useAuth();
-  const { resolved, seen, markSeen } = useOnboardingSeen();
+  const { user, initializing, needsOnboarding } = useAuth();
+  const { resolved, seen, markSeen } = useOnboardingSeen(user?.uid ?? null);
 
   // Hold the splash screen until the persisted session is restored *and* the
   // carousel flag has been read, so the app never flashes the sign-in screen at
-  // an already-signed-in user, nor at one about to be shown the carousel.
+  // an already-signed-in user, nor the Stats screen at one about to be shown
+  // the carousel. Signed out there is no flag to wait for.
   const ready = !initializing && resolved;
 
   // Inside the provider and inside the container, which is what it needs: the
@@ -52,14 +53,17 @@ const SessionGate = () => {
   }
 
   // Both of these live beside the navigator rather than in it: they are driven
-  // by state — the session for the username sheet, this install's own history
+  // by state — the session for the username sheet, this account's own history
   // for the carousel — not by a route, and each has to be able to cover any
   // screen. The carousel comes last because it covers the app whole.
+  //
+  // It waits for the username sheet to be through: the two are both blocking,
+  // and an account without a handle has nothing behind the carousel yet.
   return (
     <>
       <RootNavigator />
       <OnboardingSheet />
-      {user === null && !seen ? <OnboardingCarousel onDone={markSeen} /> : null}
+      {user !== null && !needsOnboarding && !seen ? <OnboardingCarousel onDone={markSeen} /> : null}
     </>
   );
 };

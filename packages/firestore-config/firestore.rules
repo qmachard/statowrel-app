@@ -48,16 +48,20 @@ service cloud.firestore {
                       && resource.data.broadcast_at != null
                       && request.time >= resource.data.broadcast_at);
 
-      // A third way in, and the only one open to a visitor with no session: the
-      // sample question the onboarding carousel poses before sign-up
-      // (`DEMO_QUESTION_ID` in packages/models). `get` and never `list`, so the
-      // pot stays as private as it is above — the app reads that one document
-      // by its fixed id and nothing else.
+      // A third way in: the sample question the onboarding carousel poses to a
+      // freshly signed-in account (`DEMO_QUESTION_ID` in packages/models). It
+      // belongs to nobody and was never broadcast, so neither clause above
+      // reaches it.
+      //
+      // `get` and never `list`, so the pot stays as private as it is above —
+      // the app reads that one document by its fixed id and nothing else — and
+      // signed in like every other read of this collection: the carousel comes
+      // after the session, so there is no reason to open this to a stranger.
       //
       // Nothing is answerable through it: a demo question has a null
       // `broadcast_at`, which the answer rule below already refuses, so the
       // carousel's own answer never leaves the phone.
-      allow get: if resource.data.status == 'demo';
+      allow get: if isAuthenticated() && resource.data.status == 'demo';
       allow create: if isOwner(request.resource.data.author_id)
                     && request.resource.data.status == 'pending'
                     && request.resource.data.rejection_reason == null

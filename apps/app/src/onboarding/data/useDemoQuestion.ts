@@ -19,11 +19,11 @@ export interface DemoQuestionView {
  * The sample question the carousel poses — `v1_questions/{DEMO_QUESTION_ID}`,
  * read once by its fixed id.
  *
- * The only read in the app that runs **without a session**: `firestore.rules`
- * opens a `demo` question to an anonymous `get`, because the carousel comes
- * before sign-up. It is also read and never subscribed to — nobody answers a
- * demo, so its `answer_counts` do not move under the screen the way a broadcast
- * question's do.
+ * `firestore.rules` opens a `demo` question to any signed-in `get`, because
+ * neither of the collection's other two clauses reaches it: it belongs to
+ * nobody and was never broadcast. Read once and never subscribed to — nobody
+ * answers a demo, so its `answer_counts` do not move under the screen the way a
+ * broadcast question's do.
  *
  * Anything that goes wrong — no document, rules, network — is simply « no demo
  * to offer »: the carousel then ends on its sign-up call to action instead. It

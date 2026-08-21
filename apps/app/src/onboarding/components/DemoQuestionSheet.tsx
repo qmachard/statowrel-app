@@ -15,7 +15,7 @@ import { useDoubleTapAnswer } from '@/daily-question/helpers/useDoubleTapAnswer'
 import { fontSize, fonts, spacing } from '@/design/tokens';
 import { hapticValidation } from '@/lib/haptics';
 
-import { DEMO_DAY_LABEL, DEMO_DISCLAIMER, SIGN_UP } from '../copy';
+import { DEMO_DAY_LABEL, DEMO_DISCLAIMER, DONE } from '../copy';
 
 /** The demo wears the accent red of today's question — it is the one it imitates. */
 const SURFACE = 'accent';
@@ -56,8 +56,8 @@ export interface DemoQuestionSheetProps {
   visible: boolean;
   question: QuestionData;
   onClose: () => void;
-  /** The way out through the front door — the carousel's own call to action. */
-  onSignUp: () => void;
+  /** The way out through the front door: it closes the carousel and lands on the app. */
+  onFinish: () => void;
 }
 
 /**
@@ -74,10 +74,11 @@ export interface DemoQuestionSheetProps {
  * also why nothing here goes near `answerStore` or the calendar: there is no
  * day, no streak and no account to move.
  *
- * The friends of §4.5 are the one block missing, and on purpose: they are what
- * the sign-up at the bottom is for.
+ * The friends of §4.5 are the one block missing, and on purpose: nobody has
+ * answered a question that never ran, and the real ones are what the button at
+ * the bottom lands on.
  */
-export const DemoQuestionSheet = ({ visible, question, onClose, onSignUp }: DemoQuestionSheetProps) => {
+export const DemoQuestionSheet = ({ visible, question, onClose, onFinish }: DemoQuestionSheetProps) => {
   const [ pickedId, setPickedId ] = useState<string | null>(null);
   const [ celebrating, setCelebrating ] = useState(false);
 
@@ -120,7 +121,7 @@ export const DemoQuestionSheet = ({ visible, question, onClose, onSignUp }: Demo
 
             <Text style={[ styles.disclaimer, FOREGROUND[SURFACE] ]}>{DEMO_DISCLAIMER}</Text>
 
-            <Button label={SIGN_UP} onPress={onSignUp} />
+            <Button label={DONE} onPress={onFinish} />
           </>
         )}
       </ScrollView>

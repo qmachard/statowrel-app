@@ -52,10 +52,10 @@ export const NEXT = 'Suivant';
  * dialog's own « Ne pas autoriser », not a second button here.
  */
 export const ALLOW_NOTIFICATIONS = 'Me prévenir à 7h';
-/** What closes the demo question, and the carousel with it. */
-export const SIGN_UP = 'Créer mon compte';
+/** What closes the demo question, and the carousel with it — the app is behind. */
+export const DONE = 'C’est parti';
 
-/** Said on the demo's result, where the real app would show the friends. */
+/** Said on the demo's result, where a real day would show the friends. */
 export const DEMO_DISCLAIMER = 'Celle-là ne compte pas — les vraies tombent à 7h, avec tes potes en face.';
 
 /** The date line of the demo's result: it is nobody's day. */
