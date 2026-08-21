@@ -21,6 +21,14 @@ const SUNK_BY = 2;
 /** The badge — a bead, not a counter: it says « something new », never how much. */
 const BADGE_SIZE = 12;
 
+/**
+ * How far the bead hangs off the cell, the way an app icon's own badge hangs off
+ * the icon. A third of it, so it still reads as belonging to the day it sits on
+ * — and comfortably inside the 8px gutter the calendar grid leaves between
+ * cells, so it never touches its neighbour.
+ */
+const BADGE_OVERHANG = BADGE_SIZE / 3;
+
 const PRESSED_OPACITY = 0.8;
 
 const styles = StyleSheet.create({
@@ -47,19 +55,21 @@ const styles = StyleSheet.create({
     fontSize: MISSED_GLYPH_SIZE,
     color: colors['muted-foreground'],
   },
-  // Pinned to the corner rather than laid out, so the number or the check stays
-  // centred in the cell whether or not the day carries one. The cell clips its
-  // children, hence the inset — a bead flush with the corner would come back
-  // shaved by the border radius.
+  // Hung off the cell's corner, and therefore a sibling of it rather than a
+  // child: the cell clips what it holds, so a bead inside it could only ever be
+  // tucked in. Absolute, so the number or the check stays centred whether or
+  // not the day carries one.
+  //
+  // The one surface here without the thick border — a 2px outline on a 12px
+  // bead is half of it, and what is left no longer reads as a colour. It is
+  // small enough, and far enough off the surface, to carry itself.
   badge: {
     position: 'absolute',
-    top: spacing(0.75),
-    right: spacing(0.75),
+    top: -BADGE_OVERHANG,
+    right: -BADGE_OVERHANG,
     height: BADGE_SIZE,
     width: BADGE_SIZE,
     borderRadius: radius.full,
-    borderWidth,
-    borderColor: colors.border,
   },
 });
 
@@ -145,9 +155,10 @@ export interface CalendarDayProps {
  * A raised day sinks into its own shadow when pressed, like the buttons do —
  * `shadows.sm` is a 2px offset, so that is exactly how far it travels.
  *
- * A bead in the corner says friends have answered that day since it was last
- * opened. It sits over the surface, never in place of the number or the check:
- * what the cell already said about the day stays said.
+ * A bead **hung off the corner** — an app icon's badge, not a dot drawn inside
+ * the square — says friends have answered that day since it was last opened. It
+ * never stands in place of the number or the check: what the cell already said
+ * about the day stays said.
  */
 export const CalendarDay = ({
   date,
@@ -160,24 +171,29 @@ export const CalendarDay = ({
 
   return (
     <Pressable style={styles.slot} accessibilityRole="button" disabled={isInert} onPress={onPress}>
-      {({ pressed }) => (
-        <View
-          style={[
-            styles.cell,
-            SURFACE[state],
-            pressed && !isInert ? PRESSED[state] : SHADOW[state],
-          ]}
-        >
-          {state === 'missed' ? <Hatch /> : null}
-          {answered ? (
-            <Check size={CHECK_SIZE} strokeWidth={CHECK_STROKE_WIDTH} color={CHECK_COLOR[state]} />
-          ) : (
-            <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
-          )}
-          {state === 'missed' ? <Text style={styles.missedGlyph}>?</Text> : null}
-          {hasNewFriendAnswers ? <View style={[ styles.badge, BADGE[state] ]} /> : null}
-        </View>
-      )}
+      {({ pressed }) => {
+        // The bead hangs outside the cell, so it has to be told to sink with it —
+        // inside, the cell's own transform would have carried it along.
+        const sunk = pressed && !isInert;
+
+        return (
+          <>
+            <View style={[ styles.cell, SURFACE[state], sunk ? PRESSED[state] : SHADOW[state] ]}>
+              {state === 'missed' ? <Hatch /> : null}
+              {answered ? (
+                <Check size={CHECK_SIZE} strokeWidth={CHECK_STROKE_WIDTH} color={CHECK_COLOR[state]} />
+              ) : (
+                <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
+              )}
+              {state === 'missed' ? <Text style={styles.missedGlyph}>?</Text> : null}
+            </View>
+
+            {hasNewFriendAnswers ? (
+              <View style={[ styles.badge, BADGE[state], sunk ? PRESSED[state] : null ]} />
+            ) : null}
+          </>
+        );
+      }}
     </Pressable>
   );
 };
