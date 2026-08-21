@@ -251,7 +251,7 @@ Anatomie, dans l'ordre vertical :
 
 ### 5.6 Onboarding — le carousel d'ouverture
 
-**Avant l'écran de connexion**, au tout premier lancement de l'app sur un téléphone, quatre slides disent ce qu'est StatOwrel à quelqu'un qui n'en a jamais entendu parler — la question quotidienne, la StatOwrel qu'elle rend, les réponses des amis qu'elle débloque, et pourquoi il vaut mieux être prévenu — puis une **question démo** vient se poser par-dessus.
+**Avant l'écran de connexion**, au tout premier lancement de l'app sur un téléphone, cinq slides disent ce qu'est StatOwrel à quelqu'un qui n'en a jamais entendu parler — la question quotidienne, la StatOwrel qu'elle rend, les réponses des amis qu'elle débloque, pourquoi il vaut mieux être prévenu, puis « C'est parti » — et c'est le bouton de cette dernière qui ouvre la **question démo**.
 
 - Le carousel se pose **par-dessus toute l'app**, comme la sheet de pseudo (§4.1) : il est piloté par l'état, pas par une route, et il n'y a pas encore de session en dessous.
 - Une seule sortie, deux portes : « Passer » en en-tête, qui laisse sur l'écran de connexion déjà monté derrière, et « Créer mon compte » au bas du résultat de la démo, qui mène à l'inscription. Les deux marquent le carousel comme vu — sur **l'appareil** et non sur le compte, puisqu'il précède le compte — et il ne se rejoue jamais.
@@ -262,7 +262,8 @@ Anatomie, dans l'ordre vertical :
 - Les réponses des amis (§4.5) sont le seul bloc absent du résultat : elles sont l'argument de l'inscription qui le termine.
 - La **quatrième slide demande la permission de notifier**, et c'est son seul bouton qui la demande. La boîte de dialogue système n'est jamais la première chose vue : un refus est définitif sur les deux plateformes (`canAskAgain` retombe à faux), donc on dit d'abord pourquoi. La slide **liste ce qui sera envoyé** — la question du jour, le rappel du soir (§4.2), l'ajout d'un pote (§4.1) — et **jamais une heure** : « 7h » sur un écran d'accueil se lit comme un réveil, et fait refuser la permission à qui n'est pas du matin. Elle est aussi la seule promesse que l'app fait sur ce qu'elle envoie, donc elle est tenue à jour avec les notifications qui existent vraiment. Le refus est le « Ne pas autoriser » du système, pas un second bouton dans l'app.
 - C'est **le seul endroit qui demande** : l'enregistrement de lancement, lui, se contente de la permission déjà accordée et ne lève jamais de dialogue. Sans ça la question serait posée à froid au premier démarrage connecté, avant que le carousel ait pu dire à quoi elle sert. Le jeton, lui, s'enregistre à la première session — la permission appartient au téléphone, le jeton au compte.
-- Si la question démo ne peut pas être lue, le carousel se termine après la slide notifications. C'est un échantillon, jamais une étape où l'on reste coincé.
+- La **cinquième slide est la seule dont le bouton n'avance pas** : « C'est parti » annonce le double tap (§4.3) et ouvre la démo. Elle explique le geste juste avant qu'on le fasse, plutôt que de laisser la sheet surgir derrière une boîte de dialogue système.
+- Si la question démo ne peut pas être lue, cette slide **n'existe pas** : annoncer « C'est parti » devant rien serait pire que de s'arrêter, donc le carousel se termine après la slide notifications. C'est un échantillon, jamais une étape où l'on reste coincé.
 - Le carousel se voit une fois, et il n'y a **aucun moyen produit de le revoir** : le bouton qui le remet à zéro n'existe que dans un build de développement (`__DEV__`), sur l'écran Menu. Il efface le drapeau et le choix en attente, puis déconnecte — le carousel ne se montre qu'à une session déconnectée.
 
 ### 5.7 Ce qui n'existe pas

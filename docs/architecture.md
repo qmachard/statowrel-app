@@ -379,7 +379,7 @@ Three build profiles in `eas.json`, mapped to root-level npm scripts:
 
 ### Onboarding carousel
 
-The first thing a fresh install shows, before the sign-in screen behind it — `docs/prd.md` §5.6. `apps/app/src/onboarding/` holds it: four slides saying what StatOwrel is, then the demo question popped as a sheet over them.
+The first thing a fresh install shows, before the sign-in screen behind it — `docs/prd.md` §5.6. `apps/app/src/onboarding/` holds it: five slides saying what StatOwrel is, the last of which — « C'est parti » — is the one whose button opens the demo question as a sheet over them. That slide is dropped when there is no demo to read, since it would otherwise announce something nothing follows.
 
 It is **laid over the app, not routed into it**. `src/App.tsx` renders it beside the navigator the way it renders the username sheet, for the same reason: there is no session yet, so there is nothing to navigate under. Whether it has been through is an `AsyncStorage` entry (`useOnboardingSeen`) kept on the **device** and not on an account — it runs before there is one — and storage that cannot be read counts as « already seen », since a carousel is not worth risking on every launch. The splash screen is held until that flag resolves as well as the session.
 

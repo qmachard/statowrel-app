@@ -7,7 +7,7 @@
  * `key` is what the carousel hangs each slide's illustration on, so the wording
  * and the drawing stay in two places that can each be changed alone.
  */
-export type OnboardingSlideKey = 'daily' | 'statowrel' | 'friends' | 'notifications';
+export type OnboardingSlideKey = 'daily' | 'statowrel' | 'friends' | 'notifications' | 'start';
 
 export interface OnboardingSlideCopy {
   key: OnboardingSlideKey;
@@ -36,6 +36,11 @@ export const SLIDES: OnboardingSlideCopy[] = [
     title: 'On te prévient',
     body: 'La question du jour, un rappel le soir si tu l’as loupée, et quand un pote t’ajoute. Rien de plus.',
   },
+  {
+    key: 'start',
+    title: 'C’est parti',
+    body: 'Un tap choisit ta réponse, un deuxième la valide. Essaie tout de suite, sur une vraie question.',
+  },
 ];
 
 /** The sample phrase of the second slide — a StatOwrel that belongs to nobody. */
@@ -46,13 +51,18 @@ export const SAMPLE_STATOWREL = {
 
 export const SKIP = 'Passer';
 /**
- * The same word on every slide, the last one included — where it also raises
- * the system permission dialog and then opens the demo question. Labelling that
- * button « Me prévenir » turned a step of the carousel into a commitment to
- * answer; the promise is the slide's job, the button only moves forward. The
- * refusal is the dialog's own « Ne pas autoriser », not a second button here.
+ * The same word on every slide but the last, the notification one included —
+ * where it also raises the system permission dialog before moving on. Labelling
+ * that button « Me prévenir » turned a step of the carousel into a commitment;
+ * the promise is the slide's job, the button only moves forward, and the
+ * refusal is the dialog's own « Ne pas autoriser ».
  */
 export const NEXT = 'Suivant';
+/**
+ * The last slide's own call to action, and the only button of the carousel that
+ * does something other than advance: it opens the demo question.
+ */
+export const ANSWER = 'Répondre';
 /** What closes the demo question, and the carousel with it — the sign-up screen is behind. */
 export const SIGN_UP = 'Créer mon compte';
 

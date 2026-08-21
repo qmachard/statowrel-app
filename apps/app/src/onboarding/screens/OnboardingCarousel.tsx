@@ -11,7 +11,7 @@ import { DemoQuestionSheet } from '../components/DemoQuestionSheet';
 import { OnboardingDots } from '../components/OnboardingDots';
 import { OnboardingSlide } from '../components/OnboardingSlide';
 import { OnboardingVisual } from '../components/OnboardingVisual';
-import { NEXT, SKIP, SLIDES } from '../copy';
+import { ANSWER, NEXT, SKIP, SLIDES } from '../copy';
 import { useDemoQuestion } from '../data/useDemoQuestion';
 
 const styles = StyleSheet.create({
@@ -66,17 +66,19 @@ export interface OnboardingCarouselProps {
  * sign-up one.
  *
  * The last two slides each do something rather than only say it. The
- * notification one raises the system permission dialog on its own call to
- * action — the point of the slide is that the dialog is never the first thing
- * seen, since a refusal is final on both platforms — and the demo of
- * `DemoQuestionSheet` pops right behind it. Neither needs an account: the
- * permission belongs to the phone, and the demo's pick waits on it until there
- * is one (`useDemoAnswerFlush`).
+ * notification one raises the system permission dialog on its own « Suivant » —
+ * the point of the slide is that the dialog is never the first thing seen,
+ * since a refusal is final on both platforms — and « C'est parti » is the one
+ * button of the carousel that does not advance: it opens the demo of
+ * `DemoQuestionSheet`. Neither needs an account: the permission belongs to the
+ * phone, and the demo's pick waits on it until there is one
+ * (`useDemoAnswerFlush`).
  *
- * The demo is offered only when there is one to pose: a question that could not
- * be read simply ends the carousel, never a step somebody is stuck on. The
+ * **The last slide only exists when there is a question to pose.** A demo that
+ * could not be read would leave it announcing something nothing follows, so it
+ * is dropped and the carousel ends on the notification slide instead. The
  * permission is asked either way — it is worth asking whether or not there is a
- * sample to follow it.
+ * sample behind it.
  */
 export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
   const { width } = useWindowDimensions();
@@ -87,8 +89,11 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
   const [ asking, setAsking ] = useState(false);
   const [ demoOpen, setDemoOpen ] = useState(false);
 
-  const last = SLIDES.length - 1;
-  const isLast = current === last;
+  // Announcing « C'est parti » in front of a demo that could not be read would
+  // be announcing nothing, so that slide comes and goes with its question.
+  const slides = question === null ? SLIDES.filter((slide) => slide.key !== 'start') : SLIDES;
+  const currentKey = slides[current]?.key ?? null;
+  const isLast = current === slides.length - 1;
 
   const finish = (destination: 'SignIn' | 'SignUp') => {
     // Navigating first: the stack underneath is the signed-out one, so the
@@ -111,14 +116,17 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
     setCurrent(Math.round(event.nativeEvent.contentOffset.x / width));
   };
 
+  const goToNextSlide = () => scroller.current?.scrollTo({ x: width * (current + 1), animated: true });
+
   /**
-   * What the last slide's button does: raise the permission dialog, then move
-   * on whatever the answer was. A « non » is a legitimate answer — it costs the
-   * daily banner, not the app — and it is never asked twice (`canAskAgain` is
-   * false afterwards, so the dialog would not even show). The token itself is
-   * registered at the first signed-in launch; there is no account here.
+   * What the notification slide's button does before moving on: raise the
+   * permission dialog, and take whatever comes back. A « non » is a legitimate
+   * answer — it costs the daily banner, not the app — and it is never asked
+   * twice (`canAskAgain` is false afterwards, so the dialog would not even
+   * show). The token itself is registered at the first signed-in launch; there
+   * is no account here.
    */
-  const askThenContinue = async () => {
+  const askThenAdvance = async () => {
     setAsking(true);
 
     try {
@@ -127,23 +135,31 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
       setAsking(false);
     }
 
-    if (question === null) {
+    // Last only when there is no demo to announce — nothing follows this slide
+    // then, so the carousel hands over to the sign-up screen.
+    if (isLast) {
       finish('SignUp');
 
       return;
     }
 
-    setDemoOpen(true);
+    goToNextSlide();
   };
 
   const advance = () => {
-    if (!isLast) {
-      scroller.current?.scrollTo({ x: width * (current + 1), animated: true });
+    if (currentKey === 'notifications') {
+      void askThenAdvance();
 
       return;
     }
 
-    void askThenContinue();
+    if (currentKey === 'start') {
+      setDemoOpen(true);
+
+      return;
+    }
+
+    goToNextSlide();
   };
 
   return (
@@ -161,7 +177,7 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={onMomentumScrollEnd}
         >
-          {SLIDES.map((slide) => (
+          {slides.map((slide) => (
             <OnboardingSlide
               key={slide.key}
               width={width}
@@ -173,9 +189,13 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
         </ScrollView>
 
         <View style={styles.footer}>
-          <OnboardingDots count={SLIDES.length} current={current} />
+          <OnboardingDots count={slides.length} current={current} />
 
-          <Button label={NEXT} loading={asking} onPress={advance} />
+          <Button
+            label={currentKey === 'start' ? ANSWER : NEXT}
+            loading={asking}
+            onPress={advance}
+          />
         </View>
       </SafeAreaView>
 
