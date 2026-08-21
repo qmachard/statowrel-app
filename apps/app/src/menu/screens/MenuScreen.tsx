@@ -13,6 +13,7 @@ import { Button } from '@/components/Button';
 import { LegalLinks } from '@/components/LegalLinks';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendsCard } from '@/friends/components/FriendsCard';
+import { NotificationsButton } from '@/notifications/components/NotificationsButton';
 import { clearPendingDemoAnswer } from '@/onboarding/data/demoAnswerStore';
 import { resetOnboardingSeen } from '@/onboarding/data/useOnboardingSeen';
 
@@ -145,6 +146,12 @@ export const MenuScreen = () => {
               }}
             />
           ) : null}
+          {/* Above the way out, because it is the one line of this block that
+              turns something on: whoever installed the app before the
+              onboarding carousel's notification slide existed — or tapped
+              « Passer » through it — has never been asked, and this is the only
+              place in the app that asks again. */}
+          <NotificationsButton />
           <Button label="Se déconnecter" variant="secondary" disabled={deleting} onPress={() => signOut()} />
           <Button
             label="Supprimer mon compte"
