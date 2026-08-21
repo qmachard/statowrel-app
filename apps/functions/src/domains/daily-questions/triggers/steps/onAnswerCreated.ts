@@ -19,7 +19,18 @@ import {
 
 import { getDocumentRef, getSubDocumentRef, parseData, runTransaction } from '@/libs/firebase-admin';
 
+import { acceptedFriendsQuery } from '../../helpers/friendsAnswers';
 import { nextStreakState } from '../../helpers/streak';
+
+/**
+ * How many friends one answer is counted onto at most.
+ *
+ * A Firestore transaction takes 500 writes, and this one already owes three of
+ * its own. The cap is what keeps a very large friend list from failing the
+ * whole transaction — the streak and the calendar projection included — over a
+ * badge; going past it is logged rather than swallowed.
+ */
+const MAX_FRIENDS_COUNTED = 400;
 
 /**
  * The `stat_label` of the option an answer points at — the one the calendar
@@ -89,7 +100,7 @@ const countDemoAnswer = async (answer: DailyQuestionAnswerData): Promise<void> =
 /**
  * Everything one answer changes outside of itself — docs/prd.md §4.6 and §6.
  *
- * Three writes, in one transaction:
+ * Four writes, in one transaction:
  *
  * 1. `answer_counts.{option_id}` on the question, which the card's stat bar and
  *    rarity are computed from (docs/prd.md §5.5);
@@ -97,12 +108,19 @@ const countDemoAnswer = async (answer: DailyQuestionAnswerData): Promise<void> =
  *    calendar loads in a single read;
  * 3. the author's counters — `answers_count` always, the streak only when the
  *    answer is on time, since a catch-up completes the calendar without ever
- *    restoring a streak.
+ *    restoring a streak;
+ * 4. `friend_answer_counts.{DD}` in **every accepted friend's** calendar month
+ *    for that day — the badge of docs/prd.md §5.2. It goes onto the friends'
+ *    own read model rather than being counted when the calendar is displayed,
+ *    because a friend's answers are only ever readable one question at a time
+ *    (`firestore.rules`): counting them client-side would be one read per
+ *    friend per day of the month, against the single read the month costs now.
  *
- * The onboarding demo takes the first of those three and none of the other two
- * — see `countDemoAnswer`.
+ * The onboarding demo takes the first of those four and none of the other three
+ * — see `countDemoAnswer`. Its answer is not a day, so nobody's friends are
+ * told about it either.
  *
- * A Firestore trigger is delivered *at least* once, and two of those three
+ * A Firestore trigger is delivered *at least* once, and three of those four
  * writes are increments, so the whole thing has to be idempotent. The marker is
  * the calendar entry itself: one answer per person per question is guaranteed
  * by the answer document's id, so a day already present in the month means this
@@ -142,8 +160,11 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
   const questionRef = getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter);
 
   await runTransaction(async (transaction) => {
+    // Every read first: a transaction refuses to read after it has written, so
+    // the friend list is fetched before the bail-out below rather than after it.
     const calendarMonth = (await transaction.get(calendarMonthRef)).data();
     const user = (await transaction.get(userRef)).data();
+    const friends = await transaction.get(acceptedFriendsQuery(userRef));
 
     if (calendarMonth?.days[monthDayKey] !== undefined) {
       logger.info('Answer already applied, nothing to do', { date, user_id: userId });
@@ -169,6 +190,38 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
     // A fixed field path plus `increment`, so two answers landing at the same
     // moment add up instead of overwriting each other.
     transaction.update(questionRef, `answer_counts.${optionId}`, FieldValue.increment(1));
+
+    // The friends' badge. Same `merge` as the projection above — the friend may
+    // have no calendar month for this month at all, having answered nothing in
+    // it — and the same `increment`, since several friends answering the same
+    // day land on the same field. The converter is dropped for this one write:
+    // its `toFirestore` would rebuild the map value by value and throw the
+    // sentinel away, and there is nothing here for it to convert.
+    const countedFriendIds = friends.docs.slice(0, MAX_FRIENDS_COUNTED).map((friendship) => friendship.id);
+
+    if (friends.size > countedFriendIds.length) {
+      logger.warn('Too many accepted friends to count this answer onto them all', {
+        counted: countedFriendIds.length,
+        date,
+        friends: friends.size,
+        user_id: userId,
+      });
+    }
+
+    countedFriendIds.forEach((friendId) => {
+      const friendCalendarMonthRef = getSubDocumentRef(
+        getDocumentRef(USER_COLLECTION, friendId, userConverter),
+        USER_CALENDAR_MONTH_COLLECTION,
+        monthKey,
+        userCalendarMonthConverter,
+      ).withConverter(null);
+
+      transaction.set(friendCalendarMonthRef, {
+        month: monthKey,
+        friend_answer_counts: { [monthDayKey]: FieldValue.increment(1) },
+        updated_at: Timestamp.now(),
+      }, { merge: true });
+    });
 
     if (user === undefined) {
       // The profile is written at first sign-in and nothing deletes it, so this

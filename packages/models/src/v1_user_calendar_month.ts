@@ -59,7 +59,29 @@ export interface UserCalendarMonthFirebaseData {
   month: string;
   /** Answered days of the month, keyed by their zero-padded day of the month (`'01'`…`'31'`). An unanswered day is simply absent. */
   days: Record<string, UserCalendarMonthDayFirebaseData>;
-  /** Bumped on every day written into the month. */
+  /**
+   * How many accepted friends answered each day, keyed the same way `days` is
+   * (`'01'`…`'31'`). A day no friend has answered is simply absent.
+   *
+   * The badge of the Stats calendar (docs/prd.md §5.2) is this number compared
+   * to what the device last showed: a friend answering a day one has already
+   * looked at puts a dot back on its cell.
+   *
+   * It lives here rather than being counted at display time because counting it
+   * would mean one read per friend per day of the month — a friend's answers
+   * are only ever readable one question at a time (`firestore.rules`), and
+   * their own calendar month is private to them. Written by the answer trigger,
+   * which increments the day under every accepted friend of whoever answered,
+   * in the transaction that projects their own day.
+   *
+   * **Monotonic**, and deliberately so: a friendship removed afterwards leaves
+   * the count where it was rather than sending the app back over the answers to
+   * recount. Which is why the app marks a day seen at *this* number and not at
+   * how many friends it just listed — otherwise a removed friend would leave a
+   * dot nothing could clear.
+   */
+  friend_answer_counts: Record<string, number>;
+  /** Bumped on every day written into the month, and on every friend's answer counted into it. */
   updated_at: UniversalTimestamp;
 }
 
@@ -84,18 +106,51 @@ const parseDays = (
   }, {})
 );
 
+/**
+ * Returns `undefined` rather than an empty map when there is nothing to say,
+ * so `toFirestore` leaves the field out entirely.
+ *
+ * That is what keeps the two writers of this document from stepping on each
+ * other: both write with `merge`, and a merge carrying `friend_answer_counts:
+ * {}` would replace the counters with an empty map instead of leaving them
+ * alone. The answer trigger's own projection never carries them — it writes
+ * `days` — so they must not be materialized on its behalf.
+ */
+const parseCounts = (
+  counts: Record<string, number> | null | undefined,
+): Record<string, number> | undefined => {
+  // Built by reduce, not by indexing: `noUncheckedIndexedAccess` is on in this package.
+  const parsed = Object.entries(counts ?? {}).reduce<Record<string, number>>((acc, [ monthDayKey, count ]) => {
+    if (typeof count === 'number' && count > 0) {
+      acc[monthDayKey] = count;
+    }
+
+    return acc;
+  }, {});
+
+  return Object.keys(parsed).length === 0 ? undefined : parsed;
+};
+
 export const userCalendarMonthConverter: FirestoreConverter<UserCalendarMonthData, UserCalendarMonthFirebaseData> = (TimestampClass) => ({
-  toFirestore: (data) => removeMissingFields({
-    month: data.month,
-    days: parseDays(data.days),
-    updated_at: TimestampClass.fromDate(new Date(data.updated_at)),
-  }),
+  toFirestore: (data) => {
+    // Spread rather than assigned, so an absent map leaves the field out of the
+    // written document entirely — see `parseCounts`.
+    const friendAnswerCounts = parseCounts(data.friend_answer_counts);
+
+    return removeMissingFields({
+      month: data.month,
+      days: parseDays(data.days),
+      ...(friendAnswerCounts === undefined ? {} : { friend_answer_counts: friendAnswerCounts }),
+      updated_at: TimestampClass.fromDate(new Date(data.updated_at)),
+    });
+  },
   fromFirestore: (snap) => {
     const data = snap.data();
 
     return {
       month: data.month ?? '',
       days: parseDays(data.days),
+      friend_answer_counts: parseCounts(data.friend_answer_counts) ?? {},
       updated_at: parseTimestamp(data.updated_at ?? null, 'now'),
     };
   },

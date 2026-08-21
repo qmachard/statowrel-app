@@ -18,6 +18,9 @@ const CHECK_STROKE_WIDTH = 3;
 /** How far a raised day travels when pressed — the offset of the `sm` shadow it drops. */
 const SUNK_BY = 2;
 
+/** The badge — a bead, not a counter: it says « something new », never how much. */
+const BADGE_SIZE = 12;
+
 const PRESSED_OPACITY = 0.8;
 
 const styles = StyleSheet.create({
@@ -43,6 +46,20 @@ const styles = StyleSheet.create({
     fontFamily: fonts.head,
     fontSize: MISSED_GLYPH_SIZE,
     color: colors['muted-foreground'],
+  },
+  // Pinned to the corner rather than laid out, so the number or the check stays
+  // centred in the cell whether or not the day carries one. The cell clips its
+  // children, hence the inset — a bead flush with the corner would come back
+  // shaved by the border radius.
+  badge: {
+    position: 'absolute',
+    top: spacing(0.75),
+    right: spacing(0.75),
+    height: BADGE_SIZE,
+    width: BADGE_SIZE,
+    borderRadius: radius.full,
+    borderWidth,
+    borderColor: colors.border,
   },
 });
 
@@ -83,6 +100,16 @@ const LABEL = StyleSheet.create({
   idle: { fontFamily: fonts.sans, color: colors['muted-foreground'] },
 }) satisfies Record<CalendarDayState, TextStyle>;
 
+// The badge is the one thing on the cell that has to be seen *against* it, so
+// it takes the other identity colour rather than the surface's foreground:
+// accent on the yellow of an answered day, primary on the red of today.
+const BADGE = StyleSheet.create({
+  answered: { backgroundColor: colors.accent },
+  today: { backgroundColor: colors.primary },
+  missed: { backgroundColor: colors.accent },
+  idle: { backgroundColor: colors.accent },
+}) satisfies Record<CalendarDayState, ViewStyle>;
+
 // The check takes its surface's own foreground, like the number it replaces —
 // black on the yellow of a past answered day, white on the accent of today.
 const CHECK_COLOR: Record<CalendarDayState, string> = {
@@ -100,6 +127,11 @@ export interface CalendarDayProps {
    * instead of its number — today included, once it has been played.
    */
   answered?: boolean;
+  /**
+   * Friends have answered that day since it was last opened — the cell carries
+   * a bead in its corner until it is opened again (docs/prd.md §5.2).
+   */
+  hasNewFriendAnswers?: boolean;
   /** Opens that day (docs/prd.md §5.2). An `idle` day stays inert whatever is passed. */
   onPress?: () => void;
 }
@@ -112,8 +144,18 @@ export interface CalendarDayProps {
  *
  * A raised day sinks into its own shadow when pressed, like the buttons do —
  * `shadows.sm` is a 2px offset, so that is exactly how far it travels.
+ *
+ * A bead in the corner says friends have answered that day since it was last
+ * opened. It sits over the surface, never in place of the number or the check:
+ * what the cell already said about the day stays said.
  */
-export const CalendarDay = ({ date, state, answered = false, onPress }: CalendarDayProps) => {
+export const CalendarDay = ({
+  date,
+  state,
+  answered = false,
+  hasNewFriendAnswers = false,
+  onPress,
+}: CalendarDayProps) => {
   const isInert = state === 'idle' || onPress === undefined;
 
   return (
@@ -133,6 +175,7 @@ export const CalendarDay = ({ date, state, answered = false, onPress }: Calendar
             <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
           )}
           {state === 'missed' ? <Text style={styles.missedGlyph}>?</Text> : null}
+          {hasNewFriendAnswers ? <View style={[ styles.badge, BADGE[state] ]} /> : null}
         </View>
       )}
     </Pressable>
