@@ -88,6 +88,12 @@ export const deleteAccount = onCall<unknown, Promise<DeleteAccountResult>>(
       // The collection group is scoped by the `user_id` field rather than by
       // the document id: a group query cannot filter on `__name__` across
       // parents, and the field is carried on the answer for exactly this.
+      //
+      // It needs its own index, and not the composite one the calendar uses:
+      // an automatic single-field index only ever covers `COLLECTION` scope, so
+      // an equality on `user_id` across the group is a `FAILED_PRECONDITION`
+      // until the `COLLECTION_GROUP` exemption in `firestore.indexes.json` is
+      // deployed. `npm run deploy:firestore` is part of shipping this function.
       getCollectionGroupRef(DAILY_QUESTION_ANSWER_COLLECTION, dailyQuestionAnswerConverter)
         .where('user_id', '==', userId)
         .get(),
