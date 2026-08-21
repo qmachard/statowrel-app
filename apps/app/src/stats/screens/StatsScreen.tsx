@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, pagePadding, spacing } from '@/design/tokens';
 import { InvitationsCard } from '@/friends/components/InvitationsCard';
 import { DailyQuestionBanner } from '@/stats/components/DailyQuestionBanner';
+import { ProposeQuestionButton } from '@/stats/components/ProposeQuestionButton';
 import { StatTile } from '@/stats/components/StatTile';
 import { StatsCalendar } from '@/stats/components/StatsCalendar';
 import { StatsHeader } from '@/stats/components/StatsHeader';
@@ -18,8 +19,9 @@ import { resolveStreakCount } from '@/stats/helpers/streak';
  * The root of the app (docs/prd.md §5.1, §5.2), from top to bottom: the
  * invitations waiting on an answer, the day's banner — the question while it is
  * still open, « RDV demain » once it has been answered — the streak and its
- * counters on a scrolling strip, then the calendar. The daily question sheet
- * lands on top of it (§5.4).
+ * counters on a scrolling strip, the calendar, and under it what the streak
+ * eventually buys: proposing a question (§4.7). The daily question sheet lands
+ * on top of it (§5.4).
  */
 const styles = StyleSheet.create({
   safeArea: {
@@ -107,6 +109,10 @@ export const StatsScreen = () => {
           calendar={calendar}
           archiveStart={archiveStart}
         />
+
+        {/* Under the calendar, because it is the calendar it reads: the streak
+            is the sum of those days, and the proposal is what it unlocks. */}
+        <ProposeQuestionButton streak={streakCount} />
       </ScrollView>
     </SafeAreaView>
   );

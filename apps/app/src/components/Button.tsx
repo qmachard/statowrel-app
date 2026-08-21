@@ -27,6 +27,12 @@ export type ButtonIcon = ComponentType<{ color?: string; size?: number }>;
 export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> {
   /** Also the accessibility label of the icon-only sizes, which don't render it. */
   label: string;
+  /**
+   * A small line under the label — the condition, the price or the caveat the
+   * label alone can't carry. Sans-serif, lower case, dimmed against the
+   * variant's own foreground, and read as the button's accessibility hint.
+   */
+  description?: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
   icon?: ButtonIcon;
@@ -42,9 +48,23 @@ const styles = StyleSheet.create({
     gap: spacing(2),
     borderRadius: radius.sm,
   },
+  // A described button stops centring its copy: the two lines are a block, and
+  // a block reads from its left edge. It takes the width the icon leaves, so
+  // the label and its description start on the same pixel.
+  copy: {
+    flex: 1,
+    gap: spacing(1),
+  },
   label: {
     fontFamily: fonts.head,
     textTransform: 'uppercase',
+  },
+  description: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.xs,
+    // Dimmed rather than recoloured: every variant already hands it a
+    // foreground that reads on its own surface.
+    opacity: 0.75,
   },
   disabled: {
     opacity: 0.6,
@@ -162,6 +182,7 @@ const isIconOnly = (size: ButtonSize) => size.startsWith('icon');
  */
 export const Button = ({
   label,
+  description,
   variant = 'default',
   size = 'default',
   icon: Icon,
@@ -176,10 +197,30 @@ export const Button = ({
 
   const renderIcon = () => (Icon ? <Icon color={foreground} size={ICON_SIZE[size]} /> : null);
 
+  const renderCopy = () => {
+    if (iconOnly) {
+      return null;
+    }
+
+    const text = <Text style={[ styles.label, TEXT_SIZE[size], LABEL[variant] ]}>{label}</Text>;
+
+    if (description === undefined) {
+      return text;
+    }
+
+    return (
+      <View style={styles.copy}>
+        {text}
+        <Text style={[ styles.description, LABEL[variant] ]}>{description}</Text>
+      </View>
+    );
+  };
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint={description}
       accessibilityState={{ disabled: Boolean(isDisabled), busy: loading }}
       disabled={isDisabled}
       {...props}
@@ -201,7 +242,7 @@ export const Button = ({
           ) : (
             <>
               {iconPosition === 'start' ? renderIcon() : null}
-              {iconOnly ? null : <Text style={[ styles.label, TEXT_SIZE[size], LABEL[variant] ]}>{label}</Text>}
+              {renderCopy()}
               {iconPosition === 'end' ? renderIcon() : null}
             </>
           )}
