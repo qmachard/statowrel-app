@@ -3,11 +3,13 @@ import {
   type DeleteAccountResult,
   USER_CALENDAR_MONTH_COLLECTION,
   USER_COLLECTION,
+  USER_DEVICE_COLLECTION,
   USERNAME_COLLECTION,
   USER_FRIEND_COLLECTION,
   dailyQuestionAnswerConverter,
   userCalendarMonthConverter,
   userConverter,
+  userDeviceConverter,
   userFriendConverter,
   usernameConverter,
 } from '@statowrel/models';
@@ -62,11 +64,16 @@ const deleteAll = async (refs: FirebaseFirestore.DocumentReference[]): Promise<v
  *    anybody but keep counting in the aggregate. The document id *is* the UID,
  *    so deleting it is what anonymising means here; there is no field to blank.
  * 2. the calendar months projected from them;
- * 3. both halves of every friendship — the one in this user's list and its
+ * 3. this account's push destinations — a sub-collection survives the deletion
+ *    of the document it hangs off, so without this the day's question would
+ *    keep being pushed to a phone whose account no longer exists. The app drops
+ *    its own token on sign-out, but not here: by the time it signs out the
+ *    account is gone and that write is no longer one the rules allow;
+ * 4. both halves of every friendship — the one in this user's list and its
  *    mirror in the friend's;
- * 4. the username reservation, which frees the handle;
- * 5. the profile;
- * 6. the Firebase Auth user.
+ * 5. the username reservation, which frees the handle;
+ * 6. the profile;
+ * 7. the Firebase Auth user.
  *
  * Auth last, deliberately: a failure halfway leaves an account that can still
  * sign in and retry, where the reverse would leave orphaned data nobody owns.
@@ -83,7 +90,7 @@ export const deleteAccount = onCall<unknown, Promise<DeleteAccountResult>>(
     const userId = request.auth.uid;
     const userRef = getDocumentRef(USER_COLLECTION, userId, userConverter);
 
-    const [ profile, answers, months, friendships ] = await Promise.all([
+    const [ profile, answers, months, devices, friendships ] = await Promise.all([
       userRef.get().then(parseData),
       // The collection group is scoped by the `user_id` field rather than by
       // the document id: a group query cannot filter on `__name__` across
@@ -98,6 +105,7 @@ export const deleteAccount = onCall<unknown, Promise<DeleteAccountResult>>(
         .where('user_id', '==', userId)
         .get(),
       getSubCollectionRef(userRef, USER_CALENDAR_MONTH_COLLECTION, userCalendarMonthConverter).get(),
+      getSubCollectionRef(userRef, USER_DEVICE_COLLECTION, userDeviceConverter).get(),
       getSubCollectionRef(userRef, USER_FRIEND_COLLECTION, userFriendConverter).get(),
     ]);
 
@@ -117,6 +125,7 @@ export const deleteAccount = onCall<unknown, Promise<DeleteAccountResult>>(
     await deleteAll([
       ...answers.docs.map((answer) => answer.ref),
       ...months.docs.map((month) => month.ref),
+      ...devices.docs.map((device) => device.ref),
       ...friendshipRefs,
     ]);
 
@@ -149,6 +158,7 @@ export const deleteAccount = onCall<unknown, Promise<DeleteAccountResult>>(
       user_id: userId,
       answers: answers.size,
       months: months.size,
+      devices: devices.size,
       friendships: friendships.size,
     });
 
