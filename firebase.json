@@ -28,6 +28,14 @@
     ],
     "rewrites": [
       {
+        "source": "/legal/cgu",
+        "destination": "/legal/cgu.html"
+      },
+      {
+        "source": "/legal/mentions-legales",
+        "destination": "/legal/mentions-legales.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

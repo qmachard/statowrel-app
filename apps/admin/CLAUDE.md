@@ -96,7 +96,11 @@ mobile (docs/prd.md §5.3), deux pages HTML écrites à la main que Vite recopie
 tokens (`legal.css`) au lieu d'importer `src/index.css`. Elles survivent à la réécriture SPA parce
 que Hosting sert un fichier *avant* de réécrire, et `cleanUrls` est ce qui en fait `/legal/cgu` et
 `/legal/mentions-legales` — la forme que l'app pointe et que les stores reçoivent, donc elle ne
-change pas. L'identité de l'éditeur y est marquée en rouge (`À COMPLÉTER`) : c'est la seule chose
+change pas. **Deux réécritures explicites doublent ces deux chemins** avant le `**` attrape-tout,
+alors que `cleanUrls` suffirait : sans l'un ni l'autre, `/legal/cgu` répond 200 *avec la console*,
+pas 404 — la panne ne ressemble donc jamais à une panne de routage vue du dehors. Et la config
+Hosting n'est en ligne qu'à hauteur du dernier `npm run deploy:admin` : changer `firebase.json` ne
+suffit pas, il faut redéployer. L'identité de l'éditeur y est marquée en rouge (`À COMPLÉTER`) : c'est la seule chose
 que le dépôt ne peut pas connaître, et elle doit être remplie avant toute publication.
 
 **Le build inline la config Firebase**, donc le déploiement demande son propre fichier :
