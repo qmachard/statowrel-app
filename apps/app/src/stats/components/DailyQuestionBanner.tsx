@@ -11,7 +11,7 @@ export interface DailyQuestionBannerProps {
    * next one to announce instead of this one to ask.
    */
   label: string | null;
-  /** Opens today's question sheet (docs/prd.md §5.4) — its result, once answered (§5.5). */
+  /** Opens today's question sheet (docs/prd.md §5.4). Ignored once the day is answered — a spent banner is inert. */
   onPress?: () => void;
 }
 
@@ -21,18 +21,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing(4),
     borderRadius: radius.md,
-    borderWidth,
-    borderColor: colors.border,
     padding: spacing(5),
   },
   pending: {
+    borderWidth,
+    borderColor: colors.border,
     backgroundColor: colors.accent,
   },
-  // The yellow an answered day wears in the calendar, exactly as the pending
-  // banner wears the accent of an unanswered today — the banner and the cell
-  // say the same thing in the same colour.
+  // The treatment the calendar gives a day with nothing behind it: the sand of
+  // `muted`, no border, no shadow, nothing to tap. An answered day is done —
+  // the banner steps back off the screen the way those cells do, rather than
+  // holding the weight the open question had.
   answered: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.muted,
   },
   copy: {
     flex: 1,
@@ -56,12 +57,14 @@ const styles = StyleSheet.create({
     color: colors['accent-foreground'],
   },
   answeredText: {
-    color: colors['primary-foreground'],
+    color: colors['muted-foreground'],
   },
 });
 
 /** A pressed banner sinks by exactly its shadow offset — 4px, the offset of `shadows.md`. */
 const SUNK: ViewStyle = { transform: [ { translateX: spacing(1) }, { translateY: spacing(1) } ] };
+
+const ICON_SIZE = 14;
 
 /** The 07:00 Paris draw the daily scheduler runs on — what « demain » actually means. */
 const ANSWERED_CAPTION = 'Prochaine question à 7h';
@@ -69,49 +72,50 @@ const ANSWERED_CAPTION = 'Prochaine question à 7h';
 const ANSWERED_LABEL = 'RDV demain';
 
 /**
+ * What an answered day leaves in the banner's place (docs/prd.md §5.2): the
+ * flat sand a spent calendar cell wears, and no way in — the day is played, the
+ * calendar cell is where one goes back to its result (§5.5).
+ */
+const AnsweredBanner = () => (
+  <View style={[ styles.surface, styles.answered ]} accessibilityLabel={`Question du jour répondue. ${ANSWERED_LABEL}.`}>
+    <View style={styles.copy}>
+      <View style={styles.heading}>
+        <Check size={ICON_SIZE} color={colors['muted-foreground']} />
+        <Text style={[ styles.caption, styles.answeredText ]}>{ANSWERED_CAPTION}</Text>
+      </View>
+      <Text style={[ styles.label, styles.answeredText ]}>{ANSWERED_LABEL}</Text>
+    </View>
+  </View>
+);
+
+/**
  * The first thing on the screen once the invitations are through
  * (docs/prd.md §5.2), and the day's status line: the question while it is still
- * waiting, on the `accent` the calendar gives an unanswered today, then
- * « RDV demain » on the yellow of an answered day. Either way it is the second
- * way in to the question sheet (§5.4) — the first being the calendar cell it
- * borrows its colour from — which an answered day opens onto its result (§5.5).
+ * waiting, raised on the `accent` the calendar gives an unanswered today, and
+ * the second way in to the question sheet (§5.4) — the first being the calendar
+ * cell it borrows its colour from. Once the day is answered it keeps the slot
+ * and gives it up as a surface: « RDV demain », flat and inert.
  */
 export const DailyQuestionBanner = ({ label, onPress }: DailyQuestionBannerProps) => {
-  const answered = label === null;
-  const text = answered ? styles.answeredText : styles.pendingText;
-  const iconColor = answered ? colors['primary-foreground'] : colors['accent-foreground'];
+  if (label === null) {
+    return <AnsweredBanner />;
+  }
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={answered
-        ? `Question du jour répondue. ${ANSWERED_LABEL}.`
-        : `Question du jour : ${label}`}
-      onPress={onPress}
-    >
+    <Pressable accessibilityRole="button" accessibilityLabel={`Question du jour : ${label}`} onPress={onPress}>
       {({ pressed }) => (
-        <View
-          style={[
-            styles.surface,
-            answered ? styles.answered : styles.pending,
-            pressed ? SUNK : shadows.md,
-          ]}
-        >
+        <View style={[ styles.surface, styles.pending, pressed ? SUNK : shadows.md ]}>
           <View style={styles.copy}>
             <View style={styles.heading}>
-              {answered
-                ? <Check size={14} color={iconColor} />
-                : <MessageCircleQuestionMark size={14} color={iconColor} />}
-              <Text style={[ styles.caption, text ]}>
-                {answered ? ANSWERED_CAPTION : 'Question du jour'}
-              </Text>
+              <MessageCircleQuestionMark size={ICON_SIZE} color={colors['accent-foreground']} />
+              <Text style={[ styles.caption, styles.pendingText ]}>Question du jour</Text>
             </View>
-            <Text style={[ styles.label, text ]} numberOfLines={3}>
-              {answered ? ANSWERED_LABEL : label}
+            <Text style={[ styles.label, styles.pendingText ]} numberOfLines={3}>
+              {label}
             </Text>
           </View>
 
-          <ChevronRight size={28} color={iconColor} />
+          <ChevronRight size={28} color={colors['accent-foreground']} />
         </View>
       )}
     </Pressable>
