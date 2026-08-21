@@ -16,10 +16,28 @@ export const QUESTION_MAX_OPTIONS = 6;
  * Moderation lifecycle (docs/prd.md §4.7): a user proposes a question
  * (`pending`), a moderator approves or rejects it, and it becomes `used` once
  * it has been drawn as a daily question. A used question is never redrawn.
+ *
+ * `demo` sits outside that lifecycle: it is the sample question the onboarding
+ * carousel poses to someone who has not signed up yet. It is never moderated,
+ * never drawn — the daily draw reads the `approved` pot alone — and it is the
+ * one status `firestore.rules` lets an anonymous visitor read, because the
+ * carousel runs before there is a session to check.
  */
-export const QUESTION_STATUSES = [ 'pending', 'approved', 'rejected', 'used' ] as const;
+export const QUESTION_STATUSES = [ 'pending', 'approved', 'rejected', 'used', 'demo' ] as const;
 
 export type QuestionStatus = (typeof QUESTION_STATUSES)[number];
+
+/**
+ * The one question the onboarding carousel poses — a fixed document id rather
+ * than a query, so the app reads a single document and `firestore.rules` can
+ * open it up by status alone.
+ *
+ * Written by `npm run seed-demo-question`, which is also what carries the
+ * tally the sample StatOwrel is computed from: a demo question takes no
+ * answers (`broadcast_at` is null, so the rules deny every write under it), and
+ * an empty `answer_counts` would put the visitor at « 100% des gens ».
+ */
+export const DEMO_QUESTION_ID = '01M0HNM3RQMP2TDXPTW6ZSSM17';
 
 export interface QuestionOptionFirebaseData {
   /**

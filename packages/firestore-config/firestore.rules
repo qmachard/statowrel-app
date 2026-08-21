@@ -47,6 +47,18 @@ service cloud.firestore {
                   || (isAuthenticated()
                       && resource.data.broadcast_at != null
                       && request.time >= resource.data.broadcast_at);
+
+      // A third way in, and the only rule in this file that grants anything
+      // **without a session**: the sample question the onboarding carousel
+      // poses before sign-up (`DEMO_QUESTION_ID` in packages/models). It
+      // belongs to nobody and was never broadcast, so neither clause above
+      // reaches it, and the visitor reading it has no account yet.
+      //
+      // The anonymity stops there. `get` and never `list`, so the pot stays as
+      // private as it is above — one document, by its fixed id, nothing else —
+      // and the answer rule below still wants an owner: the pick made in the
+      // carousel waits on the phone and is written once the visitor signs up.
+      allow get: if resource.data.status == 'demo';
       allow create: if isOwner(request.resource.data.author_id)
                     && request.resource.data.status == 'pending'
                     && request.resource.data.rejection_reason == null
@@ -75,7 +87,10 @@ service cloud.firestore {
       // A question that was never broadcast has a null `broadcast_on`, which no
       // `date` string can equal — so nobody gets to seed answers on the
       // moderation pot. A document predating those fields has none at all, so
-      // the expression errors and the write is denied, same outcome.
+      // the expression errors and the write is denied, same outcome. The
+      // onboarding demo is the one question answerable without a broadcast, and
+      // it is let through by its status rather than by a hole in that check —
+      // see `isAnswerToDemo` below.
       //
       // An answer is final: no update, no delete (docs/prd.md §4.2). Deleting
       // an account is what removes one, backend-side (`users-deleteAccount`) —
@@ -84,18 +99,43 @@ service cloud.firestore {
       // `answer_counts` are not decremented, so the answer keeps counting in
       // the aggregate while belonging to nobody (docs/prd.md §4.1).
       match /v1_daily_question_answers/{user_id} {
-        // Takes the parent question rather than reading it itself, so the whole
-        // rule costs one `get()` however many of its fields it checks.
-        function isAnswerTo(question) {
+        // What every answer looks like, whatever it answers. `counted_at` is
+        // the answer trigger's own marker, so a client never writes one: a
+        // pre-filled one would tell the trigger this answer was already folded
+        // into `answer_counts`.
+        function hasAnswerShape() {
           return request.resource.data.user_id == user_id
                  && request.resource.data.question_id == question_id
-                 && request.resource.data.date == question.broadcast_on
                  && request.resource.data.option_id is string
                  && request.resource.data.option_id.size() > 0
                  && request.resource.data.answered_at is timestamp
-                 && question.broadcast_at != null
+                 && request.resource.data.counted_at == null;
+        }
+
+        // An answer to the question as the day it ran.
+        function isAnswerToBroadcast(question) {
+          return question.broadcast_at != null
                  && request.time >= question.broadcast_at
+                 && request.resource.data.date == question.broadcast_on
                  && request.resource.data.late == (request.time > question.closes_at);
+        }
+
+        // An answer to the onboarding sample (docs/prd.md §5.6), which was
+        // never a day: no `broadcast_on` to be dated with and no `closes_at` to
+        // be late against, so both are pinned to a value that cannot be
+        // mistaken for a day of anybody's calendar or streak. The trigger reads
+        // the same status and folds this answer into `answer_counts` alone.
+        function isAnswerToDemo(question) {
+          return question.status == 'demo'
+                 && request.resource.data.date == ''
+                 && request.resource.data.late == false;
+        }
+
+        // Takes the parent question rather than reading it itself, so the whole
+        // rule costs one `get()` however many of its fields it checks.
+        function isAnswerTo(question) {
+          return hasAnswerShape()
+                 && (isAnswerToBroadcast(question) || isAnswerToDemo(question));
         }
 
         allow read: if isAuthenticated();

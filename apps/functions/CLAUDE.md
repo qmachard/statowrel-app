@@ -41,7 +41,7 @@ Every ref helper takes a `FirestoreConverter` from `@statowrel/models` — never
 
 ## Triggers are delivered at least once
 
-A Firestore trigger can fire twice for the same write, so anything it does has to be idempotent — and "increment a counter" never is on its own. Read a marker inside a transaction and bail out before writing, rather than adding a flag nobody else needs: `triggers/steps/onAnswerCreated.ts` uses the day's own entry in the author's calendar month, which the same transaction writes.
+A Firestore trigger can fire twice for the same write, so anything it does has to be idempotent — and "increment a counter" never is on its own. Read a marker inside a transaction and bail out before writing, rather than adding a flag nobody else needs: `triggers/steps/onAnswerCreated.ts` uses the day's own entry in the author's calendar month, which the same transaction writes. The onboarding demo is the exception that proves the rule — it is projected into no calendar, so it has no free marker, and `counted_at` on the answer document is the flag it had to grow.
 
 One more thing that catches people out: `DocumentReference.update()` does **not** run the converter (only `set()` and reads do), so a timestamp written through it must be a `Timestamp`, never an ISO string.
 
@@ -95,6 +95,16 @@ npm run seed-daily-questions -- --answers 120 --dry-run
 Fills the days already gone, so a fresh project does not open on an empty calendar. It replays the batch `scheduleDailyQuestion` commits every morning — draw an `approved` question, stamp `status` / `broadcast_at` (07:00 Paris) / `broadcast_on` / `closes_at` (the following Paris midnight), index the day in `v1_daily_question_months` — with two differences: nobody is notified, and the days the approved pot cannot cover are minted straight from `scripts/questions.seed.json`. Minting is keyed on the label alone where `seed-questions` keys on the label *and* its options: the catalogue poses several variants of the same wording, and a calendar week showing one twice reads as a bug. A day already indexed in its month is left alone, so the script only ever fills holes and is safe to re-run.
 
 `--answers <n>` is the one thing it writes that is not true: a fabricated tally on the days it seeds, so the result card reads « Comme 23% des gens… » on a database nobody else has answered in. Off by default, and counters on the question only — no answer document is forged under anybody's UID, and a real answer keeps incrementing them. It never overwrites a tally a question already has.
+
+```bash
+npm run seed-demo-question                    # write/repair v1_questions/{DEMO_QUESTION_ID}
+npm run seed-demo-question -- --answers 2500 --dry-run
+npm run seed-demo-question -- --production
+```
+
+Writes the one question the onboarding carousel poses (`docs/prd.md` §5.6) — a fixed document id, so the app reads a single document and `firestore.rules` can open it up by status alone. It sits outside the moderation lifecycle: `demo`, never approved, never drawn. It does take answers — the rules let one through on its status — but they count in its own `answer_counts` and nowhere else: no calendar, no streak, no `answers_count`, since a demo is not a day.
+
+So the starting tally still matters. The first visitor would otherwise land on « Comme 100% des gens… » — hence a fabricated one here, the same `fabricateAnswerCounts` the daily seeder uses, which real answers then add to. Non-destructive in both directions: a document already there keeps its wording and its options, only its status moves, and a tally it already carries is never overwritten. A question that has been broadcast is refused outright — turning a day of the calendar into the demo would leave that day pointing at something no screen can render as a day.
 
 ```bash
 npm run send-test-notification -- --email moi@exemple.fr   # every device of that account

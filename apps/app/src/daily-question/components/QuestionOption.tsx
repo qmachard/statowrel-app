@@ -6,6 +6,9 @@ import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/
 /** The letter badge is a square, so its side is a token rather than a padding. */
 const LETTER_SIZE = spacing(9);
 
+/** `A`, `B`, `C`… for the option at that rank — a question carries 2 to 6 (docs/prd.md §4.2). */
+export const letterOf = (index: number) => String.fromCharCode('A'.charCodeAt(0) + index);
+
 const styles = StyleSheet.create({
   option: {
     flexDirection: 'row',

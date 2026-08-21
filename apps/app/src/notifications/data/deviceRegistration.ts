@@ -85,22 +85,27 @@ const ensureAndroidChannels = async (notifications: Notifications): Promise<void
 };
 
 /**
- * Asks for the permission, once.
+ * The permission, asked at most once — and only when `ask` says this is the
+ * moment for it.
  *
- * A refusal is final here: `canAskAgain` is false on both platforms after the
- * first "no", and re-prompting a user who has already refused is a dialog the
- * system would not even show. Turning notifications back on then happens in the
- * system settings — which is where a settings screen (docs/prd.md §5.6) will
- * eventually send them.
+ * **Who raises the dialog matters more than when.** A refusal is final on both
+ * platforms: `canAskAgain` is false after the first "no", and re-prompting is a
+ * dialog the system would not even show. So the one place that asks is the
+ * onboarding carousel's notification slide (docs/prd.md §5.6), which has just
+ * said what the notification is for; every other caller — the launch
+ * registration, above all — passes `ask: false` and settles for the permission
+ * it finds. Turning notifications back on afterwards happens in the system
+ * settings, which is where a settings screen (docs/prd.md §5.7) will eventually
+ * send them.
  */
-const ensurePermission = async (notifications: Notifications): Promise<boolean> => {
+const ensurePermission = async (notifications: Notifications, ask: boolean): Promise<boolean> => {
   const current = await notifications.getPermissionsAsync();
 
   if (current.granted) {
     return true;
   }
 
-  if (!current.canAskAgain) {
+  if (!ask || !current.canAskAgain) {
     return false;
   }
 
@@ -147,6 +152,40 @@ const fetchExpoPushToken = async (notifications: Notifications): Promise<string 
   }
 };
 
+/**
+ * The permission dialog, raised on its own and ahead of any account — what the
+ * onboarding carousel's notification slide asks for once it has said why
+ * (docs/prd.md §5.6).
+ *
+ * Asking before there is a UID is the whole point: the alternative is the cold
+ * system prompt at the first launch of a signed-in session, with nothing on
+ * screen explaining what it is for, and a refusal is final on both platforms.
+ * Nothing is registered here — there is no account to register under yet — but
+ * `registerDeviceForPush` finds the permission already granted at sign-in and
+ * goes straight to the token, so the dialog is never raised twice.
+ *
+ * **Never throws**, like everything else in this module: a build without the
+ * native module, or a platform that has no such dialog, is « the user did not
+ * grant it », not a broken carousel.
+ */
+export const requestPushPermission = async (): Promise<boolean> => {
+  const notifications = loadNotifications();
+
+  if (notifications === null || devicePlatform() === null) {
+    return false;
+  }
+
+  try {
+    await ensureAndroidChannels(notifications);
+
+    return await ensurePermission(notifications, true);
+  } catch (error: unknown) {
+    console.warn('[notifications] could not ask for the push permission', error);
+
+    return false;
+  }
+};
+
 const deviceRef = (userId: string, token: string) => getSubDocumentRef(
   USER_COLLECTION,
   userId,
@@ -166,13 +205,21 @@ const deviceRef = (userId: string, token: string) => getSubDocumentRef(
  * from the existing document instead of being restamped — it is the day this
  * phone first subscribed, and a launch is not that day.
  *
+ * **`ask` decides whether it may raise the permission dialog, and it defaults
+ * to no.** A launch registers with whatever permission is already there; the
+ * onboarding carousel's notification slide is the one caller that passes
+ * `true`, after saying what the notification is for. See `ensurePermission`.
+ *
  * **Never throws.** Everything it needs can legitimately be missing — the
  * native module on a stale dev client, the token on a simulator, the permission
  * on a phone whose owner said no — and none of it is worth failing a launch
  * over. The return value says what happened for a caller that cares; nobody
  * does yet.
  */
-export const registerDeviceForPush = async (userId: string): Promise<string | null> => {
+export const registerDeviceForPush = async (
+  userId: string,
+  { ask = false }: { ask?: boolean } = {},
+): Promise<string | null> => {
   const notifications = loadNotifications();
 
   if (notifications === null) {
@@ -190,7 +237,7 @@ export const registerDeviceForPush = async (userId: string): Promise<string | nu
   try {
     await ensureAndroidChannels(notifications);
 
-    if (!await ensurePermission(notifications)) {
+    if (!await ensurePermission(notifications, ask)) {
       return null;
     }
 

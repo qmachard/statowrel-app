@@ -19,9 +19,14 @@ import {
  *
  * The name says `daily_question` rather than its parent's `question` on
  * purpose: what it holds is an answer to the question **as the daily question**
- * — it exists only for a question that was broadcast, and carries the `date`
- * and `late` of that broadcast. A question sitting in the moderation pot has no
+ * — it exists for a question that was broadcast, and carries the `date` and
+ * `late` of that broadcast. A question sitting in the moderation pot has no
  * answers.
+ *
+ * The one exception is the onboarding demo (docs/prd.md §5.6), which is
+ * answered by everybody who installs the app and was never a day: its answers
+ * carry an empty `date` and a `late` of false, and count in nothing but the
+ * question's own `answer_counts`.
  */
 export const DAILY_QUESTION_ANSWER_COLLECTION = 'v1_daily_question_answers';
 
@@ -61,6 +66,19 @@ export interface DailyQuestionAnswerFirebaseData {
    * `answered_at` at display time.
    */
   late: boolean;
+  /**
+   * When the answer trigger folded this answer into the question's
+   * `answer_counts`. Written by the backend alone, and `null` on every answer
+   * the client creates — `firestore.rules` refuses a create that pre-fills it.
+   *
+   * It exists for the **onboarding demo** (docs/prd.md §5.6). A trigger is
+   * delivered at least once, so an increment needs a marker to bail out on, and
+   * a broadcast answer has one for free: its entry in the author's calendar
+   * month, which the same transaction writes and reads back. A demo answer is
+   * projected nowhere — it is not a day — so it needs a marker of its own, and
+   * the cheapest one is on the answer itself.
+   */
+  counted_at: UniversalTimestamp | null;
 }
 
 export type DailyQuestionAnswerData = ModelData<DailyQuestionAnswerFirebaseData>;
@@ -73,6 +91,7 @@ export const dailyQuestionAnswerConverter: FirestoreConverter<DailyQuestionAnswe
     option_id: data.option_id,
     answered_at: TimestampClass.fromDate(new Date(data.answered_at)),
     late: data.late,
+    counted_at: data.counted_at ? TimestampClass.fromDate(new Date(data.counted_at)) : null,
   }),
   fromFirestore: (snap) => {
     const data = snap.data();
@@ -84,6 +103,7 @@ export const dailyQuestionAnswerConverter: FirestoreConverter<DailyQuestionAnswe
       option_id: data.option_id ?? '',
       answered_at: parseTimestamp(data.answered_at ?? null, 'now'),
       late: data.late ?? false,
+      counted_at: parseTimestamp(data.counted_at ?? null),
     };
   },
 });

@@ -299,6 +299,13 @@ h3 {
   color: var(--color-secondary-foreground);
 }
 
+/* The onboarding sample — outside the moderation lifecycle, so it wears the
+   one colour none of the four verdicts uses. */
+.badge--demo {
+  background: var(--color-ultra, #6d4bd8);
+  color: #ffffff;
+}
+
 /* Question form ----------------------------------------------------------- */
 
 .option {
