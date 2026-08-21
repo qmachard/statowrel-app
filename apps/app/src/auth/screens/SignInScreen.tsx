@@ -11,6 +11,7 @@ import { authErrorMessage } from '@/auth/errors';
 import { signInWithEmail } from '@/auth/providers';
 import { type SignInValues, signInSchema } from '@/auth/schemas';
 import { Button } from '@/components/Button';
+import { LegalLinks } from '@/components/LegalLinks';
 import { TextField } from '@/components/TextField';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import type { RootStackParamList } from '@/navigation/types';
@@ -67,6 +68,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.foreground,
     textDecorationLine: 'underline',
+  },
+  // Outside the scroll view, so it sits at the bottom of the screen rather than
+  // under a block the screen centres — and outside the keyboard avoider, so
+  // typing does not drag the legal footer up over the form.
+  footer: {
+    paddingHorizontal: spacing(6),
+    paddingBottom: spacing(4),
   },
 });
 
@@ -157,6 +165,8 @@ export const SignInScreen = () => {
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <LegalLinks style={styles.footer} />
     </SafeAreaView>
   );
 };

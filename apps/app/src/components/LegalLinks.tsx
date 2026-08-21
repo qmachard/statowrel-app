@@ -1,4 +1,4 @@
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
@@ -57,12 +57,18 @@ const LegalLink = ({ label, url }: { label: string; url: string }) => (
 );
 
 /**
- * The legal footer of the Profile screen (docs/prd.md §5.3): small, grey, out of
- * the way — there to be found when it is looked for, never to compete with the
- * screen.
+ * The legal footer: small, grey, out of the way — there to be found when it is
+ * looked for, never to compete with the screen it sits under.
+ *
+ * It stands at the bottom of the Profile screen (docs/prd.md §5.3) *and* of the
+ * two doors into the app, where the conditions have to be readable before an
+ * account is created rather than only once there is one to open the Menu with.
+ *
+ * `style` is layout only, per the app's convention — where the footer sits is
+ * the screen's business, what it looks like is this component's.
  */
-export const LegalLinks = () => (
-  <View style={styles.container}>
+export const LegalLinks = ({ style }: { style?: ViewStyle }) => (
+  <View style={[ styles.container, style ]}>
     <LegalLink label="CGU" url={LEGAL_URLS.terms} />
     <Text style={styles.separator}>·</Text>
     <LegalLink label="Mentions légales" url={LEGAL_URLS.notice} />

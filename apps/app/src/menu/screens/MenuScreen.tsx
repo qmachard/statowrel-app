@@ -10,9 +10,9 @@ import { deleteAccountErrorMessage } from '@/auth/errors';
 import { signOut } from '@/auth/providers';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
+import { LegalLinks } from '@/components/LegalLinks';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendsCard } from '@/friends/components/FriendsCard';
-import { LegalLinks } from '@/menu/components/LegalLinks';
 
 const styles = StyleSheet.create({
   safeArea: {
