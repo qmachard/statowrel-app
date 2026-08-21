@@ -15,7 +15,7 @@ const payloadSchema = z.object({
 });
 
 /**
- * The evening line, in its two states — docs/prd.md §4.5.
+ * The evening nudge, in its two states — docs/prd.md §4.5.
  *
  * The count is the whole point of the 18:00 push, so when there is none to give
  * the notification says something else entirely rather than a « 0 de tes potes »
@@ -26,7 +26,7 @@ const payloadSchema = z.object({
  * 07:00, and repeating it in the evening would spoil it a second time to
  * somebody who is being asked to open the app precisely to discover it.
  */
-const notificationBody = (friendsAnswered: number): string => {
+const nudgeBody = (friendsAnswered: number): string => {
   if (friendsAnswered === 0) {
     return 'Ne perds pas ta série : tu as jusqu\'à minuit pour répondre.';
   }
@@ -38,9 +38,9 @@ const notificationBody = (friendsAnswered: number): string => {
   return `${friendsAnswered} de tes potes ont répondu à la question du jour. Et toi ?`;
 };
 
-const notificationFor = (date: string, friendsAnswered: number): PushNotification => ({
+const nudgeFor = (date: string, friendsAnswered: number): PushNotification => ({
   title: friendsAnswered === 0 ? 'Tes potes attendent ta réponse' : 'Tes potes ont répondu',
-  body: notificationBody(friendsAnswered),
+  body: nudgeBody(friendsAnswered),
   channelId: DAILY_QUESTION_CHANNEL_ID,
   // The same payload as the 07:00 drop, on purpose: the tap has the same
   // destination — the day's question — and the app already knows how to read it
@@ -49,8 +49,36 @@ const notificationFor = (date: string, friendsAnswered: number): PushNotificatio
 });
 
 /**
- * Nudges at 18:00 whoever still owes an answer, with the number of their
- * friends who have already given theirs — docs/prd.md §4.5.
+ * The other evening line: the one for somebody who has already answered.
+ *
+ * « Et toi ? » is unanswerable to them, but the friends' answers are exactly
+ * what they unlocked by answering (docs/prd.md §4.5), so the push stops being a
+ * reminder and becomes an invitation to come and read them. No count in the
+ * line: it would be one number at 18:00 and another by the time the day screen
+ * opens, and what is being offered is the reading, not the tally.
+ *
+ * Nobody is pushed when none of their friends has answered — there would be
+ * nothing to discover, and they owe no answer of their own.
+ */
+const discoveryFor = (date: string, friendsAnswered: number): PushNotification | null => {
+  if (friendsAnswered === 0) {
+    return null;
+  }
+
+  return {
+    title: 'Tes potes ont répondu',
+    body: friendsAnswered === 1
+      ? 'Découvre la réponse de ton pote à la question du jour.'
+      : 'Découvre la réponse de tes potes à la question du jour.',
+    channelId: DAILY_QUESTION_CHANNEL_ID,
+    data: { type: 'daily_question', date },
+  };
+};
+
+/**
+ * The 18:00 push: whoever still owes an answer is nudged with the number of
+ * their friends who have already given theirs, whoever has answered is sent to
+ * read those answers — docs/prd.md §4.5.
  *
  * That count is what makes the evening push worth sending: « la question du
  * jour est toujours ouverte » is a reminder, « 4 de tes potes ont répondu » is
@@ -61,8 +89,9 @@ const notificationFor = (date: string, friendsAnswered: number): PushNotificatio
  * Everybody who has not answered is nudged, friends or no friends: the day
  * closes at midnight either way (docs/prd.md §4.6), and a user whose friends
  * are all as late as they are is exactly the one worth waking up. Whoever has
- * answered is skipped, since the line ends on a question only they would have
- * no reason to be asked.
+ * answered gets the other line — « Découvre la réponse de tes potes » — since
+ * « Et toi ? » is a question only somebody who still owes an answer can be
+ * asked, and the friends' answers are what their own answer unlocked.
  *
  * Retried by Cloud Tasks, and the retry re-sends the whole fan-out rather than
  * resuming it, exactly like the 07:00 drop: nothing tracks who already got the
@@ -87,9 +116,11 @@ export const notifyFriendsAnswers = onTaskDispatched({
 
   const { answered, friendsAnswered } = await friendsAnswersDigest(question_id);
 
-  const report = await sendPushToUsers((userId) => (
-    answered.has(userId) ? null : notificationFor(date, friendsAnswered.get(userId) ?? 0)
-  ));
+  const report = await sendPushToUsers((userId) => {
+    const friendsCount = friendsAnswered.get(userId) ?? 0;
+
+    return answered.has(userId) ? discoveryFor(date, friendsCount) : nudgeFor(date, friendsCount);
+  });
 
   logger.info('Friends answers nudge sent', { date, question_id, answered: answered.size, ...report });
 });
