@@ -23,11 +23,12 @@ const BADGE_SIZE = 12;
 
 /**
  * How far the bead hangs off the cell, the way an app icon's own badge hangs off
- * the icon. A third of it, so it still reads as belonging to the day it sits on
- * — and comfortably inside the 8px gutter the calendar grid leaves between
- * cells, so it never touches its neighbour.
+ * the icon. A fifth of it — enough to read as hung on the corner rather than
+ * drawn inside it, little enough that it still belongs to the day it sits on,
+ * and well inside the 8px gutter the calendar grid leaves between cells, so it
+ * never touches its neighbour.
  */
-const BADGE_OVERHANG = BADGE_SIZE / 3;
+const BADGE_OVERHANG = BADGE_SIZE / 5;
 
 const PRESSED_OPACITY = 0.8;
 
