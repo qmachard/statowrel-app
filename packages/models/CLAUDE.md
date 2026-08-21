@@ -19,7 +19,7 @@ The wire contracts of the callable Cloud Functions — one of the two modules he
 
 ## `src/daily_question_time.ts`
 
-The daily cycle's clock: `parisTimeToInstant`, and the two instants a day key stands for — `publicationTimeOf` (07:00 Europe/Paris, `PUBLICATION_HOUR`) and `closingTimeOf` (the following Paris midnight). No collection either, but the two values it computes are what `v1_questions`' `broadcast_at` and `closes_at` *mean*, so they belong beside the models rather than inside the scheduler that happens to write them: the seeding script (`npm run seed-daily-questions`) stamps the same fields from outside the functions runtime.
+The daily cycle's clock: `parisTimeToInstant`, the two instants a day key stands for — `publicationTimeOf` (07:00 Europe/Paris, `PUBLICATION_HOUR`) and `closingTimeOf` (the following Paris midnight) — and `FRIENDS_ANSWERS_HOUR`, the 18:00 the evening nudge is scheduled on (docs/prd.md §4.5), an hour rather than an instant since nothing stores it. No collection either, but the two values it computes are what `v1_questions`' `broadcast_at` and `closes_at` *mean*, so they belong beside the models rather than inside the scheduler that happens to write them: the seeding script (`npm run seed-daily-questions`) stamps the same fields from outside the functions runtime.
 
 Day-key arithmetic stays in `v1_daily_question_month.ts`, next to `dailyQuestionDateKey` — `dateKeyParts`, `previousDateKey`, `monthKeyOf`, `monthDayKeyOf`, `dateKeyOf`.
 

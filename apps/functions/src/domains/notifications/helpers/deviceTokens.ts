@@ -22,6 +22,8 @@ import {
 const DELETES_PER_BATCH = 500;
 
 export interface RegisteredDevice {
+  /** Firebase Auth UID the device is registered under — what a per-user fan-out groups on. */
+  user_id: string;
   push_token: string;
   platform: DevicePlatform;
   /** Where the token is stored, so a dead one can be dropped without rebuilding its path. */
@@ -29,18 +31,11 @@ export interface RegisteredDevice {
 }
 
 /**
- * Every push destination in the database, read as a collection group — the
- * daily question goes to everyone at once (docs/prd.md §4.2), so there is
- * nothing to filter by.
+ * The devices a query answered with, whichever query it was.
  *
  * Malformed tokens are dropped here rather than sent: Expo rejects a whole
  * request over one bad `to`, which would cost the hundred people sharing that
  * batch their notification.
- *
- * The whole set is held in memory. That is the same bet `drawApprovedQuestion`
- * makes on the question pot, and it holds for as long as one device fits in a
- * few hundred bytes; a paginated fan-out is what a six-figure user count would
- * need.
  */
 const readDevices = (snapshot: QuerySnapshot<UserDeviceData>): RegisteredDevice[] => {
   const devices = snapshot.docs.reduce<RegisteredDevice[]>((registered, document) => {
@@ -50,7 +45,11 @@ const readDevices = (snapshot: QuerySnapshot<UserDeviceData>): RegisteredDevice[
     const pushToken = document.id;
 
     if (isExpoPushToken(pushToken)) {
-      registered.push({ push_token: pushToken, platform: data.platform, ref: document.ref });
+      // The parent's parent is `v1_users/{uid}`, which is the owner even for a
+      // document whose `user_id` field was never written.
+      const userId = document.ref.parent.parent?.id ?? data.user_id;
+
+      registered.push({ user_id: userId, push_token: pushToken, platform: data.platform, ref: document.ref });
     }
 
     return registered;
@@ -65,6 +64,21 @@ const readDevices = (snapshot: QuerySnapshot<UserDeviceData>): RegisteredDevice[
   return devices;
 };
 
+/**
+ * Every push destination in the database, read as a collection group — the
+ * daily question goes to everyone at once (docs/prd.md §4.2), so there is
+ * nothing to filter by.
+ *
+ * Read whole by the per-user fan-out of 18:00 too (docs/prd.md §4.5): a
+ * Firestore `in` filter takes at most thirty values, so targeting a few hundred
+ * users would be a dozen queries against this one read. The caller groups on
+ * `user_id`.
+ *
+ * The whole set is held in memory. That is the same bet `drawApprovedQuestion`
+ * makes on the question pot, and it holds for as long as one device fits in a
+ * few hundred bytes; a paginated fan-out is what a six-figure user count would
+ * need.
+ */
 export const listRegisteredDevices = async (): Promise<RegisteredDevice[]> => (
   readDevices(await getCollectionGroupRef(USER_DEVICE_COLLECTION, userDeviceConverter).get())
 );

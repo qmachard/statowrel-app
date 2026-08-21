@@ -100,10 +100,13 @@ Fills the days already gone, so a fresh project does not open on an empty calend
 npm run send-test-notification -- --email moi@exemple.fr   # every device of that account
 npm run send-test-notification -- --uid <uid> --date 2026-08-19
 npm run send-test-notification -- --token 'ExponentPushToken[…]' --body 'Coucou'
+npm run send-test-notification -- --email moi@exemple.fr --nudge --friends 3
 npm run send-test-notification -- --all --dry-run
 ```
 
 Sends the day's notification by hand — the one part of the daily cycle no screen can show, since it leaves the backend and only comes back as a banner. It builds exactly what `notifyDailyQuestion` builds: the same title, the same body (the day's label, copied onto `v1_daily_question_months`), the same `DAILY_QUESTION_CHANNEL_ID` and the same `{ type: 'daily_question', date }` — so a tap routes through `apps/app/src/notifications/` the way the real one does, and a working test means a working 07:00.
+
+`--nudge` sends the 18:00 lines instead of the 07:00 one, with the count `--friends <n>` names rather than a real one: the point is to read the line on a lock screen, and counting for real would mean answering as somebody else first. Zero friends is a message of its own (« Ne perds pas ta série… »), so `--nudge` alone is worth sending too.
 
 It then does the one thing the backend does not: it polls `/push/getReceipts`. An Expo ticket is an acceptance, not a delivery, and the difference is exactly what a test is for — `--no-receipts` skips the wait.
 

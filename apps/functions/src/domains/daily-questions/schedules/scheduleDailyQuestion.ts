@@ -3,10 +3,8 @@ import { logger } from 'firebase-functions/v2';
 import { Timestamp } from 'firebase-admin/firestore';
 import {
   closingTimeOf,
-  DAILY_QUESTION_MONTH_COLLECTION,
   DAILY_QUESTION_TIME_ZONE,
   type DailyQuestionMonthDayData,
-  dailyQuestionMonthConverter,
   dailyQuestionDateKey,
   monthDayKeyOf,
   monthKeyOf,
@@ -16,20 +14,11 @@ import {
   questionConverter,
 } from '@statowrel/models';
 
-import { createWriteBatch, getDocumentRef, parseData, REGION_CLOUD } from '@/libs/firebase-admin';
+import { createWriteBatch, getDocumentRef, REGION_CLOUD } from '@/libs/firebase-admin';
 
 import { drawApprovedQuestion } from '../helpers/drawQuestion';
+import { dailyQuestionMonthRefOf, scheduledQuestionOf } from '../helpers/monthIndex';
 import { enqueueDailyQuestionNotification } from '../helpers/notificationQueue';
-const dailyQuestionMonthRefOf = (date: string) => (
-  getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKeyOf(date), dailyQuestionMonthConverter)
-);
-
-/** The question already drawn for `date`, or `null` — the month index is the day. */
-const scheduledQuestionOf = async (date: string): Promise<DailyQuestionMonthDayData | null> => {
-  const month = parseData(await dailyQuestionMonthRefOf(date).get());
-
-  return month?.days[monthDayKeyOf(date)] ?? null;
-};
 
 /**
  * Draws one approved question for `date` and commits both halves of that

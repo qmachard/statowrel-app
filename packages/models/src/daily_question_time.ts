@@ -74,3 +74,10 @@ export const publicationTimeOf = (dateKey: string): Date => (
  * streak and is flagged `late` (docs/prd.md §4.6).
  */
 export const closingTimeOf = (dateKey: string): Date => parisTimeToInstant(dateKey, 24);
+
+/**
+ * The daily nudge goes out at 18:00 Paris — late enough that a good part of the
+ * friends have answered and the count is worth reading, early enough to leave
+ * the whole evening to answer before the day closes at midnight.
+ */
+export const FRIENDS_ANSWERS_HOUR = 18;
