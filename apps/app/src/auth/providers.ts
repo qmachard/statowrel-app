@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { Platform } from 'react-native';
 
+import { clearFriends } from '@/friends/data/friendsStore';
 import { auth } from '@/lib/firebase';
 import { unregisterDeviceForPush } from '@/notifications/data/deviceRegistration';
 
@@ -184,6 +185,12 @@ export const signOut = async (): Promise<void> => {
   if (uid) {
     await unregisterDeviceForPush(uid);
   }
+
+  // The friend list is subscribed to for the whole session and mirrored to
+  // disk, neither of which survives the account leaving this phone: a signed-out
+  // device has no business keeping a listener open on it, nor a copy of who
+  // somebody is friends with.
+  await clearFriends(uid ?? null);
 
   // Without this, Google's native SDK keeps the account selected and the next
   // sign-in skips the account picker entirely.

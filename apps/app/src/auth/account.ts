@@ -1,5 +1,7 @@
 import { DELETE_ACCOUNT_CALLABLE, type DeleteAccountResult } from '@statowrel/models';
 
+import { clearFriends } from '@/friends/data/friendsStore';
+import { auth } from '@/lib/firebase';
 import { callFunction } from '@/lib/functions';
 
 import { signOut } from './providers';
@@ -20,7 +22,14 @@ import { signOut } from './providers';
  * next token refresh.
  */
 export const deleteAccount = async (): Promise<void> => {
+  // Read before the callable runs: it deletes the Auth user, so `currentUser`
+  // is on borrowed time and the key the friend list is stored under would go
+  // with it — leaving that copy on the phone with nothing left able to name it.
+  const uid = auth.currentUser?.uid ?? null;
+
   await callFunction<Record<string, never>, DeleteAccountResult>(DELETE_ACCOUNT_CALLABLE, {});
+
+  await clearFriends(uid);
 
   await signOut();
 };
