@@ -3,8 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Card, CardContent } from '@/components/Card';
-import { Star } from '@/components/animations';
-import { QuestionOption } from '@/daily-question/components/QuestionOption';
+import { Star, SuccessCheck } from '@/components/animations';
 import { shadows } from '@/design/shadows';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 
@@ -12,9 +11,6 @@ import { SAMPLE_STATOWREL, type OnboardingSlideKey } from '../copy';
 
 /** Three handles nobody holds — the faces are generated from them (`src/lib/avatars.ts`). */
 const SAMPLE_FRIENDS = [ 'lou.martin', 'sacha', 'nina.b' ];
-
-/** The option the last slide shows mid-gesture — a question nobody will be asked. */
-const SAMPLE_OPTION = 'Par le bout';
 
 /** The bell's own box, and the icon inside it. */
 const BELL_BOX = spacing(30);
@@ -54,12 +50,6 @@ const styles = StyleSheet.create({
   },
   // The accent red of a notification that has just landed — the same one the
   // daily-question banner and today's cell wear.
-  // Full width, so the sample row reads as the row it imitates rather than as a
-  // chip, and tilted like the StatOwrel card two slides earlier.
-  gesture: {
-    width: '100%',
-    transform: [ { rotate: '-2deg' } ],
-  },
   bell: {
     height: BELL_BOX,
     width: BELL_BOX,
@@ -98,14 +88,13 @@ export const OnboardingVisual = ({ slideKey }: { slideKey: OnboardingSlideKey })
   }
 
   if (slideKey === 'start') {
-    // The selected state of the real thing, which is what the slide is about:
-    // it carries « Tape encore pour valider » on its own. Inert — no `onPress`,
-    // and no taps taken.
-    return (
-      <View style={styles.gesture} pointerEvents="none">
-        <QuestionOption letter="A" label={SAMPLE_OPTION} selected />
-      </View>
-    );
+    // The lighter of the two success animations: `SuccessCircle` is what plays
+    // over an answer that just landed, and this slide is the promise of one,
+    // not the thing itself. Held between plays rather than looped, like the
+    // star — every slide of this carousel is mounted from the first render, so
+    // an animation that only plays on mount would be over before anybody
+    // reached it.
+    return <SuccessCheck size="3xl" replayDelay={2000} />;
   }
 
   if (slideKey === 'notifications') {
