@@ -19,7 +19,7 @@ const CHECK_STROKE_WIDTH = 3;
 const SUNK_BY = 2;
 
 /** The badge — a bead, not a counter: it says « something new », never how much. */
-const BADGE_SIZE = 12;
+const BADGE_SIZE = 14;
 
 /**
  * How far the bead hangs off the cell, the way an app icon's own badge hangs off
