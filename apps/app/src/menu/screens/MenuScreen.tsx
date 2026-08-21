@@ -13,6 +13,7 @@ import { Button } from '@/components/Button';
 import { LegalLinks } from '@/components/LegalLinks';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendsCard } from '@/friends/components/FriendsCard';
+import { resetOnboardingSeen } from '@/onboarding/data/useOnboardingSeen';
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -89,7 +90,7 @@ export const MenuScreen = () => {
   const confirmDeletion = () => {
     Alert.alert(
       'Supprimer ton compte ?',
-      'Ton profil, ton pseudo, tes potes et ton streak disparaissent définitivement. Tes réponses passées restent dans les compteurs, sans plus rien qui les relie à toi.',
+      'Ton profil, ton pseudo, tes potes et ta série disparaissent définitivement. Tes réponses passées restent dans les compteurs, sans plus rien qui les relie à toi.',
       [
         { text: 'Annuler', style: 'cancel' },
         { text: 'Supprimer', style: 'destructive', onPress: () => void runDeletion() },
@@ -127,6 +128,21 @@ export const MenuScreen = () => {
         <FriendsCard onInvite={() => navigation.navigate('InviteFriend')} />
 
         <View style={styles.settings}>
+          {/* Development only, and dropped from a release build by the `__DEV__`
+              branch: the carousel is shown once per account and there is no
+              product reason to replay it, but testing it otherwise means
+              clearing the app's storage between every run. It closes the Menu
+              first, so the carousel lands on the screen it is meant to cover. */}
+          {__DEV__ ? (
+            <Button
+              label="Revoir l’intro (dev)"
+              variant="ghost"
+              onPress={() => {
+                navigation.goBack();
+                void resetOnboardingSeen(user.uid);
+              }}
+            />
+          ) : null}
           <Button label="Se déconnecter" variant="secondary" disabled={deleting} onPress={() => signOut()} />
           <Button
             label="Supprimer mon compte"

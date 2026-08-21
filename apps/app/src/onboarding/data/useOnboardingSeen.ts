@@ -14,6 +14,27 @@ import { useCallback, useEffect, useState } from 'react';
  */
 const storageKeyOf = (userId: string) => `statowrel.onboarding.seen.v1:${userId}`;
 
+/**
+ * Told when the flag is cleared, so the carousel comes back on the spot rather
+ * than at the next launch — `src/App.tsx` mounts the hook, and the button that
+ * clears it lives three screens away in the Menu.
+ *
+ * A set of callbacks rather than a module store: nothing here has a value to
+ * publish, only a moment to announce.
+ */
+const resetListeners = new Set<(userId: string) => void>();
+
+/**
+ * Puts an account back where it was before the carousel — **development only**,
+ * behind the Menu's `__DEV__` button. There is no product reason to replay the
+ * onboarding, and nothing in the app calls this outside that button.
+ */
+export const resetOnboardingSeen = async (userId: string): Promise<void> => {
+  await AsyncStorage.removeItem(storageKeyOf(userId));
+
+  resetListeners.forEach((notify) => notify(userId));
+};
+
 export interface OnboardingSeen {
   /** False until the flag has been read — the splash screen is held on it. */
   resolved: boolean;
@@ -61,6 +82,20 @@ export const useOnboardingSeen = (userId: string | null): OnboardingSeen => {
 
     return () => {
       cancelled = true;
+    };
+  }, [ userId ]);
+
+  useEffect(() => {
+    const onReset = (resetUserId: string) => {
+      if (resetUserId === userId) {
+        setLoaded({ userId: resetUserId, seen: false });
+      }
+    };
+
+    resetListeners.add(onReset);
+
+    return () => {
+      resetListeners.delete(onReset);
     };
   }, [ userId ]);
 
