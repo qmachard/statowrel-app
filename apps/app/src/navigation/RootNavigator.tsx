@@ -37,11 +37,9 @@ export const RootNavigator = () => {
           {/* The question is posed *over* Stats, never beside it (docs/prd.md §5.4):
               a form sheet whose single detent is its own content, so a two-line
               question takes a short sheet and a six-option one a tall one, with
-              Stats still visible above it. `fitToContents` has no ceiling of its
-              own, though — the screen bounds its own column by the screen's
-              height and scrolls past it (`useSheetMaxHeight`), so an answered
-              day holding a recap and a full list of friends is reachable to its
-              last line rather than cut off at the sheet's edge.
+              Stats still visible above it. The screen renders no scroll view for
+              that reason — `fitToContents` measures the content, and a nested
+              scroller has no height to measure.
 
               Still dismissable, grabber included. Pinning it open while today's
               question is unanswered, as §5.4 wants, comes with answering (§4.3). */}
