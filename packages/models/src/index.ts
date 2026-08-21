@@ -16,5 +16,6 @@ export * from './v1_daily_question_month';
 export * from './v1_question';
 export * from './v1_user';
 export * from './v1_user_calendar_month';
+export * from './v1_user_device';
 export * from './v1_user_friend';
 export * from './v1_username';
