@@ -1,14 +1,20 @@
+import { BellRing } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Card, CardContent } from '@/components/Card';
 import { Star } from '@/components/animations';
-import { colors, fontSize, fonts, spacing } from '@/design/tokens';
+import { shadows } from '@/design/shadows';
+import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 
 import { SAMPLE_STATOWREL, type OnboardingSlideKey } from '../copy';
 
 /** Three handles nobody holds — the faces are generated from them (`src/lib/avatars.ts`). */
 const SAMPLE_FRIENDS = [ 'lou.martin', 'sacha', 'nina.b' ];
+
+/** The bell's own box, and the icon inside it. */
+const BELL_BOX = spacing(30);
+const BELL_ICON = spacing(14);
 
 const styles = StyleSheet.create({
   // Tilted the way a sticker lands, which is what keeps the sample from reading
@@ -42,6 +48,19 @@ const styles = StyleSheet.create({
   face: {
     marginLeft: -spacing(3),
   },
+  // The accent red of a notification that has just landed — the same one the
+  // daily-question banner and today's cell wear.
+  bell: {
+    height: BELL_BOX,
+    width: BELL_BOX,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius['2xl'],
+    borderWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.accent,
+    transform: [ { rotate: '-6deg' } ],
+  },
 });
 
 /**
@@ -65,6 +84,14 @@ export const OnboardingVisual = ({ slideKey }: { slideKey: OnboardingSlideKey })
           <Text style={styles.sampleLabel}>{SAMPLE_STATOWREL.label}</Text>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (slideKey === 'notifications') {
+    return (
+      <View style={[ styles.bell, shadows.lg ]}>
+        <BellRing color={colors['accent-foreground']} size={BELL_ICON} />
+      </View>
     );
   }
 

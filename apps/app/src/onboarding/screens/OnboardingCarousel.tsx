@@ -5,12 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { colors, pagePadding, spacing } from '@/design/tokens';
 import { navigationRef } from '@/navigation/navigationRef';
+import { requestPushPermission } from '@/notifications/data/deviceRegistration';
 
 import { DemoQuestionSheet } from '../components/DemoQuestionSheet';
 import { OnboardingDots } from '../components/OnboardingDots';
 import { OnboardingSlide } from '../components/OnboardingSlide';
 import { OnboardingVisual } from '../components/OnboardingVisual';
-import { NEXT, SIGN_UP, SKIP, SLIDES, TRY } from '../copy';
+import { ALLOW_NOTIFICATIONS, NEXT, SKIP, SLIDES } from '../copy';
 import { useDemoQuestion } from '../data/useDemoQuestion';
 
 const styles = StyleSheet.create({
@@ -64,10 +65,16 @@ export interface OnboardingCarouselProps {
  * on the sign-in screen already mounted underneath, « Créer mon compte » on the
  * sign-up one.
  *
- * The last slide is where the demo of `DemoQuestionSheet` pops from. It is
- * offered only when there is one to pose: a question that could not be read is
- * a carousel that ends on its sign-up button instead, never a step somebody is
- * stuck on.
+ * The last two slides each do something rather than only say it. The
+ * notification one raises the system permission dialog on its own call to
+ * action (docs/prd.md §5.6) — the point of the slide is that the dialog is
+ * never the first thing seen, since a refusal is final on both platforms — and
+ * the demo of `DemoQuestionSheet` pops right behind it.
+ *
+ * The demo is offered only when there is one to pose: a question that could not
+ * be read is a carousel that ends on its sign-up button instead, never a step
+ * somebody is stuck on. The permission is asked either way — it is worth asking
+ * whether or not there is a sample to follow it.
  */
 export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
   const { width } = useWindowDimensions();
@@ -75,6 +82,7 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
 
   const scroller = useRef<ScrollView>(null);
   const [ current, setCurrent ] = useState(0);
+  const [ asking, setAsking ] = useState(false);
   const [ demoOpen, setDemoOpen ] = useState(false);
 
   const last = SLIDES.length - 1;
@@ -101,11 +109,19 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
     setCurrent(Math.round(event.nativeEvent.contentOffset.x / width));
   };
 
-  const advance = () => {
-    if (!isLast) {
-      scroller.current?.scrollTo({ x: width * (current + 1), animated: true });
+  /**
+   * What the last slide's button does: raise the permission dialog, then move
+   * on whatever the answer was. A « non » is a legitimate answer — it costs the
+   * daily banner, not the app — and it is never asked twice (`canAskAgain` is
+   * false afterwards, so the dialog would not even show).
+   */
+  const askThenContinue = async () => {
+    setAsking(true);
 
-      return;
+    try {
+      await requestPushPermission();
+    } finally {
+      setAsking(false);
     }
 
     if (question === null) {
@@ -115,6 +131,16 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
     }
 
     setDemoOpen(true);
+  };
+
+  const advance = () => {
+    if (!isLast) {
+      scroller.current?.scrollTo({ x: width * (current + 1), animated: true });
+
+      return;
+    }
+
+    void askThenContinue();
   };
 
   return (
@@ -147,7 +173,8 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
           <OnboardingDots count={SLIDES.length} current={current} />
 
           <Button
-            label={isLast ? (question === null ? SIGN_UP : TRY) : NEXT}
+            label={isLast ? ALLOW_NOTIFICATIONS : NEXT}
+            loading={asking}
             onPress={advance}
           />
         </View>

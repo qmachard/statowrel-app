@@ -7,7 +7,7 @@
  * `key` is what the carousel hangs each slide's illustration on, so the wording
  * and the drawing stay in two places that can each be changed alone.
  */
-export type OnboardingSlideKey = 'daily' | 'statowrel' | 'friends';
+export type OnboardingSlideKey = 'daily' | 'statowrel' | 'friends' | 'notifications';
 
 export interface OnboardingSlideCopy {
   key: OnboardingSlideKey;
@@ -31,6 +31,11 @@ export const SLIDES: OnboardingSlideCopy[] = [
     title: 'Et les réponses de tes potes',
     body: 'Débloquées seulement une fois que tu as donné la tienne. Pas de feed, pas de likes, pas de compteur de vues.',
   },
+  {
+    key: 'notifications',
+    title: 'On te prévient à 7h',
+    body: 'Sans notification, tu découvres la question le soir — ou pas du tout, et le streak avec. C’est le seul message qu’on t’envoie : un par jour, quand elle tombe.',
+  },
 ];
 
 /** The sample phrase of the second slide — a StatOwrel that belongs to nobody. */
@@ -41,8 +46,13 @@ export const SAMPLE_STATOWREL = {
 
 export const SKIP = 'Passer';
 export const NEXT = 'Suivant';
-/** The last slide's call to action, when there is a demo question to pose. */
-export const TRY = 'Essayer, pour voir';
+/**
+ * The last slide's call to action. It raises the system permission dialog and,
+ * whatever the answer, opens the demo question behind it — the refusal is the
+ * dialog's own « Ne pas autoriser », not a second button here.
+ */
+export const ALLOW_NOTIFICATIONS = 'Me prévenir à 7h';
+/** What closes the demo question, and the carousel with it. */
 export const SIGN_UP = 'Créer mon compte';
 
 /** Said on the demo's result, where the real app would show the friends. */
