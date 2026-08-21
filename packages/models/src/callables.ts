@@ -44,3 +44,23 @@ export interface InviteFriendResult {
   /** The handle the invitation actually landed on, normalized — what the app echoes back. */
   username: string;
 }
+
+/**
+ * Deleting one's own account (docs/prd.md §4.1, required by both stores).
+ *
+ * A callable rather than a client-side write: `firestore.rules` denies deleting
+ * a profile, a username reservation and an answer to everyone, on purpose —
+ * freeing a handle and dropping the *other* half of every friendship are writes
+ * no client can be trusted with, and there is no delete a rule could scope to
+ * "everything this account owns" in one go.
+ */
+export const DELETE_ACCOUNT_CALLABLE = 'users-deleteAccount';
+
+/**
+ * Nothing to hand back but the confirmation: the account is gone, and the app's
+ * only next move is to sign out. It is a shape rather than `void` so the
+ * callable keeps a contract to compile against, like the one above.
+ */
+export interface DeleteAccountResult {
+  outcome: 'deleted';
+}

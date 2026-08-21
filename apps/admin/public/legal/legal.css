@@ -1,0 +1,136 @@
+/*
+ * The legal pages' own stylesheet — the app's neobrutalism, ported by hand from
+ * apps/app/src/design/tokens.ts like apps/admin/src/index.css is. It is not
+ * shared with the console: these pages are static files that never go through
+ * Vite, so they carry their own copy rather than importing the SPA's bundle.
+ */
+
+:root {
+  --background: #f7f0d4;
+  --foreground: #000000;
+  --card: #ffffff;
+  --muted-foreground: #6b6355;
+  --primary: #ffdc59;
+  --destructive: #e63946;
+  --border-width: 2px;
+  --radius: 12px;
+  --font-head: 'Archivo Black', system-ui, sans-serif;
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 32px 20px 64px;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+header {
+  margin-bottom: 32px;
+}
+
+.brand {
+  display: inline-block;
+  padding: 6px 12px;
+  border: var(--border-width) solid var(--foreground);
+  border-radius: 8px;
+  background: var(--primary);
+  box-shadow: 4px 4px 0 0 var(--foreground);
+  font-family: var(--font-head);
+  font-size: 14px;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--foreground);
+}
+
+h1 {
+  margin: 24px 0 8px;
+  font-family: var(--font-head);
+  font-size: 32px;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+h2 {
+  margin: 40px 0 8px;
+  font-family: var(--font-head);
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.updated {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+section {
+  padding: 20px 24px;
+  border: var(--border-width) solid var(--foreground);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: 4px 4px 0 0 var(--foreground);
+}
+
+section > h2:first-child {
+  margin-top: 0;
+}
+
+dl {
+  margin: 0;
+}
+
+dt {
+  margin-top: 12px;
+  font-weight: 700;
+}
+
+dd {
+  margin: 0;
+}
+
+a {
+  color: var(--foreground);
+}
+
+/*
+ * The identity of the publisher is the one thing this repository cannot know.
+ * Every value that has to be filled in before the pages are published is marked
+ * with this class, so nothing ships as a quiet blank.
+ */
+.todo {
+  padding: 1px 6px;
+  border: var(--border-width) dashed var(--destructive);
+  border-radius: 6px;
+  color: var(--destructive);
+  font-weight: 700;
+}
+
+footer {
+  margin-top: 32px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 26px;
+  }
+
+  section {
+    padding: 16px;
+  }
+}

@@ -20,12 +20,21 @@
     "predeploy": [
       "npm run build:admin"
     ],
+    "cleanUrls": true,
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
     "rewrites": [
+      {
+        "source": "/legal/cgu",
+        "destination": "/legal/cgu.html"
+      },
+      {
+        "source": "/legal/mentions-legales",
+        "destination": "/legal/mentions-legales.html"
+      },
       {
         "source": "**",
         "destination": "/index.html"

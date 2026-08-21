@@ -72,6 +72,36 @@ const messageForCode = (code: string, method: SignInMethod): string => {
 };
 
 /**
+ * `functions/*` codes `users-deleteAccount` raises on purpose. Anything else is
+ * a transport failure and falls back below — same split as
+ * `src/friends/errors.ts` for the invitation callable.
+ */
+const DELETE_ACCOUNT_MESSAGES: Record<string, string> = {
+  'functions/unauthenticated': 'Reconnecte-toi pour supprimer ton compte.',
+  // Everything the account owned is already gone at this point; only the
+  // sign-in survived, and retrying is what finishes the job.
+  'functions/internal': 'La suppression n\'est pas allée au bout. Réessaie dans un instant.',
+};
+
+const DELETE_ACCOUNT_FALLBACK = 'La suppression n\'a pas abouti. Vérifie ta connexion et réessaie.';
+
+/**
+ * Never returns a raw `functions/*` code, the way `authErrorMessage` never
+ * returns an `auth/*` one.
+ */
+export const deleteAccountErrorMessage = (error: unknown): string => {
+  if (error instanceof FirebaseError) {
+    console.warn(`[auth] account deletion failed with ${error.code}`, error.message);
+
+    return DELETE_ACCOUNT_MESSAGES[error.code] ?? DELETE_ACCOUNT_FALLBACK;
+  }
+
+  console.warn('[auth] account deletion failed', error);
+
+  return DELETE_ACCOUNT_FALLBACK;
+};
+
+/**
  * Never returns a raw `auth/*` code — the code goes to the console instead, so a
  * developer can still tell a provider misconfiguration from a user mistake.
  */
