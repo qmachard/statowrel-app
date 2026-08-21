@@ -71,7 +71,7 @@ export const OnboardingVisual = ({ slideKey }: { slideKey: OnboardingSlideKey })
   if (slideKey === 'daily') {
     // Held on its last frame between plays rather than looping: the star is
     // decoration here, and Lottie's own `loop` restarts on the next frame.
-    return <Star size="xl" replayDelay={2000} />;
+    return <Star size="2xl" replayDelay={2000} />;
   }
 
   if (slideKey === 'statowrel') {

@@ -45,13 +45,14 @@ export const SAMPLE_STATOWREL = {
 };
 
 export const SKIP = 'Passer';
-export const NEXT = 'Suivant';
 /**
- * The last slide's call to action. It raises the system permission dialog and,
- * whatever the answer, opens the demo question behind it — the refusal is the
- * dialog's own « Ne pas autoriser », not a second button here.
+ * The same word on every slide, the last one included — where it also raises
+ * the system permission dialog and then opens the demo question. Labelling that
+ * button « Me prévenir » turned a step of the carousel into a commitment to
+ * answer; the promise is the slide's job, the button only moves forward. The
+ * refusal is the dialog's own « Ne pas autoriser », not a second button here.
  */
-export const ALLOW_NOTIFICATIONS = 'Me prévenir';
+export const NEXT = 'Suivant';
 /** What closes the demo question, and the carousel with it — the app is behind. */
 export const DONE = 'C’est parti';
 

@@ -11,7 +11,7 @@ import { DemoQuestionSheet } from '../components/DemoQuestionSheet';
 import { OnboardingDots } from '../components/OnboardingDots';
 import { OnboardingSlide } from '../components/OnboardingSlide';
 import { OnboardingVisual } from '../components/OnboardingVisual';
-import { ALLOW_NOTIFICATIONS, NEXT, SKIP, SLIDES } from '../copy';
+import { NEXT, SKIP, SLIDES } from '../copy';
 import { useDemoQuestion } from '../data/useDemoQuestion';
 
 const styles = StyleSheet.create({
@@ -160,11 +160,7 @@ export const OnboardingCarousel = ({ onDone }: OnboardingCarouselProps) => {
         <View style={styles.footer}>
           <OnboardingDots count={SLIDES.length} current={current} />
 
-          <Button
-            label={isLast ? ALLOW_NOTIFICATIONS : NEXT}
-            loading={asking}
-            onPress={advance}
-          />
+          <Button label={NEXT} loading={asking} onPress={advance} />
         </View>
       </SafeAreaView>
 
