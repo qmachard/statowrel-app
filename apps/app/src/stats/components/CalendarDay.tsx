@@ -60,9 +60,10 @@ const styles = StyleSheet.create({
   // tucked in. Absolute, so the number or the check stays centred whether or
   // not the day carries one.
   //
-  // It keeps the border every other surface wears, and it needs it more than
-  // they do: hanging off the cell, it lands half on the page's own sand, where
-  // an unoutlined bead simply disappears.
+  // One colour whatever the day is (`notification`, see the tokens) — the bead
+  // lands across the cell *and* the page behind it, so no colour borrowed from
+  // either could show on both. It keeps the border every other surface wears,
+  // and needs it more than they do for the same reason.
   badge: {
     position: 'absolute',
     top: -BADGE_OVERHANG,
@@ -72,6 +73,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     borderWidth,
     borderColor: colors.border,
+    backgroundColor: colors.notification,
   },
 });
 
@@ -111,16 +113,6 @@ const LABEL = StyleSheet.create({
   missed: { fontFamily: fonts.head, color: colors['muted-foreground'] },
   idle: { fontFamily: fonts.sans, color: colors['muted-foreground'] },
 }) satisfies Record<CalendarDayState, TextStyle>;
-
-// The badge is the one thing on the cell that has to be seen *against* it, so
-// it takes the other identity colour rather than the surface's foreground:
-// accent on the yellow of an answered day, primary on the red of today.
-const BADGE = StyleSheet.create({
-  answered: { backgroundColor: colors.accent },
-  today: { backgroundColor: colors.primary },
-  missed: { backgroundColor: colors.accent },
-  idle: { backgroundColor: colors.accent },
-}) satisfies Record<CalendarDayState, ViewStyle>;
 
 // The check takes its surface's own foreground, like the number it replaces —
 // black on the yellow of a past answered day, white on the accent of today.
@@ -191,7 +183,7 @@ export const CalendarDay = ({
             </View>
 
             {hasNewFriendAnswers ? (
-              <View style={[ styles.badge, BADGE[state], sunk ? PRESSED[state] : null ]} />
+              <View style={[ styles.badge, sunk ? PRESSED[state] : null ]} />
             ) : null}
           </>
         );
