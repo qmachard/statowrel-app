@@ -36,6 +36,10 @@
         "destination": "/legal/cgu.html"
       },
       {
+        "source": "/legal/confidentialite",
+        "destination": "/legal/confidentialite.html"
+      },
+      {
         "source": "/legal/mentions-legales",
         "destination": "/legal/mentions-legales.html"
       },

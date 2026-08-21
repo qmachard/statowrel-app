@@ -1,26 +1,28 @@
-# StatOwrel — Politique de confidentialité (brouillon)
+# StatOwrel — Politique de confidentialité
 
-> **Brouillon.** Ce texte est rédigé à partir de l'inventaire réel de ce que le code collecte —
-> chaque affirmation est traçable à un fichier du dépôt, et les renvois entre crochets sont là pour
-> le vérifier avant publication (ils sont à retirer du texte publié).
+> **Publiée.** Le texte de référence est servi sur
+> `apps/admin/public/legal/confidentialite.html`, à l'URL `/legal/confidentialite` — c'est celle
+> que les deux stores reçoivent et que l'app pointe depuis son pied de page légal. Ce document est
+> la source à partir de laquelle la page a été écrite : chaque affirmation est traçable à un
+> fichier du dépôt, et les renvois entre crochets sont là pour la vérifier (ils ne figurent pas sur
+> la page publiée).
 >
-> Il reste à **faire relire par un juriste** avant mise en ligne, et à remplir les champs entre
-> `«…»` : identité de l'éditeur, adresse de contact, date. Il décrit par ailleurs deux traitements
-> qui n'existent pas encore dans le code — les notifications et la suppression de compte
-> (`docs/production-checklist.md` §1.1 et §2.1) : **ne pas publier ces sections avant que le code
-> les honore.**
+> **Modifier la page, pas seulement ce fichier** : les deux doivent rester d'accord, et c'est la
+> page qui fait foi. Il reste à faire relire par un juriste.
 >
 > Publication : voir `docs/production-checklist.md` §2.2.
 
 ---
 
-**Dernière mise à jour : «JJ/MM/AAAA»**
+**Dernière mise à jour : 21 août 2026**
 
 ## 1. Qui traite vos données
 
-StatOwrel (« l'application ») est éditée par «nom de l'éditeur», «adresse», ci-après « nous ».
+StatOwrel (« l'application ») est éditée par Quentin Machard SAS, société par actions simplifiée
+au capital de 1 000 €, 6 rue des Prunus, 53410 Port-Brillet, RCS Laval 891 303 893, ci-après
+« nous ».
 
-Pour toute question relative à vos données : «adresse e-mail de contact».
+Pour toute question relative à vos données : quentin.machard@gmail.com.
 
 ## 2. Le principe
 
@@ -90,12 +92,14 @@ attente ou amitié acceptée), et les dates. Une amitié est réciproque et enre
 Nous n'accédons **jamais** à votre carnet d'adresses : un ami s'ajoute uniquement en tapant son nom
 d'utilisateur exact. *[`packages/models/src/v1_user_friend.ts`]*
 
-### 3.7 «Notifications — à ne publier qu'une fois la fonctionnalité en place»
+### 3.7 Notifications
 
 Si vous acceptez de recevoir les notifications, nous enregistrons un identifiant technique
-d'envoi lié à votre appareil, pour vous prévenir quand la question du jour tombe. Vous pouvez
-retirer cette autorisation à tout moment depuis les réglages de votre téléphone ; nous supprimons
-alors cet identifiant.
+d'envoi lié à votre appareil, pour vous prévenir quand la question du jour tombe (7 h) et, le soir,
+si vous n'y avez pas encore répondu (18 h). Vous pouvez retirer cette autorisation à tout moment
+depuis les réglages de votre téléphone ; l'identifiant est par ailleurs supprimé à la déconnexion et
+lorsqu'il devient invalide. *[`packages/models/src/v1_user_device.ts`,
+`apps/functions/src/domains/notifications/`]*
 
 ## 4. Ce que nous ne collectons pas
 
@@ -111,6 +115,7 @@ notre compte et uniquement pour faire fonctionner l'application :
 | Prestataire | Ce qu'il traite | Où |
 |---|---|---|
 | **Google (Firebase / Google Cloud)** | Hébergement, base de données, authentification, traitements serveur | Union européenne (`europe-west1`) |
+| **Expo (Expo Push)** | L'identifiant d'envoi de votre appareil et le texte de la notification, qu'il relaie vers Apple ou Google | États-Unis, clauses contractuelles types |
 | **Apple** | Uniquement si vous utilisez « Se connecter avec Apple » | Selon la politique d'Apple |
 | **Google Sign-In** | Uniquement si vous utilisez « Se connecter avec Google » | Selon la politique de Google |
 | **DiceBear** | Voir ci-dessous | — |
@@ -139,11 +144,13 @@ StatOwrel.
 
 Vos données sont conservées tant que votre compte existe.
 
-À sa suppression, nous effaçons votre profil, votre nom d'utilisateur, votre calendrier et vos
-amitiés. **Vos réponses passées sont anonymisées plutôt que supprimées** : elles sont détachées de
-votre compte et il devient impossible de vous les rattribuer. Nous ne les effaçons pas, parce
-qu'elles ont été comptées dans les pourcentages affichés à tous les autres utilisateurs : les
-retirer fausserait rétroactivement des statistiques déjà vues et déjà partagées.
+À sa suppression, nous effaçons votre profil, votre nom d'utilisateur, votre calendrier, vos
+amitiés, vos identifiants de notification **et vos réponses**. Seuls subsistent les **compteurs
+agrégés** de chaque question — le nombre de réponses par option —, qui ne comportent aucune donnée
+personnelle et que plus rien ne relie à vous. Nous ne les décrémentons pas, parce que ces réponses
+ont été comptées dans les pourcentages affichés à tous les autres utilisateurs : les retirer
+fausserait rétroactivement des statistiques déjà vues et déjà partagées.
+*[`apps/functions/src/domains/users/callables/deleteAccount.ts`]*
 
 ## 8. Vos droits
 
@@ -151,10 +158,10 @@ Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'ef
 limitation, d'opposition et de portabilité.
 
 - **Modifier votre profil** : depuis l'application.
-- **«Supprimer votre compte : Menu → Réglages → Supprimer mon compte — à ne publier qu'une fois la
-  fonctionnalité en place»**. La suppression est immédiate et définitive. Vous pouvez aussi en
-  faire la demande à «adresse e-mail de contact», ou depuis la page «URL/suppression-compte».
-- **Exercer les autres droits** : écrivez à «adresse e-mail de contact». Nous répondons sous 30 jours.
+- **Supprimer votre compte** : Menu → Supprimer mon compte. La suppression est immédiate et
+  définitive. Si le compte n'est plus accessible, vous pouvez en faire la demande à
+  quentin.machard@gmail.com, depuis l'adresse e-mail du compte.
+- **Exercer les autres droits** : écrivez à quentin.machard@gmail.com. Nous répondons sous 30 jours.
 
 Vous pouvez introduire une réclamation auprès de la CNIL (www.cnil.fr).
 
@@ -175,15 +182,16 @@ stockés par Firebase Authentication ; nous n'y avons jamais accès.
 
 ## 11. Âge minimum
 
-StatOwrel est réservée aux personnes de **«15» ans et plus**. Nous ne collectons pas sciemment de
+StatOwrel est réservée aux personnes de **15 ans et plus**. Nous ne collectons pas sciemment de
 données concernant un enfant en deçà de cet âge ; si cela se produisait, écrivez-nous et nous
 supprimerions le compte.
 
 ## 12. Contenus signalés
 
-«À ne publier qu'une fois le signalement en place — `docs/production-checklist.md` §2.3.»
-Vous pouvez signaler un utilisateur depuis sa fiche dans votre liste d'amis. Nous traitons les
-signalements sous 24 heures et pouvons suspendre un compte qui ne respecte pas les règles.
+Vous pouvez signaler un utilisateur par e-mail, à l'adresse indiquée sur la page d'assistance
+(`/legal/assistance`). Nous traitons les signalements sous 24 heures et pouvons libérer un nom
+d'utilisateur, suspendre ou supprimer un compte qui ne respecte pas les règles. Retirer la personne
+de vos amis interrompt immédiatement toute visibilité entre les deux comptes.
 
 ## 13. Modifications
 

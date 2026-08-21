@@ -146,22 +146,31 @@ l'app. C'est l'un des motifs de rejet les plus mécaniques qui soient.
 **Exigence.** URL obligatoire dans les deux consoles, et **accessible publiquement, sans
 connexion**, au moment de l'examen.
 
-**État.** `docs/privacy-policy.md` contient le texte rédigé à partir de l'inventaire réel des
-données. Il n'est hébergé nulle part.
+**État.** Les quatre pages sont écrites et servies par le Firebase Hosting qui porte déjà
+`apps/admin` : `/legal/cgu`, `/legal/mentions-legales`, `/legal/confidentialite` et
+`/legal/assistance` (`apps/admin/public/legal/`). L'identité de l'éditeur y est renseignée —
+Quentin Machard SAS, RCS Laval 891 303 893 — et l'adresse de contact est la même partout.
+`docs/privacy-policy.md` reste la source à partir de laquelle la page a été écrite. Il reste à
+choisir le domaine, à déployer, et à renseigner les URLs dans les deux consoles.
 
-- [ ] Choisir le domaine (voir `docs/store-listing.md` §4)
-- [ ] Publier la politique de confidentialité — le plus court chemin est le Firebase Hosting qui
-      sert déjà `apps/admin` (`firebase.json` → `hosting`), sur `/confidentialite`
-- [ ] Publier la page de demande de suppression de compte sur `/suppression-compte`
+- [x] Politique de confidentialité écrite et servie sur `/legal/confidentialite`
+      (`apps/admin/public/legal/confidentialite.html`)
 - [x] Page d'assistance écrite et servie sur `/legal/assistance`
-      (`apps/admin/public/legal/assistance.html`) — son adresse e-mail reste `À COMPLÉTER`
-- [ ] Renseigner les trois URLs dans App Store Connect et dans la Play Console
-- [ ] Lier la politique de confidentialité **depuis l'app** (écran Réglages) — Apple le vérifie
+      (`apps/admin/public/legal/assistance.html`), adresse de contact renseignée
+- [x] CGU et mentions légales complétées — éditeur, siège, RCS, TVA, contact
+- [x] Lier la politique de confidentialité **depuis l'app** — `LegalLinks` (Menu, connexion,
+      inscription) porte les trois liens ; Apple le vérifie
+- [ ] Choisir le domaine (voir `docs/store-listing.md` §4)
+- [ ] Publier la page de demande de suppression de compte sur `/suppression-compte`, exigée par Play
+- [ ] `npm run deploy:admin` — la config Hosting n'est en ligne qu'à hauteur du dernier déploiement
+- [ ] Renseigner les URLs dans App Store Connect et dans la Play Console
 - [ ] Vérifier que les URLs répondent en HTTPS sans redirection ni mur de connexion
+- [ ] Faire relire les quatre pages par un juriste
 
 > La réécriture SPA de `firebase.json` (`"source": "**"` → `/index.html`) sert `apps/admin` sur
-> **toutes** les routes. Publier des pages statiques à côté demande d'ajouter leurs chemins avant
-> la réécriture, sinon `/confidentialite` renvoie la console de modération.
+> **toutes** les routes. Chacune des quatre pages porte donc sa propre réécriture explicite avant
+> l'attrape-tout : sans elle, `/legal/confidentialite` répond 200 **avec la console**, ce qui ne
+> ressemble pas à une panne de routage vu du dehors.
 
 ### 2.3 🔴 Signalement d'un utilisateur
 

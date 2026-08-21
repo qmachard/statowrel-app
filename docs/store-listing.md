@@ -228,13 +228,14 @@ Bon appétit.
 
 | Champ | Statut | Valeur |
 |---|---|---|
-| URL de la politique de confidentialité | **bloquant** | à publier — voir `docs/privacy-policy.md` |
-| URL d'assistance | **bloquant** | à publier (page ou `mailto:` sur un domaine maîtrisé) |
+| URL de la politique de confidentialité | **bloquant** | écrite, `/legal/confidentialite` — reste à déployer |
+| URL d'assistance | **bloquant** | écrite, `/legal/assistance` — reste à déployer |
 | URL marketing | facultatif | — |
 
 Ces deux URLs sont des blocages durs : App Store Connect refuse la soumission sans la politique de
 confidentialité, et Play exige en plus une URL de **suppression de compte** accessible hors de
-l'app. Le contenu à publier est rédigé dans `docs/privacy-policy.md` ; il ne reste qu'à l'héberger.
+l'app — la seule des trois qui reste à écrire. Les pages légales sont dans
+`apps/admin/public/legal/` ; il ne reste qu'à choisir le domaine et à déployer.
 Le plus court chemin : le déployer sur le Firebase Hosting qui sert déjà `apps/admin`
 (`firebase.json` → `hosting`), sur `/confidentialite` et `/suppression-compte`.
 
