@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, pagePadding, spacing } from '@/design/tokens';
 import { InvitationsCard } from '@/friends/components/InvitationsCard';
 import { DailyQuestionBanner } from '@/stats/components/DailyQuestionBanner';
-import { ProposeQuestionCard } from '@/stats/components/ProposeQuestionCard';
+import { ProposeQuestionButton } from '@/stats/components/ProposeQuestionButton';
 import { StatTile } from '@/stats/components/StatTile';
 import { StatsCalendar } from '@/stats/components/StatsCalendar';
 import { StatsHeader } from '@/stats/components/StatsHeader';
@@ -112,7 +112,7 @@ export const StatsScreen = () => {
 
         {/* Under the calendar, because it is the calendar it reads: the streak
             is the sum of those days, and the proposal is what it unlocks. */}
-        <ProposeQuestionCard streak={streakCount} />
+        <ProposeQuestionButton streak={streakCount} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -204,7 +204,7 @@ La racine de l'app. De haut en bas :
 - Le calendrier **est** l'historique : c'est le seul endroit où l'on retrouve les questions passées et ses propres cartes.
 - Un jour sans question diffusée (avant le lancement, ou incident de publication) est rendu comme « futur » : inerte, non rattrapable.
 
-**6. Proposer une question.** Sous le calendrier, la carte qui dit à quoi sert la série (§4.7) : « Tu dois atteindre une série de 30 pour publier une question. », une jauge et son compteur `n / 30` sous elle, puis le bouton « Proposer une question ». Sous le palier, la carte est en retrait — surface `muted`, bouton `outline` cadenassé, rien à toucher : c'est la porte fermée et la distance qui reste. Au palier, la carte reprend le `card` et le bouton le `primary`, et le message ne dit plus ce qu'il manque. Le formulaire derrière n'existe pas encore, et tant qu'il n'existe pas le bouton reste inerte même pour qui a gagné le droit de le presser.
+**6. Proposer une question.** Sous le calendrier, un bouton « Proposer une question » (§4.7) et rien autour : pas de carte, pas de jauge — la progression tient dans la petite ligne que le bouton porte sous son label, « 12 / 30 jours de série pour publier une question. ». Sous le palier il est `outline` et cadenassé, rien à toucher : c'est la porte fermée et la distance qui reste. Au palier il passe en `primary`, et sa ligne ne dit plus ce qu'il manque. Le formulaire derrière n'existe pas encore, et tant qu'il n'existe pas le bouton reste inerte même pour qui a gagné le droit de le presser.
 
 ### 5.3 Écran Profil
 

@@ -27,6 +27,12 @@ export type ButtonIcon = ComponentType<{ color?: string; size?: number }>;
 export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> {
   /** Also the accessibility label of the icon-only sizes, which don't render it. */
   label: string;
+  /**
+   * A small line under the label — the condition, the price or the caveat the
+   * label alone can't carry. Sans-serif, lower case, dimmed against the
+   * variant's own foreground, and read as the button's accessibility hint.
+   */
+  description?: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
   icon?: ButtonIcon;
@@ -42,9 +48,24 @@ const styles = StyleSheet.create({
     gap: spacing(2),
     borderRadius: radius.sm,
   },
+  // The label and its description are one centred column, so the icon keeps
+  // sitting beside the pair rather than beside the label alone.
+  copy: {
+    alignItems: 'center',
+    gap: spacing(1),
+  },
   label: {
     fontFamily: fonts.head,
     textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  description: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.xs,
+    textAlign: 'center',
+    // Dimmed rather than recoloured: every variant already hands it a
+    // foreground that reads on its own surface.
+    opacity: 0.75,
   },
   disabled: {
     opacity: 0.6,
@@ -162,6 +183,7 @@ const isIconOnly = (size: ButtonSize) => size.startsWith('icon');
  */
 export const Button = ({
   label,
+  description,
   variant = 'default',
   size = 'default',
   icon: Icon,
@@ -180,6 +202,7 @@ export const Button = ({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint={description}
       accessibilityState={{ disabled: Boolean(isDisabled), busy: loading }}
       disabled={isDisabled}
       {...props}
@@ -201,7 +224,14 @@ export const Button = ({
           ) : (
             <>
               {iconPosition === 'start' ? renderIcon() : null}
-              {iconOnly ? null : <Text style={[ styles.label, TEXT_SIZE[size], LABEL[variant] ]}>{label}</Text>}
+              {iconOnly ? null : (
+                <View style={styles.copy}>
+                  <Text style={[ styles.label, TEXT_SIZE[size], LABEL[variant] ]}>{label}</Text>
+                  {description === undefined ? null : (
+                    <Text style={[ styles.description, LABEL[variant] ]}>{description}</Text>
+                  )}
+                </View>
+              )}
               {iconPosition === 'end' ? renderIcon() : null}
             </>
           )}
