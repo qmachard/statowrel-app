@@ -153,7 +153,8 @@ données. Il n'est hébergé nulle part.
 - [ ] Publier la politique de confidentialité — le plus court chemin est le Firebase Hosting qui
       sert déjà `apps/admin` (`firebase.json` → `hosting`), sur `/confidentialite`
 - [ ] Publier la page de demande de suppression de compte sur `/suppression-compte`
-- [ ] Publier une page de support (ou une adresse e-mail dédiée) sur `/support`
+- [x] Page d'assistance écrite et servie sur `/legal/assistance`
+      (`apps/admin/public/legal/assistance.html`) — son adresse e-mail reste `À COMPLÉTER`
 - [ ] Renseigner les trois URLs dans App Store Connect et dans la Play Console
 - [ ] Lier la politique de confidentialité **depuis l'app** (écran Réglages) — Apple le vérifie
 - [ ] Vérifier que les URLs répondent en HTTPS sans redirection ni mur de connexion
@@ -175,7 +176,7 @@ le quatrième point peu coûteux :
 |---|---|
 | Filtrage du contenu répréhensible | ✅ Les questions sont approuvées une par une dans `apps/admin` ; les réponses sont des options pré-écrites |
 | Blocage d'un utilisateur abusif | ✅ Retirer un ami supprime les deux moitiés de l'amitié (`src/friends/data/friendships.ts`) |
-| Contact avec l'éditeur | ✅ dès que la page de support de la §2.2 existe |
+| Contact avec l'éditeur | ✅ `/legal/assistance`, dès que son adresse e-mail est renseignée |
 | **Signalement** | ❌ **manquant** |
 
 Le seul contenu qu'un utilisateur écrit et qu'un autre voit est son **nom d'utilisateur**. C'est

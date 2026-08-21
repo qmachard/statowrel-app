@@ -90,13 +90,14 @@ qui fait tenir une SPA derrière un rechargement de page. Les assets portent leu
 donc `/assets/**` part `immutable` pour un an, tandis que `**/*.html` reste `no-cache` — sans quoi
 un déploiement resterait invisible le temps du cache par défaut de Hosting sur le document d'entrée.
 
-**`public/legal/` n'appartient pas à la console.** Ce sont les CGU et les mentions légales de l'app
-mobile (docs/prd.md §5.3), deux pages HTML écrites à la main que Vite recopie telles quelles dans
-`dist/legal/` : elles ne passent jamais par le bundler, donc elles portent leur propre copie des
+**`public/legal/` n'appartient pas à la console.** Ce sont les CGU, les mentions légales et la page
+d'assistance de l'app mobile (docs/prd.md §5.3), trois pages HTML écrites à la main que Vite recopie
+telles quelles dans `dist/legal/` : elles ne passent jamais par le bundler, donc elles portent leur propre copie des
 tokens (`legal.css`) au lieu d'importer `src/index.css`. Elles survivent à la réécriture SPA parce
-que Hosting sert un fichier *avant* de réécrire, et `cleanUrls` est ce qui en fait `/legal/cgu` et
-`/legal/mentions-legales` — la forme que l'app pointe et que les stores reçoivent, donc elle ne
-change pas. **Deux réécritures explicites doublent ces deux chemins** avant le `**` attrape-tout,
+que Hosting sert un fichier *avant* de réécrire, et `cleanUrls` est ce qui en fait `/legal/cgu`,
+`/legal/mentions-legales` et `/legal/assistance` — la forme que l'app pointe et que les stores
+reçoivent (l'URL d'assistance est un champ obligatoire des deux fiches), donc elle ne change pas.
+**Trois réécritures explicites doublent ces chemins** avant le `**` attrape-tout,
 alors que `cleanUrls` suffirait : sans l'un ni l'autre, `/legal/cgu` répond 200 *avec la console*,
 pas 404 — la panne ne ressemble donc jamais à une panne de routage vue du dehors. Et la config
 Hosting n'est en ligne qu'à hauteur du dernier `npm run deploy:admin` : changer `firebase.json` ne
