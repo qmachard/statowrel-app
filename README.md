@@ -2,7 +2,11 @@
 
 Turborepo monorepo — mobile app (React Native + Expo + EAS), question moderation console (Vite), and backend (Firebase Cloud Functions).
 
-See [`CLAUDE.md`](./CLAUDE.md) for conventions and [`docs/architecture.md`](./docs/architecture.md) for the architecture.
+See [`CLAUDE.md`](./CLAUDE.md) for conventions, [`docs/architecture.md`](./docs/architecture.md) for the architecture,
+and [`docs/prd.md`](./docs/prd.md) for the product.
+
+Shipping it: [`docs/production-checklist.md`](./docs/production-checklist.md),
+[`docs/store-listing.md`](./docs/store-listing.md), [`docs/privacy-policy.md`](./docs/privacy-policy.md).
 
 ## Structure
 
