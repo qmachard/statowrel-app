@@ -151,12 +151,14 @@ Immédiatement après avoir répondu :
 
 ### 4.7 Proposition de questions
 
-- N'importe quel utilisateur peut proposer une question : intitulé + **2 à 6** options, chacune avec son « tu es un.e ... ».
+- La proposition **se mérite** : elle s'ouvre à une série de **30 jours**. Écrire la question que tout le monde lira demande d'avoir répondu à celle des autres un mois durant.
+- N'importe quel utilisateur ayant atteint ce palier peut proposer une question : intitulé + **2 à 6** options, chacune avec son « tu es un.e ... ».
 - La question part en file de modération (statut `pending`).
 - Le modérateur valide, édite ou rejette depuis le backoffice d'administration. Une raison de rejet est renvoyée à l'auteur.
 - Une question validée rejoint le **pot commun** et devient éligible au tirage au sort.
 - L'auteur est notifié quand sa question est validée, puis quand elle est effectivement tirée. Son nom d'utilisateur est crédité sur l'écran de la question.
 - Une question déjà tirée ne peut pas ressortir (v1 : jamais de rediffusion).
+  **Pas encore fait**, sauf la porte : le palier des 30 jours est affiché sur l'écran Stats (§5.2), avec la série en cours qui monte vers lui. Le formulaire, la file de modération côté app et les notifications à l'auteur restent à écrire — la console de modération, elle, sait déjà lire un `pending`.
 
 ## 5. Navigation & écrans
 
@@ -201,6 +203,8 @@ La racine de l'app. De haut en bas :
 - Navigation mois par mois (chevrons gauche/droite), bornée au **premier mois où une question a été diffusée** d'un côté et au mois courant de l'autre. La borne basse est la même pour tout le monde : les jours antérieurs à l'inscription sont des jours ratés comme les autres, rattrapables en mode late (§4.2).
 - Le calendrier **est** l'historique : c'est le seul endroit où l'on retrouve les questions passées et ses propres cartes.
 - Un jour sans question diffusée (avant le lancement, ou incident de publication) est rendu comme « futur » : inerte, non rattrapable.
+
+**6. Proposer une question.** Sous le calendrier, la carte qui dit à quoi sert la série (§4.7) : « Tu dois atteindre une série de 30 pour publier une question. », une jauge et son compteur `n / 30` sous elle, puis le bouton « Proposer une question ». Sous le palier, la carte est en retrait — surface `muted`, bouton `outline` cadenassé, rien à toucher : c'est la porte fermée et la distance qui reste. Au palier, la carte reprend le `card` et le bouton le `primary`, et le message ne dit plus ce qu'il manque. Le formulaire derrière n'existe pas encore, et tant qu'il n'existe pas le bouton reste inerte même pour qui a gagné le droit de le presser.
 
 ### 5.3 Écran Profil
 
