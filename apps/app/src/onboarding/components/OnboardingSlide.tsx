@@ -15,9 +15,9 @@ const styles = StyleSheet.create({
   },
   // A fixed height rather than each illustration's own, so the four titles land
   // on the same line while paging and the copy does not jump under them. It is
-  // the tallest of them — the star at `2xl` — so nothing has to be cropped.
+  // the tallest of them — the star at `3xl` — so nothing has to be cropped.
   visual: {
-    height: spacing(48),
+    height: spacing(60),
     alignItems: 'center',
     justifyContent: 'center',
   },
