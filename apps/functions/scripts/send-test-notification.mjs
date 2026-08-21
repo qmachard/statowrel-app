@@ -16,6 +16,7 @@
 //   npm run send-test-notification -- --token 'ExponentPushToken[…]'
 //   npm run send-test-notification -- --email moi@exemple.fr --date 2026-08-19
 //   npm run send-test-notification -- --email moi@exemple.fr --body 'Coucou'
+//   npm run send-test-notification -- --email moi@exemple.fr --nudge --friends 3   # the 18:00 nudge
 //   npm run send-test-notification -- --all                     # every registered device
 //   npm run send-test-notification -- --dry-run
 //
@@ -40,7 +41,8 @@ import { GeoPoint, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { die, resolveProjectId } from './lib/firebase-project.mjs';
 
 const USAGE = 'Usage: npm run send-test-notification -- [--email <email> | --uid <uid> | --token <token> | --all] '
-  + '[--date <YYYY-MM-DD>] [--title <text>] [--body <text>] [--no-receipts] [--production | --project <id>] [--dry-run] [--force]';
+  + '[--date <YYYY-MM-DD>] [--nudge] [--friends <n>] [--title <text>] [--body <text>] [--no-receipts] '
+  + '[--production | --project <id>] [--dry-run] [--force]';
 
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 const EXPO_RECEIPTS_ENDPOINT = 'https://exp.host/--/api/v2/push/getReceipts';
@@ -52,6 +54,28 @@ const MESSAGES_PER_REQUEST = 100;
 const NOTIFICATION_TITLE = 'La question du jour est tombée';
 
 const FALLBACK_BODY = 'Tu as jusqu\'à minuit pour répondre.';
+
+/**
+ * The 18:00 nudge, copied from `tasks/notifyFriendsAnswers.ts` — `--nudge`
+ * sends that one instead of the 07:00 drop, with the count `--friends` names
+ * rather than a real one: the point is to read the line on a lock screen, and
+ * counting for real would mean answering as somebody else first.
+ */
+const NUDGE_TITLE = 'Tes potes ont répondu';
+
+const NUDGE_TITLE_ALONE = 'Tes potes attendent ta réponse';
+
+const nudgeBody = (friends) => {
+  if (friends === 0) {
+    return 'Ne perds pas ta série : tu as jusqu\'à minuit pour répondre.';
+  }
+
+  if (friends === 1) {
+    return 'Un de tes potes a répondu à la question du jour. Et toi ?';
+  }
+
+  return `${friends} de tes potes ont répondu à la question du jour. Et toi ?`;
+};
 
 /**
  * How long Expo is given to turn a ticket into a receipt.
@@ -69,6 +93,8 @@ const parseArgs = (argv) => {
     tokens: [],
     all: false,
     date: null,
+    nudge: false,
+    friends: 0,
     title: null,
     body: null,
     receipts: true,
@@ -99,6 +125,11 @@ const parseArgs = (argv) => {
       parsed.uid = readValue(argv[i += 1], '--uid');
     } else if (arg === '--token') {
       parsed.tokens.push(readValue(argv[i += 1], '--token'));
+    } else if (arg === '--nudge') {
+      parsed.nudge = true;
+    } else if (arg === '--friends') {
+      parsed.friends = Number(readValue(argv[i += 1], '--friends'));
+      parsed.nudge = true;
     } else if (arg === '--date') {
       parsed.date = readValue(argv[i += 1], '--date');
     } else if (arg === '--title') {
@@ -125,6 +156,10 @@ const parseArgs = (argv) => {
     die(`Pick one target at a time.\n${USAGE}`);
   }
 
+  if (!Number.isInteger(parsed.friends) || parsed.friends < 0) {
+    die(`--friends takes a count of 0 or more.\n${USAGE}`);
+  }
+
   if (parsed.date !== null && !/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
     die(`--date takes a YYYY-MM-DD day (got "${parsed.date}").\n${USAGE}`);
   }
@@ -132,7 +167,7 @@ const parseArgs = (argv) => {
   return parsed;
 };
 
-const { email, uid, tokens, all, date, title, body, receipts, dryRun, force, ...selector } = parseArgs(process.argv.slice(2));
+const { email, uid, tokens, all, date, nudge, friends, title, body, receipts, dryRun, force, ...selector } = parseArgs(process.argv.slice(2));
 const projectId = resolveProjectId(selector);
 const emulator = process.env.FIRESTORE_EMULATOR_HOST;
 
@@ -263,9 +298,13 @@ if (label === null) {
   console.warn('    Seed it first: npm run seed-daily-questions -- --include-today');
 }
 
+const nudgeTitle = friends === 0 ? NUDGE_TITLE_ALONE : NUDGE_TITLE;
+
 const message = {
-  title: title ?? NOTIFICATION_TITLE,
-  body: body ?? label ?? FALLBACK_BODY,
+  // Both notifications point at the same day and travel on the same channel —
+  // only the lines differ, which is the whole of what there is to check here.
+  title: title ?? (nudge ? nudgeTitle : NOTIFICATION_TITLE),
+  body: body ?? (nudge ? nudgeBody(friends) : label ?? FALLBACK_BODY),
   data: { type: 'daily_question', date: dateKey },
   channelId: DAILY_QUESTION_CHANNEL_ID,
 };

@@ -134,6 +134,9 @@ Immédiatement après avoir répondu :
 - Accessibles **uniquement** après avoir répondu soi-même (mécanique BeReal).
 - Liste des amis : avatar, nom d'utilisateur, la StatOwrel que leur réponse leur vaut, heure de réponse.
 - Les amis qui n'ont pas encore répondu apparaissent en attente (« n'a pas encore répondu »), sans notion de retard ou de temps de réaction en v1.
+- **Relance push à 18h** : « x de tes potes ont répondu à la question du jour. Et toi ? », pour qui n'a pas encore répondu.
+
+**État d'implémentation (relance de 18h).** Elle part vraiment, sur le même chemin que le tir de 07:00 : `dailyQuestions-scheduleFriendsAnswersReminder` résout la question du jour dans son mois et met en file `dailyQuestions-notifyFriendsAnswers`, qui compte et envoie. Le compte est parcouru depuis **ceux qui ont répondu** — une amitié est écrite des deux côtés, donc lire les amis des répondants donne d'un coup tous ceux qui ont un nombre à recevoir, et ce nombre. Tout le monde est relancé sauf les répondants, avec ou sans potes : « Un de tes potes a répondu… » au singulier, « 4 de tes potes ont répondu… » au-delà, et « Ne perds pas ta série : tu as jusqu'à minuit pour répondre. » quand aucun pote n'a encore répondu — « 0 de tes potes » se lit comme un bug. Le tap ouvre le jour, exactement comme celui de 07:00 : même canal, même charge utile, donc l'app n'a rien eu à apprendre.
 
 **État d'implémentation.** La liste existe, sous la carte de récap du §5.5 : avatar, `@handle`, leur StatOwrel (le `stat_label` de l'option choisie, pas son libellé) en puce et l'heure, ceux qui ont répondu comme moi en tête, ceux qui n'ont pas encore répondu en fin de liste. C'est la ligne de la liste d'amis du §5.3, à l'identique — même avatar DiceBear semé sur le handle, même carte découpée par des séparateurs — pour qu'un pote se reconnaisse du même coup d'œil où qu'il apparaisse. Seules les amitiés `accepted` y figurent, et aucune réponse n'est lue tant qu'on n'a pas répondu soi-même — c'est la mécanique, pas une optimisation. Sans aucun pote, la section se réduit à une ligne sur la sheet, sans carte.
 
@@ -143,6 +146,8 @@ Immédiatement après avoir répondu :
 - **0** dès qu'une journée est manquée. Pas de joker : répondre en retard depuis le calendrier (§4.2) complète la journée dans le calendrier et débloque la carte, mais ne rallume pas le streak cassé.
 - Streak visible sur son profil et à côté de son nom dans la liste des amis.
 - Rappel push à 21h si la question du jour n'a pas été répondue et que le streak est en cours.
+  **Pas encore fait** — mais la relance de 18h (§4.5) couvre déjà l'essentiel : elle part à qui n'a pas répondu, et son message de repli est justement la série. Celui de 21h est le second coup, à trancher avec la question du §9 (« utile ou harcèlement ? ») et avec les réglages de notifications du §5.3, qui n'existent pas non plus.
+
 
 ### 4.7 Proposition de questions
 

@@ -6,7 +6,8 @@
  * service the other domains go through, and each of them owns the trigger —
  * `dailyQuestions-notifyDailyQuestion` is the first, a Cloud Task so the
  * fan-out gets its own retries without ever making the scheduler re-draw the
- * day.
+ * day; `dailyQuestions-notifyFriendsAnswers` is the second, and the reason
+ * this domain knows how to send a different body to each user.
  *
  * The day it grows a function of its own — a reminder before midnight — it
  * lands here, next to the helpers, and this file starts exporting it. The
@@ -18,4 +19,5 @@ export {
   type PushNotification,
   sendPushToAllDevices,
   sendPushToUser,
+  sendPushToUsers,
 } from './helpers/sendPush';
