@@ -40,15 +40,27 @@ export const colors = {
   input: '#ffffff',
   ring: '#000000',
   /**
-   * The two rarity liserés of the StatOwrel card (docs/prd.md §5.5) — the only
-   * colours outside the identity palette, and they exist to say « this one is
-   * rarer than yours »: gold under 25%, holographic violet under 10%. They are
-   * frame and badge colours only, never a surface a screen is built on.
+   * The two rarity liserés of the StatOwrel card (docs/prd.md §5.5) — they exist
+   * to say « this one is rarer than yours »: gold under 25%, holographic violet
+   * under 10%. They are frame and badge colours only, never a surface a screen
+   * is built on, and the same goes for `notification` below.
    */
   rare: '#e8a317',
   'rare-foreground': '#000000',
   ultra: '#6d4bd8',
   'ultra-foreground': '#ffffff',
+  /**
+   * The « nouvelles réponses » bead of the Stats calendar (docs/prd.md §5.2).
+   *
+   * A colour of its own because it has to be **the same on every cell**: the
+   * bead hangs off the corner and lands across two surfaces at once — the day's
+   * own, and the page behind it — so neither `primary` nor `accent` can carry
+   * it without disappearing into one of the cells it sits on. Reading « il y a
+   * du neuf » must not depend on which day it is.
+   *
+   * Like `rare` and `ultra`, a mark and never a surface.
+   */
+  notification: '#ff7eb6',
 };
 
 /**

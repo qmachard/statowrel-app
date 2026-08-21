@@ -5,9 +5,13 @@ import {
   questionConverter,
   USER_COLLECTION,
   USER_FRIEND_COLLECTION,
+  type UserData,
+  type UserFriendData,
   userConverter,
   userFriendConverter,
 } from '@statowrel/models';
+
+import type { DocumentReference, Query } from 'firebase-admin/firestore';
 
 import { getDocumentRef, getSubCollectionRef } from '@/libs/firebase-admin';
 
@@ -34,13 +38,24 @@ const answererIdsOf = async (questionId: string): Promise<Set<string>> => {
   return new Set(snapshot.docs.map((document) => document.id));
 };
 
-/** The UIDs of one user's accepted friends — the same half of the friendship the app's friend list reads. */
-const acceptedFriendIdsOf = async (userId: string): Promise<string[]> => {
-  const userRef = getDocumentRef(USER_COLLECTION, userId, userConverter);
-
-  const snapshot = await getSubCollectionRef(userRef, USER_FRIEND_COLLECTION, userFriendConverter)
+/**
+ * One user's accepted friendships — the same half of the friendship the app's
+ * friend list reads, and the one whose document id is the friend's UID.
+ *
+ * Handed over as a query rather than as a result so the answer trigger can run
+ * it inside its own transaction, where the fan-out onto the friends' calendars
+ * has to be read and written atomically with the answer it comes from.
+ */
+export const acceptedFriendsQuery = (
+  userRef: DocumentReference<UserData>,
+): Query<UserFriendData> => (
+  getSubCollectionRef(userRef, USER_FRIEND_COLLECTION, userFriendConverter)
     .where('status', '==', 'accepted')
-    .get();
+);
+
+/** The UIDs of one user's accepted friends. */
+const acceptedFriendIdsOf = async (userId: string): Promise<string[]> => {
+  const snapshot = await acceptedFriendsQuery(getDocumentRef(USER_COLLECTION, userId, userConverter)).get();
 
   return snapshot.docs.map((document) => document.id);
 };

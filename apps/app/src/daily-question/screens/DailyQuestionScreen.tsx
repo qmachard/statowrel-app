@@ -1,7 +1,7 @@
 import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { dailyQuestionDateKey } from '@statowrel/models';
 import { X } from 'lucide-react-native';
-import { type ReactNode, useLayoutEffect, useState } from 'react';
+import { type ReactNode, useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -20,6 +20,7 @@ import { FOREGROUND, SURFACE, type Surface } from '@/daily-question/helpers/surf
 import { useAuth } from '@/auth/AuthContext';
 import { fontSize, fonts, spacing } from '@/design/tokens';
 import { hapticValidation } from '@/lib/haptics';
+import { markFriendAnswersSeen } from '@/stats/data/seenFriendAnswers';
 import { useSheetBottomInset } from '@/lib/useSheetBottomInset';
 import { formatDayLabel, fromDateKey, toDateKey } from '@/lib/dates';
 import type { RootStackParamList } from '@/navigation/types';
@@ -187,6 +188,21 @@ export const DailyQuestionScreen = () => {
   // The friends of docs/prd.md §4.5, unlocked by one's own answer — which is
   // what the flag says, and why nothing is read before it flips.
   const friends = useFriendAnswers(questionId, answer !== null);
+
+  // Seeing them is what clears the day's badge on the calendar (docs/prd.md
+  // §5.2) — the bead was pointing at this list, so listing it is the moment it
+  // has been answered. `null` until the reads land: a badge must not fall on a
+  // list that failed to load.
+  const listedFriendAnswers = friends.status === 'ready'
+    ? friends.friends.filter((friend) => friend.optionId !== null).length
+    : null;
+  const userId = user?.uid ?? null;
+
+  useEffect(() => {
+    if (userId !== null && listedFriendAnswers !== null) {
+      markFriendAnswersSeen(userId, date, listedFriendAnswers);
+    }
+  }, [ userId, listedFriendAnswers, date ]);
 
   return (
     <View style={SURFACE[surface]}>

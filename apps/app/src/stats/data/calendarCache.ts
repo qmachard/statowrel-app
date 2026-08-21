@@ -22,9 +22,26 @@ export interface CalendarMonth {
   published: Record<string, DailyQuestionMonthDayData>;
   /** Days this user answered, from `v1_users/{uid}/v1_user_calendar_months`. */
   answered: Record<string, UserCalendarMonthDayData>;
+  /**
+   * How many accepted friends answered each day, off the same document
+   * `answered` comes from — so the badge of docs/prd.md §5.2 costs no read of
+   * its own.
+   *
+   * It only ever goes up (see `v1_user_calendar_month.ts`), and it moves from
+   * the *outside*: a friend answering writes it. Which is why it is not
+   * subscribed to either — the month's refresh policy below is what picks it
+   * up, so a friend answering while the screen is up shows on the next return
+   * to it or the next pull.
+   */
+  friendAnswers: Record<string, number>;
 }
 
-export const emptyCalendarMonth = (key: string): CalendarMonth => ({ key, published: {}, answered: {} });
+export const emptyCalendarMonth = (key: string): CalendarMonth => ({
+  key,
+  published: {},
+  answered: {},
+  friendAnswers: {},
+});
 
 /**
  * The calendar months this app run has read, and the only place they are held.
@@ -50,7 +67,9 @@ export const emptyCalendarMonth = (key: string): CalendarMonth => ({ key, publis
  * Nothing here expires on a clock. A month leaves the cache when something the
  * app did makes it wrong (`invalidateCalendarMonth`, on an answer), and is read
  * again when the user asks for it — pulling the screen down, or coming back to
- * it. Those are the whole refresh policy; see `useStatsData`.
+ * it. Those are the whole refresh policy; see `useStatsData`. The badge counter
+ * is the one thing in a month that somebody else writes, and it is picked up by
+ * those same two occasions rather than by a listener of its own.
  */
 const months = new Map<string, CalendarMonth>();
 
@@ -115,6 +134,7 @@ const fetchCalendarMonth = async (userId: string, monthKey: string): Promise<Cal
     key: monthKey,
     published: published.data()?.days ?? {},
     answered: answered.data()?.days ?? {},
+    friendAnswers: answered.data()?.friend_answer_counts ?? {},
   };
 };
 

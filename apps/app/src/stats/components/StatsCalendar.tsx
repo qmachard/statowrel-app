@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/Card';
 import { fromDateKey, startOfDay, startOfMonth, toDateKey } from '@/lib/dates';
 import { CalendarDay } from '@/stats/components/CalendarDay';
 import type { CalendarMonth } from '@/stats/data/calendarCache';
+import { useSeenFriendAnswers } from '@/stats/data/useSeenFriendAnswers';
 import { getCalendarDayState } from '@/stats/helpers/calendarState';
 
 export interface StatsCalendarProps {
@@ -28,9 +29,16 @@ export interface StatsCalendarProps {
 /**
  * The month calendar of docs/prd.md §5.2 — the app's whole history, and the way
  * back to a past question or card.
+ *
+ * A day carries a **badge** when friends have answered it since it was last
+ * looked at: the month's own `friendAnswers` counter against what this device
+ * has already shown (`useSeenFriendAnswers`). Only on a day one has answered
+ * oneself — a friend's answer is unlocked by one's own (docs/prd.md §4.5), so a
+ * bead on any other day would point at something the tap could not show.
  */
 export const StatsCalendar = ({ month, onMonthChange, calendar, archiveStart }: StatsCalendarProps) => {
   const navigation = useNavigation();
+  const seenFriendAnswers = useSeenFriendAnswers();
   const today = useMemo(() => startOfDay(new Date()), []);
 
   const todayKey = toDateKey(today);
@@ -56,6 +64,11 @@ export const StatsCalendar = ({ month, onMonthChange, calendar, archiveStart }: 
               <CalendarDay
                 date={date}
                 answered={answer !== undefined}
+                hasNewFriendAnswers={
+                  answer !== undefined
+                  && seenFriendAnswers !== null
+                  && (calendar.friendAnswers[monthDayKey] ?? 0) > (seenFriendAnswers[dayKey] ?? 0)
+                }
                 state={getCalendarDayState({
                   day: dayKey,
                   today: todayKey,
