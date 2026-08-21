@@ -3,6 +3,12 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fontSize, fonts, pagePadding, spacing } from '@/design/tokens';
 
+/** Tight, the way a headline is set — the titles are two or three lines each. */
+const TITLE_LINE_HEIGHT = fontSize['3xl'] * 1.1;
+
+/** What the longest title takes on a phone; see `titleBox`. */
+const TITLE_LINES = 3;
+
 const styles = StyleSheet.create({
   // The width is the caller's: a page of a horizontal pager has to be exactly
   // the width of the pager, which only the screen knows.
@@ -13,9 +19,9 @@ const styles = StyleSheet.create({
     gap: spacing(8),
     paddingHorizontal: pagePadding,
   },
-  // A fixed height rather than each illustration's own, so the four titles land
-  // on the same line while paging and the copy does not jump under them. It is
-  // the tallest of them — the star at `3xl` — so nothing has to be cropped.
+  // A fixed height rather than each illustration's own, so the five
+  // illustrations land on the same line while paging. It is the tallest of them
+  // — the star at `3xl` — so nothing has to be cropped.
   visual: {
     height: spacing(60),
     alignItems: 'center',
@@ -24,10 +30,21 @@ const styles = StyleSheet.create({
   text: {
     gap: spacing(3),
   },
+  // The titles run from one line (« C'est parti. ») to three (« Une question
+  // que personne n'ose poser. »), so the room for the longest is reserved on
+  // every slide and they are hung from its bottom: what has to hold still while
+  // paging is the sentence under them, not the top of the headline. A title
+  // that overflows on a narrow phone simply pushes it down on that slide alone
+  // — `minHeight`, never a fixed one.
+  titleBox: {
+    minHeight: TITLE_LINE_HEIGHT * TITLE_LINES,
+    justifyContent: 'flex-end',
+  },
   title: {
     textAlign: 'center',
     fontFamily: fonts.head,
     fontSize: fontSize['3xl'],
+    lineHeight: TITLE_LINE_HEIGHT,
     textTransform: 'uppercase',
     color: colors.foreground,
   },
@@ -53,7 +70,10 @@ export const OnboardingSlide = ({ width, title, body, visual }: OnboardingSlideP
     <View style={styles.visual}>{visual}</View>
 
     <View style={styles.text}>
-      <Text style={styles.title}>{title}</Text>
+      <View style={styles.titleBox}>
+        <Text style={styles.title}>{title}</Text>
+      </View>
+
       <Text style={styles.body}>{body}</Text>
     </View>
   </View>

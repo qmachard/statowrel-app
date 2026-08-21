@@ -4,6 +4,20 @@
  * understand before signing up: the daily question, the StatOwrel it gives
  * back, the friends it unlocks, and why the notification is worth accepting.
  *
+ * The first three carry the store's own screenshot captions word for word
+ * (`docs/store-listing.md` §3.1): the sentence that made somebody install the
+ * app is the sentence that should greet them when it opens. The last two are
+ * the carousel's alone — no store screenshot asks for a permission or poses a
+ * question — so they keep the app's plainer voice.
+ *
+ * The store's fourth caption, the one about the streak unlocking the right to
+ * propose a question, is deliberately **not** here: the proposal form does not
+ * exist yet (`ProposeQuestionButton` opens nothing), and a promise made at
+ * sign-up is a disappointment scheduled for day 30.
+ *
+ * A title runs to three lines at `3xl` — `OnboardingSlide` reserves the room so
+ * the sentence under it does not move from one slide to the next.
+ *
  * `key` is what the carousel hangs each slide's illustration on, so the wording
  * and the drawing stay in two places that can each be changed alone.
  */
@@ -18,27 +32,29 @@ export interface OnboardingSlideCopy {
 export const SLIDES: OnboardingSlideCopy[] = [
   {
     key: 'daily',
-    title: 'Une question par jour',
-    body: 'La même pour tout le monde. Tu as la journée pour y répondre.',
+    title: 'Une question que personne n’ose poser.',
+    body: 'Tous les matins. Deux taps pour être honnête.',
   },
   {
     key: 'statowrel',
-    title: 'Ta StatOwrel',
-    body: 'Ta réponse, replacée dans celle des autres. Tout le jeu tient dans cette phrase.',
+    title: 'La stat qui dit qui tu es.',
+    body: 'Chaque réponse te donne ta StatOwrel. Rare ou banal, c’est écrit.',
   },
   {
     key: 'friends',
-    title: 'Les réponses de tes potes',
-    body: 'Tu les découvres une fois que tu as donné la tienne. Pas de feed, pas de likes.',
+    title: 'Tes potes vont te surprendre.',
+    body: 'Vois ce qu’ils ont vraiment répondu. Sujet de conversation garanti.',
   },
   {
     key: 'notifications',
-    title: 'On te prévient',
+    // The point at the end of every title is the store captions' own
+    // punctuation, kept on these two so the five read as one set.
+    title: 'On te prévient.',
     body: 'La question du jour, un rappel le soir si tu l’as loupée, et quand un pote t’ajoute. Rien de plus.',
   },
   {
     key: 'start',
-    title: 'C’est parti',
+    title: 'C’est parti.',
     body: 'Un tap choisit ta réponse, un deuxième la valide. Essaie tout de suite, sur une vraie question.',
   },
 ];

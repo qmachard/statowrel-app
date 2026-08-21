@@ -65,8 +65,11 @@ description ne peut pas dire en décrivant le double tap ou le calendrier.
 | Description courte Play (§2.2) | **Le champ lui-même** — 72 des 80 caractères |
 | Texte promotionnel App Store (§1.3) | Première phrase |
 | Description longue, iOS et Play (§1.4) | Première ligne, avant tout le reste |
-| Première capture d'écran (§3.1) | La légende incrustée |
 | Bannière Play 1024×500 (§3.2) | Sur le jaune de marque, sous l'étoile |
+
+Elle ne va **pas** sur les captures d'écran : celles-ci portent leur propre jeu de légendes (§3.1),
+dont la première est la déclinaison au singulier de la baseline — « Une question que personne n'ose
+poser. » La baseline dit le produit, la capture dit la journée. C'est un écho, pas une reformulation.
 
 Elle ne va **pas** dans le sous-titre App Store : voir §1.2, l'arbitrage y est différent.
 
@@ -435,19 +438,51 @@ Les textes ne suffisent pas : les deux stores refusent une fiche sans captures a
 
 ### 3.1 Captures d'écran — l'ordre raconte la boucle
 
-Six captures, dans cet ordre, chacune avec sa légende incrustée (la légende est ce qui se lit, la
-capture est ce qui prouve) :
+Quatre captures, dans cet ordre, chacune avec sa légende incrustée en deux niveaux : **un titre en
+capitales**, qui est ce qui se lit dans la vignette, et **une ligne dessous**, qui dit le mécanisme.
+La capture, elle, prouve.
 
-| # | Écran | Légende |
-|---|---|---|
-| 1 | La question du jour, plein écran, une option sélectionnée | **Les questions que personne ne pose.** |
-| 2 | La même, sur le second tap | **Deux taps. Pas de bouton valider.** |
-| 3 | Le résultat : « Comme 10% des gens, tu es un.e BORDÉLIQUE » | **Ta réponse, dans la statistique.** |
-| 4 | La carte de récap avec les pourcentages par option | **Vraiment, tout le monde fait ça ?** |
-| 5 | Les réponses des amis sous la récap | **Et tes potes ? Une fois que tu as joué.** |
-| 6 | L'écran Stats : série, compteurs, calendrier | **Ta série, ton calendrier, ta collection.** |
+| # | Écran | Titre incrusté | Ligne sous le titre |
+|---|---|---|---|
+| 1 | La question du jour, plein écran, une option sélectionnée sur le second tap | **UNE QUESTION QUE PERSONNE N'OSE POSER.** | Tous les matins. Deux taps pour être honnête. |
+| 2 | Le résultat : « Comme 10% des gens, tu es un.e BORDÉLIQUE » | **LA STAT QUI DIT QUI TU ES.** | Chaque réponse te donne ta StatOwrel. Rare ou banal, c'est écrit. |
+| 3 | Les réponses des amis sous la carte de récap | **TES POTES VONT TE SURPRENDRE.** | Vois ce qu'ils ont vraiment répondu. Sujet de conversation garanti. |
+| 4 | L'écran Stats : série, compteurs, calendrier, et le bouton de proposition en bas | **DEVIENS CELUI QUI POSE LES QUESTIONS.** | Enchaîne les réponses. Débloque le droit de poser la question du jour. |
 
-La 1 et la 3 sont les deux seules que la plupart des gens verront : elles doivent tenir seules.
+**La 1 et la 2 sont les seules que la plupart des gens verront** — l'App Store en affiche trois dans
+les résultats de recherche, Play une seule — donc chacune doit tenir seule, sans la précédente.
+
+**Les quatre titres racontent une montée**, et c'est l'ordre qui la porte : on te pose la question →
+tu découvres qui tu es → tu découvres qui ils sont → c'est toi qui poses la question. Ne pas
+réordonner les captures sans refaire les titres.
+
+**Ces légendes ne sont pas la baseline et ne la remplacent pas.** La capture 1 en est la déclinaison
+au singulier — la baseline parle du produit, la capture parle de la journée — ce qui les rend
+cohérentes sans les rendre redondantes. La baseline reste sur la bannière Play (§3.2) et en tête des
+deux descriptions (§1.4), où elle continue de ne jamais se reformuler (§6).
+
+**Les trois premiers titres sont aussi ceux du carousel d'accueil** de l'app
+(`apps/app/src/onboarding/copy.ts`) : la phrase qui a fait installer l'app est la phrase qui accueille
+à l'ouverture. Changer l'une, c'est changer l'autre.
+
+> ⚠️ **La capture 4 décrit une fonctionnalité que la 1.0 ne livre pas.** L'écran Stats montre bien le
+> bouton et sa condition (« Valide d'abord une série de 30 j »), mais le formulaire de proposition
+> n'existe pas : un examinateur qui atteint 30 jours ne trouverait rien derrière. C'est exactement le
+> cas que la règle en tête de ce document interdit (guideline 2.3.1). **Deux options** :
+> - **Publier la capture 4 en même temps que la fonctionnalité** (`docs/production-checklist.md` §1.4),
+>   et sortir à trois captures d'ici là — trois suffisent aux deux stores.
+> - **Ou la remplacer par sa variante de repli**, qui décrit la même capture d'écran sans rien
+>   promettre : **TA SÉRIE NE TIENT QU'À TOI.** / *Un jour raté, elle repart à zéro. Pas de joker.*
+
+#### Si l'on veut monter à six captures
+
+Deux compléments, dans le même ton, à placer en 5 et 6 — jamais avant, ce sont des captures de
+confirmation, pas de conversion :
+
+| # | Écran | Titre incrusté | Ligne sous le titre |
+|---|---|---|---|
+| 5 | La carte de récap avec les pourcentages par option | **VRAIMENT, TOUT LE MONDE FAIT ÇA ?** | Le détail, option par option. Une fois que tu as joué. |
+| 6 | Le calendrier du mois, cases cochées | **TA COLLECTION DE JOURNÉES.** | Chaque jour répondu devient une case. Même ceux d'avant toi. |
 
 ### 3.2 Formats exigés
 
@@ -455,7 +490,7 @@ La 1 et la 3 sont les deux seules que la plupart des gens verront : elles doiven
 |---|---|---|
 | App Store | 6,9" (1290×2796) et 6,5" (1242×2688) | Apple décline les autres tailles depuis la 6,9" ; fournir les deux reste le plus sûr |
 | App Store | Icône 1024×1024, sans transparence, sans coins arrondis | `apps/app/assets/icon.png` est la source |
-| Play | 2 captures minimum, 8 maximum, min. 1080 px sur le petit côté | Mêmes visuels que iOS |
+| Play | 2 captures minimum, 8 maximum, min. 1080 px sur le petit côté | Mêmes visuels et mêmes légendes que iOS (§3.1) |
 | Play | Icône 512×512 PNG 32 bits | |
 | Play | **Bannière 1024×500** | Obligatoire, et souvent oubliée : la fiche est refusée sans elle |
 
@@ -529,7 +564,7 @@ soumis. Chaque ligne référence le point de `docs/production-checklist.md` qui 
 |---|---|---|
 | Notification du matin | `LA NOTIFICATION DE 7H` / `Tous les matins à 7h, la question tombe. Tu as jusqu'à minuit.` | Checklist §1.1 |
 | Partage du résultat | `PARTAGE TA STATOWREL` / `Une image de ton résultat, prête pour la story. Sans les réponses de tes potes — elles restent entre vous.` | Checklist §1.3 |
-| Proposition de questions | `PROPOSE TES QUESTIONS` / `Une meilleure idée ? Propose-la. Validée par la modération, elle peut tomber un matin pour tout le monde, avec ton nom crédité dessous.` | Checklist §1.4 |
+| Proposition de questions | `PROPOSE TES QUESTIONS` / `Une meilleure idée ? Propose-la. Validée par la modération, elle peut tomber un matin pour tout le monde, avec ton nom crédité dessous.` — **et la capture 4 de §3.1**, aujourd'hui à remplacer par sa variante de repli | Checklist §1.4 |
 | Lien et code d'invitation | Remplacer `On ajoute un pote en tapant son nom d'utilisateur exact` par `On ajoute un pote par lien, par code à 6 caractères, ou en tapant son nom d'utilisateur exact.` | Checklist §1.5 |
 | Rappel de 21h | `Un rappel le soir si tu as oublié — désactivable.` | Checklist §1.1 |
 
