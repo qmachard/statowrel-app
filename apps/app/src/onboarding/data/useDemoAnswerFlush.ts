@@ -3,14 +3,16 @@ import { getDoc } from 'firebase/firestore';
 import { useEffect } from 'react';
 
 import {
+  DAILY_QUESTION_ANSWER_COLLECTION,
   DEMO_QUESTION_ID,
   QUESTION_COLLECTION,
+  dailyQuestionAnswerConverter,
   questionConverter,
 } from '@statowrel/models';
 
 import { useAuth } from '@/auth/AuthContext';
 import { submitAnswer } from '@/daily-question/data/submitAnswer';
-import { getDocumentRef } from '@/lib/firestore';
+import { getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
 
 import { clearPendingDemoAnswer, readPendingDemoAnswer } from './demoAnswerStore';
 
@@ -28,10 +30,16 @@ import { clearPendingDemoAnswer, readPendingDemoAnswer } from './demoAnswerStore
  * no calendar entry, no `answers_count`, no streak, since a demo is not a day
  * (the answer trigger's `countDemoAnswer` is what stops there).
  *
- * **Nothing here may fail a launch, and nothing retries forever.** A refusal is
- * final — a `permission-denied` means this account already answered the demo,
- * so the pick is dropped rather than replayed at every launch — while anything
- * else (no network, most often) leaves it waiting for the next one.
+ * **The pick is only ever dropped once it has landed, or once the answer it
+ * would create is already there.** Deciding that from the error instead — a
+ * `permission-denied` reading as « already answered » — quietly throws the pick
+ * away on a project whose rules have not been deployed yet, which is the one
+ * failure this is most likely to meet. So the document is read first, and every
+ * failure leaves the pick for the next launch.
+ *
+ * Nothing here may fail a launch: one attempt per session, and the warning
+ * carries the code, since `permission-denied` and a network error mean very
+ * different things to whoever is looking.
  */
 export const useDemoAnswerFlush = (): void => {
   const { user } = useAuth();
@@ -51,36 +59,56 @@ export const useDemoAnswerFlush = (): void => {
         return;
       }
 
-      // Read for its `status`, which is what tells `submitAnswer` to write a
-      // demo's shape — an empty day, never late. One read, and only ever for a
-      // phone that actually went through the demo.
-      const question = (await getDoc(
-        getDocumentRef(QUESTION_COLLECTION, DEMO_QUESTION_ID, questionConverter),
-      )).data() ?? null;
+      const [ existing, question ] = await Promise.all([
+        // Already answered — a second account on this phone, or a reinstall
+        // that kept the pick. The rules would refuse the write anyway; reading
+        // is what tells the two refusals apart.
+        getDoc(getSubDocumentRef(
+          QUESTION_COLLECTION,
+          DEMO_QUESTION_ID,
+          DAILY_QUESTION_ANSWER_COLLECTION,
+          userId,
+          dailyQuestionAnswerConverter,
+        )),
+        // Read for its `status`, which is what tells `submitAnswer` to write a
+        // demo's shape — an empty day, never late.
+        getDoc(getDocumentRef(QUESTION_COLLECTION, DEMO_QUESTION_ID, questionConverter)),
+      ]);
 
-      if (question === null || cancelled) {
+      if (cancelled) {
         return;
       }
 
-      try {
-        await submitAnswer({
-          userId,
-          questionId: DEMO_QUESTION_ID,
-          question,
-          optionId: pending.option_id,
-          answeredAt: pending.answered_at,
-        });
-      } catch (error: unknown) {
-        if (!(error instanceof FirebaseError) || error.code !== 'permission-denied') {
-          throw error;
-        }
+      if (existing.exists()) {
+        await clearPendingDemoAnswer();
+
+        return;
       }
+
+      const demo = question.data() ?? null;
+
+      if (demo === null) {
+        return;
+      }
+
+      await submitAnswer({
+        userId,
+        questionId: DEMO_QUESTION_ID,
+        question: demo,
+        optionId: pending.option_id,
+        answeredAt: pending.answered_at,
+      });
 
       await clearPendingDemoAnswer();
     };
 
     void flush().catch((error: unknown) => {
-      console.warn('[onboarding] could not write the demo answer, keeping it for the next launch', error);
+      const code = error instanceof FirebaseError ? error.code : 'unknown';
+
+      console.warn(
+        `[onboarding] could not write the demo answer (${code}), keeping it for the next launch`,
+        error,
+      );
     });
 
     return () => {
