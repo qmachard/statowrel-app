@@ -4,12 +4,12 @@
 // `@statowrel/models`, a fixed document id so the app reads a single document
 // and `firestore.rules` can open it up by status alone.
 //
-// A demo question sits outside the moderation lifecycle: it is never approved,
-// never drawn (the daily draw reads the `approved` pot), and it takes no
-// answers — its `broadcast_at` is null, which the answer rule refuses. The
-// carousel's own answer never leaves the phone, so what makes its StatOwrel
-// read like a real one is the tally carried here: without it the visitor lands
-// on « Comme 100% des gens… », which reads as a bug rather than as a demo.
+// A demo question sits outside the moderation lifecycle: it is never approved
+// and never drawn (the daily draw reads the `approved` pot). It does take
+// answers — `firestore.rules` lets one through on its `status`, and the pick
+// made in the carousel is written at the first sign-in — but it starts with
+// none, and the first visitors would land on « Comme 100% des gens… », which
+// reads as a bug rather than as a demo. Hence the tally seeded here.
 //
 //   npm run seed-demo-question                       # default project (.firebaserc)
 //   npm run seed-demo-question -- --production
@@ -146,8 +146,8 @@ if (existing === null) {
     author_id: '',
     rejection_reason: null,
     // A demo question is never a day: everything the daily cycle owns stays
-    // null, which is also what keeps the answer rule refusing every write
-    // under it.
+    // null. Its answers carry an empty `date` and `late: false` rather than a
+    // day of anybody's calendar — see `isAnswerToDemo` in `firestore.rules`.
     broadcast_at: null,
     broadcast_on: null,
     closes_at: null,
