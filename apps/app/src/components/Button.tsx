@@ -48,21 +48,20 @@ const styles = StyleSheet.create({
     gap: spacing(2),
     borderRadius: radius.sm,
   },
-  // The label and its description are one centred column, so the icon keeps
-  // sitting beside the pair rather than beside the label alone.
+  // A described button stops centring its copy: the two lines are a block, and
+  // a block reads from its left edge. It takes the width the icon leaves, so
+  // the label and its description start on the same pixel.
   copy: {
-    alignItems: 'center',
+    flex: 1,
     gap: spacing(1),
   },
   label: {
     fontFamily: fonts.head,
     textTransform: 'uppercase',
-    textAlign: 'center',
   },
   description: {
     fontFamily: fonts.sans,
     fontSize: fontSize.xs,
-    textAlign: 'center',
     // Dimmed rather than recoloured: every variant already hands it a
     // foreground that reads on its own surface.
     opacity: 0.75,
@@ -198,6 +197,25 @@ export const Button = ({
 
   const renderIcon = () => (Icon ? <Icon color={foreground} size={ICON_SIZE[size]} /> : null);
 
+  const renderCopy = () => {
+    if (iconOnly) {
+      return null;
+    }
+
+    const text = <Text style={[ styles.label, TEXT_SIZE[size], LABEL[variant] ]}>{label}</Text>;
+
+    if (description === undefined) {
+      return text;
+    }
+
+    return (
+      <View style={styles.copy}>
+        {text}
+        <Text style={[ styles.description, LABEL[variant] ]}>{description}</Text>
+      </View>
+    );
+  };
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -224,14 +242,7 @@ export const Button = ({
           ) : (
             <>
               {iconPosition === 'start' ? renderIcon() : null}
-              {iconOnly ? null : (
-                <View style={styles.copy}>
-                  <Text style={[ styles.label, TEXT_SIZE[size], LABEL[variant] ]}>{label}</Text>
-                  {description === undefined ? null : (
-                    <Text style={[ styles.description, LABEL[variant] ]}>{description}</Text>
-                  )}
-                </View>
-              )}
+              {renderCopy()}
               {iconPosition === 'end' ? renderIcon() : null}
             </>
           )}
