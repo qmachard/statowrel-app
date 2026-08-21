@@ -14,6 +14,7 @@
     "set-admin": "node scripts/set-admin.mjs",
     "seed-questions": "node scripts/seed-questions.mjs",
     "seed-daily-questions": "node scripts/seed-daily-questions.mjs",
+    "send-test-notification": "node scripts/send-test-notification.mjs",
     "dev": "npm run build && NODE_ENV=development NODE_OPTIONS=--enable-source-maps concurrently --kill-others \"npm run start:emulators\" \"npm run build:watch\""
   },
   "engines": {

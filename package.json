@@ -22,6 +22,7 @@
     "set-admin": "node apps/functions/scripts/set-admin.mjs",
     "seed-questions": "npm run build:models && node apps/functions/scripts/seed-questions.mjs",
     "seed-daily-questions": "npm run build:models && node apps/functions/scripts/seed-daily-questions.mjs",
+  "send-test-notification": "npm run build:models && node apps/functions/scripts/send-test-notification.mjs",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

@@ -269,6 +269,8 @@ Sending is not transactional and nothing tracks who got what: a push is a hint, 
 
 Set `EXPO_ACCESS_TOKEN` in the functions environment once "enhanced security for push notifications" is turned on for the Expo account; unset, Expo accepts the request unauthenticated.
 
+`apps/functions/scripts/send-test-notification.mjs` (`npm run send-test-notification`) is how this is checked by hand: it reads the tokens out of Firestore and posts the very message `notifyDailyQuestion` posts — same title, same body off the month index, same channel, same `{ type, date }` payload — so a tap routes through `apps/app/src/notifications/` exactly as the 07:00 one does. It also polls `/push/getReceipts`, which the domain itself does not, because a ticket is an acceptance and a test wants a delivery. There is no emulator for Expo push: `FIRESTORE_EMULATOR_HOST` only decides where the tokens are read from, the phone is always real — so the script requires an explicit target and refuses `--all` on production without `--force`.
+
 `src/libs/firebase-admin.ts` centralizes all Firestore/Storage access (`getDocumentRef`, `getSubCollectionRef`, `createWriteBatch`, `getAdminStorageSignedUrl`, …) — every ref is created with a `@statowrel/models` converter, never read untyped.
 
 ### `friends`
