@@ -100,3 +100,32 @@ export const seedOptionsOf = (entry) => entry.options.map((option) => ({
   label: option.label.trim(),
   stat_label: option.stat_label.trim(),
 }));
+
+/**
+ * A plausible tally over a question's options, totalling `total` answers.
+ *
+ * Every option gets at least one answer — an option at 0% reads as a bug on the
+ * result card — and the rest is split on random weights, so two seeded
+ * questions do not come out with the same shape. Returns `null` for a `total`
+ * of 0: the question then keeps the empty map the model starts with, and the
+ * first real answer is simply 100% of one answer.
+ */
+export const fabricateAnswerCounts = (options, total) => {
+  if (total === 0) {
+    return null;
+  }
+
+  const weights = options.map(() => 0.2 + Math.random());
+  const weighed = weights.reduce((acc, weight) => acc + weight, 0);
+  let left = Math.max(total - options.length, 0);
+
+  return options.reduce((counts, option, index) => {
+    const extra = index === options.length - 1
+      ? left
+      : Math.min(left, Math.round((weights[index] / weighed) * Math.max(total - options.length, 0)));
+
+    left -= extra;
+
+    return { ...counts, [option.id]: 1 + extra };
+  }, {});
+};

@@ -50,6 +50,7 @@ import { ulid } from 'ulid';
 import { die, resolveProjectId } from './lib/firebase-project.mjs';
 import {
   DEFAULT_SEED_FILE,
+  fabricateAnswerCounts,
   labelKeyOf,
   readSeedEntries,
   seedOptionsOf,
@@ -192,35 +193,6 @@ const shuffle = (items) => {
   return shuffled;
 };
 
-/**
- * A plausible tally over a question's options, totalling `--answers`.
- *
- * Every option gets at least one answer — an option at 0% reads as a bug on the
- * result card — and the rest is split on random weights, so the days do not all
- * come out of the seeding with the same shape. Returns `null` without
- * `--answers`, which is the default: the day keeps the empty map the model
- * starts with, and the first real answer is simply 100% of one answer.
- */
-const buildAnswerCounts = (options) => {
-  if (answers === 0) {
-    return null;
-  }
-
-  const weights = options.map(() => 0.2 + Math.random());
-  const total = weights.reduce((acc, weight) => acc + weight, 0);
-  let left = Math.max(answers - options.length, 0);
-
-  return options.reduce((counts, option, index) => {
-    const extra = index === options.length - 1
-      ? left
-      : Math.min(left, Math.round((weights[index] / total) * Math.max(answers - options.length, 0)));
-
-    left -= extra;
-
-    return { ...counts, [option.id]: 1 + extra };
-  }, {});
-};
-
 const seedDay = async (date, pick) => {
   const publishedAt = publicationTimeOf(date);
   const question = pick();
@@ -229,7 +201,7 @@ const seedDay = async (date, pick) => {
     return null;
   }
 
-  const counts = buildAnswerCounts(question.options);
+  const counts = fabricateAnswerCounts(question.options, answers);
 
   if (dryRun) {
     return question;

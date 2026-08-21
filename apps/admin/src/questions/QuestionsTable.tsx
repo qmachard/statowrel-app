@@ -13,10 +13,17 @@ const STATUS_LABELS: Record<QuestionStatus, string> = {
   approved: 'Validée',
   rejected: 'Rejetée',
   used: 'Diffusée',
+  demo: 'Démo',
 };
 
-/** A question already in the pot, or already out of it, has nothing left to approve. */
-const isApprovable = (status: QuestionStatus): boolean => status !== 'approved' && status !== 'used';
+/**
+ * A question already in the pot, or already out of it, has nothing left to
+ * approve — and neither has the onboarding sample: approving it would drop it
+ * into the daily draw, where it would run as a real day nobody wrote it for.
+ */
+const isApprovable = (status: QuestionStatus): boolean => (
+  status !== 'approved' && status !== 'used' && status !== 'demo'
+);
 
 const formatDay = (value: string): string => (
   new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
