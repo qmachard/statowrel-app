@@ -34,7 +34,7 @@ export const SLIDES: OnboardingSlideCopy[] = [
   {
     key: 'notifications',
     title: 'On te prévient',
-    body: 'Un message par jour, quand la question tombe. C’est le seul qu’on t’enverra.',
+    body: 'La question du jour, un rappel le soir si tu l’as loupée, et quand un pote t’ajoute. Rien de plus.',
   },
 ];
 
