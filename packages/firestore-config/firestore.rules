@@ -103,13 +103,21 @@ service cloud.firestore {
         // the answer trigger's own marker, so a client never writes one: a
         // pre-filled one would tell the trigger this answer was already folded
         // into `answer_counts`.
+        //
+        // Read through `get()` with a default rather than directly, the same
+        // way `keepsBackendCounters()` reads the profile's counters below: the
+        // field was added after the app shipped, and a build that predates it
+        // sends an answer without it. A missing-field access errors, and an
+        // erroring expression denies the whole write — so checking it directly
+        // would lock every installed build out of answering. Absent and `null`
+        // mean the same thing here, which is what the trigger reads back.
         function hasAnswerShape() {
           return request.resource.data.user_id == user_id
                  && request.resource.data.question_id == question_id
                  && request.resource.data.option_id is string
                  && request.resource.data.option_id.size() > 0
                  && request.resource.data.answered_at is timestamp
-                 && request.resource.data.counted_at == null;
+                 && request.resource.data.get('counted_at', null) == null;
         }
 
         // An answer to the question as the day it ran.
