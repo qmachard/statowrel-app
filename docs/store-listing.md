@@ -17,6 +17,61 @@ public que l'app ne sert pas.
 
 ---
 
+## 0. La baseline
+
+```
+Les questions que personne ne pose. Les réponses que tout le monde veut.
+```
+72 caractères.
+
+C'est la phrase de marque : **une seule**, recopiée partout, jamais reformulée d'un support à
+l'autre. Elle dit ce que le mécanisme ne dit pas — pourquoi on ouvre l'app, et pas seulement ce
+qu'on y fait.
+
+**Ce qu'elle tient.** Une tension en deux temps, dans l'ordre où elle se lit : le premier membre
+disqualifie la question (personne ne la pose, elle ne sert à rien), le second la rend irrésistible
+(tout le monde veut quand même savoir). C'est exactement la promesse du produit — « une question
+personnelle, absurde, que personne ne pense à poser » (`docs/prd.md` §1) — et c'est ce que la
+description ne peut pas dire en décrivant le double tap ou le calendrier.
+
+**Les arbitrages de rédaction**, pour qu'ils ne se reperdent pas à la prochaine itération :
+
+- **Le pluriel plutôt que le singulier.** « La question que personne ne pose » désigne celle du
+  jour ; le pluriel désigne le produit. La baseline parle de l'app, pas de la journée.
+- **Le parallélisme.** « Les questions… / Les réponses… » : deux membres de même longueur, même
+  construction, la bascule au milieu. C'est ce qui la rend citable, et ce qui la fait tenir sur
+  deux lignes d'une bannière.
+- **« Tout le monde » plutôt que « tu ».** Le reste de la fiche tutoie (§6), et la baseline est la
+  seule exception assumée : la promesse est statistique — la réponse qu'on veut est celle *des
+  autres*, pas la sienne. « Tout le monde » est déjà la stat.
+- **La compulsion, coupée.** « Que tu ne pourrais pas t'empêcher de connaître » la dit mieux mais
+  la dit long (90 caractères contre 72), et une baseline se lit d'un œil. « Veut » suffit : le
+  premier membre a déjà installé le fait qu'on ne devrait pas.
+
+### Variantes, si celle-ci s'use
+
+| Variante | Car. | Ce qu'elle change |
+|---|---|---|
+| `Les questions que personne ne pose. Les réponses que tout le monde veut.` | 72 | **Retenue** |
+| `Personne ne pose la question. Tout le monde veut la réponse.` | 60 | Plus sèche, plus punchy ; perd le pluriel de produit |
+| `Les questions que personne ne pose, et dont tout le monde veut la réponse.` | 74 | Une seule phrase : plus fluide à lire, moins frappante à citer |
+| `Des questions que personne ne pose. Des réponses que tu ne peux pas t'empêcher de vouloir.` | 90 | La formulation d'origine, gardée entière — trop longue pour une bannière, juste pour un texte promotionnel |
+| `Personne ne pose la question. Toi, tu veux la réponse.` | 54 | Tutoie, comme le reste de la fiche ; perd la promesse statistique |
+
+### Où elle sert
+
+| Support | Usage |
+|---|---|
+| Description courte Play (§2.2) | **Le champ lui-même** — 72 des 80 caractères |
+| Texte promotionnel App Store (§1.3) | Première phrase |
+| Description longue, iOS et Play (§1.4) | Première ligne, avant tout le reste |
+| Première capture d'écran (§3.1) | La légende incrustée |
+| Bannière Play 1024×500 (§3.2) | Sur le jaune de marque, sous l'étoile |
+
+Elle ne va **pas** dans le sous-titre App Store : voir §1.2, l'arbitrage y est différent.
+
+---
+
 ## 1. App Store (iOS)
 
 ### 1.1 Nom de l'app — 30 caractères max
@@ -51,8 +106,18 @@ Variantes :
 | Variante | Car. |
 |---|---|
 | `1 question/jour entre potes` | 27 |
+| `Personne ne pose la question` | 28 |
 | `La question du jour, à 7h` | 25 |
 | `Une question. Tous les jours.` | 29 |
+
+**Pourquoi le mécanisme et non la baseline ici.** Le sous-titre est le seul champ court d'iOS qui
+soit **indexé** : « question », « jour » et « potes » y sont trois mots que les gens tapent
+réellement. « Personne ne pose la question » (28 caractères) tient et sonne mieux, mais ne contient
+aucun terme de recherche et n'apprend rien à qui découvre la fiche. La baseline a déjà quatre
+autres supports (§0) ; le sous-titre est le seul endroit où le mécanisme doit passer.
+
+À rebasculer sur la baseline le jour où la marque est connue et où la recherche par nom dépasse la
+recherche générique.
 
 ### 1.3 Texte promotionnel — 170 caractères max
 
@@ -60,11 +125,16 @@ Modifiable **sans nouvelle soumission** : c'est le champ à faire vivre (questio
 palier d'utilisateurs, saison).
 
 ```
-Chaque jour, une question que personne ne pense à poser. Tu réponds, tu découvres dans quel pourcentage tu tombes — et ce que tes potes ont répondu.
+Les questions que personne ne pose. Les réponses que tout le monde veut. Une par jour, la même pour tous : tu réponds, tu découvres ta stat, puis celles de tes potes.
 ```
-148 caractères.
+166 caractères.
 
 Rotation prête à l'emploi :
+
+```
+Des questions que personne ne pose. Des réponses que tu ne peux pas t'empêcher de vouloir. Une par jour, la même pour tout le monde, et tes potes y passent aussi.
+```
+162 caractères.
 
 ```
 « Ton dentifrice, tu le presses par le bout ou au milieu ? » Réponds, découvre si tu es méthodique ou anarchiste, et compare avec tes potes.
@@ -79,7 +149,9 @@ Pas de feed. Pas de likes. Une question par jour, ta réponse dans la statistiqu
 ### 1.4 Description — 4000 caractères max
 
 ```
-Une question. Une par jour. La même pour tout le monde.
+Les questions que personne ne pose. Les réponses que tout le monde veut.
+
+Une par jour. La même pour tout le monde.
 
 StatOwrel est un réseau social entre potes sans feed, sans likes et sans commentaires. Une question personnelle, absurde, celle que personne ne pense à poser. Tu as la journée pour y répondre, et ça te prend dix secondes.
 
@@ -118,7 +190,7 @@ CE QU'IL N'Y A PAS
 Pas de fil à scroller. Pas de likes, pas de commentaires, pas de messagerie. Pas de publicité. Pas de classement. Une question, une réponse, une statistique, tes potes. Moins de trente secondes par jour.
 ```
 
-2471 caractères — de la marge pour ajouter les blocs de la §7 au fil des versions.
+2531 caractères — de la marge pour ajouter les blocs de la §7 au fil des versions.
 
 ### 1.5 Mots-clés — 100 caractères max, séparés par des virgules, **sans espace**
 
@@ -277,17 +349,22 @@ StatOwrel — question du jour
 ### 2.2 Description courte — 80 caractères max
 
 ```
-Une question par jour. Ta réponse dans la stat, et celles de tes potes.
+Les questions que personne ne pose. Les réponses que tout le monde veut.
 ```
-71 caractères.
+72 caractères — la baseline (§0), telle quelle.
+
+C'est le champ où elle sert le mieux : Play affiche le titre et la description courte **collés**,
+et le titre porte déjà le mécanisme (« question du jour »). Le mécanisme dit ce que l'app fait, la
+baseline dit pourquoi on l'ouvre — les deux lignes ne se répètent pas.
 
 Variantes :
 
 | Variante | Car. |
 |---|---|
+| `Les questions que personne ne pose. Les réponses que tout le monde veut.` | 72 |
+| `Une question par jour, de celles que personne ne pose. Et sa réponse.` | 69 |
 | `Une question par jour. Ta réponse dans la stat, et celles de tes potes.` | 71 |
 | `1 question par jour, entre potes. Sans feed, sans likes, sans pub.` | 66 |
-| `Réponds à la question du jour, découvre ta stat et celle de tes potes.` | 70 |
 
 ### 2.3 Description complète — 4000 caractères max
 
@@ -363,7 +440,7 @@ capture est ce qui prouve) :
 
 | # | Écran | Légende |
 |---|---|---|
-| 1 | La question du jour, plein écran, une option sélectionnée | **Une question. Tous les jours.** |
+| 1 | La question du jour, plein écran, une option sélectionnée | **Les questions que personne ne pose.** |
 | 2 | La même, sur le second tap | **Deux taps. Pas de bouton valider.** |
 | 3 | Le résultat : « Comme 10% des gens, tu es un.e BORDÉLIQUE » | **Ta réponse, dans la statistique.** |
 | 4 | La carte de récap avec les pourcentages par option | **Vraiment, tout le monde fait ça ?** |
@@ -382,7 +459,9 @@ La 1 et la 3 sont les deux seules que la plupart des gens verront : elles doiven
 | Play | Icône 512×512 PNG 32 bits | |
 | Play | **Bannière 1024×500** | Obligatoire, et souvent oubliée : la fiche est refusée sans elle |
 
-L'étoile de `assets/splash-icon.png` sur le jaune de marque (`#ffdc59`) fait une bannière évidente.
+L'étoile de `assets/splash-icon.png` sur le jaune de marque (`#ffdc59`), la baseline (§0) sous
+elle : la bannière s'écrit toute seule. Elle est rognée différemment selon les surfaces de Play —
+garder le texte loin des bords et centré verticalement.
 
 ### 3.3 Vidéo de prévisualisation
 
@@ -431,6 +510,10 @@ Trois règles, tirées du produit lui-même (`docs/prd.md` §1) :
 3. **Ce qu'il n'y a pas est un argument.** Pas de feed, pas de likes, pas de pub : la 1.0 se vend
    autant par ses absences que par ses fonctionnalités, et c'est le seul angle qui distingue
    vraiment l'app dans sa catégorie.
+
+4. **La baseline ne se reformule pas.** C'est le seul texte de la fiche qui doit être identique au
+   caractère près partout où il apparaît (§0). Une phrase de marque qui varie d'un support à
+   l'autre n'est plus une phrase de marque.
 
 Ce qu'il faut éviter : les superlatifs, les emojis dans le nom ou le titre (interdits côté Play),
 et toute mention d'un concurrent — dans les textes comme dans les mots-clés.
