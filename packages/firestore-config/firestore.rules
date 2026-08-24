@@ -86,11 +86,10 @@ service cloud.firestore {
       // projects the day into `v1_user_calendar_months` and moves the streak.
       // A question that was never broadcast has a null `broadcast_on`, which no
       // `date` string can equal — so nobody gets to seed answers on the
-      // moderation pot. A document predating those fields has none at all, so
-      // the expression errors and the write is denied, same outcome. The
-      // onboarding demo is the one question answerable without a broadcast, and
-      // it is let through by its status rather than by a hole in that check —
-      // see `isAnswerToDemo` below.
+      // moderation pot, and a document predating those fields comes to the same
+      // thing without erroring on the way. The onboarding demo is the one
+      // question answerable without a broadcast, and it is let through by its
+      // status rather than by a hole in that check — see `isAnswerToDemo` below.
       //
       // An answer is final: no update, no delete (docs/prd.md §4.2). Deleting
       // an account is what removes one, backend-side (`users-deleteAccount`) —
@@ -121,10 +120,24 @@ service cloud.firestore {
         }
 
         // An answer to the question as the day it ran.
+        //
+        // The parent's fields are read through `get()` with a default, the
+        // same way `hasAnswerShape()` reads `counted_at` above: `broadcast_on`
+        // and `closes_at` were added to the model after the first questions
+        // were written, a missing-field access errors, and an erroring
+        // expression denies the whole write. A question that has none of them
+        // was never a day, which is exactly what this function should answer
+        // — `false`, not an error.
+        //
+        // `broadcast_at` and `closes_at` are checked for presence before being
+        // compared to `request.time`, because comparing an instant to a null
+        // errors too. A broadcast question always carries both: the scheduler
+        // stamps them in one batch.
         function isAnswerToBroadcast(question) {
-          return question.broadcast_at != null
+          return question.get('broadcast_at', null) != null
+                 && question.get('closes_at', null) != null
                  && request.time >= question.broadcast_at
-                 && request.resource.data.date == question.broadcast_on
+                 && request.resource.data.date == question.get('broadcast_on', null)
                  && request.resource.data.late == (request.time > question.closes_at);
         }
 
@@ -134,16 +147,22 @@ service cloud.firestore {
         // mistaken for a day of anybody's calendar or streak. The trigger reads
         // the same status and folds this answer into `answer_counts` alone.
         function isAnswerToDemo(question) {
-          return question.status == 'demo'
+          return question.get('status', '') == 'demo'
                  && request.resource.data.date == ''
                  && request.resource.data.late == false;
         }
 
         // Takes the parent question rather than reading it itself, so the whole
         // rule costs one `get()` however many of its fields it checks.
+        //
+        // The demo is tried first, and not for taste: it is decided on `status`
+        // alone, the one field every question has carried since the collection
+        // existed. Whatever the broadcast branch may trip over on an older
+        // document, it is never what stands between a visitor and the sample
+        // question they just answered.
         function isAnswerTo(question) {
           return hasAnswerShape()
-                 && (isAnswerToBroadcast(question) || isAnswerToDemo(question));
+                 && (isAnswerToDemo(question) || isAnswerToBroadcast(question));
         }
 
         allow read: if isAuthenticated();
