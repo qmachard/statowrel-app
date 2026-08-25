@@ -1,0 +1,453 @@
+# StatOwrel — Audit des lectures Firestore
+
+Ce document recense **toutes** les lectures de documents Firestore du dépôt — app mobile, console
+d'admin, Cloud Functions — chiffre ce qu'elles coûteront à grande échelle, et propose les
+optimisations qui réduisent la facture sans changer le produit.
+
+Écrit à partir du code réellement présent. Chaque constat pointe le fichier et la ligne.
+
+## Modèle de coût utilisé
+
+Firestore facture **par document renvoyé**, jamais par requête. Trois conséquences qui structurent
+tout ce qui suit :
+
+- Un `onSnapshot` facture 1 lecture par document du snapshot initial, puis 1 lecture par document
+  **modifié** ensuite. Un écran ouvert pendant qu'un compteur bouge paie chaque mouvement.
+- Grouper N `getDoc` en une requête `in` ne fait **pas** baisser la facture (mêmes N documents) —
+  ça ne gagne que de la latence. Le seul levier sur le nombre de lectures est le cache et la
+  dénormalisation.
+- Les `get()` écrits **dans `firestore.rules`** sont facturés comme des lectures.
+
+Le projet déploie en `europe-west1` (`apps/functions/src/libs/firebase-admin.ts:163`), donc
+tarification régionale : **0,036 $ / 100 k lectures** (≈ 0,36 $ le million), 0,108 $ / 100 k
+écritures, 0,012 $ / 100 k suppressions. Quota gratuit : 50 k lectures et 20 k écritures par jour.
+Si la base a été créée en multi-région (`eur3`), multiplier par ~1,7 — à vérifier dans la console,
+l'emplacement n'est pas dans le dépôt.
+
+### Hypothèses du chiffrage
+
+Un scénario unique sert de référence dans tout le document :
+
+| Paramètre | Valeur |
+|---|---|
+| Utilisateurs actifs / jour | 100 000 |
+| Ouvertures d'app / utilisateur / jour | 3 |
+| Amis acceptés en moyenne | 20 |
+| Taux de réponse quotidien | 50 % (50 000 réponses) |
+| Appareils enregistrés | ~1 par utilisateur |
+
+Ce sont des ordres de grandeur, pas des mesures : personne n'a encore instrumenté la production.
+Ils servent à **classer** les problèmes, pas à prédire une facture au centime.
+
+### Le point aggravant : pas de cache disque côté app
+
+`apps/app/src/lib/firebase.ts:74` appelle `getFirestore(app)` sans configurer de cache. Le SDK JS
+Firebase n'a de persistance que via IndexedDB, indisponible en React Native — le cache est donc
+**en mémoire uniquement**, et il est vide à chaque lancement de l'app. Toute lecture répétée d'un
+lancement à l'autre repart au serveur.
+
+C'est pourquoi la moitié des recommandations ci-dessous sont des caches `AsyncStorage` écrits à la
+main : il n'y a pas d'alternative offerte par le SDK sur cette plateforme.
+
+---
+
+## Synthèse
+
+Coût quotidien estimé au scénario de référence, avant / après.
+
+| # | Poste | Lectures/jour (avant) | Après | Gravité |
+|---|---|---:|---:|---|
+| 1 | Liste d'amis — 3 abonnements concurrents | 13 200 000 | 2 000 000 | 🔴 |
+| 2 | Avatars des amis — cache session seulement | 6 000 000 | 300 000 | 🔴 |
+| 3 | Calendrier — rechargement forcé à chaque focus | 1 800 000 | 200 000 | 🔴 |
+| 4 | Réponses des amis — aucun cache entre ouvertures | 2 000 000 | 700 000 | 🟠 |
+| 5 | Nudge 18:00 — 1 requête par répondeur | 1 050 000 | 150 000 | 🔴 |
+| 6 | `onSnapshot` sur la question du jour | 500 000 – 100 M | 300 000 | 🔴 |
+| 7 | Enregistrement device à chaque lancement | 300 000 (+300 k écritures) | ~10 000 | 🟠 |
+| 8 | `readArchiveStart()` à chaque session | 300 000 | 0 | 🟡 |
+| 9 | `syncUserProfile` doublonne l'abonnement profil | 300 000 | 0 | 🟡 |
+| 10 | Mois de la question relu par l'écran du jour | 200 000 | 0 | 🟡 |
+| 11 | Fan-out push — collection group entière ×2 | 200 000 | 200 000 | 🟠 (latence) |
+| 12 | Console d'admin — tout le pot, sans filtre | variable | variable | ⚪ |
+
+**Total ≈ 25 M lectures/jour → ~5 M** — de l'ordre de **270 $/mois → 55 $/mois**, et surtout deux
+murs de scalabilité levés (#5 et #6) qui cassent avant de coûter cher.
+
+Légende : 🔴 bloquant à 100 k utilisateurs · 🟠 à traiter avant d'ouvrir les vannes · 🟡 gain facile
+· ⚪ après le lancement.
+
+---
+
+## 1. 🔴 La liste d'amis est abonnée trois fois en parallèle
+
+**Où** — `apps/app/src/friends/data/useFriends.ts:70`
+
+`useFriends()` ouvre son propre `onSnapshot` sur `v1_users/{uid}/v1_user_friends` **à chaque
+montage**. Or le hook est monté depuis trois endroits :
+
+- `InvitationsCard` (`apps/app/src/friends/components/InvitationsCard.tsx:58`) — sur l'écran Stats,
+  qui est la racine de l'app, donc monté en permanence ;
+- `FriendsCard` (`apps/app/src/friends/components/FriendsCard.tsx:89`) — écran Menu ;
+- `useFriendAnswers` (`apps/app/src/daily-question/data/useFriendAnswers.ts:67`) — écran du jour.
+
+Ouvrir la question du jour depuis les Stats donne donc **deux abonnements simultanés sur la même
+collection**, chacun facturant son snapshot initial complet. Ouvrir le Menu en donne un troisième.
+
+**Coût** — 20 documents × ~2,2 montages × 3 sessions × 100 000 = **13,2 M lectures/jour**, soit le
+premier poste du dépôt.
+
+**Correctif** — sortir l'abonnement du hook et le mettre dans un store module, sur le modèle exact
+de `calendarCache.ts` : une souscription unique, partagée par tous les consommateurs via
+`useSyncExternalStore`, avec un compteur de références qui ferme le listener quand plus personne
+n'écoute. Un provider React monté dans `App.tsx` ferait aussi l'affaire, mais le store module est
+plus proche de ce que le dépôt fait déjà ailleurs.
+
+En complément : persister le dernier snapshot dans `AsyncStorage` et le rendre en attendant le
+premier snapshot serveur. La liste d'amis change très rarement — l'affichage instantané est un
+bonus, l'économie vient surtout du fait qu'on n'a plus besoin d'un listener pour les écrans qui ne
+font que lire (`InvitationsCard` peut se contenter du cache jusqu'au montage du Menu).
+
+**Gain** — 13,2 M → ~6 M avec la déduplication seule, ~2 M avec le cache disque.
+
+---
+
+## 2. 🔴 Les avatars des amis sont relus à chaque lancement
+
+**Où** — `apps/app/src/friends/data/useFriendAvatars.ts:21`
+
+Une lecture de profil (`v1_users/{friend_id}`) par ami, mise en cache dans une `Map` **au niveau
+module** — donc perdue à chaque fermeture de l'app. Vingt amis = 20 lectures au premier affichage
+de la liste, à chaque lancement.
+
+**Coût** — 20 × 3 sessions × 100 000 = **6 M lectures/jour**.
+
+**Correctif** — persister le cache dans `AsyncStorage` avec un TTL long (7 jours suffit : une photo
+de profil ne bouge quasiment jamais, et le fallback DiceBear rend une photo manquante invisible).
+Le commentaire du fichier rejette explicitement le fait de copier `photo_url` sur la moitié
+d'amitié — argument valide (les règles ne peuvent garantir que le handle), et le cache disque est
+justement le compromis qui garde cette propriété tout en supprimant la lecture.
+
+**Gain** — 6 M → ~0,3 M lectures/jour (uniquement les nouveaux amis et les expirations de TTL).
+
+---
+
+## 3. 🔴 Le calendrier est rechargé de force à chaque retour sur l'écran
+
+**Où** — `apps/app/src/stats/data/useStatsData.ts` (`useFocusEffect`, appel `latestReload.current(true)`)
+
+`calendarCache` est bien conçu — deux documents par mois, une lecture partagée, invalidation sur
+réponse. Mais le `useFocusEffect` appelle `reload(true)`, et `force: true`
+(`apps/app/src/stats/data/calendarCache.ts:134`) court-circuite à la fois le cache **et** le
+marqueur `stale`. Chaque retour sur l'écran Stats relit donc 2 documents, 4 quand un mois passé est
+affiché — même si rien n'a pu changer entre-temps.
+
+Une session avec 4 aller-retours Stats ↔ question ↔ Menu coûte 8 à 16 lectures.
+
+**Coût** — ~6 lectures × 3 sessions × 100 000 = **1,8 M lectures/jour**.
+
+**Correctif** — trois choses, indépendantes :
+
+1. **Ne plus forcer au focus.** Relire seulement si (a) le mois est `stale`, (b) la date locale a
+   changé depuis la dernière lecture, ou (c) la dernière lecture date de plus de N minutes. Garder
+   `force: true` pour le seul *pull to refresh*, qui est le geste explicite de l'utilisateur.
+2. **Persister `v1_daily_question_months/{YYYY-MM}` sur disque.** Ce document est **global** — le
+   même pour tous les utilisateurs — et n'est écrit qu'une fois par jour, à 07:00, par le
+   planificateur (`scheduleDailyQuestion.ts`). Un mois passé est donc **immuable** : cache permanent.
+   Le mois courant : TTL jusqu'au prochain 07:00 Paris, calculable localement.
+3. **Persister `v1_users/{uid}/v1_user_calendar_months/{YYYY-MM}` sur disque.** Ce document ne bouge
+   que quand *cet* utilisateur répond, ce que l'app sait déjà (`invalidateCalendarMonth`). Un mois
+   passé est immuable dès lors que la journée est close, sauf réponse en retard — que l'utilisateur
+   fait lui-même, donc détectable localement.
+
+**Gain** — 1,8 M → ~0,2 M lectures/jour. En régime établi, revenir sur l'écran Stats devient gratuit.
+
+---
+
+## 4. 🟠 Les réponses des amis n'ont aucun cache entre deux ouvertures
+
+**Où** — `apps/app/src/daily-question/data/useFriendAnswers.ts:91`
+
+Un `getDoc` par ami accepté sur
+`v1_questions/{question_id}/v1_daily_question_answers/{friend_id}`, refait **intégralement** à
+chaque ouverture de la feuille de résultat. Le produit permet explicitement de rouvrir le résultat
+d'un jour à volonté (PRD §5.5), donc ce coût est payé plusieurs fois par jour.
+
+**Coût** — 20 lectures × ~1 ouverture × 100 000 = **2 M lectures/jour**, davantage si le résultat
+est rouvert.
+
+**Correctif** —
+
+- Mettre en cache par `(questionId, friendId)`. **Une réponse d'ami déjà lue est immuable** : les
+  règles refusent toute mise à jour d'une réponse (`firestore.rules`), donc un ami trouvé comme
+  ayant répondu ne sera jamais relu. Seuls les amis encore silencieux valent une relecture.
+- Pour un **jour passé**, la question est close : plus personne ne peut répondre, donc le résultat
+  entier est figé — cache permanent sur disque.
+
+À noter : regrouper les N `getDoc` en une requête `where(documentId(), 'in', […])` (plafonnée à 30)
+ne changerait **rien** à la facture — Firestore facture les documents renvoyés. Ça n'améliorerait
+que la latence. Le levier ici est bien le cache.
+
+**Gain** — 2 M → ~0,7 M lectures/jour (les amis qui n'avaient pas encore répondu).
+
+---
+
+## 5. 🔴 Le nudge de 18:00 fait une requête par répondeur — et va casser avant de coûter cher
+
+**Où** — `apps/functions/src/domains/daily-questions/helpers/friendsAnswers.ts:67`
+
+`friendsAnswersDigest` lit toutes les réponses du jour (A documents), puis lance **une requête par
+répondeur** pour récupérer ses amis acceptés (A requêtes renvoyant ~F documents chacune), par lots
+de 20 en parallèle.
+
+**Coût** — 50 000 + (50 000 × 20) = **1,05 M lectures/jour**, soit ~11 $/mois. Le problème n'est pas
+là.
+
+**Le vrai problème est la latence.** 50 000 requêtes séquencées par lots de 20 font ~2 500
+aller-retours Firestore. À ~50 ms l'aller-retour, la fonction met **plus de deux minutes** — alors
+que `notifyFriendsAnswers` (`tasks/notifyFriendsAnswers.ts:102`) ne fixe aucun `timeoutSeconds` et
+tourne donc sur le défaut de 60 s des fonctions v2. Le nudge de 18:00 **échouera par timeout** bien
+avant, autour de 10 à 20 k répondeurs — et ses 3 tentatives Cloud Tasks échoueront de la même façon,
+en refacturant le coût à chaque essai.
+
+**Correctif** — maintenir un index dénormalisé des amitiés acceptées :
+`v1_users/{uid}/v1_user_friends_index/current`, un document unique portant `accepted_ids: string[]`,
+écrit par le trigger d'amitié (`friends/triggers/onFriendCreated.ts`) et par les suppressions
+(`friendships.ts`). Le digest lit alors **1 document par répondeur au lieu de F**, et peut le faire
+via `getAll()` du SDK admin — qui facture toujours 1 lecture par document mais les récupère en un
+seul RPC par lot de ~500.
+
+- Lectures : 1,05 M → **150 k/jour** (7×).
+- Aller-retours : ~2 500 → **~100**. Le timeout disparaît.
+- Prix à payer : 2 écritures supplémentaires par changement d'amitié — un événement rare.
+
+L'alternative « push » (le trigger de réponse incrémente un compteur chez chacun des F amis) coûte
+F **écritures** par réponse, soit 1 M écritures/jour à 0,108 $/100 k = 3× le prix des lectures
+qu'elle économise. À écarter.
+
+**Étape suivante, quand 100 k sera dépassé** — découper le fan-out en tâches Cloud Tasks paginées
+(une tâche par tranche de N utilisateurs) plutôt qu'une seule fonction qui tient tout en mémoire.
+Le même découpage règle #11.
+
+---
+
+## 6. 🔴 L'abonnement à la question du jour est quadratique — et le compteur est un point chaud
+
+**Où** — `apps/app/src/daily-question/data/useDailyQuestion.ts:181` (`onSnapshot` sur
+`v1_questions/{id}`)
+
+Deux problèmes distincts, sur le même document.
+
+### 6a. Le coût de lecture
+
+Chaque réponse écrite par **n'importe qui** incrémente `answer_counts` sur le document de la
+question (`triggers/steps/onAnswerCreated.ts`). Chaque incrément pousse un snapshot à **tous** les
+écrans abonnés, facturé 1 lecture chacun. Le coût est le produit `viewers × answers`, pas leur
+somme.
+
+Avec 5 000 écrans ouverts pendant la ruée de 07:05–07:20 et 50 000 réponses dans la journée, le pire
+cas théorique est de l'ordre de 10⁸ lectures. Firestore regroupe les rafales, ce qui ramène le
+réalisme vers ~1 snapshot/seconde/listener — soit tout de même quelques millions de lectures par
+jour, pour une information dont personne n'a besoin à la seconde.
+
+### 6b. La contention en écriture
+
+Firestore tient environ **1 écriture soutenue par seconde et par document**. `answer_counts` reçoit
+un incrément par réponse de toute la base : 50 000 réponses concentrées sur quelques heures, c'est
+5 à 10 écritures/seconde sur un seul document. Au-delà, les transactions du trigger entrent en
+contention, réessaient, et finissent par échouer — ce qui fait perdre non seulement le compteur mais
+aussi la projection calendrier et la série, écrites dans la même transaction.
+
+**C'est un mur produit avant d'être un mur de coût**, et il arrive bien avant 100 k utilisateurs.
+
+**Correctif, en deux temps**
+
+1. **Immédiat, faible risque** — remplacer l'abonnement par un `getDoc` unique, relu une fois après
+   la réponse de l'utilisateur. Son propre écrit est déjà rendu localement par Firestore, donc la
+   bascule de la feuille vers le résultat ne change pas ; ce qu'on perd est le déplacement en direct
+   des pourcentages, que le PRD §5.5 ne demande pas. Idem pour l'abonnement à sa propre réponse
+   (`useDailyQuestion.ts:231`), qui ne bouge que quand on écrit soi-même.
+2. **Structurel** — sortir l'agrégat du document que tout le monde lit. Soit un **compteur
+   distribué** (`v1_questions/{id}/v1_answer_count_shards/{0..9}`, incrément sur un shard tiré au
+   hasard, somme à la lecture — 10 lectures au lieu d'1, mais 10× le débit d'écriture), soit un
+   document de lecture séparé `v1_daily_question_stats/{question_id}` recalculé périodiquement.
+
+Les requêtes d'agrégation `count()` (facturées 1 lecture par tranche de 1 000 entrées d'index)
+sembleraient idéales pour recalculer le total, mais une par option et par lecteur reviendrait plus
+cher que le compteur : les réserver à un recalcul planifié, pas au chemin d'affichage.
+
+---
+
+## 7. 🟠 Chaque lancement relit et réécrit le document d'appareil
+
+**Où** — `apps/app/src/notifications/data/deviceRegistration.ts` (`registerDeviceForPush`)
+
+À chaque lancement d'une session connectée : un `getDoc` — uniquement pour récupérer `created_at` et
+ne pas le réestamper — suivi d'un `setDoc` complet.
+
+**Coût** — 3 × 100 000 = 300 k lectures **et 300 k écritures** par jour. Les écritures coûtant 3×
+les lectures, c'est le poste où l'écriture domine : ~0,32 $/jour, ~10 $/mois, pour ne rien changer
+dans 99 % des cas.
+
+**Correctif** — mémoriser dans `AsyncStorage` le triplet `(uid, token, date du dernier écrit)` et
+sauter entièrement l'aller-retour Firestore si le token et l'uid n'ont pas bougé et que l'écriture
+date de moins de 24 h. Le document doit rester frais pour que `updated_at` serve à purger les
+appareils morts — une fois par jour suffit largement.
+
+**Gain** — 300 k → ~10 k lectures/jour, et autant d'écritures.
+
+---
+
+## 8. 🟡 `readArchiveStart()` relit à chaque session une valeur qui ne bouge jamais
+
+**Où** — `apps/app/src/stats/data/useStatsData.ts:34`
+
+Une requête `orderBy('month')` + `limit(1)` sur `v1_daily_question_months` pour trouver le premier
+mois publié — la borne basse de l'archive. Le commentaire dit « une lecture, une fois par session ».
+C'est exact, et c'est déjà trop : ce mois ne changera **plus jamais** une fois la première question
+diffusée.
+
+**Coût** — 3 × 100 000 = 300 k lectures/jour.
+
+**Correctif** — le mettre en cache dans `AsyncStorage` sans expiration (au pire, revalider une fois
+par mois). Encore plus simple : c'est une constante du produit — la date de lancement — qui peut
+vivre dans `@statowrel/models` au même titre que `DEMO_QUESTION_ID`, et retomber sur la lecture
+seulement si elle est absente.
+
+**Gain** — 300 k → 0.
+
+---
+
+## 9. 🟡 `syncUserProfile` refait la lecture que `AuthContext` a déjà abonnée
+
+**Où** — `apps/app/src/auth/profile.ts:47` et `apps/app/src/auth/AuthContext.tsx:77`
+
+`onAuthStateChanged` appelle `syncUserProfile(user)`, qui fait un `getDoc` sur `v1_users/{uid}` pour
+décider s'il y a quelque chose à resynchroniser. Le même document est, deux lignes plus bas, la
+cible d'un `onSnapshot` permanent dans le même contexte.
+
+**Coût** — 1 lecture inutile par lancement : 300 k/jour.
+
+**Correctif** — déclencher la synchro depuis le **premier snapshot** de l'abonnement plutôt que
+depuis `onAuthStateChanged` : le profil est déjà en main, la comparaison avec Auth est purement
+locale, et il ne reste que l'`updateDoc` quand quelque chose diffère réellement.
+
+**Gain** — 300 k → 0.
+
+---
+
+## 10. 🟡 L'écran du jour relit un mois que `calendarCache` détient déjà
+
+**Où** — `apps/app/src/daily-question/data/useDailyQuestion.ts:150`
+
+`useDailyQuestion` fait son propre `getDoc` sur `v1_daily_question_months/{YYYY-MM}` pour résoudre
+quelle question a tourné ce jour-là. C'est exactement le document que l'écran Stats vient de lire et
+qu'il garde dans `calendarCache` — la navigation vers la question du jour se fait *depuis* cet
+écran.
+
+**Coût** — ~200 k lectures/jour, entièrement redondantes.
+
+**Correctif** — router cette lecture par `calendarCache.loadCalendarMonth` / `readCalendarMonth`, ce
+qui la rend gratuite dans le cas nominal et la partage avec le correctif #3.
+
+**Gain** — 200 k → 0.
+
+---
+
+## 11. 🟠 Le fan-out push lit toute la collection group, deux fois par jour
+
+**Où** — `apps/functions/src/domains/notifications/helpers/deviceTokens.ts:82`
+
+`listRegisteredDevices()` lit `v1_user_devices` en collection group, intégralement, à 07:00 puis à
+18:00.
+
+**Coût** — 200 k lectures/jour, soit ~2 $/mois. Négligeable en argent.
+
+**Le mur est ailleurs** : tout est tenu en mémoire (100 k × ~300 octets ≈ 30 Mo, acceptable ; 1 M
+d'utilisateurs, beaucoup moins), et surtout `sendExpoPushMessages`
+(`notifications/helpers/expoPush.ts:121`) poste les lots de 100 messages **séquentiellement**. 100 k
+appareils = 1 000 requêtes HTTP à la file, ce qui dépasse le timeout de 60 s de la même façon que
+#5.
+
+**Correctif** — découper le fan-out en tâches Cloud Tasks : le planificateur pagine
+`v1_user_devices` par tranches (curseur `startAfter`) et enfile une tâche par tranche de ~5 000
+appareils. Chaque tâche lit sa tranche, envoie ses lots, et réessaie indépendamment — ce qui rend
+aussi les reprises beaucoup moins chères qu'aujourd'hui, où un échec en fin de fan-out refait tout
+le travail.
+
+Le nombre de lectures ne baisse pas (il est irréductible : un push par appareil suppose de connaître
+chaque appareil), mais la fonction cesse d'être une bombe à retardement.
+
+---
+
+## 12. ⚪ La console d'admin lit tout le pot, en direct, sans filtre
+
+**Où** — `apps/admin/src/questions/data/useQuestions.ts:32`
+
+`onSnapshot` sur `v1_questions` entier, trié par `created_at`, sans `limit`. La collection ne
+décroît jamais — une question `used` y reste pour toujours — donc le coût d'un chargement de page
+croît linéairement avec l'âge du produit.
+
+**Coût** — faible aujourd'hui (peu d'admins), mais à 50 k questions accumulées c'est 50 k lectures
+par ouverture d'onglet.
+
+**Correctif** — filtrer par `status` (la modération ne s'intéresse qu'aux `pending`), paginer avec
+`limit` + `startAfter`, et ne garder l'abonnement en direct que sur la page courante.
+
+---
+
+## Ce qui est déjà bien fait
+
+Autant le dire, pour ne pas défaire ce qui va :
+
+- **`calendarCache`** (`apps/app/src/stats/data/calendarCache.ts`) — deux documents par mois au lieu
+  d'une lecture par jour répondu, déduplication des requêtes en vol, store externe partagé entre
+  écrans. C'est le bon modèle ; il manque juste la persistance disque et un focus moins agressif (#3).
+- **Les modèles de lecture mensuels** — `v1_daily_question_months` et `v1_user_calendar_months`
+  évitent le pattern « une lecture par jour affiché », qui aurait été le premier poste du dépôt.
+- **L'identité des documents** — une réponse a pour id l'UID de son auteur, une amitié a pour id
+  l'UID de l'autre, un appareil a pour id son token. « A-t-il déjà répondu ? », « sont-ils déjà
+  amis ? » sont des lectures de document, jamais des requêtes.
+- **La double moitié d'amitié** — écrite dès l'invitation, elle évite toute requête collection group
+  sur les amis des autres, que les règles refuseraient de toute façon.
+- **`friend_username` porté sur l'amitié** — une liste de N amis coûte 1 lecture, pas N lectures de
+  profil. C'est exactement ce qui manque aux avatars (#2).
+- **`sendPushToUser`** — sous-collection plutôt que collection group filtrée : coûte les documents
+  renvoyés et aucun index.
+- **Les `get()` dans les règles** — le commentaire de `firestore.rules:135` note qu'une règle coûte
+  un `get()` quel que soit le nombre de champs vérifiés, et le code en tire les conséquences. Le coût
+  résiduel (1 lecture facturée par création de réponse, de profil, de moitié d'amitié) est
+  proportionnel aux écritures et minimal.
+
+---
+
+## Ordre d'attaque suggéré
+
+**Avant d'ouvrir les vannes** — les deux murs de scalabilité, qui cassent le produit et pas
+seulement la facture :
+
+1. #6a — abonnement question → lecture unique (petit diff, gros effet).
+2. #5 — index des amis acceptés pour le nudge de 18:00.
+3. #6b — compteur `answer_counts` shardé ou déporté.
+4. #11 — fan-out push paginé en Cloud Tasks.
+
+**Ensuite, par ratio gain/effort** — tout est côté app et sans risque produit :
+
+5. #1 — abonnement unique à la liste d'amis.
+6. #2 — cache disque des avatars.
+7. #3 — calendrier : ne plus forcer au focus, persister les mois.
+8. #8, #9, #10 — trois lectures redondantes, quelques lignes chacune.
+9. #7 — enregistrement d'appareil au plus une fois par jour.
+10. #4 — cache des réponses d'amis.
+
+**Après le lancement** : #12.
+
+## Avant tout ça : mesurer
+
+Rien ici n'a été mesuré en production. Deux choses à mettre en place en parallèle du premier
+correctif, sans quoi on optimisera à l'aveugle :
+
+- Activer **Cloud Monitoring** sur `firestore.googleapis.com/document/read_count` avec une ventilation
+  par collection, et poser une alerte de budget.
+- Faire une passe **Firebase Performance / journalisation** sur une session type de l'app pour
+  compter les lectures réelles par ouverture — le modèle ci-dessus suppose 3 sessions et 20 amis, et
+  la vraie distribution décidera de l'ordre d'attaque mieux que ce document.
