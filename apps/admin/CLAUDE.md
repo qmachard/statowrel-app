@@ -91,21 +91,26 @@ donc `/assets/**` part `immutable` pour un an, tandis que `**/*.html` reste `no-
 un déploiement resterait invisible le temps du cache par défaut de Hosting sur le document d'entrée.
 
 **`public/legal/` n'appartient pas à la console.** Ce sont les CGU, les mentions légales, la
-politique de confidentialité et la page d'assistance de l'app mobile (docs/prd.md §5.3), quatre
-pages HTML écrites à la main que Vite recopie telles quelles dans `dist/legal/` : elles ne passent
-jamais par le bundler, donc elles portent leur propre copie des tokens (`legal.css`) au lieu
-d'importer `src/index.css`. Elles survivent à la réécriture SPA parce que Hosting sert un fichier
-*avant* de réécrire, et `cleanUrls` est ce qui en fait `/legal/cgu`, `/legal/mentions-legales`,
-`/legal/confidentialite` et `/legal/assistance` — la forme que l'app pointe et que les stores
-reçoivent (l'URL de confidentialité et celle d'assistance sont deux champs obligatoires des deux
-fiches), donc elle ne change pas. **Quatre réécritures explicites doublent ces chemins** avant le
-`**` attrape-tout, alors que `cleanUrls` suffirait : sans l'un ni l'autre, `/legal/cgu` répond 200
-*avec la console*, pas 404 — la panne ne ressemble donc jamais à une panne de routage vue du dehors.
-Et la config Hosting n'est en ligne qu'à hauteur du dernier `npm run deploy:admin` : changer
-`firebase.json` ne suffit pas, il faut redéployer. L'identité de l'éditeur — Quentin Machard SAS,
-RCS Laval 891 303 893, et l'adresse de contact — est écrite en dur dans les quatre pages : elle est
-publique, elle ne dépend d'aucun projet Firebase, et `docs/privacy-policy.md` reste la source à
+politique de confidentialité, la page d'assistance et les normes de sécurité des enfants de l'app
+mobile (docs/prd.md §5.3), cinq pages HTML écrites à la main que Vite recopie telles quelles dans
+`dist/legal/` : elles ne passent jamais par le bundler, donc elles portent leur propre copie des
+tokens (`legal.css`) au lieu d'importer `src/index.css`. Elles survivent à la réécriture SPA parce
+que Hosting sert un fichier *avant* de réécrire, et `cleanUrls` est ce qui en fait `/legal/cgu`,
+`/legal/mentions-legales`, `/legal/confidentialite`, `/legal/assistance` et
+`/legal/protection-des-enfants` — la forme que l'app pointe et que les stores reçoivent (l'URL de
+confidentialité, celle d'assistance et celle des normes de sécurité des enfants sont des champs
+obligatoires des fiches), donc elle ne change pas. **Six réécritures explicites doublent ces
+chemins** avant le `**` attrape-tout — cinq pages, plus l'alias anglais `/legal/child-safety` que
+la Play Console peut recevoir —, alors que `cleanUrls` suffirait : sans l'un ni l'autre, `/legal/cgu`
+répond 200 *avec la console*, pas 404 — la panne ne ressemble donc jamais à une panne de routage vue
+du dehors. Et la config Hosting n'est en ligne qu'à hauteur du dernier `npm run deploy:admin` :
+changer `firebase.json` ne suffit pas, il faut redéployer. L'identité de l'éditeur — Quentin Machard
+SAS, RCS Laval 891 303 893, et l'adresse de contact — est écrite en dur dans les cinq pages : elle
+est publique, elle ne dépend d'aucun projet Firebase, et `docs/privacy-policy.md` reste la source à
 partir de laquelle la politique de confidentialité a été rédigée. Les deux doivent rester d'accord.
+La page des normes de sécurité des enfants, elle, doit **nommer l'app et le développeur tels qu'ils
+s'affichent sur la fiche Play** : c'est ce que Google vérifie, et une page qui ne les cite pas fait
+refuser la fiche (docs/production-checklist.md §2.8).
 
 **Le build inline la config Firebase**, donc le déploiement demande son propre fichier :
 `apps/admin/.env.production.local`, que Vite lit avant `.env.local` (et que `*.local` ignore déjà).

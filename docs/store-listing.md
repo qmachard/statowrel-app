@@ -230,6 +230,7 @@ Bon appétit.
 |---|---|---|
 | URL de la politique de confidentialité | **bloquant** | écrite, `/legal/confidentialite` — reste à déployer |
 | URL d'assistance | **bloquant** | écrite, `/legal/assistance` — reste à déployer |
+| URL des normes de sécurité des enfants | **bloquant côté Play** | écrite, `/legal/protection-des-enfants` — voir §2.7 |
 | URL marketing | facultatif | — |
 
 Ces deux URLs sont des blocages durs : App Store Connect refuse la soumission sans la politique de
@@ -430,6 +431,22 @@ Classement attendu : **PEGI 12 / Everyone 10+ à Teen** selon les territoires.
 - Application sociale : **oui**, avec la précision « interactions entre amis mutuels uniquement,
   sans messagerie ».
 - Publicité : **non**, l'app ne contient aucune publicité.
+
+> La tranche **13-15** est à réexaminer : les CGU réservent le Service aux **15 ans et plus**. Soit
+> la fiche ne coche que **16-17 et 18 et plus**, soit les CGU descendent à 13 ans avec autorisation
+> parentale — mais les deux doivent dire la même chose, et déclarer un public mineur durcit
+> l'examen de la §2.7.
+
+### 2.7 Normes pour la sécurité des enfants — obligatoire
+
+« Contenu de l'application » → « Normes pour la sécurité des enfants ». Toute app sociale doit y
+déclarer une URL de normes publiées interdisant explicitement les CSAE et un point de contact
+dédié. La page existe : `/legal/protection-des-enfants` (alias `/legal/child-safety`), contact
+`quentin.machard@gmail.com`, objet « SÉCURITÉ DES ENFANTS ».
+
+Trois pièges qui valent un refus, détaillés dans `docs/production-checklist.md` §2.8 : une URL non
+déployée, une page qui ne nomme ni l'app ni le développeur **tels qu'ils s'affichent sur la fiche**,
+et une page servie derrière la réécriture SPA de la console au lieu de son propre fichier.
 
 ---
 

@@ -184,7 +184,9 @@ stockés par Firebase Authentication ; nous n'y avons jamais accès.
 
 StatOwrel est réservée aux personnes de **15 ans et plus**. Nous ne collectons pas sciemment de
 données concernant un enfant en deçà de cet âge ; si cela se produisait, écrivez-nous et nous
-supprimerions le compte.
+supprimerions le compte. Nos [normes de sécurité des enfants](/legal/protection-des-enfants)
+décrivent l'interdiction des abus sexuels sur des enfants et de l'exploitation sexuelle d'enfants
+(CSAE), la manière de les signaler et le point de contact dédié.
 
 ## 12. Contenus signalés
 
