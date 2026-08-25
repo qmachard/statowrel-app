@@ -36,12 +36,20 @@
         "destination": "/legal/cgu.html"
       },
       {
+        "source": "/legal/child-safety",
+        "destination": "/legal/protection-des-enfants.html"
+      },
+      {
         "source": "/legal/confidentialite",
         "destination": "/legal/confidentialite.html"
       },
       {
         "source": "/legal/mentions-legales",
         "destination": "/legal/mentions-legales.html"
+      },
+      {
+        "source": "/legal/protection-des-enfants",
+        "destination": "/legal/protection-des-enfants.html"
       },
       {
         "source": "**",

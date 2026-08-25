@@ -146,9 +146,9 @@ l'app. C'est l'un des motifs de rejet les plus mécaniques qui soient.
 **Exigence.** URL obligatoire dans les deux consoles, et **accessible publiquement, sans
 connexion**, au moment de l'examen.
 
-**État.** Les quatre pages sont écrites et servies par le Firebase Hosting qui porte déjà
-`apps/admin` : `/legal/cgu`, `/legal/mentions-legales`, `/legal/confidentialite` et
-`/legal/assistance` (`apps/admin/public/legal/`). L'identité de l'éditeur y est renseignée —
+**État.** Les cinq pages sont écrites et servies par le Firebase Hosting qui porte déjà
+`apps/admin` : `/legal/cgu`, `/legal/mentions-legales`, `/legal/confidentialite`,
+`/legal/assistance` et `/legal/protection-des-enfants` (§2.8) — `apps/admin/public/legal/`. L'identité de l'éditeur y est renseignée —
 Quentin Machard SAS, RCS Laval 891 303 893 — et l'adresse de contact est la même partout.
 `docs/privacy-policy.md` reste la source à partir de laquelle la page a été écrite. Il reste à
 choisir le domaine, à déployer, et à renseigner les URLs dans les deux consoles.
@@ -158,6 +158,9 @@ choisir le domaine, à déployer, et à renseigner les URLs dans les deux consol
 - [x] Page d'assistance écrite et servie sur `/legal/assistance`
       (`apps/admin/public/legal/assistance.html`), adresse de contact renseignée
 - [x] CGU et mentions légales complétées — éditeur, siège, RCS, TVA, contact
+- [x] Normes de sécurité des enfants écrites et servies sur `/legal/protection-des-enfants`
+      (`apps/admin/public/legal/protection-des-enfants.html`), doublées de l'alias
+      `/legal/child-safety` — voir §2.8
 - [x] Lier la politique de confidentialité **depuis l'app** — `LegalLinks` (Menu, connexion,
       inscription) porte les trois liens ; Apple le vérifie
 - [ ] Choisir le domaine (voir `docs/store-listing.md` §4)
@@ -168,7 +171,7 @@ choisir le domaine, à déployer, et à renseigner les URLs dans les deux consol
 - [ ] Faire relire les quatre pages par un juriste
 
 > La réécriture SPA de `firebase.json` (`"source": "**"` → `/index.html`) sert `apps/admin` sur
-> **toutes** les routes. Chacune des quatre pages porte donc sa propre réécriture explicite avant
+> **toutes** les routes. Chacune des cinq pages porte donc sa propre réécriture explicite avant
 > l'attrape-tout : sans elle, `/legal/confidentialite` répond 200 **avec la console**, ce qui ne
 > ressemble pas à une panne de routage vu du dehors.
 
@@ -240,6 +243,48 @@ son adresse postale** affichés publiquement sur la fiche.
 
 - [ ] Trancher entre compte personnel et structure **avant** de créer le compte Play — le type de
       compte ne se change pas après coup
+
+### 2.8 🔴 Normes de sécurité des enfants (Play)
+
+**Exigence.** La [politique relative aux normes pour la sécurité des
+enfants](https://support.google.com/googleplay/android-developer/answer/9878809) de Google Play
+s'applique à **toute** application de réseau social ou de rencontre, sans seuil d'audience. Elle
+demande trois choses, déclarées dans la Play Console (« Contenu de l'application » → « Normes pour
+la sécurité des enfants ») :
+
+1. un lien vers des **normes publiées, publiques et actives** interdisant explicitement les abus
+   sexuels sur des enfants et l'exploitation sexuelle d'enfants (**CSAE**) ;
+2. un **point de contact** valide pour les problèmes de sécurité des enfants ;
+3. le respect des lois applicables en matière de CSAE.
+
+Les normes publiées doivent charger sans erreur, sans mur de connexion, être accessibles depuis
+n'importe quel pays, parler de CSAE ou de sécurité des enfants, et **nommer l'application ou le
+développeur tels qu'ils s'affichent sur la fiche Play**. Un refus de la fiche a été prononcé sur ce
+motif (« Normes publiées non valides »), et le motif se corrige puis se resoumet dans le même
+formulaire.
+
+**État.** La page est écrite : `apps/admin/public/legal/protection-des-enfants.html`, servie sur
+`/legal/protection-des-enfants` et sur son alias anglais `/legal/child-safety`. Elle nomme
+StatOwrel et Quentin Machard SAS, énumère les comportements interdits (CSAM y compris généré par
+IA, sexualisation d'un mineur, grooming, sextorsion, traite, contenu intime non consenti), rappelle
+l'âge minimum de 15 ans, décrit ce que la conception du service rend impossible (aucun envoi de
+fichier, aucune messagerie privée, aucune découverte d'inconnus), donne le point de contact et le
+délai de 24 heures, la marche à suivre en cas de danger immédiat (17, PHAROS, NCMEC) et ce qui est
+fait d'un signalement. Le texte est repris en anglais sur la même page. Les CGU la déclarent partie
+intégrante, et la politique de confidentialité comme la page d'assistance y renvoient.
+
+- [x] Page écrite, réécritures ajoutées dans `firebase.json` avant l'attrape-tout SPA
+- [x] Lien porté par l'app elle-même — `LegalLinks` (Menu, connexion, inscription)
+- [ ] `npm run deploy:admin:production` — **la page n'existe pour Google qu'une fois déployée**
+- [ ] Vérifier en navigation privée que `/legal/protection-des-enfants` répond 200 en HTTPS, sans
+      redirection ni mur de connexion, et affiche bien la page et non la console
+- [ ] Vérifier que le nom affiché sur la fiche Play (nom de l'app, nom du développeur) est bien
+      l'un de ceux que la page cite mot pour mot ; le corriger dans la page si le compte Play
+      publie un autre nom d'éditeur (§2.7)
+- [ ] Renseigner l'URL et le point de contact dans la Play Console, puis **resoumettre** la
+      déclaration
+- [ ] Envisager une adresse dédiée (`securite-enfants@…`) plutôt que l'adresse personnelle, le jour
+      où le domaine est acheté (§2.2)
 
 ---
 

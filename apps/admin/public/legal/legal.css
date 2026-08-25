@@ -98,9 +98,17 @@ dl {
   margin: 0;
 }
 
-ul {
+ul,
+ol {
   margin: 8px 0;
   padding-left: 20px;
+}
+
+/* The rule between a page's French text and its English restatement. */
+hr {
+  margin: 40px 0 0;
+  border: 0;
+  border-top: var(--border-width) solid var(--foreground);
 }
 
 li {

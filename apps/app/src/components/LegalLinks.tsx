@@ -14,11 +14,17 @@ import { colors, fontSize, fonts, spacing } from '@/design/tokens';
  *
  * `privacy` is the one Apple checks for from inside the app, not only on the
  * listing — hence its place in this footer rather than on the store page alone.
+ *
+ * `childSafety` is the page Google Play's child safety standards policy demands
+ * be published and linked from the Play Console declaration; it is carried here
+ * too so the standards are reachable from the app itself, not from the listing
+ * alone.
  */
 export const LEGAL_URLS = {
   terms: 'https://statowrel-app.web.app/legal/cgu',
   privacy: 'https://statowrel-app.web.app/legal/confidentialite',
   notice: 'https://statowrel-app.web.app/legal/mentions-legales',
+  childSafety: 'https://statowrel-app.web.app/legal/protection-des-enfants',
 };
 
 const styles = StyleSheet.create({
@@ -79,5 +85,7 @@ export const LegalLinks = ({ style }: { style?: ViewStyle }) => (
     <LegalLink label="Confidentialité" url={LEGAL_URLS.privacy} />
     <Text style={styles.separator}>·</Text>
     <LegalLink label="Mentions légales" url={LEGAL_URLS.notice} />
+    <Text style={styles.separator}>·</Text>
+    <LegalLink label="Sécurité des enfants" url={LEGAL_URLS.childSafety} />
   </View>
 );
