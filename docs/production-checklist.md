@@ -228,9 +228,10 @@ connecter avec Apple » doit l'être au même niveau.
 
 ### 2.6 🟡 Âge minimum et mentions légales
 
-- [ ] Fixer l'âge minimum à **15 ans** dans les conditions d'utilisation (RGPD, âge du consentement
-      numérique en France) ou 13 ans avec consentement parental — et s'y tenir dans le
-      questionnaire Play (§2.6 de `docs/store-listing.md`)
+- [x] Âge minimum fixé à **16 ans** — l'app est classée 16+ sur les fiches, et les CGU, la
+      politique de confidentialité et les normes de sécurité des enfants disent le même âge. Le
+      public cible Play ne coche que **16-17 et 18 et plus** (§2.6 de `docs/store-listing.md`) ;
+      toute modification doit être répercutée dans les quatre endroits à la fois
 - [ ] Décider si une porte d'âge est nécessaire à l'inscription. Sans elle, la seule protection est
       la déclaration de la fiche ; avec, c'est un frottement de plus sur un parcours déjà long
 - [ ] Conditions générales d'utilisation : l'EULA standard d'Apple suffit pour la 1.0 si aucun
@@ -267,7 +268,7 @@ formulaire.
 `/legal/protection-des-enfants` et sur son alias anglais `/legal/child-safety`. Elle nomme
 StatOwrel et Quentin Machard SAS, énumère les comportements interdits (CSAM y compris généré par
 IA, sexualisation d'un mineur, grooming, sextorsion, traite, contenu intime non consenti), rappelle
-l'âge minimum de 15 ans, décrit ce que la conception du service rend impossible (aucun envoi de
+l'âge minimum de 16 ans, décrit ce que la conception du service rend impossible (aucun envoi de
 fichier, aucune messagerie privée, aucune découverte d'inconnus), donne le point de contact et le
 délai de 24 heures, la marche à suivre en cas de danger immédiat (17, PHAROS, NCMEC) et ce qui est
 fait d'un signalement. Le texte est repris en anglais sur la même page. Les CGU la déclarent partie
@@ -278,6 +279,9 @@ intégrante, et la politique de confidentialité comme la page d'assistance y re
 - [ ] `npm run deploy:admin:production` — **la page n'existe pour Google qu'une fois déployée**
 - [ ] Vérifier en navigation privée que `/legal/protection-des-enfants` répond 200 en HTTPS, sans
       redirection ni mur de connexion, et affiche bien la page et non la console
+- [x] Public cible Play limité à 16-17 et 18 et plus, cohérent avec les CGU — sans effet sur
+      l'exigence elle-même : la politique vise toute app sociale, 16-17 restant une tranche de
+      mineurs
 - [ ] Vérifier que le nom affiché sur la fiche Play (nom de l'app, nom du développeur) est bien
       l'un de ceux que la page cite mot pour mot ; le corriger dans la page si le compte Play
       publie un autre nom d'éditeur (§2.7)
