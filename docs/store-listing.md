@@ -264,7 +264,10 @@ Réponses au questionnaire App Store Connect, à partir du contenu réel :
 | Accès web illimité | Non | Aucun navigateur intégré |
 | Localisation | Non | — |
 
-Classement attendu : **12+**.
+Classement attendu : **12+**. Ce classement est *calculé* à partir des réponses ci-dessus et décrit
+le contenu&nbsp;; il ne se confond pas avec l'**âge minimum d'accès**, fixé à **16 ans** par les CGU
+(§2.6). App Store Connect n'a pas de palier 16 — 12+ calculé et 16 ans contractuels ne se
+contredisent pas, l'accès étant la règle la plus stricte des deux.
 
 **Le point qui se défend à l'examen, c'est le contenu utilisateur.** Il existe et il faut le
 déclarer, mais il est déjà encadré par la conception :
@@ -425,17 +428,17 @@ Classement attendu : **PEGI 12 / Everyone 10+ à Teen** selon les territoires.
 
 ### 2.6 Public cible et contenu
 
-- Tranche d'âge cible : **13-15, 16-17, 18 et plus.** Ne **jamais** cocher une tranche sous 13 ans :
-  cela déclencherait les règles « Familles » (Designed for Families), incompatibles avec une app
-  sociale à connexion.
+- Tranche d'âge cible : **16-17 et 18 et plus.** L'app est classée **16+** et ses CGU réservent le
+  Service aux 16 ans et plus : les deux doivent continuer à dire la même chose. Ne **jamais** cocher
+  une tranche sous 13 ans : cela déclencherait les règles « Familles » (Designed for Families),
+  incompatibles avec une app sociale à connexion.
 - Application sociale : **oui**, avec la précision « interactions entre amis mutuels uniquement,
   sans messagerie ».
 - Publicité : **non**, l'app ne contient aucune publicité.
 
-> La tranche **13-15** est à réexaminer : les CGU réservent le Service aux **15 ans et plus**. Soit
-> la fiche ne coche que **16-17 et 18 et plus**, soit les CGU descendent à 13 ans avec autorisation
-> parentale — mais les deux doivent dire la même chose, et déclarer un public mineur durcit
-> l'examen de la §2.7.
+> **16-17 reste une tranche de mineurs.** Le classement 16+ ne dispense donc de rien : les normes
+> pour la sécurité des enfants de la §2.7 s'appliquent à toute app sociale, quel que soit son
+> classement, et la déclaration doit être remplie.
 
 ### 2.7 Normes pour la sécurité des enfants — obligatoire
 
