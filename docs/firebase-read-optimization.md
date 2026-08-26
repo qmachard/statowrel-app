@@ -312,6 +312,27 @@ aussi la projection calendrier et la série, écrites dans la même transaction.
    réécrite (seul le marqueur `counted_at` de la démo en rewrite une), donc un jour déjà ouvert sur
    cet appareil ne coûte plus rien à rouvrir.
 
+   **Le décompte de sa propre réponse.** Le trigger étant asynchrone, la relecture
+   qui suit la réponse ramène un tally qui ne la contient pas encore, et rien ne
+   vient plus la corriger puisqu'il n'y a plus d'abonnement. Le trigger stampe
+   donc `counted_at` sur la réponse **dans la transaction même qui incrémente**
+   — le marqueur n'existait que pour la démo, il est généralisé — et l'écran
+   lit la question d'abord, sa réponse ensuite : un marqueur absent sur une
+   lecture *chaînée à ce tally* prouve que le tally a été pris sans cette
+   réponse, et la carte l'ajoute elle-même. La preuve ne marche que dans un
+   sens — une lecture appartenant à un tally plus ancien, une réponse d'une
+   session antérieure, un marqueur déjà posé se lisent tous « comptée » — donc
+   le décompte peut retarder d'une réponse le temps d'un aller-retour, jamais
+   compter deux fois la même.
+
+   L'alternative envisagée, comparer `answered_at` à un `updated_at` du tally, a
+   été écartée : `answered_at` est écrit par le téléphone et les rules ne
+   l'épinglent pas à `request.time` — un appareil en avance se serait ajouté en
+   permanence. Coût du marqueur : 1 écriture par réponse (≈ 0,05 $/jour au
+   scénario de référence) et 1 lecture dans la seule session qui vient de
+   répondre. En contrepartie la réponse cesse d'être immuable, donc
+   `getFrozenDoc` ne croit un exemplaire en cache que s'il porte son marqueur.
+
    **Ce qui a été écarté, et pourquoi.** Geler le document à la clôture — la fin du §6b « naturelle »,
    qui rendrait toute l'archive lisible depuis le cache disque à zéro lecture — suppose qu'une
    réponse tardive ne compte plus dans les parts. Arbitrage produit : **elle compte**, les stats

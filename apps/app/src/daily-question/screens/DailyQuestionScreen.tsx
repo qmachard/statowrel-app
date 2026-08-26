@@ -126,7 +126,7 @@ export const DailyQuestionScreen = () => {
   // No param means today, and today is Paris' day, not the device's — the day
   // key *is* the document id (docs/architecture.md).
   const date = params?.date ?? dailyQuestionDateKey(new Date());
-  const { status, question, questionId, answer, authorName, refresh } = useDailyQuestion(date);
+  const { status, question, questionId, answer, ownAnswerPending, authorName, refresh } = useDailyQuestion(date);
 
   const [ submitting, setSubmitting ] = useState(false);
   const [ celebrating, setCelebrating ] = useState(false);
@@ -186,11 +186,12 @@ export const DailyQuestionScreen = () => {
   // The reward of docs/prd.md §5.5: the rarity is `answer_counts`' shape at
   // display time, computed from the tally as it stood when the day was opened —
   // the day is read fresh at every opening, never held live (`useDailyQuestion`).
-  // The picked option counts itself in, so the card never says « 0% » in the
-  // beat between the answer and the trigger that tallies it (`buildStatOwrel`).
+  // `ownAnswerPending` is that hook's word on whether the tally already carries
+  // this user's own answer; when it does not, `buildStatOwrel` folds it in, so
+  // the card is never one answer short of the day it describes.
   const statOwrel = question === null || answer === null
     ? null
-    : buildStatOwrel(question, question.answer_counts, answer.option_id);
+    : buildStatOwrel(question, question.answer_counts, answer.option_id, ownAnswerPending);
 
   // The friends of docs/prd.md §4.5, unlocked by one's own answer — which is
   // what the flag says, and why nothing is read before it flips.

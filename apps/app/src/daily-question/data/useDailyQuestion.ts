@@ -45,6 +45,19 @@ export interface DailyQuestionView {
   questionId: string | null;
   /** The current user's answer, or `null` while the day is still theirs to answer. */
   answer: DailyQuestionAnswerData | null;
+  /**
+   * Whether `question.answer_counts` was read **before** this session's own
+   * answer landed in it — in which case the card has to fold that answer in
+   * itself, or show a percentage one answer short (`buildStatOwrel`).
+   *
+   * True only on proof, never on a guess: it takes an answer this session
+   * wrote, and a read of that answer, chained to the very tally being shown,
+   * that still finds no `counted_at` on it. Anything else — an answer from an
+   * earlier session, a read that belongs to an older tally, a marker already
+   * stamped — reads false, so the count can only ever fall one short for a beat
+   * and never count the same answer twice.
+   */
+  ownAnswerPending: boolean;
   /** Pseudo of whoever proposed the question — the credit of docs/prd.md §5.4. */
   authorName: string | null;
   /**
@@ -70,6 +83,17 @@ interface DayState {
   /** The question broadcast that day, from the month index — `null` for a day that never had one. */
   questionId: string | null;
   failed: boolean;
+}
+
+interface AnswerState {
+  key: string;
+  answer: DailyQuestionAnswerData | null;
+  /**
+   * The question state this read was chained to — what makes the read *newer*
+   * than a given tally, and `null` for the read fired on the way in, which is
+   * chained to nothing and races the question's own.
+   */
+  readAgainst: QuestionState | null;
 }
 
 interface QuestionState {
@@ -154,12 +178,24 @@ const readAuthorName = async (authorId: string): Promise<string | null> => {
  *   answers landed since are picked up, rather than on an open connection held
  *   through the hours nothing happens. Same policy the Stats screen already
  *   refreshes its calendar on (`useStatsData`).
- * - **The answer** is this session's own when this session wrote it —
- *   `answerStore` holds it, so the sheet still flips on the tap rather than on
- *   a round trip — and a `getFrozenDoc` otherwise. An answer is never updated
- *   nor deleted (docs/prd.md §4.2, and only the demo's `counted_at` marker ever
- *   rewrites one), so a day already read on this device is answered from the
- *   SDK's disk cache and costs nothing to reopen.
+ * - **The answer** flips the sheet from `answerStore`, which holds what this
+ *   session wrote — so the flip happens on the tap and not on a round trip —
+ *   and is read with `getFrozenDoc` otherwise. No client ever rewrites an
+ *   answer, so a day already read on this device is answered from the SDK's
+ *   disk cache and costs nothing to reopen; the one write it does receive is
+ *   the trigger's `counted_at`, which is also why a cached copy is only trusted
+ *   once it carries that marker.
+ *
+ *   That marker is what `ownAnswerPending` is decided on, and it is the whole
+ *   reason the answer is read a second time after an answer is written. The
+ *   tally read at the door is one answer short of the truth until the trigger
+ *   has run — a percentage that is visibly wrong on a quiet morning — and
+ *   `counted_at` is stamped in the very transaction that increments it. So the
+ *   screen reads the tally first and the answer second: a marker still absent
+ *   on a read **chained to that tally** proves the tally was taken without this
+ *   answer, and the card folds it in itself. Chained is the load-bearing word —
+ *   a read fired alongside the tally rather than after it proves nothing, and
+ *   is treated as proving nothing.
  * - **The month index** is read once: an entry is written when the day is drawn
  *   and never rewritten, so a day's question never changes under the screen.
  */
@@ -170,7 +206,7 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
   const [ dayState, setDayState ] = useState<DayState | null>(null);
   const [ questionState, setQuestionState ] = useState<QuestionState | null>(null);
   const [ authorState, setAuthorState ] = useState<{ authorId: string; name: string | null } | null>(null);
-  const [ answerState, setAnswerState ] = useState<{ key: string; answer: DailyQuestionAnswerData | null } | null>(null);
+  const [ answerState, setAnswerState ] = useState<AnswerState | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -294,12 +330,36 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
   useSyncExternalStore(subscribeToAnswers, getAnswersVersion);
   const sessionAnswer = readAnswer(userId, date);
 
+  const answerRead = answerState?.key === answerKey ? answerState : null;
+
+  // True while this session's own answer is not provably in the tally being
+  // shown. `counted_at` is stamped by the answer trigger in the transaction
+  // that increments `answer_counts`, so a marker that is absent on a read
+  // **chained to this tally** — fired once that tally had landed, never
+  // alongside it — proves the tally was taken without this answer. Every other
+  // state answers false, which is the safe half of the question: the count may
+  // sit one short for a beat, it can never count somebody twice.
+  const ownAnswerPending = sessionAnswer !== null
+    && (answerRead?.answer?.counted_at ?? null) === null
+    && answerRead?.readAgainst === questionState;
+
+  // Read once on the way in, and again — chained to each new tally — for as
+  // long as the marker has not landed. A day nobody answered, or one whose
+  // answer is long counted, is read once and left alone: the re-read exists to
+  // watch a marker arrive, not to poll a document.
+  const needsAnswerRead = answerRead === null || (
+    sessionAnswer !== null
+    && (answerRead.answer?.counted_at ?? null) === null
+    && answerRead.readAgainst !== questionState
+  );
+
   useEffect(() => {
-    if (userId === null || questionId === null || sessionAnswer !== null) {
+    if (userId === null || questionId === null || !needsAnswerRead) {
       return undefined;
     }
 
     let cancelled = false;
+    const readAgainst = questionState;
 
     getFrozenDoc(
       getSubDocumentRef(
@@ -309,10 +369,14 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
         userId,
         dailyQuestionAnswerConverter,
       ),
+      // A cached answer is only settled once it carries its marker: the trigger
+      // writes it a beat after the answer is created, so a copy taken in that
+      // beat would answer « not counted » for ever (`getFrozenDoc`).
+      (data) => data.counted_at !== null,
     )
       .then((snapshot) => {
         if (!cancelled) {
-          setAnswerState({ key: answerKey, answer: snapshot.data() ?? null });
+          setAnswerState({ key: answerKey, answer: snapshot.data() ?? null, readAgainst });
         }
       })
       .catch((error: unknown) => {
@@ -325,13 +389,17 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     return () => {
       cancelled = true;
     };
-  }, [ date, userId, questionId, answerKey, sessionAnswer ]);
+  }, [ date, userId, questionId, answerKey, questionState, needsAnswerRead ]);
 
   return {
     status: statusOf(day, question),
     question: question?.question ?? null,
     questionId,
-    answer: sessionAnswer ?? (answerState?.key === answerKey ? answerState.answer : null),
+    // The document wins once it has been read: it is the one carrying the
+    // trigger's marker. The session's own answer is what stands in until then,
+    // so the sheet flips on the tap rather than on a round trip.
+    answer: answerRead?.answer ?? sessionAnswer,
+    ownAnswerPending,
     authorName: authorState?.authorId === authorId ? authorState.name : null,
     refresh,
   };

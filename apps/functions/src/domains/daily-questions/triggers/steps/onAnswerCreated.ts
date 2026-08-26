@@ -100,10 +100,11 @@ const countDemoAnswer = async (answer: DailyQuestionAnswerData): Promise<void> =
 /**
  * Everything one answer changes outside of itself — docs/prd.md §4.6 and §6.
  *
- * Four writes, in one transaction:
+ * Five writes, in one transaction:
  *
  * 1. `answer_counts.{option_id}` on the question, which the card's stat bar and
- *    rarity are computed from (docs/prd.md §5.5);
+ *    rarity are computed from (docs/prd.md §5.5), and `counted_at` on the
+ *    answer that was just folded into it — see below;
  * 2. the day's entry in the author's calendar month, the read model the Stats
  *    calendar loads in a single read;
  * 3. the author's counters — `answers_count` always, the streak only when the
@@ -116,7 +117,24 @@ const countDemoAnswer = async (answer: DailyQuestionAnswerData): Promise<void> =
  *    (`firestore.rules`): counting them client-side would be one read per
  *    friend per day of the month, against the single read the month costs now.
  *
- * The onboarding demo takes the first of those four and none of the other three
+ * **`counted_at` is what lets the app know its own answer has landed in the
+ * tally.** The day screen reads the question once, at the door, and never
+ * subscribes to it (`useDailyQuestion`), so it has to decide on its own whether
+ * the `answer_counts` it holds already carry the answer just written — a
+ * percentage computed on a tally that is one short of the truth is off by a
+ * whole answer, which shows on a quiet morning. Stamped here, in the very
+ * transaction that increments, the marker cannot say yes before the increment
+ * exists: the app reads the question first and its own answer second, so a
+ * marker still absent on the second read proves the tally of the first was
+ * taken without it, and the app folds itself in. It never overstates, which is
+ * the property that matters — the other way round would count somebody twice.
+ *
+ * The trigger does not need it: its own idempotency marker is the calendar
+ * entry below. The demo has needed one since it exists — it is projected into
+ * no calendar — and this generalizes it to every answer rather than keeping it
+ * an exception.
+ *
+ * The onboarding demo takes the first of those five and none of the other four
  * — see `countDemoAnswer`. Its answer is not a day, so nobody's friends are
  * told about it either.
  *
@@ -158,6 +176,7 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
   const userRef = getDocumentRef(USER_COLLECTION, userId, userConverter);
   const calendarMonthRef = getSubDocumentRef(userRef, USER_CALENDAR_MONTH_COLLECTION, monthKey, userCalendarMonthConverter);
   const questionRef = getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter);
+  const answerRef = getSubDocumentRef(questionRef, DAILY_QUESTION_ANSWER_COLLECTION, userId, dailyQuestionAnswerConverter);
 
   await runTransaction(async (transaction) => {
     // Every read first: a transaction refuses to read after it has written, so
@@ -190,6 +209,12 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
     // A fixed field path plus `increment`, so two answers landing at the same
     // moment add up instead of overwriting each other.
     transaction.update(questionRef, `answer_counts.${optionId}`, FieldValue.increment(1));
+
+    // Same transaction as that increment, and it has to stay that way: the
+    // marker is only worth anything because it cannot exist without the count
+    // it announces. update() does not run the converter (see the repo's
+    // CLAUDE.md), so this is a Timestamp and not an ISO string.
+    transaction.update(answerRef, { counted_at: Timestamp.now() });
 
     // The friends' badge. Same `merge` as the projection above — the friend may
     // have no calendar month for this month at all, having answered nothing in

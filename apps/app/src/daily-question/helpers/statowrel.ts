@@ -43,18 +43,37 @@ export const rarityOf = (share: number): StatOwrelRarity => {
 };
 
 /**
- * The picked option's count, with **this user's own answer folded in**.
+ * The picked option's count, with **this user's own answer folded in when the
+ * tally does not carry it yet**.
  *
- * The app writes the answer, the trigger increments `answer_counts` a beat
- * later (docs/prd.md §6): between the two the card would read « 0% » about a
- * question one has just answered. Counting oneself in closes that beat, and
- * costs nothing once the trigger lands — by then the stored count already
- * includes this answer, so the `max` is a no-op and the two agree.
+ * The app writes the answer, the answer trigger increments `answer_counts` a
+ * beat later (docs/prd.md §6), and the day screen reads the question once at
+ * the door rather than subscribing to it: between the two, a tally read is one
+ * answer short of the truth — the reader's own. `ownAnswerPending` is the
+ * caller's word on that beat, and it is knowable rather than guessed: the
+ * trigger stamps `counted_at` on the answer in the same transaction as the
+ * increment, and the screen reads the question first and the answer second, so
+ * a marker still absent proves the tally was taken without it
+ * (`useDailyQuestion`).
+ *
+ * The floor is what is left of the old heuristic, for the callers that cannot
+ * answer the question — the onboarding demo's visitor, an answer written before
+ * the marker existed: whoever is looking at this card answered it, so the
+ * option they picked is never worth zero.
  */
-const countOf = (counts: Record<string, number>, optionId: string, pickedId: string): number => {
+const countOf = (
+  counts: Record<string, number>,
+  optionId: string,
+  pickedId: string,
+  ownAnswerPending: boolean,
+): number => {
   const stored = counts[optionId] ?? 0;
 
-  return optionId === pickedId ? Math.max(stored, 1) : stored;
+  if (optionId !== pickedId) {
+    return stored;
+  }
+
+  return ownAnswerPending ? stored + 1 : Math.max(stored, 1);
 };
 
 /**
@@ -75,6 +94,7 @@ export const buildStatOwrel = (
   question: QuestionData,
   answerCounts: Record<string, number>,
   optionId: string,
+  ownAnswerPending: boolean,
 ): StatOwrel | null => {
   const picked = findQuestionOption(question.options, optionId);
 
@@ -84,7 +104,7 @@ export const buildStatOwrel = (
 
   const counts = question.options.map((option) => ({
     option,
-    count: countOf(answerCounts, option.id, picked.id),
+    count: countOf(answerCounts, option.id, picked.id, ownAnswerPending),
   }));
 
   // At least 1: the picked option was just folded in, so the day is never empty
