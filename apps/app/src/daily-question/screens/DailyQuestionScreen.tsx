@@ -2,7 +2,8 @@ import { type RouteProp, useNavigation, useRoute } from '@react-navigation/nativ
 import { dailyQuestionDateKey } from '@statowrel/models';
 import { X } from 'lucide-react-native';
 import { type ReactNode, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { SuccessCircle } from '@/components/animations';
@@ -21,7 +22,6 @@ import { useAuth } from '@/auth/AuthContext';
 import { fontSize, fonts, spacing } from '@/design/tokens';
 import { hapticValidation } from '@/lib/haptics';
 import { markFriendAnswersSeen } from '@/stats/data/seenFriendAnswers';
-import { useSheetBottomInset } from '@/lib/useSheetBottomInset';
 import { formatDayLabel, fromDateKey, toDateKey } from '@/lib/dates';
 import type { RootStackParamList } from '@/navigation/types';
 
@@ -33,13 +33,17 @@ const DEAD_END: Partial<Record<DailyQuestionStatus, string>> = {
 };
 
 const styles = StyleSheet.create({
-  // No `flex: 1` anywhere on the way down: the sheet's detent is
-  // `fitToContents`, so it measures this column and a stretched child would
-  // make it measure the whole screen instead.
+  // The modal covers the screen and this scroll view is its only scroller —
+  // a nested list scrolling inside a content-sized sheet is what used to drag
+  // the sheet closed on Android.
+  screen: {
+    flex: 1,
+  },
+  // The vertical paddings are completed by the safe-area insets at render
+  // time — see the `contentContainerStyle` array.
   content: {
     gap: spacing(5),
     padding: spacing(6),
-    paddingTop: spacing(4),
   },
   // The way out and the question read as one block, set apart from the options
   // below.
@@ -74,8 +78,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: fontSize.xs,
   },
-  // Absolutely positioned so playing it never resizes the sheet: the detent is
-  // `fitToContents` and would otherwise jump the moment the answer lands.
+  // Over the whole modal, outside the scroll view: it has to centre on the
+  // screen, not on scrolled content that may run taller than it.
   celebration: {
     position: 'absolute',
     top: 0,
@@ -97,10 +101,10 @@ const Message = ({ children, surface }: { children: ReactNode; surface: Surface 
  * as the sheet's title, then the options in their fixed order, each behind its
  * quizz letter. No label above the question saying it is one.
  *
- * The sheet is sized by this content (see `RootNavigator`), which is why the
- * options sit in a plain column rather than a scroll view: a short question
- * gets a short sheet. It wears accent for today and primary for a past day, and
- * keeps that colour through the answer.
+ * The modal covers the screen (see `RootNavigator`) and its content scrolls
+ * inside it — the screen's scroll view is the only scroller, so a long result
+ * never fights the dismiss gesture. It wears accent for today and primary for
+ * a past day, and keeps that colour through the answer.
  *
  * **Answering is the double tap of docs/prd.md §4.3**: the first tap selects,
  * the second one on the same option writes
@@ -121,7 +125,13 @@ export const DailyQuestionScreen = () => {
   const navigation = useNavigation();
   const { params } = useRoute<RouteProp<RootStackParamList, 'DailyQuestion'>>();
   const { user } = useAuth();
-  const bottomInset = useSheetBottomInset();
+
+  // Neither edge is inset by the platform: Android draws the modal
+  // edge-to-edge, and iOS's page sheet reaches the bottom of the screen. The
+  // top is iOS's own though — a page sheet already hangs below the status bar,
+  // and adding the inset again would double it.
+  const insets = useSafeAreaInsets();
+  const topInset = Platform.OS === 'ios' ? 0 : insets.top;
 
   // No param means today, and today is Paris' day, not the device's — the day
   // key *is* the document id (docs/architecture.md).
@@ -227,8 +237,13 @@ export const DailyQuestionScreen = () => {
   }, [ userId, listedFriendAnswers, date ]);
 
   return (
-    <View style={SURFACE[surface]}>
-      <View style={[ styles.content, { paddingBottom: spacing(6) + bottomInset } ]}>
+    <View style={[ styles.screen, SURFACE[surface] ]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: spacing(4) + topInset, paddingBottom: spacing(6) + insets.bottom },
+        ]}
+      >
         <View style={styles.prompt}>
           <View style={styles.close}>
             <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
@@ -282,13 +297,13 @@ export const DailyQuestionScreen = () => {
         {authorName === null ? null : (
           <Text style={[ styles.credit, FOREGROUND[surface] ]}>proposée par @{authorName}</Text>
         )}
+      </ScrollView>
 
-        {celebrating ? (
-          <View style={styles.celebration} pointerEvents="none">
-            <SuccessCircle size="xl" onFinish={() => setCelebrating(false)} />
-          </View>
-        ) : null}
-      </View>
+      {celebrating ? (
+        <View style={styles.celebration} pointerEvents="none">
+          <SuccessCircle size="xl" onFinish={() => setCelebrating(false)} />
+        </View>
+      ) : null}
     </View>
   );
 };

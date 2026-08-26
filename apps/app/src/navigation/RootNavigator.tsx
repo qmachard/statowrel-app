@@ -1,5 +1,4 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Platform } from 'react-native';
 
 import { useAuth } from '@/auth/AuthContext';
 import { SignInScreen } from '@/auth/screens/SignInScreen';
@@ -36,25 +35,19 @@ export const RootNavigator = () => {
         <>
           <Stack.Screen name="Stats" component={StatsScreen} options={{ animation: 'none' }} />
           {/* The question is posed *over* Stats, never beside it (docs/prd.md §5.4):
-              a form sheet whose single detent is its own content, so a two-line
-              question takes a short sheet and a six-option one a tall one, with
-              Stats still visible above it. The screen renders no scroll view for
-              that reason — `fitToContents` measures the content, and a nested
-              scroller has no height to measure.
+              a full modal — a page sheet on iOS, full screen on Android — whose
+              content scrolls inside it (the screen owns the scroll view). Not a
+              `formSheet`: the friends' list scrolling inside one dragged the
+              sheet itself on Android, closing it mid-scroll.
 
-              On Android the sheet always opens at full height instead: the
-              content-sized detent leaves it half-open there, so the one full
-              detent is pinned.
-
-              Still dismissable, grabber included. Pinning it open while today's
+              Still dismissable — swipe down on iOS, the back gesture on
+              Android, the close button on both. Pinning it open while today's
               question is unanswered, as §5.4 wants, comes with answering (§4.3). */}
           <Stack.Screen
             name="DailyQuestion"
             component={DailyQuestionScreen}
             options={{
-              presentation: 'formSheet',
-              sheetAllowedDetents: Platform.OS === 'android' ? [ 1 ] : 'fitToContents',
-              sheetGrabberVisible: true,
+              presentation: 'modal',
               // The surface is set by the screen itself, which is the only
               // place that knows whether the day has been answered — see
               // `DailyQuestionScreen`.
