@@ -5,13 +5,14 @@ import {
   monthKeyOf,
 } from '@statowrel/models';
 import { useFocusEffect } from '@react-navigation/native';
-import { getDocs, limit, orderBy, query } from '@react-native-firebase/firestore';
+import { limit, orderBy, query } from '@react-native-firebase/firestore';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useAuth } from '@/auth/AuthContext';
 import { getAnswersVersion, readAnswer, readAnswerDays, subscribeToAnswers } from '@/daily-question/data/answerStore';
 import { startOfMonth, toDateKey } from '@/lib/dates';
 import { getCollectionRef } from '@/lib/firestore';
+import { readDocs } from '@/lib/firestoreReads';
 import { useToday } from '@/lib/useToday';
 import {
   emptyCalendarMonth,
@@ -34,7 +35,11 @@ export type { CalendarMonth } from '@/stats/data/calendarCache';
  */
 const readArchiveStart = async (): Promise<string | null> => {
   const months = getCollectionRef(DAILY_QUESTION_MONTH_COLLECTION, dailyQuestionMonthConverter);
-  const snapshot = await getDocs(query(months, orderBy('month'), limit(1)));
+  const snapshot = await readDocs(
+    query(months, orderBy('month'), limit(1)),
+    'stats:archive start',
+    DAILY_QUESTION_MONTH_COLLECTION,
+  );
 
   return snapshot.docs[0]?.id ?? null;
 };

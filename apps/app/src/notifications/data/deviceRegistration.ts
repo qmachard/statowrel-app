@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { deleteDoc, getDoc, setDoc } from '@react-native-firebase/firestore';
+import { deleteDoc, setDoc } from '@react-native-firebase/firestore';
 import { Platform } from 'react-native';
 
 import {
@@ -14,6 +14,7 @@ import {
 
 import { colors } from '@/design/tokens';
 import { getSubDocumentRef } from '@/lib/firestore';
+import { readDoc } from '@/lib/firestoreReads';
 import { type Notifications, loadNotifications } from '@/notifications/helpers/nativeModule';
 
 /**
@@ -248,7 +249,7 @@ export const registerDeviceForPush = async (
     }
 
     const ref = deviceRef(userId, token);
-    const existing = await getDoc(ref);
+    const existing = await readDoc(ref, 'push:device');
     const now = new Date().toISOString();
 
     await setDoc(ref, {

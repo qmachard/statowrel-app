@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/auth/AuthContext';
 import { getSubCollectionRef } from '@/lib/firestore';
+import { logSnapshot } from '@/lib/firestoreReads';
 
 /**
  * The friend list as the Profile screen consumes it (docs/prd.md §5.3), split
@@ -65,14 +66,19 @@ export const useFriends = (): Friends => {
 
     // Oldest first: the list is read top to bottom as it was built, and a
     // pending invitation does not jump the queue by being answered.
-    const friends = query(
-      getSubCollectionRef(USER_COLLECTION, userId, USER_FRIEND_COLLECTION, userFriendConverter),
-      orderBy('created_at'),
-    );
+    const collection = getSubCollectionRef(USER_COLLECTION, userId, USER_FRIEND_COLLECTION, userFriendConverter);
+    const friends = query(collection, orderBy('created_at'));
 
     return onSnapshot(
       friends,
-      (snapshot) => setFriendships(snapshot.docs.map((entry) => entry.data())),
+      (snapshot) => {
+        // What a listener bills: every document of the first snapshot, then the
+        // ones that changed — which is what `docChanges()` counts, the first
+        // snapshot's changes being its whole result set. Nothing at all when it
+        // came from the cache.
+        logSnapshot('friends:list', collection.path, snapshot.metadata.fromCache ? 0 : snapshot.docChanges().length);
+        setFriendships(snapshot.docs.map((entry) => entry.data()));
+      },
       (error: unknown) => {
         // The rest of the Profile screen stays up: an unreachable friend list
         // renders as an empty one rather than taking the account card with it.
