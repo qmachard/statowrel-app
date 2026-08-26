@@ -2,10 +2,6 @@ import { getApp } from '@react-native-firebase/app';
 import { type Auth, connectAuthEmulator, getAuth } from '@react-native-firebase/auth';
 import { type Firestore, connectFirestoreEmulator, getFirestore } from '@react-native-firebase/firestore';
 
-import { mark } from './startupTrace';
-
-mark('firebase.ts: module evaluation starts');
-
 /**
  * React Native Firebase — the **native** Firebase SDKs behind a JS layer, not
  * the `firebase` web SDK running on the JS thread.
@@ -49,18 +45,13 @@ export const app = firebaseApp;
  */
 export const auth: Auth = getAuth(app);
 
-mark('firebase.ts: getApp + getAuth done');
-
 export const db: Firestore = getFirestore(app);
-
-mark('firebase.ts: getFirestore done');
 
 if (process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST && process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_PORT) {
   connectAuthEmulator(
     auth,
     `http://${process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST}:${process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_PORT}`,
   );
-  mark('firebase.ts: auth emulator connected');
 }
 
 if (process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST && process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT) {
@@ -69,5 +60,4 @@ if (process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST && process.env.EXPO
     process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST,
     Number(process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT),
   );
-  mark('firebase.ts: firestore emulator connected');
 }

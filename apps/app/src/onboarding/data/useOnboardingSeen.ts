@@ -1,8 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
-import { mark } from '@/lib/startupTrace';
-
 /**
  * Versioned, so a rewritten carousel can be shown again to people who already
  * went through the first one — by bumping the suffix rather than by clearing
@@ -59,8 +57,6 @@ export const useOnboardingSeen = (): OnboardingSeen => {
     const read = () => {
       AsyncStorage.getItem(STORAGE_KEY)
         .then((value) => {
-          mark(`useOnboardingSeen: flag read, seen=${String(value !== null)}`);
-
           if (!cancelled) {
             setState({ resolved: true, seen: value !== null });
           }
