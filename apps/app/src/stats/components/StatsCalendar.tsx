@@ -4,7 +4,8 @@ import { useMemo } from 'react';
 
 import { Calendar } from '@/components/Calendar';
 import { Card, CardContent } from '@/components/Card';
-import { fromDateKey, startOfDay, startOfMonth, toDateKey } from '@/lib/dates';
+import { fromDateKey, startOfMonth, toDateKey } from '@/lib/dates';
+import { useToday } from '@/lib/useToday';
 import { CalendarDay } from '@/stats/components/CalendarDay';
 import type { CalendarMonth } from '@/stats/data/calendarCache';
 import { useSeenFriendAnswers } from '@/stats/data/useSeenFriendAnswers';
@@ -39,7 +40,9 @@ export interface StatsCalendarProps {
 export const StatsCalendar = ({ month, onMonthChange, calendar, archiveStart }: StatsCalendarProps) => {
   const navigation = useNavigation();
   const seenFriendAnswers = useSeenFriendAnswers();
-  const today = useMemo(() => startOfDay(new Date()), []);
+  // Live: the calendar is mounted for as long as the app runs, and the day it
+  // paints in accent has to be the day it actually is (see `useToday`).
+  const today = useToday();
 
   const todayKey = toDateKey(today);
   const minMonth = useMemo(

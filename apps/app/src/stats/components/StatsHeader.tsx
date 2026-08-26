@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { formatDayLabel } from '@/lib/dates';
+import { useToday } from '@/lib/useToday';
 
 export interface StatsHeaderProps {
   displayName: string;
@@ -43,18 +44,24 @@ const styles = StyleSheet.create({
 });
 
 /** Greeting on the left, the app's only two actions on the right (docs/prd.md §5.1). */
-export const StatsHeader = ({ displayName, onInvite, onOpenMenu }: StatsHeaderProps) => (
-  <View style={styles.root}>
-    <View style={styles.greeting}>
-      <Text style={styles.day}>{formatDayLabel(new Date())}</Text>
-      <Text style={styles.name} numberOfLines={1}>
-        Salut {displayName}
-      </Text>
-    </View>
+export const StatsHeader = ({ displayName, onInvite, onOpenMenu }: StatsHeaderProps) => {
+  // The same clock the calendar below reads, so the date line and the accented
+  // cell can never name two different days (see `useToday`).
+  const today = useToday();
 
-    <View style={styles.actions}>
-      <Button label="Inviter un pote" icon={UserRoundPlus} size="icon" onPress={onInvite} />
-      <Button label="Ouvrir le menu" icon={Menu} variant="outline" size="icon" onPress={onOpenMenu} />
+  return (
+    <View style={styles.root}>
+      <View style={styles.greeting}>
+        <Text style={styles.day}>{formatDayLabel(today)}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          Salut {displayName}
+        </Text>
+      </View>
+
+      <View style={styles.actions}>
+        <Button label="Inviter un pote" icon={UserRoundPlus} size="icon" onPress={onInvite} />
+        <Button label="Ouvrir le menu" icon={Menu} variant="outline" size="icon" onPress={onOpenMenu} />
+      </View>
     </View>
-  </View>
-);
+  );
+};

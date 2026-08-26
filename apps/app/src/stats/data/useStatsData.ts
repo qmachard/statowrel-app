@@ -6,12 +6,13 @@ import {
 } from '@statowrel/models';
 import { useFocusEffect } from '@react-navigation/native';
 import { getDocs, limit, orderBy, query } from '@react-native-firebase/firestore';
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useAuth } from '@/auth/AuthContext';
 import { getAnswersVersion, readAnswer, readAnswerDays, subscribeToAnswers } from '@/daily-question/data/answerStore';
-import { startOfDay, startOfMonth, toDateKey } from '@/lib/dates';
+import { startOfMonth, toDateKey } from '@/lib/dates';
 import { getCollectionRef } from '@/lib/firestore';
+import { useToday } from '@/lib/useToday';
 import {
   emptyCalendarMonth,
   loadCalendarMonth,
@@ -63,19 +64,25 @@ const readArchiveStart = async (): Promise<string | null> => {
  * - **Coming back to the screen, and pulling it down, re-read.** The first
  *   covers the answer just given and the day that dropped overnight; the second
  *   is the way out whenever anything else looks stale.
+ * - **The day turning re-reads too.** The clock this hook runs on is live
+ *   (`useToday`), so an app that spent the night in the background comes back
+ *   on the right day *and* goes and gets the question that dropped at 07:00 —
+ *   coming back from the background is not a navigation, so the focus effect
+ *   above never sees it.
  */
 export const useStatsData = () => {
   const { user, profile } = useAuth();
   const userId = user?.uid ?? null;
 
-  const today = useMemo(() => startOfDay(new Date()), []);
+  // Read from a live clock rather than captured at mount: the app keeps its JS
+  // context through a night in the background, and everything below is keyed by
+  // the day — the pink cell, the banner, the streak's own reading. See
+  // `useToday`.
+  const today = useToday();
   const todayKey = toDateKey(today);
   const [ month, selectMonth ] = useState(() => startOfMonth(today));
   const monthKey = monthKeyOf(toDateKey(month));
-  // Read from its own clock rather than derived from `today`, which is handed
-  // back to the screen: a value that leaves the hook cannot be a dependency the
-  // React compiler is willing to memoize `reload` on.
-  const currentMonthKey = useMemo(() => monthKeyOf(toDateKey(startOfDay(new Date()))), []);
+  const currentMonthKey = monthKeyOf(todayKey);
 
   const [ archiveStart, setArchiveStart ] = useState<string | null>(null);
   const [ refreshing, setRefreshing ] = useState(false);
@@ -171,6 +178,21 @@ export const useStatsData = () => {
 
     focused.current = true;
   }, []));
+
+  // A day that turns is a month that has just gained one: the 07:00 draw writes
+  // into a document the cache is already holding a copy of, taken before it.
+  // The focus effect above does not cover that — returning from the background
+  // is not a navigation — so the rollover asks for the read itself.
+  const dayRead = useRef(todayKey);
+
+  useEffect(() => {
+    if (dayRead.current === todayKey) {
+      return;
+    }
+
+    dayRead.current = todayKey;
+    void latestReload.current(true);
+  }, [ todayKey ]);
 
   /** Pull to refresh — the same read, with the spinner the gesture owes the user. */
   const refresh = useCallback(async () => {
