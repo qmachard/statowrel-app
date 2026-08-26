@@ -95,7 +95,7 @@ Requires a dev client build (`npm run build:dev:ios` / `build:dev:android`) to r
 
 Every value has to be declared **twice**, because two different processes read them and neither sees the other's source:
 
-- `.env.local` — read by Metro when you run the app locally.
+- `.env.local` — read by Metro when you run the app locally. **Changing it requires `npx expo start --clear`**: `EXPO_PUBLIC_*` values are inlined at transform time and a plain restart reuses the cached transforms, so a pair added after a first launch stays `undefined` in the bundle. That is how the app ends up half-wired — auth on the emulator, Firestore silently on the cloud, every read dying on `firestore/permission-denied`. In dev, `src/lib/firebase.ts` logs the wiring the bundle actually holds at launch and warns when it is partial.
 - one of the two EAS sources below — read when EAS builds the binary. `.env.local` is gitignored, and EAS excludes gitignored files from the upload, so a value that only lives there is simply absent on the builder.
 
 EAS itself has three sources, in increasing order of precedence: the build profile's `env` block in `eas.json`, then `.env` files, then the **EAS environment variables** stored on Expo's servers. A same-named variable higher in that list wins — which is why nothing important should be defined in two of them at once. All three are applied on the worker *and* when the EAS CLI evaluates `app.config.ts` locally to resolve credentials, so a build cannot resolve one bundle identifier and sign another.

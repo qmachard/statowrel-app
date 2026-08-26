@@ -47,21 +47,6 @@ export const auth: Auth = getAuth(app);
 
 export const db: Firestore = getFirestore(app);
 
-if (__DEV__) {
-  // [DEBUG:state] What the *bundle* holds — EXPO_PUBLIC_* values are inlined by
-  // Metro at transform time, so a stale cache or a typo in .env.local shows up
-  // here as `undefined` whatever the file on disk says.
-  console.log('[DEBUG:state] emulator wiring', {
-    authHost: process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST,
-    authPort: process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_PORT,
-    firestoreHost: process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST,
-    firestorePort: process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT,
-    functionsHost: process.env.EXPO_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR_HOST,
-    functionsPort: process.env.EXPO_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR_PORT,
-    projectId: firebaseApp.options.projectId,
-  });
-}
-
 if (process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST && process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_PORT) {
   connectAuthEmulator(
     auth,
@@ -75,9 +60,49 @@ if (process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST && process.env.EXPO
     process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST,
     Number(process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT),
   );
-  // [DEBUG:branch] Firestore emulator connected
-  console.log('[DEBUG:branch] connectFirestoreEmulator ran');
-} else if (__DEV__) {
-  // [DEBUG:branch] guard was false — the bundle carries no Firestore emulator host/port
-  console.log('[DEBUG:branch] connectFirestoreEmulator SKIPPED');
+}
+
+if (__DEV__) {
+  // Metro inlines EXPO_PUBLIC_* at transform time, so the values above are what
+  // the *bundle* holds — not what .env.local says now. A pair added after a
+  // first launch stays `undefined` until the transform cache is rebuilt
+  // (`npx expo start --clear`), and the half-wired app then talks to the cloud
+  // with emulator credentials: every Firestore call dies on
+  // `firestore/permission-denied`, with nothing naming the cause. Hence this
+  // summary of where each service actually points, and the warning when the
+  // wiring is partial. The functions pair is connected in ./functions.ts; it is
+  // only reported here, so the whole wiring reads in one line.
+  const emulatorTarget = (host: string | undefined, port: string | undefined) => (
+    host && port ? `${host}:${port}` : null
+  );
+
+  const wiring = {
+    auth: emulatorTarget(
+      process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST,
+      process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_PORT,
+    ),
+    firestore: emulatorTarget(
+      process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST,
+      process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT,
+    ),
+    functions: emulatorTarget(
+      process.env.EXPO_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR_HOST,
+      process.env.EXPO_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR_PORT,
+    ),
+  };
+
+  const targets = Object.values(wiring);
+  const summary = Object.entries(wiring)
+    .map(([ name, target ]) => `${name} → ${target ?? 'cloud'}`)
+    .join(' · ');
+
+  console.log(`[firebase] ${firebaseApp.options.projectId}: ${summary}`);
+
+  if (targets.some((target) => target !== null) && targets.some((target) => target === null)) {
+    console.warn(
+      '[firebase] Partial emulator wiring — the services marked "cloud" above hit the real project '
+        + 'with emulator credentials, which fails as firestore/permission-denied. If .env.local sets '
+        + 'every pair, the bundle is stale: restart Metro with `npx expo start --clear`.',
+    );
+  }
 }
