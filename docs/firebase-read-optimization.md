@@ -39,15 +39,38 @@ Un scénario unique sert de référence dans tout le document :
 Ce sont des ordres de grandeur, pas des mesures : personne n'a encore instrumenté la production.
 Ils servent à **classer** les problèmes, pas à prédire une facture au centime.
 
-### Le point aggravant : pas de cache disque côté app
+### Le cache disque du SDK : ce qu'il donne, ce qu'il ne donne pas
 
-`apps/app/src/lib/firebase.ts:74` appelle `getFirestore(app)` sans configurer de cache. Le SDK JS
-Firebase n'a de persistance que via IndexedDB, indisponible en React Native — le cache est donc
-**en mémoire uniquement**, et il est vide à chaque lancement de l'app. Toute lecture répétée d'un
-lancement à l'autre repart au serveur.
+> Cette section a été réécrite après le passage de l'app à **React Native Firebase** (`aae045b`).
+> Elle disait auparavant qu'il n'y avait « pas de cache disque côté app », le SDK JS n'ayant de
+> persistance que via IndexedDB, indisponible en React Native. Ce n'est plus vrai, et plusieurs
+> recommandations ci-dessous en dépendaient.
 
-C'est pourquoi la moitié des recommandations ci-dessous sont des caches `AsyncStorage` écrits à la
-main : il n'y a pas d'alternative offerte par le SDK sur cette plateforme.
+`apps/app/src/lib/firebase.ts` s'appuie désormais sur les SDK **natifs**, dont la persistance
+Firestore est **activée par défaut** et **durable d'un lancement à l'autre** (il faudrait un
+`initializeFirestore(app, { persistence: false })` explicite pour la couper ; le dépôt n'en a pas).
+
+Ce que ça change réellement, et il faut être précis, parce que la conclusion intuitive est fausse :
+
+- **Ça ne supprime aucune lecture facturée sur un `getDoc`.** Un `getDoc` part sur
+  `Source.DEFAULT` : serveur d'abord, cache seulement en repli quand le réseau manque. Tous les
+  `getDoc` recensés ci-dessous sont donc toujours facturés, exactement comme avant la migration.
+- **Ça rend `Source.CACHE` disponible**, et c'est le vrai levier : sur un document **immuable**, une
+  lecture `getDocFromCache` ne coûte rien et survit au relancement. C'est ce que fait
+  `getFrozenDoc` (`apps/app/src/lib/firestore.ts`), avec deux garde-fous — un défaut de cache
+  retombe sur le serveur, et une **absence** en cache n'est jamais crue (un ami qui n'avait pas
+  encore répondu, un jour pas encore tiré).
+- **Ça rend un `onSnapshot` réétabli moins cher**, le SDK repartant d'un resume token plutôt que
+  d'un snapshot initial complet — au moins tant que la déconnexion est courte. Les chiffres des
+  postes à listener (#1, #6a, #12) sont donc des majorants depuis la migration ; ils n'ont pas été
+  remesurés.
+- **Ça ne s'applique pas à un document qui bouge** : un `photo_url` (#2), un mois de calendrier de
+  l'utilisateur (#3), le compteur `answer_counts` (#6). Pour ceux-là, un cache écrit à la main avec
+  sa propre politique de fraîcheur reste la seule réponse.
+
+Autrement dit : les stores module du dépôt (`calendarCache`, le cache d'avatars) **ne sont pas
+rendus inutiles par la migration** — ils dédoublonnent les lectures d'une même session, ce que le
+cache disque ne fait pas. La migration ajoute une couche *sous* eux, pour les seuls documents figés.
 
 ---
 
@@ -59,8 +82,8 @@ Coût quotidien estimé au scénario de référence, avant / après.
 |---|---|---:|---:|---|
 | 1 | Liste d'amis — 3 abonnements concurrents | 13 200 000 | 2 000 000 | 🔴 |
 | 2 | Avatars des amis — cache session seulement | 6 000 000 | 300 000 | 🔴 |
-| 3 | Calendrier — rechargement forcé à chaque focus | 1 800 000 | 200 000 | 🔴 |
-| 4 | Réponses des amis — aucun cache entre ouvertures | 2 000 000 | 700 000 | 🟠 |
+| 3 | Calendrier — rechargement forcé à chaque focus | 1 800 000 | 200 000 | 🔴 *(moitié faite)* |
+| 4 | Réponses des amis — aucun cache entre ouvertures | 2 000 000 | 700 000 | ✅ *fait* |
 | 5 | Nudge 18:00 — 1 requête par répondeur | 1 050 000 | 150 000 | 🔴 |
 | 6 | `onSnapshot` sur la question du jour | 500 000 – 100 M | 300 000 | 🔴 |
 | 7 | Enregistrement device à chaque lancement | 300 000 (+300 k écritures) | ~10 000 | 🟠 |
@@ -74,7 +97,11 @@ Coût quotidien estimé au scénario de référence, avant / après.
 murs de scalabilité levés (#5 et #6) qui cassent avant de coûter cher.
 
 Légende : 🔴 bloquant à 100 k utilisateurs · 🟠 à traiter avant d'ouvrir les vannes · 🟡 gain facile
-· ⚪ après le lancement.
+· ⚪ après le lancement · ✅ corrigé.
+
+Les chiffres sont ceux d'avant le passage à React Native Firebase et n'ont pas été remesurés depuis.
+Les postes à `onSnapshot` (#1, #6a, #12) sont désormais des **majorants** — voir la section sur le
+cache disque du SDK ci-dessus.
 
 ---
 
@@ -127,6 +154,10 @@ Le commentaire du fichier rejette explicitement le fait de copier `photo_url` su
 d'amitié — argument valide (les règles ne peuvent garantir que le handle), et le cache disque est
 justement le compromis qui garde cette propriété tout en supprimant la lecture.
 
+**Pas `getFrozenDoc` ici** : un profil n'est pas figé, c'est précisément le document que
+l'utilisateur modifie quand il change de photo. Servir la version en cache indéfiniment gèlerait la
+photo d'un ami pour toujours. Ce poste veut un TTL, pas une lecture `Source.CACHE`.
+
 **Gain** — 6 M → ~0,3 M lectures/jour (uniquement les nouveaux amis et les expirations de TTL).
 
 ---
@@ -150,16 +181,20 @@ Une session avec 4 aller-retours Stats ↔ question ↔ Menu coûte 8 à 16 lect
 1. **Ne plus forcer au focus.** Relire seulement si (a) le mois est `stale`, (b) la date locale a
    changé depuis la dernière lecture, ou (c) la dernière lecture date de plus de N minutes. Garder
    `force: true` pour le seul *pull to refresh*, qui est le geste explicite de l'utilisateur.
-2. **Persister `v1_daily_question_months/{YYYY-MM}` sur disque.** Ce document est **global** — le
-   même pour tous les utilisateurs — et n'est écrit qu'une fois par jour, à 07:00, par le
-   planificateur (`scheduleDailyQuestion.ts`). Un mois passé est donc **immuable** : cache permanent.
-   Le mois courant : TTL jusqu'au prochain 07:00 Paris, calculable localement.
+2. ~~**Persister `v1_daily_question_months/{YYYY-MM}` sur disque.**~~ **Fait.** Ce document est
+   **global** — le même pour tous les utilisateurs — et n'est écrit qu'une fois par jour, à 07:00,
+   par le planificateur (`scheduleDailyQuestion.ts`). Un mois passé est donc **immuable**, et
+   `calendarCache.ts` le lit maintenant par `getFrozenDoc` : le cache disque du SDK le sert, sans
+   `AsyncStorage` ni sérialisation à écrire. Le mois courant reste un `getDoc` — il gagne un jour à
+   chaque tirage, y compris un tombé pendant que l'app dormait.
 3. **Persister `v1_users/{uid}/v1_user_calendar_months/{YYYY-MM}` sur disque.** Ce document ne bouge
    que quand *cet* utilisateur répond, ce que l'app sait déjà (`invalidateCalendarMonth`). Un mois
    passé est immuable dès lors que la journée est close, sauf réponse en retard — que l'utilisateur
    fait lui-même, donc détectable localement.
 
-**Gain** — 1,8 M → ~0,2 M lectures/jour. En régime établi, revenir sur l'écran Stats devient gratuit.
+**Gain** — 1,8 M → ~0,2 M lectures/jour. La moitié figée est acquise ; il reste (1) et (3), c'est-à-dire
+le focus qui force et la persistance du mois de l'utilisateur — qui ne peut pas être un
+`getFrozenDoc`, un mois personnel bougeant sur une réponse en retard et sur `friend_answer_counts`.
 
 ---
 
@@ -177,11 +212,12 @@ est rouvert.
 
 **Correctif** —
 
-- Mettre en cache par `(questionId, friendId)`. **Une réponse d'ami déjà lue est immuable** : les
-  règles refusent toute mise à jour d'une réponse (`firestore.rules`), donc un ami trouvé comme
-  ayant répondu ne sera jamais relu. Seuls les amis encore silencieux valent une relecture.
-- Pour un **jour passé**, la question est close : plus personne ne peut répondre, donc le résultat
-  entier est figé — cache permanent sur disque.
+- ~~Mettre en cache par `(questionId, friendId)`.~~ **Fait.** **Une réponse d'ami déjà lue est
+  immuable** : les règles refusent toute mise à jour d'une réponse (`firestore.rules`), donc un ami
+  trouvé comme ayant répondu ne sera jamais relu. `useFriendAnswers` lit désormais par
+  `getFrozenDoc`, dont c'est exactement le contrat — un document existant sort du cache disque, une
+  absence repart au serveur. Seuls les amis encore silencieux sont donc relus, et rouvrir un jour
+  passé converge vers zéro lecture sans qu'aucune date n'ait à être testée.
 
 À noter : regrouper les N `getDoc` en une requête `where(documentId(), 'in', […])` (plafonnée à 30)
 ne changerait **rien** à la facture — Firestore facture les documents renvoyés. Ça n'améliorerait
@@ -313,6 +349,13 @@ par mois). Encore plus simple : c'est une constante du produit — la date de la
 vivre dans `@statowrel/models` au même titre que `DEMO_QUESTION_ID`, et retomber sur la lecture
 seulement si elle est absente.
 
+**Surtout pas `getDocsFromCache` ici**, malgré l'immuabilité : c'est une *requête*
+(`orderBy('month')` + `limit(1)`), et le cache disque n'en contient que les documents que cet
+appareil a déjà lus. Il rendrait le plus ancien mois **connu de l'appareil**, pas le plus ancien
+mois publié — une borne d'archive fausse, et fausse silencieusement. La règle générale :
+`Source.CACHE` sur un document dont on connaît l'identité, jamais sur une requête dont la
+complétude est l'information cherchée.
+
 **Gain** — 300 k → 0.
 
 ---
@@ -401,7 +444,14 @@ Autant le dire, pour ne pas défaire ce qui va :
 
 - **`calendarCache`** (`apps/app/src/stats/data/calendarCache.ts`) — deux documents par mois au lieu
   d'une lecture par jour répondu, déduplication des requêtes en vol, store externe partagé entre
-  écrans. C'est le bon modèle ; il manque juste la persistance disque et un focus moins agressif (#3).
+  écrans. C'est le bon modèle ; il manque juste un focus moins agressif et la persistance du mois de
+  l'utilisateur (#3). **La persistance native de React Native Firebase ne le remplace pas** : elle ne
+  dédoublonne rien à l'intérieur d'une session, et un `getDoc` reste facturé. Elle lui donne en
+  revanche sa moitié gratuite, le mois global passé, par `getFrozenDoc`.
+- **`getFrozenDoc`** (`apps/app/src/lib/firestore.ts`) — la lecture `Source.CACHE` des seuls
+  documents figés, avec repli serveur au défaut de cache et refus de croire une absence en cache.
+  Les deux collections qui y ont droit aujourd'hui : `v1_daily_question_months` d'un mois passé, et
+  une entrée de `v1_daily_question_answers`.
 - **Les modèles de lecture mensuels** — `v1_daily_question_months` et `v1_user_calendar_months`
   évitent le pattern « une lecture par jour affiché », qui aurait été le premier poste du dépôt.
 - **L'identité des documents** — une réponse a pour id l'UID de son auteur, une amitié a pour id
@@ -434,10 +484,11 @@ seulement la facture :
 
 5. #1 — abonnement unique à la liste d'amis.
 6. #2 — cache disque des avatars.
-7. #3 — calendrier : ne plus forcer au focus, persister les mois.
+7. #3 — calendrier : ne plus forcer au focus, persister le mois de l'utilisateur *(la moitié
+   globale est faite)*.
 8. #8, #9, #10 — trois lectures redondantes, quelques lignes chacune.
 9. #7 — enregistrement d'appareil au plus une fois par jour.
-10. #4 — cache des réponses d'amis.
+10. ~~#4 — cache des réponses d'amis.~~ *Fait — `getFrozenDoc`.*
 
 **Après le lancement** : #12.
 
