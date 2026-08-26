@@ -30,12 +30,49 @@ import { db } from './firebase';
  */
 const withConverter = <TModelData extends DocumentData, TFirebaseData extends DocumentData = TModelData>(
   converter: FirestoreConverter<TModelData, TFirebaseData>,
-) => (
-  converter(
+) => {
+  const built = converter(
     Timestamp as unknown as Parameters<typeof converter>[0],
     GeoPoint as unknown as Parameters<typeof converter>[1],
-  ) as unknown as FirestoreDataConverter<TModelData, TFirebaseData>
-);
+  );
+
+  return {
+    toFirestore: built.toFirestore,
+    /**
+     * **A document that does not exist reads as `undefined`, and the converter
+     * is not run on it.** That is the web SDK's contract, and the one every
+     * call site in this app was written against — `snapshot.data() ?? null` in
+     * `AuthContext`, `published.data()?.days ?? {}` in the calendar cache,
+     * `reservation.data()?.created_at` in `profile.ts`.
+     *
+     * React Native Firebase does not honour it. Its `DocumentSnapshot.data()`
+     * calls `fromFirestore` unconditionally, existing document or not, and the
+     * snapshot it hands over then answers `undefined` to its own `data()`. Our
+     * converters all open on `const data = snap.data()` and read a field off
+     * it, so a missing document threw instead of reading as absent:
+     *
+     *     firebase.firestore() DocumentSnapshot.data(*) 'withConverter.fromFirestore'
+     *     threw an error: Cannot read property 'username' of undefined.
+     *
+     * Which is not an edge case here — `v1_users/{uid}` not existing yet is
+     * precisely how the app knows an account has still to choose a handle
+     * (`needsOnboarding`), and the same goes for a month with no calendar, a
+     * handle nobody has reserved, a device never registered.
+     *
+     * Restoring the contract here rather than in `@statowrel/models` is
+     * deliberate twice over: the converters stay shared with `apps/functions`,
+     * which does not need this; and a converter made to tolerate a missing
+     * document would have to return a fully defaulted object, quietly turning
+     * « no document » into « empty document » — the one distinction half this
+     * app's logic is built on.
+     */
+    fromFirestore: (snapshot: { exists: () => boolean }) => (
+      snapshot.exists()
+        ? built.fromFirestore(snapshot as unknown as Parameters<typeof built.fromFirestore>[0])
+        : undefined
+    ),
+  } as unknown as FirestoreDataConverter<TModelData, TFirebaseData>;
+};
 
 export const getDocumentRef = <TModelData extends DocumentData, TFirebaseData extends DocumentData = TModelData>(
   collectionPath: string,
