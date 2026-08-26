@@ -169,27 +169,58 @@ if (!androidGoogleServicesFile || !iosGoogleServicesFile) {
 }
 
 const plugins: NonNullable<ExpoConfig['plugins']> = [
-  /*
-   * React Native Firebase's own plugin: it is what copies the two service files
-   * into the native projects and wires the Firebase SDKs into the build. Auth
-   * carries a second one, which adds the iOS pieces the native Auth SDK needs.
-   *
-   * Firestore and Functions have no plugin of their own — their pods are pulled
-   * in by autolinking off the packages alone.
-   */
-  '@react-native-firebase/app',
-  '@react-native-firebase/auth',
   [
     /*
-     * The Firebase Apple SDK is resolved through Swift Package Manager on React
-     * Native 0.75+, which requires **dynamic** frameworks — the linkage
-     * `useFrameworks` sets on the Podfile. Without it the iOS build fails at
-     * link time, and it fails on the builder rather than here.
+     * React Native Firebase's own plugin: it is what copies the two service
+     * files into the native projects and wires the Firebase SDKs into the
+     * build. Auth carries a second one, which adds the iOS pieces the native
+     * Auth SDK needs. Firestore and Functions have no plugin of their own —
+     * their pods are pulled in by autolinking off the packages alone.
+     *
+     * **`disableSPM` is the whole reason this entry is a tuple**, and it is not
+     * a preference. On React Native 0.75+ RNFB resolves the Firebase Apple SDK
+     * through Swift Package Manager by default, which requires dynamic
+     * framework linkage. That combination builds — right up to the final link,
+     * where it fails with `ld: symbol(s) not found for architecture arm64`.
+     *
+     * The cause is in this app's pod graph, not in Firebase.
+     * `@react-native-google-signin/google-signin` pulls the `GoogleSignIn` pod,
+     * and with it GoogleUtilities, GTMSessionFetcher and PromisesObjC **through
+     * CocoaPods** — the very libraries Firebase brings through SPM. The build
+     * log shows both sets being compiled side by side. RNFB's own docs name
+     * this: mixing its SPM mode with a pod that resolves the same Google
+     * libraries via CocoaPods is dual resolution, and it does not produce one
+     * shared runtime.
+     *
+     * So Firebase is resolved through CocoaPods too, and every Google library
+     * in the binary comes from one graph. Which in turn is what allows — and
+     * requires — the static linkage below.
      */
+    '@react-native-firebase/app',
+    {
+      ios: {
+        disableSPM: true,
+      },
+    },
+  ],
+  '@react-native-firebase/auth',
+  [
     'expo-build-properties',
     {
       ios: {
-        useFrameworks: 'dynamic',
+        /*
+         * Static, and only because SPM is off above: `useFrameworks: 'static'`
+         * with RNFB's SPM mode is explicitly unsupported — the Firebase Swift
+         * Package ships dynamic products only, so each RNFB pod would embed its
+         * own copy and the link would fail on duplicate symbols instead.
+         *
+         * `forceStaticLinking` names the RNFB pods that must stay static under
+         * the `use_frameworks!` this sets. One line per Firebase module the app
+         * installs: adding a `@react-native-firebase/*` package means adding
+         * its pod here.
+         */
+        useFrameworks: 'static',
+        forceStaticLinking: [ 'RNFBApp', 'RNFBAuth', 'RNFBFirestore', 'RNFBFunctions' ],
       },
     },
   ],
