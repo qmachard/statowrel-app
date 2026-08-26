@@ -53,6 +53,18 @@ export const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.ge
 
 export const addMonths = (date: Date, months: number) => new Date(date.getFullYear(), date.getMonth() + months, 1);
 
+/**
+ * Whether `YYYY-MM` is a month the device has already left — the test that says
+ * a `v1_daily_question_months` document is frozen and can be read from the
+ * SDK's disk cache (`getFrozenDoc`). The current month is not: it gains a day
+ * at every 07:00 draw.
+ *
+ * String comparison, because `YYYY-MM` sorts the way the calendar does. Read off
+ * the device's own clock like everything else here, so a month that turns over
+ * while the app is up simply stops being served from the cache.
+ */
+export const isPastMonth = (monthKey: string): boolean => monthKey < toDateKey(new Date()).slice(0, 7);
+
 /** Negative when `a` falls in an earlier month than `b`, `0` for the same month. */
 export const compareMonths = (a: Date, b: Date) => (
   (a.getFullYear() - b.getFullYear()) * 12 + (a.getMonth() - b.getMonth())

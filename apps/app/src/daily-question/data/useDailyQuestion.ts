@@ -17,7 +17,8 @@ import {
 } from '@statowrel/models';
 
 import { useAuth } from '@/auth/AuthContext';
-import { getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
+import { isPastMonth } from '@/lib/dates';
+import { getDocumentRef, getFrozenDoc, getSubDocumentRef } from '@/lib/firestore';
 
 /**
  * What a day can look like to the app — the four dead ends are as much part of
@@ -146,8 +147,16 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
   useEffect(() => {
     let cancelled = false;
 
-    // Read once — see this hook's own doc: a day's entry never changes.
-    getDoc(getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKeyOf(date), dailyQuestionMonthConverter))
+    const monthKey = monthKeyOf(date);
+    const monthRef = getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKey, dailyQuestionMonthConverter);
+
+    // Read once — see this hook's own doc: a day's entry never changes. And for
+    // a month the device has already left, neither does the document holding
+    // them, so it is read off the SDK's disk cache when that holds it: opening
+    // a day out of the archive is then a `v1_questions` subscription and
+    // nothing else. The current month is re-read, since it gains a day at every
+    // 07:00 draw — including one that may have landed while the app slept.
+    (isPastMonth(monthKey) ? getFrozenDoc(monthRef) : getDoc(monthRef))
       .then((snapshot) => {
         if (!cancelled) {
           setDayState({

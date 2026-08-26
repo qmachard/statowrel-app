@@ -1,10 +1,14 @@
 import {
   type DocumentData,
+  type DocumentReference,
+  type DocumentSnapshot,
   type FirestoreDataConverter,
   GeoPoint,
   Timestamp,
   collection,
   doc,
+  getDoc,
+  getDocFromCache,
 } from '@react-native-firebase/firestore';
 
 import type { FirestoreConverter } from '@statowrel/models';
@@ -120,3 +124,46 @@ export const getSubCollectionRef = <TModelData extends DocumentData, TFirebaseDa
   collection(db, collectionPath, identifier, subCollectionPath)
     .withConverter(withConverter(converter))
 );
+
+/**
+ * A `getDoc` for a document that **cannot change once it exists** — served from
+ * the SDK's own disk cache when it holds it, from the server otherwise.
+ *
+ * React Native Firebase runs the native SDKs, whose offline persistence is on
+ * by default and durable across launches — unlike the web SDK's memory-only
+ * cache on React Native, which `docs/firebase-read-optimization.md` was written
+ * against. That does **not** on its own make a read free: `getDoc` goes out on
+ * `Source.DEFAULT`, meaning server first and cache only as an offline fallback,
+ * so it is billed every time. `Source.CACHE` is what actually spends nothing —
+ * and it is only ever correct on a document whose content is frozen.
+ *
+ * Two rules make that safe here, and both are load-bearing:
+ *
+ * - **A cache miss falls back to the server.** The native SDKs reject a
+ *   `source: 'cache'` read the cache cannot answer — the normal case on a fresh
+ *   install, and the reason a hit is an optimisation rather than a guarantee: a
+ *   document no listener holds open is eligible for the cache's LRU eviction.
+ *   Nothing here breaks when it is evicted; the read simply costs what it used
+ *   to.
+ * - **A cached *absence* is never trusted.** `exists() === false` is the one
+ *   answer a frozen document can give today and contradict tomorrow — a friend
+ *   who had not answered yet, a day not drawn when the month was last read — so
+ *   it is re-read rather than believed. Only a document the cache actually
+ *   holds short-circuits the round trip.
+ *
+ * Which leaves the caller with one thing to establish: that the document, once
+ * written, is never rewritten. `v1_daily_question_months` for a **past** month
+ * (the current one gains a day at every 07:00 draw) and a `v1_daily_question_answers`
+ * entry (the rules deny every update to one) are the two that qualify.
+ *
+ * This is not a replacement for the module stores — `calendarCache`,
+ * `useFriendAvatars` — which dedupe the reads of one app run whether or not
+ * anything is frozen. It is the layer under them, and it survives a relaunch.
+ */
+export const getFrozenDoc = async <TModelData extends DocumentData, TFirebaseData extends DocumentData>(
+  reference: DocumentReference<TModelData, TFirebaseData>,
+): Promise<DocumentSnapshot<TModelData, TFirebaseData>> => {
+  const cached = await getDocFromCache(reference).catch(() => null);
+
+  return cached !== null && cached.exists() ? cached : await getDoc(reference);
+};

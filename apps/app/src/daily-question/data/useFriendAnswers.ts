@@ -3,12 +3,11 @@ import {
   QUESTION_COLLECTION,
   dailyQuestionAnswerConverter,
 } from '@statowrel/models';
-import { getDoc } from '@react-native-firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useFriendAvatars } from '@/friends/data/useFriendAvatars';
 import { useFriends } from '@/friends/data/useFriends';
-import { getSubDocumentRef } from '@/lib/firestore';
+import { getFrozenDoc, getSubDocumentRef } from '@/lib/firestore';
 
 /** One accepted friend and what they answered that day — `null` while they haven't. */
 export interface FriendAnswer {
@@ -88,7 +87,15 @@ export const useFriendAnswers = (questionId: string | null, enabled: boolean): F
 
     let cancelled = false;
 
-    Promise.all(friendIds.map((friendId) => getDoc(getSubDocumentRef(
+    // `getFrozenDoc` rather than `getDoc`, and the distinction it draws is
+    // exactly the one this list needs: an answer that exists is immutable — the
+    // rules deny every update to one — so a friend already found to have
+    // answered is served from the SDK's disk cache, for good, across relaunches.
+    // A friend who has *not* answered reads as an absence, which `getFrozenDoc`
+    // never trusts, so they are re-read from the server every time. Reopening a
+    // spent day therefore converges on costing nothing, while today's sheet
+    // still picks up whoever answered since it was last opened.
+    Promise.all(friendIds.map((friendId) => getFrozenDoc(getSubDocumentRef(
       QUESTION_COLLECTION,
       questionId,
       DAILY_QUESTION_ANSWER_COLLECTION,

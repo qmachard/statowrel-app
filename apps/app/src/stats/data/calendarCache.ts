@@ -9,7 +9,8 @@ import {
 } from '@statowrel/models';
 import { getDoc } from '@react-native-firebase/firestore';
 
-import { getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
+import { isPastMonth } from '@/lib/dates';
+import { getDocumentRef, getFrozenDoc, getSubDocumentRef } from '@/lib/firestore';
 
 /**
  * One month of the Stats calendar, as the screen consumes it — the two halves
@@ -118,9 +119,29 @@ export const invalidateCalendarMonth = (userId: string, monthKey: string): void 
   stale.add(cacheKeyOf(userId, monthKey));
 };
 
+/**
+ * The two documents a month is, read side by side — and read differently, which
+ * is the one asymmetry worth stating.
+ *
+ * The **shared half** is frozen once the month is over: `v1_daily_question_months`
+ * is written by the 07:00 draw and by nothing else, so a past month is the same
+ * document for everybody, forever. That is what `getFrozenDoc` needs, and it is
+ * what makes walking back through the archive cost nothing from the second
+ * launch onwards — the SDK's disk cache answers, and survives the relaunch this
+ * module-level map does not.
+ *
+ * The **user's own half** is not frozen and never will be: a catch-up answer
+ * (docs/prd.md §4.2) adds an entry to a month long closed, and
+ * `friend_answer_counts` moves from the outside every time an accepted friend
+ * answers — which is precisely the counter the calendar badge is read from. So
+ * it stays a plain `getDoc`, server first, at the two occasions `useStatsData`
+ * re-reads a month.
+ */
 const fetchCalendarMonth = async (userId: string, monthKey: string): Promise<CalendarMonth> => {
+  const publishedRef = getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKey, dailyQuestionMonthConverter);
+
   const [ published, answered ] = await Promise.all([
-    getDoc(getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKey, dailyQuestionMonthConverter)),
+    isPastMonth(monthKey) ? getFrozenDoc(publishedRef) : getDoc(publishedRef),
     getDoc(getSubDocumentRef(
       USER_COLLECTION,
       userId,
