@@ -50,10 +50,33 @@
         margin: 0 auto;
       }
 
+      .topbar {
+        align-items: center;
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+      }
+
       .brand {
         font-family: var(--font-head);
         font-size: 20px;
         letter-spacing: 0.02em;
+      }
+
+      .admin-link {
+        background: var(--card);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: 8px;
+        box-shadow: 3px 3px 0 0 var(--foreground);
+        color: var(--foreground);
+        font-size: 14px;
+        font-weight: 700;
+        padding: 6px 14px;
+        text-decoration: none;
+      }
+
+      .admin-link:hover {
+        background: var(--primary);
       }
 
       h1 {
@@ -125,7 +148,10 @@
   <body>
     <main>
       <header>
-        <span class="brand">StatOwrel</span>
+        <div class="topbar">
+          <span class="brand">StatOwrel</span>
+          <a class="admin-link" href="/admin/">Admin</a>
+        </div>
         <h1>Les questions que personne ne pose. Les réponses que tout le monde veut.</h1>
         <p class="baseline">Une par jour. La même pour tout le monde.</p>
       </header>
