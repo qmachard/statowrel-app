@@ -1,5 +1,6 @@
-import { getDoc, onSnapshot } from '@react-native-firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { getDoc } from '@react-native-firebase/firestore';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
@@ -17,6 +18,7 @@ import {
 } from '@statowrel/models';
 
 import { useAuth } from '@/auth/AuthContext';
+import { getAnswersVersion, readAnswer, subscribeToAnswers } from '@/daily-question/data/answerStore';
 import { isPastMonth } from '@/lib/dates';
 import { getDocumentRef, getFrozenDoc, getSubDocumentRef } from '@/lib/firestore';
 
@@ -37,7 +39,7 @@ export type DailyQuestionStatus = 'loading' | 'ready' | 'unpublished' | 'missing
 
 export interface DailyQuestionView {
   status: DailyQuestionStatus;
-  /** The day's question, live — `answer_counts` moves on it as answers come in. */
+  /** The day's question, as it stood when the day was opened — see the hook's own doc on `answer_counts`. */
   question: QuestionData | null;
   /** Document id of that question, and the parent an answer is written under. */
   questionId: string | null;
@@ -45,6 +47,16 @@ export interface DailyQuestionView {
   answer: DailyQuestionAnswerData | null;
   /** Pseudo of whoever proposed the question — the credit of docs/prd.md §5.4. */
   authorName: string | null;
+  /**
+   * Re-reads the day's tally, out of turn.
+   *
+   * The screen calls it the moment an answer is written: the card of
+   * docs/prd.md §5.5 is a number about everybody else, and the one read at the
+   * door can be minutes old by the time the question has been thought about —
+   * long enough, at 07:05 on a day nobody has answered yet, for the card to
+   * announce « 100% des gens » to the second person of the morning.
+   */
+  refresh: () => void;
 }
 
 /**
@@ -123,15 +135,31 @@ const readAuthorName = async (authorId: string): Promise<string | null> => {
  * user's answer sits under it — with their UID as its document id, so "already
  * answered" is a single document rather than a query.
  *
- * Two of the three are **subscribed to**, the third is read once:
+ * **None of the three is subscribed to.** The day has to be *fresh when it is
+ * opened*, which is not the same requirement as live, and the difference is the
+ * whole cost of this screen:
  *
- * - **The question**, because `answer_counts` moves every time anybody answers,
- *   and the StatOwrel card's rarity is that map's shape at display time
- *   (docs/prd.md §5.5). It also makes the 07:00 drop land on a screen that is
- *   already open, instead of on the next time it is opened.
- * - **The answer**, because it is what flips the sheet to its answered state.
- *   Firestore hands a local write to its own listeners before the round trip,
- *   so the flip happens on the tap rather than on the server.
+ * - **The question** is read at every opening of the day, and again at every
+ *   return to it. `answer_counts` moves on this one document every time anybody
+ *   answers anywhere — including on a day long closed, a catch-up answer
+ *   counting like any other — so a subscription bills one read per answer of
+ *   the entire app for as long as the sheet stays up. That is a cost in the
+ *   square of the audience, paid to watch percentages drift by tenths. Read at
+ *   the door instead, it is one read per opening, and the rarity of
+ *   docs/prd.md §5.5 is still that map's shape at display time.
+ *
+ *   `useFocusEffect` is what makes "at the door" hold: it fires on the way in,
+ *   and again on every return to the day — from the friends sheet, from the
+ *   invitation form, from the calendar — which is where the 07:00 drop and the
+ *   answers landed since are picked up, rather than on an open connection held
+ *   through the hours nothing happens. Same policy the Stats screen already
+ *   refreshes its calendar on (`useStatsData`).
+ * - **The answer** is this session's own when this session wrote it —
+ *   `answerStore` holds it, so the sheet still flips on the tap rather than on
+ *   a round trip — and a `getFrozenDoc` otherwise. An answer is never updated
+ *   nor deleted (docs/prd.md §4.2, and only the demo's `counted_at` marker ever
+ *   rewrites one), so a day already read on this device is answered from the
+ *   SDK's disk cache and costs nothing to reopen.
  * - **The month index** is read once: an entry is written when the day is drawn
  *   and never rewritten, so a day's question never changes under the screen.
  */
@@ -182,14 +210,22 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
   const day = dayState?.date === date ? dayState : null;
   const questionId = day?.questionId ?? null;
 
-  useEffect(() => {
+  // Nothing is reset on the way in: a re-read that lands on a day already shown
+  // replaces its state, and a re-read that fails leaves the day standing rather
+  // than blanking a screen that was reading fine a second ago.
+  const readQuestion = useCallback(() => {
     if (questionId === null) {
       return undefined;
     }
 
-    return onSnapshot(
-      getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter),
-      (snapshot) => {
+    let cancelled = false;
+
+    getDoc(getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter))
+      .then((snapshot) => {
+        if (cancelled) {
+          return;
+        }
+
         const question = snapshot.data() ?? null;
 
         setQuestionState({
@@ -198,13 +234,32 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
           published: question?.broadcast_at != null && new Date(question.broadcast_at) <= new Date(),
           failed: false,
         });
-      },
-      (error) => {
-        console.warn('[daily-question] lost the question subscription', questionId, error);
-        setQuestionState({ questionId, question: null, published: false, failed: true });
-      },
-    );
+      })
+      .catch((error: unknown) => {
+        console.warn('[daily-question] could not read the question', questionId, error);
+
+        if (!cancelled) {
+          setQuestionState((current) => (
+            current?.questionId === questionId
+              ? current
+              : { questionId, question: null, published: false, failed: true }
+          ));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [ questionId ]);
+
+  useFocusEffect(readQuestion);
+
+  // Same read, out of turn — the cleanup is dropped because there is no render
+  // pass to hang it on: a call that lands after the day has changed is written
+  // off by the `questionId` its state carries, like every other slice here.
+  const refresh = useCallback(() => {
+    readQuestion();
+  }, [ readQuestion ]);
 
   const question = questionState?.questionId === questionId ? questionState : null;
   const authorId = question?.question?.author_id ?? null;
@@ -232,12 +287,21 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
 
   const answerKey = `${questionId ?? ''}:${userId ?? ''}`;
 
+  // The answer this session wrote, if it wrote one. `DailyQuestionScreen` hands
+  // it to `answerStore` for the Stats screen underneath, and the sheet reads it
+  // back from there: the flip to the result happens on the tap, without the
+  // round trip the subscription used to hide it behind, and without a read.
+  useSyncExternalStore(subscribeToAnswers, getAnswersVersion);
+  const sessionAnswer = readAnswer(userId, date);
+
   useEffect(() => {
-    if (userId === null || questionId === null) {
+    if (userId === null || questionId === null || sessionAnswer !== null) {
       return undefined;
     }
 
-    return onSnapshot(
+    let cancelled = false;
+
+    getFrozenDoc(
       getSubDocumentRef(
         QUESTION_COLLECTION,
         questionId,
@@ -245,21 +309,30 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
         userId,
         dailyQuestionAnswerConverter,
       ),
-      (snapshot) => setAnswerState({ key: answerKey, answer: snapshot.data() ?? null }),
-      (error) => {
+    )
+      .then((snapshot) => {
+        if (!cancelled) {
+          setAnswerState({ key: answerKey, answer: snapshot.data() ?? null });
+        }
+      })
+      .catch((error: unknown) => {
         // The day itself still renders: not knowing whether it was answered is
         // worth an unanswered-looking sheet, not an error screen — a second
         // answer would be refused by the rules anyway.
-        console.warn('[daily-question] lost the answer subscription', date, error);
-      },
-    );
-  }, [ date, userId, questionId, answerKey ]);
+        console.warn('[daily-question] could not read the answer', date, error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ date, userId, questionId, answerKey, sessionAnswer ]);
 
   return {
     status: statusOf(day, question),
     question: question?.question ?? null,
     questionId,
-    answer: answerState?.key === answerKey ? answerState.answer : null,
+    answer: sessionAnswer ?? (answerState?.key === answerKey ? answerState.answer : null),
     authorName: authorState?.authorId === authorId ? authorState.name : null,
+    refresh,
   };
 };

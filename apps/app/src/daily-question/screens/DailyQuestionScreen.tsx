@@ -126,7 +126,7 @@ export const DailyQuestionScreen = () => {
   // No param means today, and today is Paris' day, not the device's — the day
   // key *is* the document id (docs/architecture.md).
   const date = params?.date ?? dailyQuestionDateKey(new Date());
-  const { status, question, questionId, answer, authorName } = useDailyQuestion(date);
+  const { status, question, questionId, answer, authorName, refresh } = useDailyQuestion(date);
 
   const [ submitting, setSubmitting ] = useState(false);
   const [ celebrating, setCelebrating ] = useState(false);
@@ -156,11 +156,16 @@ export const DailyQuestionScreen = () => {
     try {
       const written = await submitAnswer({ userId: user.uid, questionId, question, optionId });
 
-      // The sheet flips on its own answer subscription; this is for the Stats
-      // screen underneath, which no longer subscribes to the calendar: it drops
-      // the answered month from its cache and carries the day until the answer
-      // trigger has projected it.
+      // What flips the sheet to its result, and what carries the answer to the
+      // Stats screen underneath — one store for both since neither is
+      // subscribed to Firestore any more: it drops the answered month from the
+      // calendar cache and holds the day until the answer trigger has projected
+      // it, and `useDailyQuestion` reads it straight back.
       rememberAnswer(written, question.options.find((option) => option.id === optionId)?.stat_label ?? '');
+      // The card that is about to show is a percentage about everybody else:
+      // it is worth one read to compute it on the day as it stands now, not as
+      // it stood when the question was opened and read for the first time.
+      refresh();
       setCelebrating(true);
     } catch (error) {
       console.warn('[daily-question] could not save the answer', date, error);
@@ -178,9 +183,11 @@ export const DailyQuestionScreen = () => {
   // taps — and so does a day still writing one.
   const answerable = status === 'ready' && user !== null && answer === null && !submitting;
 
-  // The reward of docs/prd.md §5.5, recomputed on every `answer_counts` the
-  // question subscription hands over: the rarity is that map's shape at display
-  // time, so it keeps moving while the day's answers come in.
+  // The reward of docs/prd.md §5.5: the rarity is `answer_counts`' shape at
+  // display time, computed from the tally as it stood when the day was opened —
+  // the day is read fresh at every opening, never held live (`useDailyQuestion`).
+  // The picked option counts itself in, so the card never says « 0% » in the
+  // beat between the answer and the trigger that tallies it (`buildStatOwrel`).
   const statOwrel = question === null || answer === null
     ? null
     : buildStatOwrel(question, question.answer_counts, answer.option_id);
