@@ -126,7 +126,9 @@ export const DailyQuestionScreen = () => {
   // No param means today, and today is Paris' day, not the device's — the day
   // key *is* the document id (docs/architecture.md).
   const date = params?.date ?? dailyQuestionDateKey(new Date());
-  const { status, question, questionId, answer, ownAnswerPending, authorName, refresh } = useDailyQuestion(date);
+  const {
+    status, question, questionId, answer, ownAnswerPending, resultSettled, authorName, refresh,
+  } = useDailyQuestion(date);
 
   const [ submitting, setSubmitting ] = useState(false);
   const [ celebrating, setCelebrating ] = useState(false);
@@ -180,8 +182,24 @@ export const DailyQuestionScreen = () => {
   });
 
   // The choice is final (docs/prd.md §4.2), so an answered day stops taking
-  // taps — and so does a day still writing one.
+  // taps — and so does a day still writing one. Decided on the answer itself
+  // and never on `showingResult` below: a second tap has to be refused from the
+  // instant the first one is written, whatever the sheet is still showing.
   const answerable = status === 'ready' && user !== null && answer === null && !submitting;
+
+  // **The sheet flips once the result is whole, not the instant the answer is
+  // written.** The two are a beat apart on purpose: answering re-reads the day's
+  // tally, and the answer right behind it, so a result shown at the tap would
+  // move twice — once when the fresher tally lands, once when this answer is
+  // folded into it — under the eyes of whoever just answered. `resultSettled`
+  // is the hook's word on that beat, and the confirmation animation is what
+  // covers it, being the one thing playing over the sheet at that moment.
+  //
+  // The animation ending is the other way out, and it is not a fallback so much
+  // as the deadline: a read that has not landed by then is not worth holding a
+  // result for, and reopening an answered day — where nothing celebrates —
+  // shows it straight away rather than waiting on a read it has no reason to.
+  const showingResult = answer !== null && (resultSettled || !celebrating);
 
   // The reward of docs/prd.md §5.5: the rarity is `answer_counts`' shape at
   // display time, computed from the tally as it stood when the day was opened —
@@ -189,7 +207,7 @@ export const DailyQuestionScreen = () => {
   // `ownAnswerPending` is that hook's word on whether the tally already carries
   // this user's own answer; when it does not, `buildStatOwrel` folds it in, so
   // the card is never one answer short of the day it describes.
-  const statOwrel = question === null || answer === null
+  const statOwrel = question === null || answer === null || !showingResult
     ? null
     : buildStatOwrel(question, question.answer_counts, answer.option_id, ownAnswerPending);
 
@@ -220,7 +238,7 @@ export const DailyQuestionScreen = () => {
             <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
           </View>
 
-          {question === null || answer !== null ? null : (
+          {question === null || showingResult ? null : (
             <Text style={[ styles.question, FOREGROUND[surface] ]}>{question.label}</Text>
           )}
         </View>
@@ -249,7 +267,7 @@ export const DailyQuestionScreen = () => {
           </>
         )}
 
-        {question === null || answer !== null ? null : (
+        {question === null || showingResult ? null : (
           <View style={styles.options}>
             {question.options.map((option, index) => (
               <QuestionOption

@@ -307,10 +307,13 @@ aussi la projection calendrier et la série, écrites dans la même transaction.
    réponse est écrite. Cette dernière n'est pas une politesse — le tally lu à 07:05 est vide, et
    sans elle la carte de §5.5 annonce « 100% des gens » à la deuxième personne de la matinée. La
    bascule de la feuille vers le résultat ne passe plus par Firestore du tout : `answerStore`
-   tenait déjà la réponse de la session pour l'écran Stats, la feuille la relit de là. Et
-   l'abonnement à sa propre réponse est devenu un `getFrozenDoc` — une réponse n'est jamais
-   réécrite (seul le marqueur `counted_at` de la démo en rewrite une), donc un jour déjà ouvert sur
-   cet appareil ne coûte plus rien à rouvrir.
+   tenait déjà la réponse de la session pour l'écran Stats, la feuille la relit de là — mais elle
+   n'a lieu qu'une fois ces deux lectures rentrées (`resultSettled`), sans quoi les pourcentages
+   bougeraient deux fois sous les yeux de celui qui vient de répondre. L'animation de confirmation
+   couvre ce battement et sa fin sert d'échéance. Et l'abonnement à sa propre réponse est devenu un
+   `getFrozenDoc` — aucun client ne réécrit une réponse, donc un jour déjà ouvert sur cet appareil
+   ne coûte plus rien à rouvrir, le marqueur ci-dessous étant la seule écriture qu'elle reçoive et
+   la condition pour croire un exemplaire en cache.
 
    **Le décompte de sa propre réponse.** Le trigger étant asynchrone, la relecture
    qui suit la réponse ramène un tally qui ne la contient pas encore, et rien ne

@@ -58,6 +58,23 @@ export interface DailyQuestionView {
    * and never count the same answer twice.
    */
   ownAnswerPending: boolean;
+  /**
+   * Whether the numbers a card built from `question.answer_counts` would show
+   * are the ones it will keep — false while the read that decides
+   * `ownAnswerPending` is still out.
+   *
+   * It exists for the beat that follows an answer, and it is a display concern
+   * rather than a data one: the tally is re-read the moment the answer is
+   * written, and the answer right behind it, so a card shown before the two
+   * have landed moves twice under the eyes of whoever just answered. The screen
+   * holds the result until this turns true — the confirmation animation is
+   * playing over that beat anyway — rather than animating a percentage that was
+   * never true (docs/prd.md §5.5).
+   *
+   * A day answered in an earlier session settles immediately: there is nothing
+   * to wait for when nothing was just written.
+   */
+  resultSettled: boolean;
   /** Pseudo of whoever proposed the question — the credit of docs/prd.md §5.4. */
   authorName: string | null;
   /**
@@ -332,6 +349,11 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
 
   const answerRead = answerState?.key === answerKey ? answerState : null;
 
+  // Whether the answer on hand carries the trigger's marker, and whether it was
+  // read against the tally being shown — the two halves of everything below.
+  const ownAnswerCounted = (answerRead?.answer?.counted_at ?? null) !== null;
+  const readAgainstThisTally = answerRead?.readAgainst === questionState;
+
   // True while this session's own answer is not provably in the tally being
   // shown. `counted_at` is stamped by the answer trigger in the transaction
   // that increments `answer_counts`, so a marker that is absent on a read
@@ -339,19 +361,18 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
   // alongside it — proves the tally was taken without this answer. Every other
   // state answers false, which is the safe half of the question: the count may
   // sit one short for a beat, it can never count somebody twice.
-  const ownAnswerPending = sessionAnswer !== null
-    && (answerRead?.answer?.counted_at ?? null) === null
-    && answerRead?.readAgainst === questionState;
+  const ownAnswerPending = sessionAnswer !== null && !ownAnswerCounted && readAgainstThisTally;
 
-  // Read once on the way in, and again — chained to each new tally — for as
-  // long as the marker has not landed. A day nobody answered, or one whose
-  // answer is long counted, is read once and left alone: the re-read exists to
-  // watch a marker arrive, not to poll a document.
-  const needsAnswerRead = answerRead === null || (
-    sessionAnswer !== null
-    && (answerRead.answer?.counted_at ?? null) === null
-    && answerRead.readAgainst !== questionState
-  );
+  // Nothing left to learn about this tally: nothing was written this session, or
+  // the marker is in — once stamped it holds for every tally read afterwards —
+  // or the read on hand belongs to this one.
+  const resultSettled = sessionAnswer === null || ownAnswerCounted || readAgainstThisTally;
+
+  // Read once on the way in, and again — chained to each new tally — until it
+  // settles. A day nobody answered, or one whose answer is long counted, is read
+  // once and left alone: the re-read is there to watch a marker arrive, not to
+  // poll a document.
+  const needsAnswerRead = answerRead === null || !resultSettled;
 
   useEffect(() => {
     if (userId === null || questionId === null || !needsAnswerRead) {
@@ -384,6 +405,19 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
         // worth an unanswered-looking sheet, not an error screen — a second
         // answer would be refused by the rules anyway.
         console.warn('[daily-question] could not read the answer', date, error);
+
+        // Stamped all the same, which is what keeps `resultSettled` from
+        // waiting on a read that will never land: offline, the tally on hand is
+        // the one read before this session wrote its answer, so folding that
+        // answer in is right — and the screen has a result to show rather than
+        // a question it has already answered.
+        if (!cancelled) {
+          setAnswerState((current) => ({
+            key: answerKey,
+            answer: current?.key === answerKey ? current.answer : null,
+            readAgainst,
+          }));
+        }
       });
 
     return () => {
@@ -400,6 +434,7 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     // so the sheet flips on the tap rather than on a round trip.
     answer: answerRead?.answer ?? sessionAnswer,
     ownAnswerPending,
+    resultSettled,
     authorName: authorState?.authorId === authorId ? authorState.name : null,
     refresh,
   };
