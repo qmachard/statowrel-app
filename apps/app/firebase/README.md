@@ -76,6 +76,20 @@ each profile's `env` block. Everything else — `env:set`, `env:list`, `config`,
 `env:create` was the older spelling of `env:set` and is deprecated; the value
 it carries is the same.
 
+**That same `exited with non-zero code: 1` also means « run `npm install` ».**
+Evaluating the config resolves the config plugins, and this branch added three
+of them (`@react-native-firebase/app`, `@react-native-firebase/auth`,
+`expo-build-properties`), so a checkout switched to it without reinstalling
+fails on the first one — `PluginError: Failed to resolve plugin for module …`,
+which EAS reports as the same bare exit code as everything else.
+
+When an `eas` command dies on that line, run the underlying command directly to
+see what it actually said:
+
+```bash
+cd apps/app && APP_VARIANT=development npx expo config --json
+```
+
 `app.config.ts` prefers these variables and falls back to the local files, so
 `expo prebuild` and a local `run:ios` work off the checkout alone.
 
