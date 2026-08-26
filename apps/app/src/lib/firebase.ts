@@ -47,6 +47,21 @@ export const auth: Auth = getAuth(app);
 
 export const db: Firestore = getFirestore(app);
 
+if (__DEV__) {
+  // [DEBUG:state] What the *bundle* holds — EXPO_PUBLIC_* values are inlined by
+  // Metro at transform time, so a stale cache or a typo in .env.local shows up
+  // here as `undefined` whatever the file on disk says.
+  console.log('[DEBUG:state] emulator wiring', {
+    authHost: process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST,
+    authPort: process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_PORT,
+    firestoreHost: process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST,
+    firestorePort: process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT,
+    functionsHost: process.env.EXPO_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR_HOST,
+    functionsPort: process.env.EXPO_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR_PORT,
+    projectId: firebaseApp.options.projectId,
+  });
+}
+
 if (process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST && process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_PORT) {
   connectAuthEmulator(
     auth,
@@ -60,4 +75,9 @@ if (process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST && process.env.EXPO
     process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST,
     Number(process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT),
   );
+  // [DEBUG:branch] Firestore emulator connected
+  console.log('[DEBUG:branch] connectFirestoreEmulator ran');
+} else if (__DEV__) {
+  // [DEBUG:branch] guard was false — the bundle carries no Firestore emulator host/port
+  console.log('[DEBUG:branch] connectFirestoreEmulator SKIPPED');
 }
