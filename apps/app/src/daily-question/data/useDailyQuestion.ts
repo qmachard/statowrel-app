@@ -406,13 +406,15 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
         const answer = snapshot.data() ?? null;
 
         if (__DEV__ && answer !== null) {
-          // The one line the read log cannot carry, and the one this chained
-          // read exists for: whether the tally just read already carries this
-          // answer, or the card has to fold it in on its own.
+          // The one line the read log cannot carry, and the one this read
+          // exists for: whether the tally already carries this answer, or the
+          // card has to fold it in on its own. Which read it was matters as
+          // much as what it found — only one chained to a landed tally proves
+          // anything, the one fired on the way in proves nothing and is only
+          // there to say whether the day was answered at all.
           console.log(
-            `[daily-question] own answer · ${answer.counted_at === null
-              ? 'not counted yet, the card folds it in'
-              : 'counted, the tally carries it'}`,
+            `[daily-question] own answer · ${answer.counted_at === null ? 'not counted yet' : 'counted'}`
+            + ` · ${readAgainst === null ? 'read on the way in, proves nothing' : 'read against the tally on screen'}`,
           );
         }
 
