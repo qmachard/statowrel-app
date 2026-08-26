@@ -68,9 +68,9 @@ Ce que ça change réellement, et il faut être précis, parce que la conclusion
   l'utilisateur (#3), le compteur `answer_counts` (#6). Pour ceux-là, un cache écrit à la main avec
   sa propre politique de fraîcheur reste la seule réponse.
 
-Autrement dit : les stores module du dépôt (`calendarCache`, le cache d'avatars) **ne sont pas
-rendus inutiles par la migration** — ils dédoublonnent les lectures d'une même session, ce que le
-cache disque ne fait pas. La migration ajoute une couche *sous* eux, pour les seuls documents figés.
+Autrement dit : un store module comme `calendarCache` **n'est pas
+rendu inutile par la migration** — il dédoublonne les lectures d'une même session, ce que le
+cache disque ne fait pas. La migration ajoute une couche *sous* lui, pour les seuls documents figés.
 
 ---
 
@@ -81,7 +81,7 @@ Coût quotidien estimé au scénario de référence, avant / après.
 | # | Poste | Lectures/jour (avant) | Après | Gravité |
 |---|---|---:|---:|---|
 | 1 | Liste d'amis — 3 abonnements concurrents | 13 200 000 | 2 000 000 | 🔴 |
-| 2 | Avatars des amis — cache session seulement | 6 000 000 | 300 000 | 🔴 |
+| 2 | Avatars des amis — lecture de profil par ami | 6 000 000 | 0 | ✅ *fait* |
 | 3 | Calendrier — rechargement forcé à chaque focus | 1 800 000 | 200 000 | 🔴 *(moitié faite)* |
 | 4 | Réponses des amis — aucun cache entre ouvertures | 2 000 000 | 700 000 | ✅ *fait* |
 | 5 | Nudge 18:00 — 1 requête par répondeur | 1 050 000 | 150 000 | 🔴 |
@@ -138,9 +138,9 @@ font que lire (`InvitationsCard` peut se contenter du cache jusqu'au montage du 
 
 ---
 
-## 2. 🔴 Les avatars des amis sont relus à chaque lancement
+## 2. ✅ Les avatars des amis étaient relus à chaque lancement
 
-**Où** — `apps/app/src/friends/data/useFriendAvatars.ts:21`
+**Où** — `apps/app/src/friends/data/useFriendAvatars.ts` *(supprimé)*
 
 Une lecture de profil (`v1_users/{friend_id}`) par ami, mise en cache dans une `Map` **au niveau
 module** — donc perdue à chaque fermeture de l'app. Vingt amis = 20 lectures au premier affichage
@@ -148,17 +148,20 @@ de la liste, à chaque lancement.
 
 **Coût** — 20 × 3 sessions × 100 000 = **6 M lectures/jour**.
 
-**Correctif** — persister le cache dans `AsyncStorage` avec un TTL long (7 jours suffit : une photo
-de profil ne bouge quasiment jamais, et le fallback DiceBear rend une photo manquante invisible).
-Le commentaire du fichier rejette explicitement le fait de copier `photo_url` sur la moitié
-d'amitié — argument valide (les règles ne peuvent garantir que le handle), et le cache disque est
-justement le compromis qui garde cette propriété tout en supprimant la lecture.
+**Correctif** — **Fait**, et plus radicalement que le cache `AsyncStorage` + TTL envisagé ici : la
+lecture est **supprimée**. Le produit n'a pas encore de système de photo de profil — le visage d'un
+ami est l'avatar DiceBear généré depuis son handle (`src/lib/avatars.ts`), et `friend_username` est
+déjà porté par la moitié d'amitié. `useFriendAvatars` lisait donc un `photo_url` par ami pour un
+étage d'`Avatar` que rien n'alimente vraiment ; le hook est supprimé et les lignes d'amis rendent
+l'avatar généré directement. (Un `photo_url` peut être non nul aujourd'hui — recopié du provider
+par `syncUserProfile` — mais il ne reste affiché que sur son propre écran Menu, qui le lit
+gratuitement via l'abonnement `AuthContext`.)
 
-**Pas `getFrozenDoc` ici** : un profil n'est pas figé, c'est précisément le document que
-l'utilisateur modifie quand il change de photo. Servir la version en cache indéfiniment gèlerait la
-photo d'un ami pour toujours. Ce poste veut un TTL, pas une lecture `Source.CACHE`.
+Le jour où un vrai système de photo de profil arrive, la suite est déjà décidée : **dénormaliser
+`photo_url` sur `v1_user_friends`**, écrit par le backend (callable d'invitation + fan-out sur
+changement de photo) comme `friend_username` l'est déjà — jamais une lecture de profil par ami.
 
-**Gain** — 6 M → ~0,3 M lectures/jour (uniquement les nouveaux amis et les expirations de TTL).
+**Gain** — 6 M → **0**.
 
 ---
 
@@ -460,7 +463,8 @@ Autant le dire, pour ne pas défaire ce qui va :
 - **La double moitié d'amitié** — écrite dès l'invitation, elle évite toute requête collection group
   sur les amis des autres, que les règles refuseraient de toute façon.
 - **`friend_username` porté sur l'amitié** — une liste de N amis coûte 1 lecture, pas N lectures de
-  profil. C'est exactement ce qui manque aux avatars (#2).
+  profil. C'est aussi ce qui rend les avatars gratuits depuis #2 : le visage d'un ami est généré
+  depuis ce handle-là.
 - **`sendPushToUser`** — sous-collection plutôt que collection group filtrée : coûte les documents
   renvoyés et aucun index.
 - **Les `get()` dans les règles** — le commentaire de `firestore.rules:135` note qu'une règle coûte
@@ -483,7 +487,8 @@ seulement la facture :
 **Ensuite, par ratio gain/effort** — tout est côté app et sans risque produit :
 
 5. #1 — abonnement unique à la liste d'amis.
-6. #2 — cache disque des avatars.
+6. ~~#2 — cache disque des avatars.~~ *Fait — la lecture de profil par ami est supprimée, l'avatar
+   est généré depuis le handle porté par l'amitié.*
 7. #3 — calendrier : ne plus forcer au focus, persister le mois de l'utilisateur *(la moitié
    globale est faite)*.
 8. #8, #9, #10 — trois lectures redondantes, quelques lignes chacune.

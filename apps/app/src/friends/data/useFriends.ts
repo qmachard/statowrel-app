@@ -46,8 +46,11 @@ const EMPTY: Friends = { accepted: [], incoming: [], outgoing: [], loading: fals
  * The handle shown per line is `friend_username`, the copy carried on the
  * entry — that is what makes a list of N friends cost one read instead of N
  * profile reads. Nothing else about the friend is carried, which is why the row
- * shows no streak despite §5.3, and why the picture is fetched separately
- * (`useFriendAvatars`) rather than read from here.
+ * shows no streak despite §5.3. The face beside the handle is generated from
+ * that same copy (`src/lib/avatars.ts`), so it costs nothing either; the day a
+ * real profile-photo system ships, `photo_url` is the next copy to carry on the
+ * entry — denormalized and backfilled by the backend — never a profile read per
+ * friend (docs/firebase-read-optimization.md #2).
  */
 export const useFriends = (): Friends => {
   const { user } = useAuth();

@@ -5,7 +5,6 @@ import { colors, fontSize, fonts, pagePadding, spacing } from '@/design/tokens';
 import { FriendRow } from '@/friends/components/FriendRow';
 import { PendingActions } from '@/friends/components/PendingActions';
 import { FAILURE, NOTES } from '@/friends/copy';
-import { useFriendAvatars } from '@/friends/data/useFriendAvatars';
 import { useFriends } from '@/friends/data/useFriends';
 import { useFriendshipWrite } from '@/friends/data/useFriendshipWrite';
 
@@ -57,7 +56,6 @@ const styles = StyleSheet.create({
 export const InvitationsCard = () => {
   const { incoming } = useFriends();
   const { busy, running, failed, run } = useFriendshipWrite();
-  const avatars = useFriendAvatars(incoming.map((friendship) => friendship.friend_id));
   const { width } = useWindowDimensions();
 
   if (incoming.length === 0) {
@@ -78,7 +76,6 @@ export const InvitationsCard = () => {
           <Card key={friendship.friend_id} style={[ styles.card, { width: cardWidth } ]}>
             <FriendRow
               username={friendship.friend_username}
-              photoUrl={avatars[friendship.friend_id]}
               note={NOTES.incoming}
               action={(
                 <PendingActions

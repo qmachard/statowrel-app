@@ -86,7 +86,6 @@ const styles = StyleSheet.create({
 interface Row {
   friendId: string;
   username: string;
-  photoUrl: string | null | undefined;
   /** The StatOwrel of what they picked, `null` for a friend who hasn't answered. */
   statLabel: string | null;
   timeLabel: string | null;
@@ -115,7 +114,6 @@ const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: strin
       return {
         friendId: friend.friendId,
         username: friend.username,
-        photoUrl: friend.photoUrl,
         statLabel: option === null ? null : statLabelOf(option),
         timeLabel: friend.answeredAt === null ? null : formatTimeLabel(new Date(friend.answeredAt)),
         same: friend.optionId === pickedId,
@@ -184,7 +182,6 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
             <View key={row.friendId} style={index === 0 ? null : styles.separated}>
               <FriendRow
                 username={row.username}
-                photoUrl={row.photoUrl}
                 note={row.timeLabel ?? undefined}
               >
                 {row.statLabel === null ? (

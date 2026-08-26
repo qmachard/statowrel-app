@@ -5,16 +5,14 @@ import {
 } from '@statowrel/models';
 import { useEffect, useMemo, useState } from 'react';
 
-import { useFriendAvatars } from '@/friends/data/useFriendAvatars';
 import { useFriends } from '@/friends/data/useFriends';
 import { getFrozenDoc, getSubDocumentRef } from '@/lib/firestore';
 
 /** One accepted friend and what they answered that day — `null` while they haven't. */
 export interface FriendAnswer {
   friendId: string;
+  /** The friend's handle — what the row shows, and what seeds their generated avatar. */
   username: string;
-  /** Their picture — `undefined` while their profile is being read, `null` when they have none. */
-  photoUrl: string | null | undefined;
   /** `QuestionOptionData.id` of what they picked, `null` for a friend who hasn't answered. */
   optionId: string | null;
   answeredAt: string | null;
@@ -39,17 +37,17 @@ interface AnswersState {
 
 /**
  * The friends' answers of docs/prd.md §4.5, for one day's question: every
- * accepted friend, with their picture, what they picked and when — or nothing
- * for a friend who hasn't answered yet.
+ * accepted friend, what they picked and when — or nothing for a friend who
+ * hasn't answered yet.
  *
  * **`enabled` is the BeReal mechanic**, not an optimisation: a friend's answer
  * is unlocked by having answered oneself, so the screen passes `false` until its
  * own answer exists and no answer is read before then.
  *
- * The friend list and the pictures are not read here — `useFriends` already
- * subscribes to `v1_users/{uid}/v1_user_friends` for the Menu screen's list, and
- * `useFriendAvatars` already reads a profile per UID and caches it for the
- * session. This hook adds the one thing neither carries: one `get` per friend on
+ * The friend list is not read here — `useFriends` already subscribes to
+ * `v1_users/{uid}/v1_user_friends` for the Menu screen's list, and that entry
+ * carries everything a row shows (the handle, which also seeds the generated
+ * avatar). This hook adds the one thing it doesn't: one `get` per friend on
  * `v1_questions/{question_id}/v1_daily_question_answers/{friend_id}`. The
  * document id being the answering user's UID is what makes that a read rather
  * than a query — a collection-group query is deliberately impossible, since the
@@ -69,8 +67,6 @@ export const useFriendAnswers = (questionId: string | null, enabled: boolean): F
     () => accepted.map((friendship) => friendship.friend_id),
     [ accepted ],
   );
-
-  const avatars = useFriendAvatars(enabled ? friendIds : []);
 
   const [ state, setState ] = useState<AnswersState | null>(null);
 
@@ -143,11 +139,10 @@ export const useFriendAnswers = (questionId: string | null, enabled: boolean): F
     return {
       friendId: friendship.friend_id,
       username: friendship.friend_username,
-      photoUrl: avatars[friendship.friend_id],
       optionId: answer?.optionId ?? null,
       answeredAt: answer?.answeredAt ?? null,
     };
-  }), [ accepted, avatars, current ]);
+  }), [ accepted, current ]);
 
   if (!enabled) {
     return { status: 'idle', friends: [] };
