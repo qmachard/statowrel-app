@@ -2,36 +2,38 @@
 
 | Champ | Valeur |
 |---|---|
-| Version | **1.0.1-rc1** (`version` applicative : `1.0.1`, bumpée dans `apps/app/app.config.ts` — les rc de la 1.0.0 restaient à `1.0.0`) |
+| Version | **1.0.1-rc1** (`version` applicative : `1.0.1`, bumpée dans `apps/app/package.json` et `apps/app/app.config.ts` — la 1.0.0 restait à `1.0.0`) |
 | Build iOS | non figé — la rc précède le build TestFlight (`autoIncrement` + `appVersionSource: "remote"` dans `apps/app/eas.json`) |
 | Date | 2026-08-26 |
-| Nature | **pre-release** — première release candidate de la 1.0.1 ; la 1.0.0 n'a jamais été finalisée, aucune version n'est encore publiée sur les stores |
+| Nature | **pre-release** — première release candidate de la 1.0.1 |
+| Version précédente | **1.0.0** (build iOS 6), taggée sur `f597037` — `release-notes-1.0.0.md`. Tout ce que cette note décrit est **postérieur** à ce commit |
 | Fiche store | **français (France) uniquement** pour la 1.0 (`docs/store-listing.md`) ; la section anglaise ci-dessous est une réserve, à ne pas publier |
 
-Cette note **remplace** `release-notes-1.0.0-rc2.md` pour la soumission. Les textes App Store sont
-inchangés — rien de ce qui s'est ajouté depuis la rc2 n'est une fonctionnalité qu'on annonce à un
-utilisateur qui découvre l'app. Ce qui bouge est **sous la fiche** : l'app est passée sur les SDK
-Firebase natifs (React Native Firebase), le dernier bloquant Play documentaire est fermé (normes de
-sécurité des enfants), la question du jour s'ouvre en modal pleine hauteur, les jours manqués du
-calendrier deviennent des boutons de rattrapage, les lectures Firestore ont été fortement réduites,
-et trois bugs visibles sont corrigés (écran blanc au lancement, journée figée après minuit, réponse
-de démonstration refusée).
+Cette note part de la **1.0.0** et n'en décrit que le delta. Les textes App Store sont inchangés —
+rien de ce qui s'est ajouté depuis n'est une fonctionnalité qu'on annonce à un utilisateur qui
+découvre l'app. Ce qui bouge est **sous la fiche** : l'app est passée sur les SDK Firebase natifs
+(React Native Firebase), la console de modération est passée sous `/admin/` avec une page de
+présentation à la racine du site, l'app est verrouillée en portrait, la question du jour s'ouvre en
+modal pleine hauteur, les jours manqués du calendrier deviennent des boutons de rattrapage, les
+lectures Firestore ont été fortement réduites, et deux bugs visibles sont corrigés (écran blanc au
+lancement, journée figée après minuit).
+
+> Les normes de sécurité des enfants (CSAE), l'âge minimum 16 ans des CGU et le correctif de la
+> réponse de démonstration **appartiennent à la 1.0.0** — ils ne figurent plus dans ce delta.
 
 ---
 
-## Ce qui change depuis la 1.0.0-rc2
+## Ce qui change depuis la 1.0.0
 
 | # | Changement | Effet sur la soumission |
 |---|---|---|
 | 1 | **App migrée sur React Native Firebase** (SDK natifs iOS/Android, résolution CocoaPods sur iOS) | Aucun texte de fiche ne bouge, mais la **surface de régression est maximale** : auth, Firestore, callables et push passent tous par un nouveau SDK — le plan QA complet est à repasser sur appareil physique |
-| 2 | Normes de **sécurité des enfants (CSAE)** publiées sur `/legal/protection-des-enfants` (alias `/legal/child-safety`) | Ferme le bloquant documentaire Play (`docs/production-checklist.md` §2.8) — l'URL à déclarer dans la Play Console existe |
-| 3 | Âge minimum des CGU aligné sur le **classement 16+** de la fiche | Cohérence fiche ↔ conditions : un examinateur qui recoupe ne trouve plus deux âges différents |
-| 4 | Console de modération déplacée sous **`/admin/`**, la racine du site servant une page de présentation | Les URLs légales sont inchangées ; l'URL marketing donnée aux stores peut être la racine du site sans tomber sur un écran de connexion admin |
-| 5 | Question du jour présentée en **modal pleine hauteur**, contenu scrollant à l'intérieur (Android compris) | UX seulement — le parcours reviewer décrit plus bas est inchangé |
-| 6 | Jours manqués du calendrier levés en **boutons de rattrapage** (« ? » noir) | Rend visible le rattrapage que la description promet déjà (« tu peux y répondre après coup ») |
-| 7 | App **verrouillée en portrait** sur iOS et Android | Les captures store n'ont besoin d'aucune variante paysage |
-| 8 | **Lectures Firestore réduites** : documents figés servis depuis le cache disque du SDK, question du jour lue une fois à l'ouverture, plus aucune lecture de profil par ami (avatar généré depuis le pseudo, `photo_url` retiré de `v1_users`) | Coût d'exploitation et réactivité — rien de visible sur la fiche |
-| 9 | Correctifs : écran de lancement **jamais tenu plus de 6 s**, jour courant lu sur une **horloge vivante**, réponse de démonstration acceptée sur son seul statut | Trois bugs visibles de la rc2 fermés — détail en QA |
+| 2 | Console de modération déplacée sous **`/admin/`**, la racine du site servant une page de présentation | Les URLs légales sont inchangées ; l'URL marketing donnée aux stores peut être la racine du site sans tomber sur un écran de connexion admin |
+| 3 | Question du jour présentée en **modal pleine hauteur**, contenu scrollant à l'intérieur (Android compris) | UX seulement — le parcours reviewer décrit plus bas est inchangé |
+| 4 | Jours manqués du calendrier levés en **boutons de rattrapage** (« ? » noir) | Rend visible le rattrapage que la description promet déjà (« tu peux y répondre après coup ») |
+| 5 | App **verrouillée en portrait** sur iOS et Android | Les captures store n'ont besoin d'aucune variante paysage |
+| 6 | **Lectures Firestore réduites** : documents figés servis depuis le cache disque du SDK, question du jour lue une fois à l'ouverture, plus aucune lecture de profil par ami (avatar généré depuis le pseudo, `photo_url` retiré de `v1_users`) | Coût d'exploitation et réactivité — rien de visible sur la fiche |
+| 7 | Correctifs : écran de lancement **jamais tenu plus de 6 s**, jour courant lu sur une **horloge vivante** | Deux bugs visibles de la 1.0.0 fermés — détail en QA |
 
 ---
 
@@ -39,8 +41,8 @@ de démonstration refusée).
 
 ### Texte promotionnel — 170 caractères max
 
-Champ modifiable **sans nouvelle soumission**. Inchangé depuis la rc1 de la 1.0.0, la première
-option reste retenue.
+Champ modifiable **sans nouvelle soumission**. Inchangé depuis la 1.0.0, la première option reste
+retenue.
 
 **Option 1 — retenue** (166 caractères)
 
@@ -66,8 +68,10 @@ passer le jour où le rendez-vous quotidien est installé et où c'est lui qu'on
 
 ### Nouveautés de cette version — 4000 caractères max
 
-**Inchangé depuis les rc de la 1.0.0** — c'est toujours la première version publiée, et rien de ce
-qui s'est ajouté depuis n'est une fonctionnalité qu'on annonce à un utilisateur qui découvre l'app.
+**Inchangé depuis la 1.0.0** — si la 1.0.0 n'est pas encore en ligne au moment où cette version
+part, c'est toujours la première version publiée ; rien de ce qui s'est ajouté depuis n'est une
+fonctionnalité qu'on annonce à un utilisateur qui découvre l'app. Si la 1.0.0 est déjà publiée, ce
+texte est à remplacer par une note de mise à jour (« Cette version corrige… ») avant soumission.
 
 ```
 Première version de StatOwrel.
@@ -95,7 +99,7 @@ Ton : tutoiement, aucun emoji, aucun markdown, paragraphes courts — conformém
 
 ### Description complète — 4000 caractères max
 
-Inchangée depuis la rc2 de la 1.0.0 : `docs/store-listing.md` §1.4 augmenté du bloc
+Inchangée depuis la 1.0.0 : `docs/store-listing.md` §1.4 augmenté du bloc
 `LA NOTIFICATION DE 7H`. Le rattrapage que le bloc calendrier décrit est désormais porté par un
 vrai bouton sur chaque jour manqué — la description n'a pas à changer, le binaire l'a rattrapée.
 
@@ -197,7 +201,7 @@ One question, one answer, one statistic, your friends. Under thirty seconds a da
 ## Notes pour le reviewer Apple
 
 > ⚠️ **Un champ reste à compléter avant soumission** : les identifiants du compte de démonstration
-> (`docs/production-checklist.md` §2.4, le compte n'existe pas encore).
+> (`docs/production-checklist.md` §2.4) — inchangé depuis la 1.0.0, le compte n'existe pas encore.
 
 ```
 IDENTIFIANTS DE DÉMONSTRATION
@@ -239,14 +243,14 @@ https://statowrel-app.web.app/legal/confidentialite
 https://statowrel-app.web.app/legal/mentions-legales
 ```
 
-**Ce qui a changé par rapport aux notes de la rc2, et pourquoi :**
+**Ce qui a changé par rapport aux notes de la 1.0.0, et pourquoi :**
 
 - Le point 4 du parcours mentionne le **bouton « ? » des jours manqués** — c'est désormais le
   chemin visible du rattrapage, et un reviewer qui tape une case vide doit comprendre ce qu'il
   ouvre.
 - Tout le reste est identique : la migration React Native Firebase, le déplacement de la console
   sous `/admin/` et les optimisations de lecture ne changent rien au parcours du reviewer.
-- Le compte de démonstration reste **à compléter** — inchangé depuis la rc2.
+- Le compte de démonstration reste **à compléter** — inchangé depuis la 1.0.0.
 
 **Permissions demandées par l'app**
 
@@ -309,11 +313,6 @@ simulateur — les notifications push et la connexion Apple ne fonctionnent pas 
 - [ ] App remise au premier plan le lendemain sans relancement : « aujourd'hui » et la série
       suivent le vrai jour — plus de journée figée sur la veille
 
-**Réponse de démonstration**
-
-- [ ] Répondre à la question de démonstration **puis** se connecter : la réponse est comptée
-      (le correctif accepte la démo sur son seul statut), sans jour de calendrier ni série
-
 **Avatars sans lecture de profil**
 
 - [ ] Les avatars des amis s'affichent (initiales puis motif généré depuis le pseudo) — aucune
@@ -324,11 +323,10 @@ simulateur — les notifications push et la connexion Apple ne fonctionnent pas 
 
 - [ ] `npm run deploy:admin:production` passé, puis en navigation privée : la **racine** du site
       affiche la page de présentation, `/admin/` la console de modération
-- [ ] `/legal/cgu`, `/legal/confidentialite`, `/legal/mentions-legales`, `/legal/assistance`
-      répondent toujours — pas la page de présentation, pas la console
-- [ ] `/legal/protection-des-enfants` **et** l'alias `/legal/child-safety` affichent les normes de
-      sécurité des enfants, en français puis en anglais, au nom de StatOwrel et Quentin Machard SAS
-- [ ] Les CGU affichent l'âge minimum de **16 ans**, aligné sur le classement des fiches
+- [ ] `/legal/cgu`, `/legal/confidentialite`, `/legal/mentions-legales`, `/legal/assistance`,
+      `/legal/protection-des-enfants` répondent toujours — pas la page de présentation, pas la
+      console. Les cinq pages sont acquises depuis la 1.0.0, mais le déplacement sous `/admin/`
+      rejoue les réécritures qui les servent
 
 ### Régression complète
 
@@ -434,9 +432,8 @@ dépôt à la date de cette rc.
       §2.3. Aucune collection `v1_user_reports`, aucune action « Signaler ce pote ». Le contact
       éditeur de `/legal/assistance` couvre l'exigence « traitement sous 24 h », mais **pas** le
       mécanisme de signalement lui-même. **Le seul bloquant dur qui reste côté code.**
-- [ ] `npm run deploy:admin:production` — la page de présentation, le déplacement `/admin/` et la
-      page des normes de sécurité des enfants ne sont en ligne qu'à hauteur du dernier déploiement
-      Hosting, réécritures comprises
+- [ ] `npm run deploy:admin:production` — la page de présentation et le déplacement `/admin/` ne
+      sont en ligne qu'à hauteur du dernier déploiement Hosting, réécritures comprises
 - [ ] Page web de demande de suppression de compte (exigée par Play, hors de l'app)
 - [ ] URLs de confidentialité et de support renseignées dans App Store Connect **et** dans la Play
       Console ; URL des normes de sécurité des enfants (`/legal/protection-des-enfants`)
@@ -450,13 +447,13 @@ dépôt à la date de cette rc.
 
 - [x] **App sur React Native Firebase** — SDK natifs, résolution CocoaPods sur iOS, fichiers
       Firebase déclarés par variante *(nouveau en 1.0.1-rc1)*
-- [x] **Normes de sécurité des enfants (CSAE) publiées** sur `/legal/protection-des-enfants`
-      (+ alias `/legal/child-safety`) — FR puis EN, au nom que la fiche Play affiche
-      *(nouveau en 1.0.1-rc1)*
-- [x] **Âge minimum 16 ans** dans les CGU, aligné sur le classement des fiches *(nouveau en 1.0.1-rc1)*
 - [x] **Site racine = page de présentation**, console sous `/admin/` *(nouveau en 1.0.1-rc1)*
 - [x] **Portrait verrouillé** sur iOS et Android *(nouveau en 1.0.1-rc1)*
 - [x] **Rattrapage visible** — les jours manqués du calendrier sont des boutons *(nouveau en 1.0.1-rc1)*
+- [x] Normes de sécurité des enfants (CSAE) publiées sur `/legal/protection-des-enfants`
+      (+ alias `/legal/child-safety`) — FR puis EN *(acquis en 1.0.0)*
+- [x] Âge minimum 16 ans dans les CGU, aligné sur le classement des fiches *(acquis en 1.0.0)*
+- [x] Réponse de démonstration acceptée sur le seul statut `demo` de la question *(acquis en 1.0.0)*
 - [x] Politique de confidentialité servie sur `/legal/confidentialite`
 - [x] Page d'assistance servie sur `/legal/assistance`, avec adresse de contact, délais, FAQ,
       suppression de compte, signalement et droits RGPD
@@ -465,6 +462,7 @@ dépôt à la date de cette rc.
 - [x] Permission de notification redemandable — alerte une fois par installation, interrupteur
       permanent dans le Menu
 - [x] Règle de création d'une réponse tolérante à `counted_at` absent (déployée avec les rules)
+      *(acquis avant la 1.0.0)*
 - [x] Suppression de compte depuis l'app (`users-deleteAccount`)
 - [x] Connexion avec Apple au même niveau que Google et l'e-mail
 - [x] Notification du matin réellement envoyée — la fiche peut en parler
