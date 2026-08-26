@@ -334,7 +334,8 @@ variable d'environnement.
 - [ ] Idem pour les environnements `preview` (mêmes fichiers que production, identifiant partagé)
       et `development` (les fichiers `.dev`)
 - [ ] Supprimer les `EXPO_PUBLIC_FIREBASE_*` devenues mortes des trois environnements
-      (`APP_VARIANT=production eas env:delete`) — plus rien ne les lit. Le préfixe `APP_VARIANT` est
+      (`APP_VARIANT=production eas env:delete --variable-name <NOM> --variable-environment <ENV>`,
+      le flag est bien `--variable-name` et non `--name`) — plus rien ne les lit. Le préfixe `APP_VARIANT` est
       obligatoire sur **toute** commande `eas` hors build : `app.config.ts` lève sinon, et EAS ne
       rapporte que `cli config --json exited with non-zero code: 1`, qui ne nomme rien
 - [ ] Vérifier qu'aucune variable `*_EMULATOR_HOST` / `*_EMULATOR_PORT` n'est définie en
