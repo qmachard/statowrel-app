@@ -70,6 +70,9 @@ npm run seed-questions               # fills v1_questions from apps/functions/sc
 npm run seed-questions -- --dry-run  # ... writing nothing (also --production, --status, --author)
 npm run seed-daily-questions         # broadcasts the 5 days before today, so the app is not empty
 npm run seed-demo-question           # writes the onboarding's demo question, tally included
+npm run seed-emulator                # fills the running emulator with a whole app: account, day, friends, answers
+npm run seed-emulator -- --days 60 --friends 6 --answer-today
+npm run seed-emulator -- --dry-run   # ... says what it would write (also --crowd, --email, --password, --seed)
 npm run send-test-notification -- --email <email>   # pushes the day's notification to that account's devices
 npm run send-test-notification -- --all --dry-run   # ... listing every registered device, sending nothing
 npm run send-test-notification -- --email <email> --nudge --friends 3   # ... the 18:00 nudge instead
@@ -78,6 +81,8 @@ npm run send-test-notification -- --email <email> --nudge --friends 3   # ... th
 **IMPORTANT**: After modifying any file in `packages/models`, ALWAYS run `npm run typecheck` to verify no type errors were introduced across the monorepo.
 
 **IMPORTANT**: There are no PR-gating CI checks. Run `npm run typecheck` and `npm run lint` manually before merging.
+
+**IMPORTANT**: There is only one Firebase project — `.firebaserc` aliases both `default` and `production` to `statowrel-app`. **Development happens on the emulators** (`npm run dev:functions`, then `npm run seed-emulator`), never on the project: every other script writes to the real thing with or without `--production`. `seed-emulator` is the only one that cannot — it refuses both flags and talks to the emulator ports alone. See docs/architecture.md § Environments.
 
 ## Conventions
 

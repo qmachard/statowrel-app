@@ -65,6 +65,31 @@ export const readSeedEntries = (file, bounds) => {
   return entries;
 };
 
+/**
+ * The one question the onboarding carousel poses — docs/prd.md §5.6, written to
+ * the fixed `DEMO_QUESTION_ID` of `@statowrel/models`.
+ *
+ * It lives here rather than in `seed-demo-question.mjs` because it has two
+ * writers: that script, on a real project, and `seed-emulator.mjs`, which wipes
+ * the database before rebuilding it and would otherwise leave the carousel
+ * pointing at nothing.
+ *
+ * docs/prd.md §1's own example, three options so the carousel shows a QCM
+ * rather than a coin flip. A demo has no author to credit, so the app leaves
+ * the credit line out.
+ */
+export const DEMO_QUESTION = {
+  label: 'Ton dentifrice, tu le presses…',
+  options: [
+    { label: 'Par le bout', stat_label: 'Méthodique' },
+    { label: 'Au milieu', stat_label: 'Sauvage' },
+    { label: 'Je l\'écrase n\'importe comment', stat_label: 'Anarchiste' },
+  ],
+};
+
+/** Enough answers for the demo's shares to read as a real day rather than as a sample. */
+export const DEMO_ANSWERS = 1200;
+
 /** A question's label, normalised for comparison: case and spacing are out of it. */
 export const labelKeyOf = (label) => label.trim().replace(/\s+/g, ' ').toLocaleLowerCase('fr-FR');
 

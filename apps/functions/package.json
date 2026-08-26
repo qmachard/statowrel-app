@@ -16,6 +16,7 @@
     "seed-daily-questions": "node scripts/seed-daily-questions.mjs",
     "send-test-notification": "node scripts/send-test-notification.mjs",
     "seed-demo-question": "node scripts/seed-demo-question.mjs",
+    "seed-emulator": "node scripts/seed-emulator.mjs",
     "dev": "npm run build && NODE_ENV=development NODE_OPTIONS=--enable-source-maps concurrently --kill-others \"npm run start:emulators\" \"npm run build:watch\""
   },
   "engines": {
