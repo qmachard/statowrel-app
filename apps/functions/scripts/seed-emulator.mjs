@@ -552,7 +552,6 @@ for (const username of castUsernames) {
 
   writer.set(usersRef.doc(uidOf(username)), {
     username,
-    photo_url: null,
     email: emailOf(username),
     auth_providers: [ 'password' ],
     created_at: createdAt,

@@ -30,8 +30,11 @@ export const isAuthProviderId = (value: string): value is AuthProviderId => (
  * written by the app itself, once the pseudo has been chosen on the onboarding
  * screen (`src/auth/profile.ts`).
  *
- * Profile, sign-in identities and answering stats. Only the PRD's
- * `invite_code` is still to be modelled.
+ * Profile, sign-in identities and answering stats. The PRD's `invite_code` is
+ * still to be modelled, and so is its `photo_url` the day a real profile-photo
+ * system ships — today every face is generated from the handle
+ * (`apps/app/src/lib/avatars.ts`), and the Menu screen's own avatar reads the
+ * provider picture straight off Firebase Auth, so Firestore carries no photo.
  */
 export interface UserFirebaseData {
   /**
@@ -41,8 +44,6 @@ export interface UserFirebaseData {
    * unique and what resolves it back to this account (docs/prd.md §4.1).
    */
   username: string;
-  /** Avatar. Null until the user picks one and when the provider gives none. */
-  photo_url: string | null;
   /**
    * Account email, mirrored from Firebase Auth. Null when no provider gives one
    * (Apple's private relay can be hidden, and the field is not the source of
@@ -93,7 +94,6 @@ const parseAuthProviders = (providers: unknown): AuthProviderId[] => (
 export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (TimestampClass) => ({
   toFirestore: (data) => removeMissingFields({
     username: data.username,
-    photo_url: data.photo_url ?? null,
     email: data.email ?? null,
     auth_providers: data.auth_providers ?? [],
     created_at: TimestampClass.fromDate(new Date(data.created_at)),
@@ -108,7 +108,6 @@ export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (Ti
 
     return {
       username: data.username ?? '',
-      photo_url: data.photo_url ?? null,
       email: data.email ?? null,
       auth_providers: parseAuthProviders(data.auth_providers),
       created_at: parseTimestamp(data.created_at ?? null, 'now'),
