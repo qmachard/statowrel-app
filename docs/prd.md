@@ -196,7 +196,7 @@ La racine de l'app. De haut en bas :
 | État | Rendu | Tap |
 |---|---|---|
 | **Répondu** | Case `primary`, ombre dure, un **check** central à la place du numéro du jour | Ouvre le résultat StatOwrel de ce jour (§5.5), en lecture seule |
-| **Raté** (jour passé sans réponse) | Case `background` hachurée, bordure noire, petit « ? » central | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
+| **Raté** (jour passé sans réponse) | Case `background`, bordure noire, ombre dure — surélevée comme les jours répondus, car la question se rattrape — un « ? » central à la place du numéro du jour | Ouvre la modale question de ce jour en **rattrapage** (§5.4) |
 | **Aujourd'hui** | Case `accent` — le même traitement qu'un jour répondu, bordure, ombre dure et check compris une fois la journée jouée : seule la couleur change. Aujourd'hui reste `accent` quoi qu'il arrive, répondu ou non — c'est le jour dont l'écran parle, et le voir virer au jaune comme les autres le dissolvait dans le mois | Ouvre la modale question du jour (§5.4), ou le résultat StatOwrel (§5.5) une fois répondu |
 | **Futur, ou sans question** | Case `muted`, sans bordure | Inerte |
 
