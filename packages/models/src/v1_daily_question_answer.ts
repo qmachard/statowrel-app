@@ -37,8 +37,9 @@ export const DAILY_QUESTION_ANSWER_COLLECTION = 'v1_daily_question_answers';
  * answer per person per day" a property of the data rather than a check
  * somebody has to remember: there is no second document to create, and
  * `firestore.rules` compares the id to `request.auth.uid` to reject answering
- * for someone else. An answer is never updated nor deleted — the choice is
- * final (docs/prd.md §4.2).
+ * for someone else. **No client ever updates or deletes one** — the choice is
+ * final (docs/prd.md §4.2). The answer trigger writes to it exactly once, to
+ * stamp `counted_at`; nothing else ever rewrites an answer.
  */
 export interface DailyQuestionAnswerFirebaseData {
   /** Firebase Auth UID of the author, same value as the document id. Carried as a field so the collection-group query can filter on it. */
@@ -68,15 +69,27 @@ export interface DailyQuestionAnswerFirebaseData {
   late: boolean;
   /**
    * When the answer trigger folded this answer into the question's
-   * `answer_counts`. Written by the backend alone, and `null` on every answer
-   * the client creates — `firestore.rules` refuses a create that pre-fills it.
+   * `answer_counts` — written in that very transaction, so it cannot exist
+   * without the count it announces. Written by the backend alone, and `null` on
+   * every answer the client creates: `firestore.rules` refuses a create that
+   * pre-fills it, and refuses every update, so the trigger's stamp is the one
+   * write an answer ever receives after its own.
    *
-   * It exists for the **onboarding demo** (docs/prd.md §5.6). A trigger is
-   * delivered at least once, so an increment needs a marker to bail out on, and
-   * a broadcast answer has one for free: its entry in the author's calendar
-   * month, which the same transaction writes and reads back. A demo answer is
-   * projected nowhere — it is not a day — so it needs a marker of its own, and
-   * the cheapest one is on the answer itself.
+   * Two things read it.
+   *
+   * The **onboarding demo** (docs/prd.md §5.6) needs it to be idempotent: a
+   * trigger is delivered at least once, so an increment needs a marker to bail
+   * out on, and a broadcast answer has one for free — its entry in the author's
+   * calendar month, which the same transaction writes and reads back. A demo
+   * answer is projected nowhere, being no day, so it has none.
+   *
+   * The **day screen** needs it to know whether the tally it holds already
+   * carries the answer just written (`useDailyQuestion`). It reads the question
+   * first and the answer second: a marker still absent on the second read
+   * proves the tally of the first was taken without this answer, and the screen
+   * folds it in itself rather than showing a percentage one answer short. The
+   * ordering is what makes that sound — it can only ever fail by not folding
+   * in, never by counting the same answer twice.
    */
   counted_at: UniversalTimestamp | null;
 }

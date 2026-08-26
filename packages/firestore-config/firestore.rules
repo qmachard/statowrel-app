@@ -91,7 +91,13 @@ service cloud.firestore {
       // question answerable without a broadcast, and it is let through by its
       // status rather than by a hole in that check — see `isAnswerToDemo` below.
       //
-      // An answer is final: no update, no delete (docs/prd.md §4.2). Deleting
+      // An answer is final for whoever wrote it: no update, no delete
+      // (docs/prd.md §4.2). The answer trigger does write to it once, to stamp
+      // `counted_at` in the transaction that folds the answer into
+      // `answer_counts` — the admin SDK goes past these rules, and that stamp
+      // is what tells the day screen whether the tally it read already carries
+      // this answer. No client path can produce it: a create that pre-fills it
+      // is refused below, and an update is refused outright. Deleting
       // an account is what removes one, backend-side (`users-deleteAccount`) —
       // and since the document id *is* its author's UID, the delete is what
       // anonymising means: there is no field left to blank. The question's

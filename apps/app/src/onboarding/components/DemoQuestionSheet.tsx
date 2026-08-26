@@ -97,7 +97,11 @@ export const DemoQuestionSheet = ({ visible, question, onClose, onSignUp }: Demo
     void rememberDemoAnswer(optionId);
   });
 
-  const statOwrel = pickedId === null ? null : buildStatOwrel(question, question.answer_counts, pickedId);
+  // Always pending: the pick made here is written at the first sign-in
+  // (`useDemoAnswerFlush`), so the tally on screen is by construction the one
+  // from before this visitor answered — there is no beat to wait out, and no
+  // marker to read.
+  const statOwrel = pickedId === null ? null : buildStatOwrel(question, question.answer_counts, pickedId, true);
 
   return (
     <BottomSheet visible={visible} label="Question démo" surface={SURFACE} onDismiss={onClose}>

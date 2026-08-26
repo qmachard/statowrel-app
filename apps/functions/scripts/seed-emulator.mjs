@@ -777,9 +777,11 @@ for (const day of world) {
         option_id: answer.option.id,
         answered_at: answer.instant.toISOString(),
         late: answer.late,
-        // Null, like every broadcast answer in production: `counted_at` is the
-        // demo question's marker alone (see the answer trigger).
-        counted_at: null,
+        // Stamped, like every answer the trigger has been through: the tally
+        // and the calendars written above already carry this answer, and
+        // `counted_at` is what says so — the day screen reads it to know
+        // whether it has to fold its own answer into the percentages it shows.
+        counted_at: answer.instant.toISOString(),
       },
     );
   }

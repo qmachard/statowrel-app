@@ -126,7 +126,9 @@ export const DailyQuestionScreen = () => {
   // No param means today, and today is Paris' day, not the device's — the day
   // key *is* the document id (docs/architecture.md).
   const date = params?.date ?? dailyQuestionDateKey(new Date());
-  const { status, question, questionId, answer, authorName } = useDailyQuestion(date);
+  const {
+    status, question, questionId, answer, ownAnswerPending, resultSettled, authorName,
+  } = useDailyQuestion(date);
 
   const [ submitting, setSubmitting ] = useState(false);
   const [ celebrating, setCelebrating ] = useState(false);
@@ -156,10 +158,11 @@ export const DailyQuestionScreen = () => {
     try {
       const written = await submitAnswer({ userId: user.uid, questionId, question, optionId });
 
-      // The sheet flips on its own answer subscription; this is for the Stats
-      // screen underneath, which no longer subscribes to the calendar: it drops
-      // the answered month from its cache and carries the day until the answer
-      // trigger has projected it.
+      // What flips the sheet to its result, and what carries the answer to the
+      // Stats screen underneath — one store for both since neither is
+      // subscribed to Firestore any more: it drops the answered month from the
+      // calendar cache and holds the day until the answer trigger has projected
+      // it, and `useDailyQuestion` reads it straight back.
       rememberAnswer(written, question.options.find((option) => option.id === optionId)?.stat_label ?? '');
       setCelebrating(true);
     } catch (error) {
@@ -175,15 +178,34 @@ export const DailyQuestionScreen = () => {
   });
 
   // The choice is final (docs/prd.md §4.2), so an answered day stops taking
-  // taps — and so does a day still writing one.
+  // taps — and so does a day still writing one. Decided on the answer itself
+  // and never on `showingResult` below: a second tap has to be refused from the
+  // instant the first one is written, whatever the sheet is still showing.
   const answerable = status === 'ready' && user !== null && answer === null && !submitting;
 
-  // The reward of docs/prd.md §5.5, recomputed on every `answer_counts` the
-  // question subscription hands over: the rarity is that map's shape at display
-  // time, so it keeps moving while the day's answers come in.
-  const statOwrel = question === null || answer === null
+  // **The sheet flips once the result is whole, not the instant the answer is
+  // written.** The two are a beat apart on purpose: answering reads the answer
+  // back to learn whether the tally on hand already carries it, so a result
+  // shown at the tap would move under the eyes of whoever just answered — by
+  // exactly the one answer it had not folded in yet. `resultSettled` is the
+  // hook's word on that beat, and the confirmation animation is what covers it,
+  // being the one thing playing over the sheet at that moment.
+  //
+  // The animation ending is the other way out, and it is not a fallback so much
+  // as the deadline: a read that has not landed by then is not worth holding a
+  // result for, and reopening an answered day — where nothing celebrates —
+  // shows it straight away rather than waiting on a read it has no reason to.
+  const showingResult = answer !== null && (resultSettled || !celebrating);
+
+  // The reward of docs/prd.md §5.5: the rarity is `answer_counts`' shape at
+  // display time, computed from the tally as it stood when the day was opened —
+  // the day is read fresh at every opening, never held live (`useDailyQuestion`).
+  // `ownAnswerPending` is that hook's word on whether the tally already carries
+  // this user's own answer; when it does not, `buildStatOwrel` folds it in, so
+  // the card is never one answer short of the day it describes.
+  const statOwrel = question === null || answer === null || !showingResult
     ? null
-    : buildStatOwrel(question, question.answer_counts, answer.option_id);
+    : buildStatOwrel(question, question.answer_counts, answer.option_id, ownAnswerPending);
 
   // The friends of docs/prd.md §4.5, unlocked by one's own answer — which is
   // what the flag says, and why nothing is read before it flips.
@@ -212,7 +234,7 @@ export const DailyQuestionScreen = () => {
             <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
           </View>
 
-          {question === null || answer !== null ? null : (
+          {question === null || showingResult ? null : (
             <Text style={[ styles.question, FOREGROUND[surface] ]}>{question.label}</Text>
           )}
         </View>
@@ -241,7 +263,7 @@ export const DailyQuestionScreen = () => {
           </>
         )}
 
-        {question === null || answer !== null ? null : (
+        {question === null || showingResult ? null : (
           <View style={styles.options}>
             {question.options.map((option, index) => (
               <QuestionOption

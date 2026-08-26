@@ -86,7 +86,7 @@ Coût quotidien estimé au scénario de référence, avant / après.
 | 3 | Calendrier — rechargement forcé à chaque focus | 1 800 000 | 200 000 | 🔴 *(moitié faite)* |
 | 4 | Réponses des amis — aucun cache entre ouvertures | 2 000 000 | 700 000 | ✅ *fait* |
 | 5 | Nudge 18:00 — 1 requête par répondeur | 1 050 000 | 150 000 | 🔴 |
-| 6 | `onSnapshot` sur la question du jour | 500 000 – 100 M | 300 000 | 🔴 |
+| 6 | `onSnapshot` sur la question du jour | 500 000 – 100 M | 300 000 | ✅ *fait (6a)* · 🔴 *(6b)* |
 | 7 | Enregistrement device à chaque lancement | 300 000 (+300 k écritures) | ~10 000 | 🟠 |
 | 8 | `readArchiveStart()` à chaque session | 300 000 | 0 | 🟡 |
 | 9 | `syncUserProfile` doublonne l'abonnement profil | 300 000 | 0 | 🟡 |
@@ -302,11 +302,49 @@ aussi la projection calendrier et la série, écrites dans la même transaction.
 
 **Correctif, en deux temps**
 
-1. **Immédiat, faible risque** — remplacer l'abonnement par un `getDoc` unique, relu une fois après
-   la réponse de l'utilisateur. Son propre écrit est déjà rendu localement par Firestore, donc la
-   bascule de la feuille vers le résultat ne change pas ; ce qu'on perd est le déplacement en direct
-   des pourcentages, que le PRD §5.5 ne demande pas. Idem pour l'abonnement à sa propre réponse
-   (`useDailyQuestion.ts:231`), qui ne bouge que quand on écrit soi-même.
+1. ✅ **Fait** — l'abonnement est remplacé par un `getDoc` porté par `useFocusEffect` : la question
+   est lue à chaque ouverture du jour et à chaque retour dessus, et à ces moments-là seulement.
+   Répondre ne la relit pas : ça ne rattraperait que les réponses tombées entre l'ouverture du jour
+   et le tap — quelques secondes pour qui arrive par la notification — au prix d'une lecture et
+   d'un second aller-retour tenus devant le seul écran qu'on ne doit pas faire attendre. La
+   bascule de la feuille vers le résultat ne passe plus par Firestore du tout : `answerStore`
+   tenait déjà la réponse de la session pour l'écran Stats, la feuille la relit de là — mais elle
+   n'a lieu qu'une fois la relecture de la réponse rentrée (`resultSettled`), sans quoi les
+   pourcentages bougeraient sous les yeux de celui qui vient de répondre, de la réponse même qu'il
+   vient d'écrire. L'animation de confirmation couvre ce battement et sa fin sert d'échéance. Et
+   l'abonnement à sa propre réponse est devenu un `getFrozenDoc` — aucun client ne réécrit une
+   réponse, donc un jour déjà ouvert sur cet appareil ne coûte plus rien à rouvrir, le marqueur
+   ci-dessous étant la seule écriture qu'elle reçoive et la condition pour croire un exemplaire en
+   cache.
+
+   **Le décompte de sa propre réponse.** Le trigger étant asynchrone, le tally en main
+   ne contient pas encore la réponse qui vient d'être écrite, et rien ne
+   vient plus la corriger puisqu'il n'y a plus d'abonnement. Le trigger stampe
+   donc `counted_at` sur la réponse **dans la transaction même qui incrémente**
+   — le marqueur n'existait que pour la démo, il est généralisé — et l'écran
+   lit la question d'abord, sa réponse ensuite : un marqueur absent sur une
+   lecture *chaînée à ce tally* prouve que le tally a été pris sans cette
+   réponse, et la carte l'ajoute elle-même. La preuve ne marche que dans un
+   sens — une lecture appartenant à un tally plus ancien, une réponse d'une
+   session antérieure, un marqueur déjà posé se lisent tous « comptée » — donc
+   le décompte peut retarder d'une réponse le temps d'un aller-retour, jamais
+   compter deux fois la même.
+
+   L'alternative envisagée, comparer `answered_at` à un `updated_at` du tally, a
+   été écartée : `answered_at` est écrit par le téléphone et les rules ne
+   l'épinglent pas à `request.time` — un appareil en avance se serait ajouté en
+   permanence. Coût du marqueur : 1 écriture par réponse (≈ 0,05 $/jour au
+   scénario de référence) et 1 lecture dans la seule session qui vient de
+   répondre. En contrepartie la réponse cesse d'être immuable, donc
+   `getFrozenDoc` ne croit un exemplaire en cache que s'il porte son marqueur.
+
+   **Ce qui a été écarté, et pourquoi.** Geler le document à la clôture — la fin du §6b « naturelle »,
+   qui rendrait toute l'archive lisible depuis le cache disque à zéro lecture — suppose qu'une
+   réponse tardive ne compte plus dans les parts. Arbitrage produit : **elle compte**, les stats
+   d'un jour bougent tant qu'on peut y répondre. Il n'existe donc aucun instant où le document est
+   figé, et la seule chose que le produit demande est la fraîcheur **à l'ouverture**, pas le temps
+   réel — ce que le correctif ci-dessus donne exactement, pour 1 lecture par ouverture au lieu d'une
+   lecture par réponse de toute l'app.
 2. **Structurel** — sortir l'agrégat du document que tout le monde lit. Soit un **compteur
    distribué** (`v1_questions/{id}/v1_answer_count_shards/{0..9}`, incrément sur un shard tiré au
    hasard, somme à la lecture — 10 lectures au lieu d'1, mais 10× le débit d'écriture), soit un

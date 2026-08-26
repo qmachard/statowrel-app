@@ -152,9 +152,16 @@ export const getSubCollectionRef = <TModelData extends DocumentData, TFirebaseDa
  *   holds short-circuits the round trip.
  *
  * Which leaves the caller with one thing to establish: that the document, once
- * written, is never rewritten. `v1_daily_question_months` for a **past** month
- * (the current one gains a day at every 07:00 draw) and a `v1_daily_question_answers`
- * entry (the rules deny every update to one) are the two that qualify.
+ * written, is never rewritten — or that what the caller needs from it is.
+ * `v1_daily_question_months` for a **past** month (the current one gains a day
+ * at every 07:00 draw) qualifies outright.
+ *
+ * A `v1_daily_question_answers` entry qualifies **once the answer trigger has
+ * stamped its `counted_at`**, and not before: no client can ever rewrite one
+ * (the rules deny every update), but the trigger writes to it exactly once, a
+ * beat after it is created. A copy cached in that beat would answer « not
+ * counted » forever after. Hence `isFrozen`: a predicate the caller passes to
+ * say which cached copies are settled, the rest being re-read.
  *
  * This is not a replacement for a module store like `calendarCache`, which
  * dedupes the reads of one app run whether or not anything is frozen. It is the
@@ -162,8 +169,18 @@ export const getSubCollectionRef = <TModelData extends DocumentData, TFirebaseDa
  */
 export const getFrozenDoc = async <TModelData extends DocumentData, TFirebaseData extends DocumentData>(
   reference: DocumentReference<TModelData, TFirebaseData>,
+  isFrozen?: (data: TModelData) => boolean,
 ): Promise<DocumentSnapshot<TModelData, TFirebaseData>> => {
   const cached = await getDocFromCache(reference).catch(() => null);
 
-  return cached !== null && cached.exists() ? cached : await getDoc(reference);
+  if (cached === null || !cached.exists()) {
+    return await getDoc(reference);
+  }
+
+  const data = cached.data();
+
+  // `data()` answers `undefined` on a document the cache holds as absent, which
+  // `exists()` has already ruled out — the check is the type system's, not a
+  // second guard.
+  return isFrozen === undefined || (data !== undefined && isFrozen(data)) ? cached : await getDoc(reference);
 };
