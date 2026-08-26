@@ -37,13 +37,55 @@ repo for it.
 ## Builds
 
 EAS never sees a gitignored file, so an EAS build reads them from **file**
-environment variables instead:
+environment variables instead. Run these from `apps/app`, once the files are
+in place — `--value` is a path, resolved against the working directory:
 
 ```bash
-eas env:create --environment development --type file --name GOOGLE_SERVICES_JSON  --value ./firebase/google-services.development.json
-eas env:create --environment development --type file --name GOOGLE_SERVICES_PLIST --value ./firebase/GoogleService-Info.development.plist
-# … same for the preview and production environments, with the production pair.
+# The development pair.
+APP_VARIANT=development eas env:set development \
+  --name GOOGLE_SERVICES_JSON  --type file --visibility secret \
+  --value ./firebase/google-services.development.json
+
+APP_VARIANT=development eas env:set development \
+  --name GOOGLE_SERVICES_PLIST --type file --visibility secret \
+  --value ./firebase/GoogleService-Info.development.plist
+
+# The production pair, in both environments at once: `preview` and `production`
+# share a bundle identifier, so they share the Firebase app.
+APP_VARIANT=production eas env:set \
+  --environment preview --environment production \
+  --name GOOGLE_SERVICES_JSON  --type file --visibility secret \
+  --value ./firebase/google-services.production.json
+
+APP_VARIANT=production eas env:set \
+  --environment preview --environment production \
+  --name GOOGLE_SERVICES_PLIST --type file --visibility secret \
+  --value ./firebase/GoogleService-Info.production.plist
 ```
 
-`app.config.ts` prefers those variables and falls back to the local files,
-so `expo prebuild` and a local `run:ios` work off the checkout alone.
+**`APP_VARIANT` is not optional, and its absence does not look like its
+absence.** Every `eas` command evaluates `app.config.ts` to resolve the
+project, and that file throws rather than defaulting the variant (see its own
+comment — a silent default once shipped a `.dev` bundle identifier through a
+`--profile production` build). EAS swallows the message and reports only
+`expo/bin/cli config --json exited with non-zero code: 1`, which names nothing.
+A build is the one case that needs no prefix: `eas.json` sets `APP_VARIANT` in
+each profile's `env` block. Everything else — `env:set`, `env:list`, `config`,
+`credentials` — has no profile to read, so it has to be passed by hand.
+
+`env:create` was the older spelling of `env:set` and is deprecated; the value
+it carries is the same.
+
+`app.config.ts` prefers these variables and falls back to the local files, so
+`expo prebuild` and a local `run:ios` work off the checkout alone.
+
+## Checking what landed
+
+```bash
+APP_VARIANT=production eas env:list --environment production
+```
+
+A `secret` file variable is write-only from the outside: the listing shows the
+name and the type, never the contents. That is the trade for `--visibility
+secret` — use `sensitive` instead if you would rather be able to read it back,
+at the cost of it being visible to anyone with dashboard access.

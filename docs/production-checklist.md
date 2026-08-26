@@ -328,13 +328,15 @@ garantit qu'elles existent. Sans elles le build ne part même pas — le plugin
 le binaire. Mais **changer de projet Firebase demande désormais un build**, jamais une simple
 variable d'environnement.
 
-- [ ] `eas env:list --environment production` : vérifier `GOOGLE_SERVICES_JSON` et
+- [ ] `APP_VARIANT=production eas env:list --environment production` : vérifier `GOOGLE_SERVICES_JSON` et
       `GOOGLE_SERVICES_PLIST` (type `file`), et qu'elles pointent bien sur les fichiers du projet
       **de production**, pour le bundle `fr.quentinmachard.statowrel`
 - [ ] Idem pour les environnements `preview` (mêmes fichiers que production, identifiant partagé)
       et `development` (les fichiers `.dev`)
 - [ ] Supprimer les `EXPO_PUBLIC_FIREBASE_*` devenues mortes des trois environnements
-      (`eas env:delete`) — plus rien ne les lit
+      (`APP_VARIANT=production eas env:delete`) — plus rien ne les lit. Le préfixe `APP_VARIANT` est
+      obligatoire sur **toute** commande `eas` hors build : `app.config.ts` lève sinon, et EAS ne
+      rapporte que `cli config --json exited with non-zero code: 1`, qui ne nomme rien
 - [ ] Vérifier qu'aucune variable `*_EMULATOR_HOST` / `*_EMULATOR_PORT` n'est définie en
       production — elles feraient pointer l'app sur un émulateur inexistant
 - [ ] Vérifier que `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` du profil `production` correspond bien au

@@ -106,11 +106,13 @@ The split between the two EAS sources follows whether the value changes between 
 | Variable | Lives in | Why |
 |---|---|---|
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `…_IOS_CLIENT_ID`, `…_IOS_URL_SCHEME` | `eas.json` `env` | Public OAuth identifiers, committed on purpose — the reviewer of a diff should see which client a profile signs against. |
-| `GOOGLE_SERVICES_JSON`, `GOOGLE_SERVICES_PLIST` | EAS **file** environment variables (`eas env:create --type file`) | Not `EXPO_PUBLIC_*` and not read at runtime at all: React Native Firebase is configured natively off these two files, which `app.config.ts` bakes into the binary. They are gitignored, and EAS excludes gitignored files from the upload, so a build has no other way to reach them. See `firebase/README.md`. |
+| `GOOGLE_SERVICES_JSON`, `GOOGLE_SERVICES_PLIST` | EAS **file** environment variables (`eas env:set --type file`) | Not `EXPO_PUBLIC_*` and not read at runtime at all: React Native Firebase is configured natively off these two files, which `app.config.ts` bakes into the binary. They are gitignored, and EAS excludes gitignored files from the upload, so a build has no other way to reach them. See `firebase/README.md`. |
 
 The `EXPO_PUBLIC_FIREBASE_*` config values are **gone** — they configured the web SDK, which this app no longer runs. If they are still set as EAS environment variables, they are dead weight and can be deleted (`eas env:delete`).
 
-Verify what a profile actually resolves to before trusting it: `npx eas config --profile production --platform ios` prints both the loaded variables and the resulting config, and `npx eas env:list --environment production` (add `--scope account` for the account-wide ones) prints what the servers hold.
+Verify what a profile actually resolves to before trusting it: `APP_VARIANT=production npx eas config --profile production --platform ios` prints both the loaded variables and the resulting config, and `APP_VARIANT=production npx eas env:list --environment production` (add `--scope account` for the account-wide ones) prints what the servers hold.
+
+**Every `eas` command outside a build needs `APP_VARIANT` passed by hand**, and forgetting it does not look like forgetting it. `eas` evaluates `app.config.ts` to resolve the project, that file throws rather than defaulting the variant, and EAS reports only `expo/bin/cli config --json exited with non-zero code: 1` — which names nothing. A *build* is the exception: `eas.json` sets the variable in each profile's `env` block. `env:set`, `env:list`, `config` and `credentials` have no profile to read.
 
 Two things fail loudly rather than silently, both because their silent version cost a wasted build:
 
