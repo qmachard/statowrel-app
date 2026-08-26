@@ -3,16 +3,178 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="StatOwrel — une question par jour, la même pour tout le monde. Tu réponds, tu découvres ta stat et celles de tes potes."
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <title>StatOwrel — Admin</title>
+    <title>StatOwrel</title>
+    <style>
+      /*
+       * La page d'accueil porte sa propre copie des tokens, comme public/legal/ :
+       * elle n'a pas de bundle, juste du HTML servi à la racine du site.
+       */
+      :root {
+        --background: #f7f0d4;
+        --foreground: #000000;
+        --card: #ffffff;
+        --muted-foreground: #6b6355;
+        --primary: #ffdc59;
+        --border-width: 2px;
+        --radius: 12px;
+        --font-head: 'Archivo Black', system-ui, sans-serif;
+        --font-sans: 'Space Grotesk', system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 48px 20px 64px;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-size: 16px;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+
+      .brand {
+        font-family: var(--font-head);
+        font-size: 20px;
+        letter-spacing: 0.02em;
+      }
+
+      h1 {
+        font-family: var(--font-head);
+        font-size: clamp(32px, 7vw, 48px);
+        line-height: 1.15;
+        margin: 16px 0 0;
+      }
+
+      .baseline {
+        font-size: 18px;
+        font-weight: 500;
+        margin: 16px 0 40px;
+      }
+
+      .cards {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .card {
+        background: var(--card);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius);
+        box-shadow: 4px 4px 0 0 var(--foreground);
+        padding: 20px;
+      }
+
+      .card h2 {
+        font-family: var(--font-head);
+        font-size: 16px;
+        margin: 0 0 8px;
+        text-transform: uppercase;
+      }
+
+      .card p {
+        margin: 0;
+      }
+
+      .soon {
+        background: var(--primary);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius);
+        box-shadow: 4px 4px 0 0 var(--foreground);
+        font-family: var(--font-head);
+        margin: 40px 0 0;
+        padding: 20px;
+        text-align: center;
+      }
+
+      footer {
+        border-top: var(--border-width) solid var(--foreground);
+        color: var(--muted-foreground);
+        font-size: 14px;
+        margin-top: 48px;
+        padding-top: 24px;
+      }
+
+      footer a {
+        color: inherit;
+      }
+
+      footer nav a + a::before {
+        content: ' · ';
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <main>
+      <header>
+        <span class="brand">StatOwrel</span>
+        <h1>Les questions que personne ne pose. Les réponses que tout le monde veut.</h1>
+        <p class="baseline">Une par jour. La même pour tout le monde.</p>
+      </header>
+
+      <div class="cards">
+        <section class="card">
+          <h2>Une question par jour</h2>
+          <p>
+            Personnelle, absurde, celle que personne ne pense à poser. Tu as la journée pour y
+            répondre, et ça te prend dix secondes.
+          </p>
+        </section>
+        <section class="card">
+          <h2>Ta StatOwrel</h2>
+          <p>
+            Ta réponse replacée dans la statistique de tous les autres. Plus elle est minoritaire,
+            plus le résultat est rare.
+          </p>
+        </section>
+        <section class="card">
+          <h2>Tes potes</h2>
+          <p>
+            Leurs réponses se débloquent seulement une fois que tu as répondu toi-même. Pas de
+            voyeurisme, pas de triche.
+          </p>
+        </section>
+        <section class="card">
+          <h2>Ta série</h2>
+          <p>
+            Réponds avant minuit et elle monte d'un jour. Rate une journée, elle repart à zéro — pas
+            de joker.
+          </p>
+        </section>
+      </div>
+
+      <p class="soon">Bientôt sur iOS et Android.</p>
+
+      <footer>
+        <nav>
+          <a href="/legal/cgu">CGU</a>
+          <a href="/legal/confidentialite">Politique de confidentialité</a>
+          <a href="/legal/mentions-legales">Mentions légales</a>
+          <a href="/legal/assistance">Assistance</a>
+        </nav>
+        <p>
+          Quentin Machard SAS —
+          <a href="mailto:quentin.machard@gmail.com">quentin.machard@gmail.com</a>
+        </p>
+      </footer>
+    </main>
   </body>
 </html>

@@ -11,6 +11,15 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      // Deux pages : la présentation à la racine, la console sous /admin/.
+      input: {
+        home: path.resolve(__dirname, 'index.html'),
+        admin: path.resolve(__dirname, 'admin/index.html'),
+      },
+    },
+  },
   server: {
     host: 'localhost',
     port: 3003,
