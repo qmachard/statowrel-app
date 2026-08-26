@@ -1,4 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Platform } from 'react-native';
 
 import { useAuth } from '@/auth/AuthContext';
 import { SignInScreen } from '@/auth/screens/SignInScreen';
@@ -41,6 +42,10 @@ export const RootNavigator = () => {
               that reason — `fitToContents` measures the content, and a nested
               scroller has no height to measure.
 
+              On Android the sheet always opens at full height instead: the
+              content-sized detent leaves it half-open there, so the one full
+              detent is pinned.
+
               Still dismissable, grabber included. Pinning it open while today's
               question is unanswered, as §5.4 wants, comes with answering (§4.3). */}
           <Stack.Screen
@@ -48,7 +53,7 @@ export const RootNavigator = () => {
             component={DailyQuestionScreen}
             options={{
               presentation: 'formSheet',
-              sheetAllowedDetents: 'fitToContents',
+              sheetAllowedDetents: Platform.OS === 'android' ? [ 1 ] : 'fitToContents',
               sheetGrabberVisible: true,
               // The surface is set by the screen itself, which is the only
               // place that knows whether the day has been answered — see
