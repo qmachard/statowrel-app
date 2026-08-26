@@ -56,6 +56,8 @@ No env file to set up: the emulator publishes the project id and mock credential
 
 Emulator state persists to `.firebase-emulator/` across runs (`--export-on-exit` / `--import`).
 
+One optional knob, for testing rather than for running: `ANSWER_TRIGGER_DELAY_MS` in `apps/functions/.env.local` (the file Firebase loads for the emulator alone) makes `onDailyQuestionAnswerCreated` sit on an answer that long before counting it. The emulator runs the trigger in milliseconds, which is the one timing production never has — the day screen folds its own answer into the tally until the trigger has been through, and that branch is otherwise unreachable locally. See docs/architecture.md § Environments. It is read with a plain `process.env`, not a `defineString()` param — see below — and the trigger checks `FUNCTIONS_EMULATOR` too, so it can never delay a deployed function.
+
 ## Env params
 
 There are none, deliberately. `initFirebase()` calls `initializeApp()` with no arguments and lets the runtime supply the project id and Application Default Credentials — deployed and emulated alike.

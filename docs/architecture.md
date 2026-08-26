@@ -515,6 +515,20 @@ It **wipes Firestore and Auth first, every time**, and there is no flag not to: 
 
 `--seed <n>` picks the world; the same value gives the same one, tallies included. The knobs are `--days`, `--friends`, `--crowd`, `--email` and `--password`.
 
+### The beat between an answer and its tally
+
+The emulator is *too fast* to test one thing the app leans on. An answer is written by the app, and its tally moves a beat later, when the answer trigger runs — the day screen reads `answer_counts` once at the door and folds its own answer in until `counted_at` proves the trigger has been through (`useDailyQuestion`, `helpers/statowrel.ts`). In production that beat is a Cloud Function's dispatch, and on the first answer of a morning its cold start. On the emulator the runtime is already up, in the same process tree as the write, so it is a few milliseconds: the local build lands on the « already counted » branch every time, and the branch that matters cannot be looked at.
+
+`ANSWER_TRIGGER_DELAY_MS` buys the beat back. Set it in `apps/functions/.env.local` — the file Firebase loads for the emulator alone, and which `.gitignore` already keeps out of the repo — and restart the emulators:
+
+```
+ANSWER_TRIGGER_DELAY_MS=3000
+```
+
+`onDailyQuestionAnswerCreated` then sits on the answer that long before counting it, which is the window the sheet spends folding its own answer into a tally that does not carry it yet. The Metro log says which branch was taken (`[daily-question] own answer · …`), and the reads around it are one line each (`apps/app/src/lib/firestoreReads.ts`). Reopening the day once the delay has elapsed shows the other branch.
+
+It cannot leak into production: the trigger also checks `FUNCTIONS_EMULATOR`, which a deployed function never sets, so a value that found its way into a real deploy delays nothing.
+
 The three prod-facing seeds next to it each fill one slice and stop where they must, since they are pointed at a real project: `seed-questions` fills the moderation pot, `seed-daily-questions` backfills the days already gone, `seed-demo-question` writes the onboarding sample. `seed-emulator` needs none of them — it writes all three slices itself.
 
 One toll each project pays once: the first **Firestore trigger** deployed to it is an Eventarc trigger, and creating it is also what creates the project's Eventarc service agent — the deploy races that agent's own IAM grant and fails with `Permission denied while using the Eventarc Service Agent`. Retrying a few minutes later goes through. `apps/functions/CLAUDE.md` carries the details and the manual grant, for the day retrying is not enough.
