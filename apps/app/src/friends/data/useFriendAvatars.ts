@@ -1,5 +1,5 @@
 import { USER_COLLECTION, userConverter } from '@statowrel/models';
-import { getDoc } from 'firebase/firestore';
+import { getDoc } from '@react-native-firebase/firestore';
 import { useEffect, useState } from 'react';
 
 import { getDocumentRef } from '@/lib/firestore';

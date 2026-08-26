@@ -1,5 +1,11 @@
-import { GeoPoint, QueryDocumentSnapshot, Timestamp } from 'firebase/firestore';
-import {
+// Types only, and `import type` on purpose: this package is bundled into the
+// React Native app, which runs on React Native Firebase and has neither of
+// these SDKs installed. `import type` is erased by the compiler, so `dist/`
+// carries no `require('firebase/firestore')` for Metro to fail on — a plain
+// `import` used only in type positions relies on the compiler electing to
+// elide it, which is a guarantee nobody should be resting a bundle on.
+import type { GeoPoint, QueryDocumentSnapshot, Timestamp } from 'firebase/firestore';
+import type {
   GeoPoint as AdminGeoPoint,
   QueryDocumentSnapshot as AdminQueryDocumentSnapshot,
   Timestamp as AdminTimestamp,

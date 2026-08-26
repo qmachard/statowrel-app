@@ -33,3 +33,6 @@ yarn-error.*
 
 expo-env.d.ts
 # @end expo-cli
+# Firebase native service files — see apps/app/firebase/README.md
+firebase/google-services.*.json
+firebase/GoogleService-Info.*.plist

@@ -1,4 +1,4 @@
-import { FirebaseError } from 'firebase/app';
+import { isFirebaseError } from '@/lib/firebaseError';
 
 /**
  * Thrown when no `v1_usernames` reservation matches the handle — raised by the
@@ -59,7 +59,7 @@ export const inviteFailure = (error: unknown): InviteFailure => {
     return NOT_FOUND;
   }
 
-  if (error instanceof FirebaseError) {
+  if (isFirebaseError(error)) {
     console.warn(`[friends] invitation failed with ${error.code}`, error.message);
 
     return FAILURES[error.code] ?? FALLBACK;

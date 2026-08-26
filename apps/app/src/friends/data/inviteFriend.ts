@@ -5,7 +5,7 @@ import {
   USERNAME_COLLECTION,
   usernameConverter,
 } from '@statowrel/models';
-import { getDoc } from 'firebase/firestore';
+import { getDoc } from '@react-native-firebase/firestore';
 
 import { FriendNotFoundError } from '@/friends/errors';
 import { getDocumentRef } from '@/lib/firestore';

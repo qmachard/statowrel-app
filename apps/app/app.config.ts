@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 type Variant = 'development' | 'preview' | 'production';
@@ -15,11 +18,32 @@ type Variant = 'development' | 'preview' | 'production';
  */
 const BRAND_YELLOW = '#ffdc59';
 
-const VARIANT_CONFIG: Record<Variant, { name: string; iosBundleIdentifier: string; androidPackage: string }> = {
+type VariantConfig = {
+  name: string;
+  iosBundleIdentifier: string;
+  androidPackage: string;
+  /**
+   * The Firebase app the variant talks to, as the *native* SDKs read it.
+   *
+   * React Native Firebase is configured at launch by the native SDK off these
+   * two files, never by the JS bundle — which is why they are named per variant
+   * here rather than assembled from `EXPO_PUBLIC_FIREBASE_*` at runtime. A
+   * Firebase app is registered against one bundle identifier, so the pairing
+   * below is the same one the identifiers make: `development` has its own,
+   * `preview` and `production` share theirs because they share an identifier.
+   *
+   * The files are gitignored (they carry the project's own identifiers, and
+   * they differ per developer's Firebase project) — see apps/app/firebase/README.md.
+   */
+  firebaseSuffix: string;
+};
+
+const VARIANT_CONFIG: Record<Variant, VariantConfig> = {
   development: {
     name: 'StatOwrel (Dev)',
     iosBundleIdentifier: 'fr.quentinmachard.statowrel.dev',
     androidPackage: 'fr.quentinmachard.statowrel.dev',
+    firebaseSuffix: 'development',
   },
   /*
    * Preview shares production's identity on purpose, and it is the only
@@ -41,11 +65,13 @@ const VARIANT_CONFIG: Record<Variant, { name: string; iosBundleIdentifier: strin
     name: 'StatOwrel (Preview)',
     iosBundleIdentifier: 'fr.quentinmachard.statowrel',
     androidPackage: 'fr.quentinmachard.statowrel',
+    firebaseSuffix: 'production',
   },
   production: {
     name: 'StatOwrel',
     iosBundleIdentifier: 'fr.quentinmachard.statowrel',
     androidPackage: 'fr.quentinmachard.statowrel',
+    firebaseSuffix: 'production',
   },
 };
 
@@ -96,7 +122,108 @@ if (!googleIosUrlScheme) {
   console.warn('[app.config] EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME is missing — Google sign-in will be unavailable on iOS.');
 }
 
+/**
+ * Where the native Firebase config comes from, and it is the whole reason this
+ * app no longer reads `EXPO_PUBLIC_FIREBASE_*`.
+ *
+ * React Native Firebase initialises the default app **natively, at launch**,
+ * off `google-services.json` (Android) and `GoogleService-Info.plist` (iOS).
+ * Both are baked into the binary at build time, which puts them on the same
+ * footing as the Google OAuth URL scheme above: changing the Firebase project
+ * takes a build, never a Metro restart and never an OTA update.
+ *
+ * Two sources, in this order:
+ *
+ * 1. `GOOGLE_SERVICES_JSON` / `GOOGLE_SERVICES_PLIST` — EAS **file** environment
+ *    variables (`eas env:create --type file`), which the builder materialises as
+ *    a path. This is what a build reads: the checked-in files are gitignored, and
+ *    EAS excludes gitignored files from the upload, so nothing else can reach the
+ *    worker.
+ * 2. `./firebase/<file>.<variant>` — the local copy, for `expo prebuild` and a
+ *    local `run:ios` / `run:android`.
+ *
+ * A missing file is left as `undefined` rather than pointed at a path that does
+ * not exist: Expo's own error for the second is a stat failure on a filename,
+ * while `src/lib/firebase.ts` catches the first at launch and says what to do.
+ */
+const googleServicesFile = (envVar: string, localPath: string): string | undefined => (
+  process.env[envVar] || (existsSync(resolve(__dirname, localPath)) ? localPath : undefined)
+);
+
+const androidGoogleServicesFile = googleServicesFile(
+  'GOOGLE_SERVICES_JSON',
+  `./firebase/google-services.${variant.firebaseSuffix}.json`,
+);
+
+const iosGoogleServicesFile = googleServicesFile(
+  'GOOGLE_SERVICES_PLIST',
+  `./firebase/GoogleService-Info.${variant.firebaseSuffix}.plist`,
+);
+
+if (!androidGoogleServicesFile || !iosGoogleServicesFile) {
+  console.warn(
+    '[app.config] No Firebase service file for the ' +
+      `"${variant.firebaseSuffix}" configuration — a build from this config cannot reach Firebase at all. ` +
+      'See apps/app/firebase/README.md.',
+  );
+}
+
 const plugins: NonNullable<ExpoConfig['plugins']> = [
+  [
+    /*
+     * React Native Firebase's own plugin: it is what copies the two service
+     * files into the native projects and wires the Firebase SDKs into the
+     * build. Auth carries a second one, which adds the iOS pieces the native
+     * Auth SDK needs. Firestore and Functions have no plugin of their own —
+     * their pods are pulled in by autolinking off the packages alone.
+     *
+     * **`disableSPM` is the whole reason this entry is a tuple**, and it is not
+     * a preference. On React Native 0.75+ RNFB resolves the Firebase Apple SDK
+     * through Swift Package Manager by default, which requires dynamic
+     * framework linkage. That combination builds — right up to the final link,
+     * where it fails with `ld: symbol(s) not found for architecture arm64`.
+     *
+     * The cause is in this app's pod graph, not in Firebase.
+     * `@react-native-google-signin/google-signin` pulls the `GoogleSignIn` pod,
+     * and with it GoogleUtilities, GTMSessionFetcher and PromisesObjC **through
+     * CocoaPods** — the very libraries Firebase brings through SPM. The build
+     * log shows both sets being compiled side by side. RNFB's own docs name
+     * this: mixing its SPM mode with a pod that resolves the same Google
+     * libraries via CocoaPods is dual resolution, and it does not produce one
+     * shared runtime.
+     *
+     * So Firebase is resolved through CocoaPods too, and every Google library
+     * in the binary comes from one graph. Which in turn is what allows — and
+     * requires — the static linkage below.
+     */
+    '@react-native-firebase/app',
+    {
+      ios: {
+        disableSPM: true,
+      },
+    },
+  ],
+  '@react-native-firebase/auth',
+  [
+    'expo-build-properties',
+    {
+      ios: {
+        /*
+         * Static, and only because SPM is off above: `useFrameworks: 'static'`
+         * with RNFB's SPM mode is explicitly unsupported — the Firebase Swift
+         * Package ships dynamic products only, so each RNFB pod would embed its
+         * own copy and the link would fail on duplicate symbols instead.
+         *
+         * `forceStaticLinking` names the RNFB pods that must stay static under
+         * the `use_frameworks!` this sets. One line per Firebase module the app
+         * installs: adding a `@react-native-firebase/*` package means adding
+         * its pod here.
+         */
+        useFrameworks: 'static',
+        forceStaticLinking: [ 'RNFBApp', 'RNFBAuth', 'RNFBFirestore', 'RNFBFunctions' ],
+      },
+    },
+  ],
   'expo-apple-authentication',
   [
     /*
@@ -163,6 +290,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     ...config.ios,
     bundleIdentifier: variant.iosBundleIdentifier,
+    googleServicesFile: iosGoogleServicesFile,
     /*
      * iPhone only (device family `[1]`), and that is what makes the portrait
      * lock above hold on iOS.
@@ -192,6 +320,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     ...config.android,
     package: variant.androidPackage,
+    googleServicesFile: androidGoogleServicesFile,
     adaptiveIcon: {
       // The star alone, on its own layer, over the yellow `icon.png` is drawn
       // on: a launcher masks the two together and moves them apart on a press,

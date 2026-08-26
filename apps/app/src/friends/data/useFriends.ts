@@ -5,7 +5,7 @@ import {
   friendshipDirectionOf,
   userFriendConverter,
 } from '@statowrel/models';
-import { onSnapshot, orderBy, query } from 'firebase/firestore';
+import { onSnapshot, orderBy, query } from '@react-native-firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/auth/AuthContext';

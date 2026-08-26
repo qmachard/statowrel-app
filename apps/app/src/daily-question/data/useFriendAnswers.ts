@@ -3,7 +3,7 @@ import {
   QUESTION_COLLECTION,
   dailyQuestionAnswerConverter,
 } from '@statowrel/models';
-import { getDoc } from 'firebase/firestore';
+import { getDoc } from '@react-native-firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useFriendAvatars } from '@/friends/data/useFriendAvatars';

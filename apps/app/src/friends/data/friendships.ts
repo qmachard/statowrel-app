@@ -1,5 +1,5 @@
 import { USER_COLLECTION, USER_FRIEND_COLLECTION, userFriendConverter } from '@statowrel/models';
-import { Timestamp, writeBatch } from 'firebase/firestore';
+import { Timestamp, writeBatch } from '@react-native-firebase/firestore';
 
 import { db } from '@/lib/firebase';
 import { getSubDocumentRef } from '@/lib/firestore';

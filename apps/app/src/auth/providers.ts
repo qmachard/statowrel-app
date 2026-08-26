@@ -6,7 +6,7 @@ import {
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
-} from 'firebase/auth';
+} from '@react-native-firebase/auth';
 import { Platform } from 'react-native';
 
 import { auth } from '@/lib/firebase';

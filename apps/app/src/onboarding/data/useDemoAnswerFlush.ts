@@ -1,5 +1,4 @@
-import { FirebaseError } from 'firebase/app';
-import { getDoc } from 'firebase/firestore';
+import { getDoc } from '@react-native-firebase/firestore';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
@@ -13,6 +12,7 @@ import {
 
 import { useAuth } from '@/auth/AuthContext';
 import { submitAnswer } from '@/daily-question/data/submitAnswer';
+import { firebaseErrorCode } from '@/lib/firebaseError';
 import { getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
 
 import { clearPendingDemoAnswer, readPendingDemoAnswer } from './demoAnswerStore';
@@ -155,7 +155,7 @@ export const useDemoAnswerFlush = (): void => {
       } catch (error: unknown) {
         const failure = error instanceof FlushFailure ? error : null;
         const reason = failure?.cause ?? error;
-        const code = reason instanceof FirebaseError ? reason.code : 'unknown';
+        const code = firebaseErrorCode(reason);
 
         console.warn(
           `[onboarding] could not write the demo answer (${failure?.step ?? 'flush'}: ${code}), keeping it for the next try`,

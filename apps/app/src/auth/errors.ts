@@ -1,4 +1,4 @@
-import { FirebaseError } from 'firebase/app';
+import { isFirebaseError } from '@/lib/firebaseError';
 
 /** Thrown when the user backs out of a native sign-in sheet — never surfaced as an error. */
 export class SignInCancelledError extends Error {
@@ -90,7 +90,7 @@ const DELETE_ACCOUNT_FALLBACK = 'La suppression n\'a pas abouti. Vérifie ta con
  * returns an `auth/*` one.
  */
 export const deleteAccountErrorMessage = (error: unknown): string => {
-  if (error instanceof FirebaseError) {
+  if (isFirebaseError(error)) {
     console.warn(`[auth] account deletion failed with ${error.code}`, error.message);
 
     return DELETE_ACCOUNT_MESSAGES[error.code] ?? DELETE_ACCOUNT_FALLBACK;
@@ -110,7 +110,7 @@ export const authErrorMessage = (error: unknown, method: SignInMethod = 'passwor
     return error.message;
   }
 
-  if (error instanceof FirebaseError) {
+  if (isFirebaseError(error)) {
     console.warn(`[auth] ${method} sign-in failed with ${error.code}`, error.message);
 
     return messageForCode(error.code, method);
