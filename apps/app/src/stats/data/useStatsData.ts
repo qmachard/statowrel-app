@@ -5,7 +5,7 @@ import {
   monthKeyOf,
 } from '@statowrel/models';
 import { useFocusEffect } from '@react-navigation/native';
-import { getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { getDocs, limit, orderBy, query } from '@react-native-firebase/firestore';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useAuth } from '@/auth/AuthContext';

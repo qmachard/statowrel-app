@@ -1,4 +1,4 @@
-import { getDoc, onSnapshot } from 'firebase/firestore';
+import { getDoc, onSnapshot } from '@react-native-firebase/firestore';
 import { useEffect, useState } from 'react';
 
 import {

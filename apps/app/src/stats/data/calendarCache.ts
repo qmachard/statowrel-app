@@ -7,7 +7,7 @@ import {
   type UserCalendarMonthDayData,
   userCalendarMonthConverter,
 } from '@statowrel/models';
-import { getDoc } from 'firebase/firestore';
+import { getDoc } from '@react-native-firebase/firestore';
 
 import { getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
 

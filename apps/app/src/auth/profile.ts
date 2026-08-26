@@ -1,6 +1,5 @@
-import { FirebaseError } from 'firebase/app';
-import type { User } from 'firebase/auth';
-import { Timestamp, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import type { User } from '@react-native-firebase/auth';
+import { Timestamp, getDoc, setDoc, updateDoc } from '@react-native-firebase/firestore';
 
 import {
   type AuthProviderId,
@@ -13,6 +12,7 @@ import {
   usernameConverter,
 } from '@statowrel/models';
 
+import { isFirebaseError } from '@/lib/firebaseError';
 import { getDocumentRef } from '@/lib/firestore';
 
 import { UsernameTakenError } from './errors';
@@ -137,7 +137,10 @@ export const createUserProfile = async (
     });
   } catch (error) {
     // Someone claimed the handle between the read above and this write.
-    if (error instanceof FirebaseError && error.code === 'permission-denied') {
+    // `firestore/permission-denied`, not the bare `permission-denied` the web
+    // SDK reported: React Native Firebase namespaces every code by the module
+    // that raised it (see `src/lib/firebaseError.ts`).
+    if (isFirebaseError(error) && error.code === 'firestore/permission-denied') {
       throw new UsernameTakenError();
     }
 

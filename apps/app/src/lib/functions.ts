@@ -1,4 +1,4 @@
-import { type Functions, connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions';
+import { type Functions, connectFunctionsEmulator, getFunctions, httpsCallable } from '@react-native-firebase/functions';
 
 import { app } from './firebase';
 

@@ -29,7 +29,7 @@ app, admin, functions → @statowrel/models
 
 `apps/admin` is what stands where the FireCMS SPA used to: not a backoffice over every collection, but one screen over `v1_questions`. It sits behind the same custom `admin` auth claim `isAdmin()` tests and `npm run set-admin` grants. Anything else admin-shaped still happens in the Firebase console.
 
-There is no shared React hooks package yet (no `@repo/firebase-react` equivalent) — `app` and `admin` each call the Firebase client SDK directly. Extract shared hooks into a package once real duplication shows up between the two.
+There is no shared React hooks package yet (no `@repo/firebase-react` equivalent) — `app` and `admin` each call Firebase directly, and no longer through the same SDK: `app` runs on **React Native Firebase** (the native SDKs), `admin` on the web `firebase` SDK a browser is limited to. Which is a second reason not to rush a shared hooks package — a hook would have to span two SDKs.
 
 ## Status
 
@@ -156,7 +156,10 @@ Top-level `functions/src/index.ts` uses namespace re-exports (`export * as healt
 ### App (`apps/app`) — React Native / Expo
 
 - Styling via React Native's own `StyleSheet.create`, colocated at the top of the component file and built from `src/design/tokens.ts` — never a raw hex, a magic padding or a hardcoded font name.
-- Firebase client SDK (`firebase` npm package), not `@react-native-firebase` — see `apps/app/src/lib/firebase.ts`. Same SDK the converters in `@statowrel/models` target on the client side.
+- **React Native Firebase** (`@react-native-firebase/{app,auth,firestore,functions}`), not the web `firebase` SDK — see `apps/app/src/lib/firebase.ts` and `docs/architecture.md`. Its modular API mirrors the web SDK's call for call, so the `@statowrel/models` converters work unchanged behind one cast in `src/lib/firestore.ts`. Three things it does differently:
+  - **Nothing configures Firebase at runtime.** The default app is created natively at launch off `google-services.json` / `GoogleService-Info.plist` (`apps/app/firebase/`, gitignored, declared per variant by `app.config.ts`). Changing project takes a build, never a Metro restart.
+  - **Error codes are namespaced** — `firestore/permission-denied`, not the web SDK's bare `permission-denied`; `auth/*` and `functions/*` are unchanged. There is no `FirebaseError` class to `instanceof`: use `isFirebaseError` / `firebaseErrorCode` from `src/lib/firebaseError.ts`.
+  - **Adding a Firebase product is a native module** — a new `@react-native-firebase/*` package means rebuilding the dev client, not just restarting Metro.
 - Navigation via [React Navigation 7](https://reactnavigation.org) — native stack + bottom tabs declared in `apps/app/src/navigation/`, entry point `apps/app/index.js` → `src/App.tsx`. Routes are typed through `RootStackParamList` / `TabParamList`, never route strings.
 - **Design system**: neobrutalism (reference: [neoflux](https://neobrutalism.com/preview/templates/neoflux)) — bold colors, thick borders, hard offset shadows, and generously rounded corners (`sm` = 8px on the buttons, `DEFAULT` = 12px, up to 32px — never square). Every token — palette, radius, shadows, spacing, type scale, border width — lives in `apps/app/src/design/tokens.ts`, read by the components and the navigation theme alike. Components apply shadows through `apps/app/src/design/shadows.ts`, which hands React Native the CSS `boxShadow` string — the legacy iOS shadow props blur the edge once a surface has a corner radius, `boxShadow` stays crisp; fonts (Archivo Black, Space Grotesk) load via `expo-font` + `@expo-google-fonts/*`. The neobrutalism.com `shadcn` registry itself is web-only (Radix/Base UI need a DOM) — it does not apply to this React Native app; reusable component primitives are hand-built against these tokens (`apps/app/src/components/`) — `Avatar` is one such port, stacking its fallbacks instead of swapping them the way Radix does.
 

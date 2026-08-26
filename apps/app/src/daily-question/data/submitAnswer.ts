@@ -5,7 +5,7 @@ import {
   type QuestionData,
   dailyQuestionAnswerConverter,
 } from '@statowrel/models';
-import { setDoc } from 'firebase/firestore';
+import { setDoc } from '@react-native-firebase/firestore';
 
 import { getSubDocumentRef } from '@/lib/firestore';
 

@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { deleteDoc, getDoc, setDoc } from 'firebase/firestore';
+import { deleteDoc, getDoc, setDoc } from '@react-native-firebase/firestore';
 import { Platform } from 'react-native';
 
 import {

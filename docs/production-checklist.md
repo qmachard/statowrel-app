@@ -310,19 +310,31 @@ distinction que `README.md` et `CLAUDE.md` décrivent n'existe pas dans les fait
 - [ ] Créer un second projet Firebase (`statowrel-app-dev` ou équivalent) et le mettre sur l'alias
       `default`
 - [ ] Y recréer : Auth (Google + Apple + e-mail), les clients OAuth, Firestore, les index
-- [ ] Faire pointer la variante `development` d'EAS dessus (variables `EXPO_PUBLIC_FIREBASE_*`)
+- [ ] Faire pointer la variante `development` dessus : y enregistrer les deux applications
+      `fr.quentinmachard.statowrel.dev` (iOS + Android) et déposer leurs fichiers de service
+      dans `apps/app/firebase/` + les variables fichier EAS `GOOGLE_SERVICES_JSON` /
+      `GOOGLE_SERVICES_PLIST` de l'environnement `development` (voir `apps/app/firebase/README.md`)
 - [ ] Vérifier qu'un `npm run deploy:firestore` sans suffixe ne touche plus la production
 
 ### 3.2 🔴 Variables d'environnement des builds EAS
 
-**Piège concret.** `apps/app/src/lib/firebase.ts` **lève une exception au démarrage** si
-`EXPO_PUBLIC_FIREBASE_API_KEY`, `_PROJECT_ID` ou `_APP_ID` manquent. Or `eas.json` ne définit dans
-ses blocs `env` que les identifiants Google OAuth — **pas** la configuration Firebase. Elle doit
-donc venir de l'environnement EAS (`eas env:create`), et rien dans le dépôt ne garantit qu'elle y
-est. Un build de production qui en manque **plante à l'ouverture, sur tous les appareils**, et le
-plantage ne se voit qu'une fois le binaire installé.
+**Piège concret.** Depuis le passage à React Native Firebase, la configuration Firebase n'est plus
+une poignée de variables `EXPO_PUBLIC_*` : ce sont deux **fichiers** — `google-services.json` et
+`GoogleService-Info.plist` — que `app.config.ts` intègre au binaire au moment du build. Ils sont
+gitignorés, et EAS exclut de l'upload tout ce qui est gitignoré : un build ne peut donc les lire que
+par les variables fichier `GOOGLE_SERVICES_JSON` / `GOOGLE_SERVICES_PLIST`, et rien dans le dépôt ne
+garantit qu'elles existent. Sans elles le build ne part même pas — le plugin
+`@react-native-firebase/app` échoue faute de fichier —, ce qui est le bon échec : bruyant, et avant
+le binaire. Mais **changer de projet Firebase demande désormais un build**, jamais une simple
+variable d'environnement.
 
-- [ ] `eas env:list --environment production` : vérifier les six `EXPO_PUBLIC_FIREBASE_*`
+- [ ] `eas env:list --environment production` : vérifier `GOOGLE_SERVICES_JSON` et
+      `GOOGLE_SERVICES_PLIST` (type `file`), et qu'elles pointent bien sur les fichiers du projet
+      **de production**, pour le bundle `fr.quentinmachard.statowrel`
+- [ ] Idem pour les environnements `preview` (mêmes fichiers que production, identifiant partagé)
+      et `development` (les fichiers `.dev`)
+- [ ] Supprimer les `EXPO_PUBLIC_FIREBASE_*` devenues mortes des trois environnements
+      (`eas env:delete`) — plus rien ne les lit
 - [ ] Vérifier qu'aucune variable `*_EMULATOR_HOST` / `*_EMULATOR_PORT` n'est définie en
       production — elles feraient pointer l'app sur un émulateur inexistant
 - [ ] Vérifier que `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` du profil `production` correspond bien au

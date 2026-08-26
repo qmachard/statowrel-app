@@ -6,7 +6,9 @@ Single source of truth for all Firestore data models. TypeScript, compiled with 
 
 Shared infrastructure — do not duplicate it in a model file:
 
-- `UniversalTimestamp` / `UniversalGeoPoint` / `UniversalSnapshot<T>` — union types spanning the client (`firebase/firestore`) and admin (`firebase-admin/firestore`) SDKs, so one converter works in both `apps/app` and `apps/functions`.
+- `UniversalTimestamp` / `UniversalGeoPoint` / `UniversalSnapshot<T>` — union types spanning the web (`firebase/firestore`) and admin (`firebase-admin/firestore`) SDKs, so one converter works in `apps/admin` and `apps/functions` alike. Both are imported with `import type`, deliberately: this package is bundled into the React Native app, which has neither SDK installed, and `import type` is erased rather than left to the compiler's discretion to elide.
+
+  **`apps/app` is a third SDK, and it is not in that union.** It runs on React Native Firebase, whose `Timestamp` / `GeoPoint` / snapshot classes carry the same shape and the same wire format but are their own types. It casts at one seam, `apps/app/src/lib/firestore.ts` — declaring the third surface here would mean linking React Native's typings into a package `apps/functions` also builds. Which is the rule for anything added to `commons.ts`: it must type-check under the admin SDK alone.
 - `ModelData<T>` — recursively rewrites a Firestore "wire" type into its app-facing shape (`UniversalTimestamp` → `string`, `UniversalGeoPoint` → `{ latitude, longitude }`).
 - `FirestoreConverter<TData, TFirestoreData>` — factory signature every model's converter follows; called with the SDK's `Timestamp`/`GeoPoint` classes so the converter stays SDK-agnostic.
 - `parseTimestamp` — ALWAYS use this in `fromFirestore`, never inline `.toDate().toISOString()`. See the root `CLAUDE.md` for the rationale (legacy docs written via raw `.update()`).

@@ -5,7 +5,7 @@ import {
   Timestamp,
   collection,
   doc,
-} from 'firebase/firestore';
+} from '@react-native-firebase/firestore';
 
 import type { FirestoreConverter } from '@statowrel/models';
 
@@ -16,13 +16,26 @@ import { db } from './firebase';
  * ref is built with a `@statowrel/models` converter, so nothing in the app ever
  * reads `snap.data()` untyped.
  *
- * The cast is the same one the admin helpers make — our converters are typed
- * against `UniversalSnapshot`, which spans both SDKs and is therefore not
- * assignable to the client SDK's own `FirestoreDataConverter` signature.
+ * The cast is the same one the admin helpers make, and it now spans one SDK
+ * more. `@statowrel/models` types its converters against `UniversalSnapshot` —
+ * the admin SDK's snapshot or the *web* SDK's, the two the package declares —
+ * while this app runs on React Native Firebase, whose `Timestamp`, `GeoPoint`
+ * and snapshot classes are its own. They carry the same shape and the same
+ * wire format (`toDate()`, `fromDate()`, `seconds`/`nanoseconds`), which is
+ * what makes a converter written against one work against another; the type
+ * system has no way to know that, and teaching `packages/models` a third SDK
+ * would mean linking React Native's typings into a package `apps/functions`
+ * also builds. So the cast stays here, at the one seam that knows which SDK it
+ * is talking to.
  */
 const withConverter = <TModelData extends DocumentData, TFirebaseData extends DocumentData = TModelData>(
   converter: FirestoreConverter<TModelData, TFirebaseData>,
-) => converter(Timestamp, GeoPoint) as unknown as FirestoreDataConverter<TModelData, TFirebaseData>;
+) => (
+  converter(
+    Timestamp as unknown as Parameters<typeof converter>[0],
+    GeoPoint as unknown as Parameters<typeof converter>[1],
+  ) as unknown as FirestoreDataConverter<TModelData, TFirebaseData>
+);
 
 export const getDocumentRef = <TModelData extends DocumentData, TFirebaseData extends DocumentData = TModelData>(
   collectionPath: string,

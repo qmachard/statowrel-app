@@ -1,6 +1,6 @@
-import type { User } from 'firebase/auth';
-import { onAuthStateChanged } from 'firebase/auth';
-import { onSnapshot } from 'firebase/firestore';
+import type { User } from '@react-native-firebase/auth';
+import { onAuthStateChanged } from '@react-native-firebase/auth';
+import { onSnapshot } from '@react-native-firebase/firestore';
 import {
   type ReactNode,
   createContext,
