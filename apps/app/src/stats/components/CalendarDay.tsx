@@ -5,11 +5,6 @@ import { shadows } from '@/design/shadows';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 import type { CalendarDayState } from '@/stats/helpers/calendarState';
 
-import { Hatch } from './Hatch';
-
-/** The `?` on a missed day is an ornament, sized below the smallest scale step. */
-const MISSED_GLYPH_SIZE = 9;
-
 /** The check that stands in for an answered day's number — the cell is small, so it is too. */
 const CHECK_SIZE = 20;
 
@@ -30,8 +25,6 @@ const BADGE_SIZE = 14;
  */
 const BADGE_OVERHANG = BADGE_SIZE / 5;
 
-const PRESSED_OPACITY = 0.8;
-
 const styles = StyleSheet.create({
   // The pressable wraps the cell, so it is the one that has to fill the square
   // the calendar grid hands it.
@@ -50,11 +43,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: fontSize.sm,
-  },
-  missedGlyph: {
-    fontFamily: fonts.head,
-    fontSize: MISSED_GLYPH_SIZE,
-    color: colors['muted-foreground'],
   },
   // Hung off the cell's corner, and therefore a sibling of it rather than a
   // child: the cell clips what it holds, so a bead inside it could only ever be
@@ -88,30 +76,30 @@ const SURFACE = StyleSheet.create({
   idle: { backgroundColor: colors.muted },
 }) satisfies Record<CalendarDayState, ViewStyle>;
 
-// An answered day and today are raised; the days with nothing to show are flat.
+// Every day with a question behind it is raised — a missed one included, since
+// its question can still be caught up on; only `idle` has nothing to press.
 const SHADOW: Record<CalendarDayState, ViewStyle | undefined> = {
   answered: shadows.sm,
   today: shadows.sm,
-  missed: undefined,
+  missed: shadows.sm,
   idle: undefined,
 };
 
 // Pressed, a raised day drops its shadow and translates by the offset it just
-// dropped — the same sink as `src/components/Button.tsx`, at `sm`'s 2px. A flat
-// day has nothing to sink into, so it dims instead.
+// dropped — the same sink as `src/components/Button.tsx`, at `sm`'s 2px.
 const SUNK: ViewStyle = { transform: [ { translateX: SUNK_BY }, { translateY: SUNK_BY } ] };
 
 const PRESSED = StyleSheet.create({
   answered: SUNK,
   today: SUNK,
-  missed: { opacity: PRESSED_OPACITY },
+  missed: SUNK,
   idle: {},
 }) satisfies Record<CalendarDayState, ViewStyle>;
 
 const LABEL = StyleSheet.create({
   answered: { fontFamily: fonts.head, color: colors['primary-foreground'] },
   today: { fontFamily: fonts.head, color: colors['accent-foreground'] },
-  missed: { fontFamily: fonts.head, color: colors['muted-foreground'] },
+  missed: { fontFamily: fonts.head, color: colors.foreground },
   idle: { fontFamily: fonts.sans, color: colors['muted-foreground'] },
 }) satisfies Record<CalendarDayState, TextStyle>;
 
@@ -174,13 +162,13 @@ export const CalendarDay = ({
         return (
           <>
             <View style={[ styles.cell, SURFACE[state], sunk ? PRESSED[state] : SHADOW[state] ]}>
-              {state === 'missed' ? <Hatch /> : null}
               {answered ? (
                 <Check size={CHECK_SIZE} strokeWidth={CHECK_STROKE_WIDTH} color={CHECK_COLOR[state]} />
               ) : (
-                <Text style={[ styles.label, LABEL[state] ]}>{date.getDate()}</Text>
+                <Text style={[ styles.label, LABEL[state] ]}>
+                  {state === 'missed' ? '?' : date.getDate()}
+                </Text>
               )}
-              {state === 'missed' ? <Text style={styles.missedGlyph}>?</Text> : null}
             </View>
 
             {hasNewFriendAnswers ? (
