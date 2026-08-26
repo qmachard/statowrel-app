@@ -49,8 +49,8 @@ const styles = StyleSheet.create({
   // is no longer boxed in a card.
   statLabel: {
     fontFamily: fonts.head,
-    fontSize: fontSize['3xl'],
-    lineHeight: fontSize['3xl'] * 1.1,
+    fontSize: fontSize['2xl'],
+    lineHeight: fontSize['2xl'] * 1.1,
     textTransform: 'uppercase',
   },
 });

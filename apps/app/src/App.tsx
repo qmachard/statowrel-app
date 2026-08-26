@@ -1,5 +1,5 @@
 import { ArchivoBlack_400Regular } from '@expo-google-fonts/archivo-black';
-import { SpaceGrotesk_400Regular } from '@expo-google-fonts/space-grotesk';
+import { SpaceGrotesk_400Regular, SpaceGrotesk_500Medium } from '@expo-google-fonts/space-grotesk';
 import { NavigationContainer } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -95,6 +95,7 @@ export default function App() {
   const [ fontsLoaded ] = useFonts({
     ArchivoBlack_400Regular,
     SpaceGrotesk_400Regular,
+    SpaceGrotesk_500Medium,
   });
 
   if (!fontsLoaded) {

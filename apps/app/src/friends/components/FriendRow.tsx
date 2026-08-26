@@ -33,8 +33,8 @@ const styles = StyleSheet.create({
     gap: spacing(0.5),
   },
   username: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.base,
+    fontFamily: fonts.sansMedium,
+    fontSize: fontSize.sm,
     color: colors['card-foreground'],
   },
   note: {

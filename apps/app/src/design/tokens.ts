@@ -100,6 +100,7 @@ export const pagePadding = spacing(5);
 export const fonts = {
   head: 'ArchivoBlack_400Regular',
   sans: 'SpaceGrotesk_400Regular',
+  sansMedium: 'SpaceGrotesk_500Medium',
 };
 
 export const fontSize = {
