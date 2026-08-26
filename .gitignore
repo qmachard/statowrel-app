@@ -54,3 +54,12 @@ next-env.d.ts
 
 .mcp.json
 .firebase
+
+# Emulator run artefacts — the emulators are the dev environment (docs/architecture.md
+# § Environments), so every dev session drops these beside the workspace it ran in.
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+database-debug.log
+ui-debug.log
+pubsub-debug.log

@@ -490,12 +490,33 @@ A collection-group query is never covered by a nested `match`: it needs its own 
 
 ## Environments
 
-Two Firebase projects, aliased in `.firebaserc`:
+**One Firebase project, and the emulators as the development environment.**
 
-- `default` → `statowrel-dev`
-- `production` → `statowrel-prod`
+`.firebaserc` aliases both `default` and `production` to `statowrel-app`. There is no second project, so `npm run deploy:functions` and `npm run deploy:functions:production` deploy to the same place, and every script's `--production` flag selects the same id as its absence — the alias machinery is in place, it just has one project behind it. The `deploy:*` scripts still switch with `firebase use` before deploying and switch back to `default` afterwards, so the day a second project exists nothing else has to move.
 
-`npm run deploy:*` scripts switch project via `firebase use` before deploying and switch back to `default` afterward for the `:production` variants, mirroring planexplora-hub's convention.
+A second project was weighed and not taken: `apps/app/app.config.ts` already carries a `development` variant with its own bundle identifier and its own pair of native service files, so the app side is ready for one — but it would also mean a second set of Google OAuth clients, a second Sign in with Apple App ID, a rebuilt dev client (React Native Firebase reads its project natively at launch — see `apps/app/firebase/README.md`) and a second Blaze project to deploy functions to. A named second *Firestore database* inside the one project was weighed too and is worse for this: it splits Firestore alone, leaving Auth, Storage, the deployed functions and the schedulers shared, for changes in every layer that touches Firestore.
+
+So the rule the rest of this section rests on: **development happens on the emulators, never on the project.**
+
+### The emulators
+
+`npm run dev:functions` starts them — functions, Firestore, Auth and Storage together, with the bundle rebuilt on change beside them. The ports live in `firebase.json` (Firestore 8080, Auth 9099, Storage 9199, functions 5001, UI 4000) and `singleProjectMode` holds them to the one project id `.firebaserc` names. The app and the console both switch onto them through env vars rather than a build (`EXPO_PUBLIC_FIREBASE_*_EMULATOR_*` in `apps/app`, `import.meta.env.DEV` in `apps/admin`), which is the one thing the native SDK still lets a restart decide.
+
+`start:emulators` runs with `--import=./.firebase-emulator --export-on-exit`, so a session's data survives the next start. That is a convenience, not the source of the fixture: the fixture is the seed below, which is reproducible from nothing.
+
+### Seeding the emulator
+
+An emulator that has just been reset opens on the sign-up screen of an empty app: no question today, an inert calendar, no friend to unlock the card of docs/prd.md §5.5. `apps/functions/scripts/seed-emulator.mjs` (`npm run seed-emulator`) is what fills it — the one seed script that may forge accounts and answers, because it is the one that can only ever reach the emulator. It refuses `--production` and `--project` outright, and it refuses to start at all when nothing is answering on the emulator ports.
+
+What one run writes: an account to sign in with (`dev@statowrel.test` / `statowrel`, carrying the `admin` claim so the same credentials open `npm run dev:admin`), a cast of friends around it with their profiles and username reservations, the accepted friendships plus one invitation received and one sent, a month of daily questions stamped and indexed in `v1_daily_question_months`, a pot left behind for the moderation console and for tomorrow's draw, the onboarding's demo question with its tally, the answers of the whole cast over those days — the main account's history holed twice, so the calendar shows missed days and `streak_best` is not just today's count — and the read models that follow from all of it: each answerer's calendar months, the `friend_answer_counts` behind the calendar's badge, and the streak and counters on each profile.
+
+Two things it does deliberately. **Today is left unanswered** unless `--answer-today` asks otherwise — the point of a dev fixture whose subject is the day's question is to have one to answer. And **the projections are written before the answers**, which is not an optimisation: the answer trigger is running in the emulator too, and the day's entry in the author's calendar month is exactly the marker it bails out on, so writing it first is what keeps a seeded tally from being counted a second time — and keeps the fixture identical whether the functions emulator happens to be up or not.
+
+It **wipes Firestore and Auth first, every time**, and there is no flag not to: the world it writes is one whole — the day's tally counts the answers it forged, each answer is projected, each streak is the replay of those answers — and layering a second run on top of a first leaves answers no calendar carries, which is precisely the state the trigger reads as an answer it has still to count.
+
+`--seed <n>` picks the world; the same value gives the same one, tallies included. The knobs are `--days`, `--friends`, `--crowd`, `--email` and `--password`.
+
+The three prod-facing seeds next to it each fill one slice and stop where they must, since they are pointed at a real project: `seed-questions` fills the moderation pot, `seed-daily-questions` backfills the days already gone, `seed-demo-question` writes the onboarding sample. `seed-emulator` needs none of them — it writes all three slices itself.
 
 One toll each project pays once: the first **Firestore trigger** deployed to it is an Eventarc trigger, and creating it is also what creates the project's Eventarc service agent — the deploy races that agent's own IAM grant and fails with `Permission denied while using the Eventarc Service Agent`. Retrying a few minutes later goes through. `apps/functions/CLAUDE.md` carries the details and the manual grant, for the day retrying is not enough.
 

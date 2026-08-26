@@ -31,29 +31,12 @@ import { GeoPoint, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { ulid } from 'ulid';
 
 import { die, resolveProjectId } from './lib/firebase-project.mjs';
-import { fabricateAnswerCounts } from './lib/questions-seed.mjs';
+import { DEMO_ANSWERS, DEMO_QUESTION, fabricateAnswerCounts } from './lib/questions-seed.mjs';
 
 const USAGE = 'Usage: npm run seed-demo-question -- [--answers <n>] [--production | --project <id>] [--dry-run]';
 
-/**
- * The question created when the id holds nothing yet — docs/prd.md §1's own
- * example, three options so the carousel shows a QCM rather than a coin flip.
- * A demo has no author to credit, so the app leaves the credit line out.
- */
-const DEFAULT_DEMO = {
-  label: 'Ton dentifrice, tu le presses…',
-  options: [
-    { label: 'Par le bout', stat_label: 'Méthodique' },
-    { label: 'Au milieu', stat_label: 'Sauvage' },
-    { label: 'Je l\'écrase n\'importe comment', stat_label: 'Anarchiste' },
-  ],
-};
-
-/** Enough answers for the shares to read as a real day rather than as a sample. */
-const DEFAULT_ANSWERS = 1200;
-
 const parseArgs = (argv) => {
-  const parsed = { project: null, alias: 'default', answers: DEFAULT_ANSWERS, dryRun: false };
+  const parsed = { project: null, alias: 'default', answers: DEMO_ANSWERS, dryRun: false };
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -116,7 +99,7 @@ if (existing?.broadcast_at) {
 
 const options = existing?.options?.length
   ? existing.options
-  : DEFAULT_DEMO.options.map((option) => ({ id: ulid(), ...option }));
+  : DEMO_QUESTION.options.map((option) => ({ id: ulid(), ...option }));
 
 // Only ever seeded on an empty map: a tally already there is either a real one
 // or a previous run's, and neither is worth reshuffling under a demo people
@@ -124,7 +107,7 @@ const options = existing?.options?.length
 const hasCounts = Object.keys(existing?.answer_counts ?? {}).length > 0;
 const counts = hasCounts ? null : fabricateAnswerCounts(options, answers);
 
-const label = existing?.label ?? DEFAULT_DEMO.label;
+const label = existing?.label ?? DEMO_QUESTION.label;
 
 console.log(`• « ${label} » — ${options.map((option) => option.label).join(' / ')}`);
 console.log(existing === null
