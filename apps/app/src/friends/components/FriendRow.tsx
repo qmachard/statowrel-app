@@ -5,10 +5,8 @@ import { Avatar } from '@/components/Avatar';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
 export interface FriendRowProps {
-  /** The friend's handle, rendered with its `@` — docs/prd.md §4.1. */
+  /** The friend's handle, rendered with its `@` — docs/prd.md §4.1. It also seeds the generated avatar, the only face a friend has today. */
   username: string;
-  /** Their picture, read from their profile. Undefined while it loads, null when they have none — both fall back to the generated avatar. */
-  photoUrl?: string | null;
   /** What this line is waiting on, when it is waiting on something. */
   note?: string;
   /** The line's own answer to its note — one or more buttons, rendered under it in the same column. */
@@ -70,9 +68,9 @@ const styles = StyleSheet.create({
  * It carries no surface of its own — the card around the list is the surface,
  * and the rows are cut out of it by separators.
  */
-export const FriendRow = ({ username, photoUrl, note, action, children }: FriendRowProps) => (
+export const FriendRow = ({ username, note, action, children }: FriendRowProps) => (
   <View style={[ styles.root, action === undefined ? null : styles.stacked ]}>
-    <Avatar size="lg" name={username} uri={photoUrl} />
+    <Avatar size="lg" name={username} />
 
     <View style={styles.body}>
       <Text style={styles.username} numberOfLines={1}>

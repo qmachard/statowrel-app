@@ -10,7 +10,6 @@ import { FriendRow } from '@/friends/components/FriendRow';
 import { PendingActions } from '@/friends/components/PendingActions';
 import { EMPTY, FAILURE, NOTES, REMOVE_LABEL } from '@/friends/copy';
 import { removeFriendship } from '@/friends/data/friendships';
-import { useFriendAvatars } from '@/friends/data/useFriendAvatars';
 import { useFriends } from '@/friends/data/useFriends';
 import { useFriendshipWrite } from '@/friends/data/useFriendshipWrite';
 
@@ -95,8 +94,6 @@ export const FriendsCard = ({ onInvite }: FriendsCardProps) => {
     ...outgoing.map((friendship): Line => ({ friendship, kind: 'outgoing' })),
   ];
 
-  const avatars = useFriendAvatars(lines.map((line) => line.friendship.friend_id));
-
   return (
     <View style={styles.root}>
       <View style={styles.head}>
@@ -121,7 +118,6 @@ export const FriendsCard = ({ onInvite }: FriendsCardProps) => {
           <View key={line.friendship.friend_id} style={index === 0 ? null : styles.separated}>
             <FriendRow
               username={line.friendship.friend_username}
-              photoUrl={avatars[line.friendship.friend_id]}
               note={line.kind === 'accepted' ? undefined : NOTES[line.kind]}
               action={line.kind === 'accepted' ? undefined : (
                 <PendingActions

@@ -156,9 +156,9 @@ export const getSubCollectionRef = <TModelData extends DocumentData, TFirebaseDa
  * (the current one gains a day at every 07:00 draw) and a `v1_daily_question_answers`
  * entry (the rules deny every update to one) are the two that qualify.
  *
- * This is not a replacement for the module stores — `calendarCache`,
- * `useFriendAvatars` — which dedupe the reads of one app run whether or not
- * anything is frozen. It is the layer under them, and it survives a relaunch.
+ * This is not a replacement for a module store like `calendarCache`, which
+ * dedupes the reads of one app run whether or not anything is frozen. It is the
+ * layer under it, and it survives a relaunch.
  */
 export const getFrozenDoc = async <TModelData extends DocumentData, TFirebaseData extends DocumentData>(
   reference: DocumentReference<TModelData, TFirebaseData>,
