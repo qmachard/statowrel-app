@@ -127,7 +127,7 @@ export const DailyQuestionScreen = () => {
   // key *is* the document id (docs/architecture.md).
   const date = params?.date ?? dailyQuestionDateKey(new Date());
   const {
-    status, question, questionId, answer, ownAnswerPending, resultSettled, authorName, refresh,
+    status, question, questionId, answer, ownAnswerPending, resultSettled, authorName,
   } = useDailyQuestion(date);
 
   const [ submitting, setSubmitting ] = useState(false);
@@ -164,10 +164,6 @@ export const DailyQuestionScreen = () => {
       // calendar cache and holds the day until the answer trigger has projected
       // it, and `useDailyQuestion` reads it straight back.
       rememberAnswer(written, question.options.find((option) => option.id === optionId)?.stat_label ?? '');
-      // The card that is about to show is a percentage about everybody else:
-      // it is worth one read to compute it on the day as it stands now, not as
-      // it stood when the question was opened and read for the first time.
-      refresh();
       setCelebrating(true);
     } catch (error) {
       console.warn('[daily-question] could not save the answer', date, error);
@@ -188,12 +184,12 @@ export const DailyQuestionScreen = () => {
   const answerable = status === 'ready' && user !== null && answer === null && !submitting;
 
   // **The sheet flips once the result is whole, not the instant the answer is
-  // written.** The two are a beat apart on purpose: answering re-reads the day's
-  // tally, and the answer right behind it, so a result shown at the tap would
-  // move twice — once when the fresher tally lands, once when this answer is
-  // folded into it — under the eyes of whoever just answered. `resultSettled`
-  // is the hook's word on that beat, and the confirmation animation is what
-  // covers it, being the one thing playing over the sheet at that moment.
+  // written.** The two are a beat apart on purpose: answering reads the answer
+  // back to learn whether the tally on hand already carries it, so a result
+  // shown at the tap would move under the eyes of whoever just answered — by
+  // exactly the one answer it had not folded in yet. `resultSettled` is the
+  // hook's word on that beat, and the confirmation animation is what covers it,
+  // being the one thing playing over the sheet at that moment.
   //
   // The animation ending is the other way out, and it is not a fallback so much
   // as the deadline: a read that has not landed by then is not worth holding a

@@ -303,20 +303,22 @@ aussi la projection calendrier et la série, écrites dans la même transaction.
 **Correctif, en deux temps**
 
 1. ✅ **Fait** — l'abonnement est remplacé par un `getDoc` porté par `useFocusEffect` : la question
-   est lue à chaque ouverture du jour et à chaque retour dessus, plus une relecture au moment où la
-   réponse est écrite. Cette dernière n'est pas une politesse — le tally lu à 07:05 est vide, et
-   sans elle la carte de §5.5 annonce « 100% des gens » à la deuxième personne de la matinée. La
+   est lue à chaque ouverture du jour et à chaque retour dessus, et à ces moments-là seulement.
+   Répondre ne la relit pas : ça ne rattraperait que les réponses tombées entre l'ouverture du jour
+   et le tap — quelques secondes pour qui arrive par la notification — au prix d'une lecture et
+   d'un second aller-retour tenus devant le seul écran qu'on ne doit pas faire attendre. La
    bascule de la feuille vers le résultat ne passe plus par Firestore du tout : `answerStore`
    tenait déjà la réponse de la session pour l'écran Stats, la feuille la relit de là — mais elle
-   n'a lieu qu'une fois ces deux lectures rentrées (`resultSettled`), sans quoi les pourcentages
-   bougeraient deux fois sous les yeux de celui qui vient de répondre. L'animation de confirmation
-   couvre ce battement et sa fin sert d'échéance. Et l'abonnement à sa propre réponse est devenu un
-   `getFrozenDoc` — aucun client ne réécrit une réponse, donc un jour déjà ouvert sur cet appareil
-   ne coûte plus rien à rouvrir, le marqueur ci-dessous étant la seule écriture qu'elle reçoive et
-   la condition pour croire un exemplaire en cache.
+   n'a lieu qu'une fois la relecture de la réponse rentrée (`resultSettled`), sans quoi les
+   pourcentages bougeraient sous les yeux de celui qui vient de répondre, de la réponse même qu'il
+   vient d'écrire. L'animation de confirmation couvre ce battement et sa fin sert d'échéance. Et
+   l'abonnement à sa propre réponse est devenu un `getFrozenDoc` — aucun client ne réécrit une
+   réponse, donc un jour déjà ouvert sur cet appareil ne coûte plus rien à rouvrir, le marqueur
+   ci-dessous étant la seule écriture qu'elle reçoive et la condition pour croire un exemplaire en
+   cache.
 
-   **Le décompte de sa propre réponse.** Le trigger étant asynchrone, la relecture
-   qui suit la réponse ramène un tally qui ne la contient pas encore, et rien ne
+   **Le décompte de sa propre réponse.** Le trigger étant asynchrone, le tally en main
+   ne contient pas encore la réponse qui vient d'être écrite, et rien ne
    vient plus la corriger puisqu'il n'y a plus d'abonnement. Le trigger stampe
    donc `counted_at` sur la réponse **dans la transaction même qui incrémente**
    — le marqueur n'existait que pour la démo, il est généralisé — et l'écran

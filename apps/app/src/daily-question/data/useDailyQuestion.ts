@@ -64,12 +64,12 @@ export interface DailyQuestionView {
    * `ownAnswerPending` is still out.
    *
    * It exists for the beat that follows an answer, and it is a display concern
-   * rather than a data one: the tally is re-read the moment the answer is
-   * written, and the answer right behind it, so a card shown before the two
-   * have landed moves twice under the eyes of whoever just answered. The screen
-   * holds the result until this turns true — the confirmation animation is
-   * playing over that beat anyway — rather than animating a percentage that was
-   * never true (docs/prd.md §5.5).
+   * rather than a data one: the answer is read back the moment it is written,
+   * to know whether the tally on hand carries it, so a card shown before that
+   * read lands moves under the eyes of whoever just answered — by exactly the
+   * one answer it forgot to fold in. The screen holds the result until this
+   * turns true, the confirmation animation playing over that beat anyway,
+   * rather than animating a percentage that was never true (docs/prd.md §5.5).
    *
    * A day answered in an earlier session settles immediately: there is nothing
    * to wait for when nothing was just written.
@@ -77,16 +77,6 @@ export interface DailyQuestionView {
   resultSettled: boolean;
   /** Pseudo of whoever proposed the question — the credit of docs/prd.md §5.4. */
   authorName: string | null;
-  /**
-   * Re-reads the day's tally, out of turn.
-   *
-   * The screen calls it the moment an answer is written: the card of
-   * docs/prd.md §5.5 is a number about everybody else, and the one read at the
-   * door can be minutes old by the time the question has been thought about —
-   * long enough, at 07:05 on a day nobody has answered yet, for the card to
-   * announce « 100% des gens » to the second person of the morning.
-   */
-  refresh: () => void;
 }
 
 /**
@@ -181,13 +171,22 @@ const readAuthorName = async (authorId: string): Promise<string | null> => {
  * whole cost of this screen:
  *
  * - **The question** is read at every opening of the day, and again at every
- *   return to it. `answer_counts` moves on this one document every time anybody
- *   answers anywhere — including on a day long closed, a catch-up answer
- *   counting like any other — so a subscription bills one read per answer of
- *   the entire app for as long as the sheet stays up. That is a cost in the
- *   square of the audience, paid to watch percentages drift by tenths. Read at
- *   the door instead, it is one read per opening, and the rarity of
- *   docs/prd.md §5.5 is still that map's shape at display time.
+ *   return to it — and at those moments alone. `answer_counts` moves on this
+ *   one document every time anybody answers anywhere, including on a day long
+ *   closed, a catch-up answer counting like any other, so a subscription bills
+ *   one read per answer of the entire app for as long as the sheet stays up:
+ *   a cost in the square of the audience, paid to watch percentages drift by
+ *   tenths. Read at the door instead, it is one read per opening, and the
+ *   rarity of docs/prd.md §5.5 is still that map's shape at display time.
+ *
+ *   **Answering does not re-read it**, deliberately. The card would then be
+ *   about the day as it stands at the tap rather than as it stood at the door,
+ *   which is worth something on a morning where the tally fills fast — and
+ *   costs a read and a second round trip held in front of the one screen
+ *   nobody should be kept waiting on. The gap it closes is only ever the
+ *   answers landed between opening the day and answering it, which is seconds
+ *   for anyone who came in through the notification; leaving the sheet and
+ *   coming back re-reads anyway.
  *
  *   `useFocusEffect` is what makes "at the door" hold: it fires on the way in,
  *   and again on every return to the day — from the friends sheet, from the
@@ -308,13 +307,6 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
   }, [ questionId ]);
 
   useFocusEffect(readQuestion);
-
-  // Same read, out of turn — the cleanup is dropped because there is no render
-  // pass to hang it on: a call that lands after the day has changed is written
-  // off by the `questionId` its state carries, like every other slice here.
-  const refresh = useCallback(() => {
-    readQuestion();
-  }, [ readQuestion ]);
 
   const question = questionState?.questionId === questionId ? questionState : null;
   const authorId = question?.question?.author_id ?? null;
@@ -456,6 +448,5 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     ownAnswerPending,
     resultSettled,
     authorName: authorState?.authorId === authorId ? authorState.name : null,
-    refresh,
   };
 };
