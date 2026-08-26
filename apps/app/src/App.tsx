@@ -20,6 +20,7 @@ import { navigationRef } from '@/navigation/navigationRef';
 import { navigationTheme } from '@/navigation/theme';
 import { usePushNotifications } from '@/notifications/data/usePushNotifications';
 import { usePushPermissionNudge } from '@/notifications/data/usePushPermissionNudge';
+import { mark } from '@/lib/startupTrace';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -51,6 +52,7 @@ const SessionGate = () => {
 
   useEffect(() => {
     if (ready) {
+      mark('SessionGate: ready — hiding the splash screen');
       SplashScreen.hideAsync();
     }
   }, [ready]);
@@ -77,6 +79,8 @@ export default function App() {
     ArchivoBlack_400Regular,
     SpaceGrotesk_400Regular,
   });
+
+  mark(`App render: fontsLoaded=${String(fontsLoaded)}`);
 
   if (!fontsLoaded) {
     return null;
