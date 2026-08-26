@@ -1,0 +1,394 @@
+# StatOwrel 1.0.0 — notes de version
+
+| Champ | Valeur |
+|---|---|
+| Version | **1.0.0** (`version` applicative : `1.0.0` dans `apps/app/package.json` et `apps/app/app.config.ts` sur le commit taggé) |
+| Build iOS | **6** |
+| Date | 2026-08-26 |
+| Nature | **release finale** — première version publiée sur les stores |
+| Commit taggé | `f597037e83eaa7e7255945e9fc03df999ba06d1a` — l'arbre de la 1.0.0-rc2 augmenté du correctif de la réponse de démonstration, des normes de sécurité des enfants et de l'alignement 16+ des CGU. La migration React Native Firebase et tout ce qui a suivi appartiennent à la **1.0.1** (`release-notes-1.0.1-rc1.md`) |
+| Fiche store | **français (France) uniquement** pour la 1.0 (`docs/store-listing.md`) ; la section anglaise ci-dessous est une réserve, à ne pas publier |
+
+---
+
+## Ce qui change depuis la 1.0.0-rc2
+
+| # | Changement | Effet sur la soumission |
+|---|---|---|
+| 1 | **Réponse de démonstration acceptée sur le seul statut `demo`** de la question — la règle Firestore refusait la réponse d'un build antérieur au champ `counted_at` | Correctif **côté serveur** : effectif après `npm run deploy:firestore:production`, aucun binaire à refaire |
+| 2 | Normes de **sécurité des enfants (CSAE)** publiées sur `/legal/protection-des-enfants` (alias `/legal/child-safety`), FR puis EN | Ferme le bloquant documentaire Play (`docs/production-checklist.md` §2.8) — l'URL à déclarer dans la Play Console existe |
+| 3 | Âge minimum des CGU aligné sur le **classement 16+** de la fiche | Cohérence fiche ↔ conditions : un examinateur qui recoupe ne trouve plus deux âges différents |
+
+Aucun de ces changements ne touche un texte de fiche : les textes App Store ci-dessous sont
+inchangés depuis la rc1.
+
+---
+
+## Français
+
+### Texte promotionnel — 170 caractères max
+
+Champ modifiable **sans nouvelle soumission**. La première option est retenue.
+
+**Option 1 — retenue** (166 caractères)
+
+```
+Les questions que personne ne pose. Les réponses que tout le monde veut. Une par jour, la même pour tous : tu réponds, tu découvres ta stat, puis celles de tes potes.
+```
+
+**Option 2 — le rendez-vous de 7 h** (148 caractères)
+
+```
+Les questions que personne ne pose. Les réponses que tout le monde veut. La question tombe à 7h, tu réponds en deux taps, tes potes y passent aussi.
+```
+
+**Option 3 — par les absences** (134 caractères)
+
+```
+Pas de feed. Pas de likes. Une question par jour à 7h, ta réponse dans la statistique, et celles de tes potes une fois que tu as joué.
+```
+
+L'option 1 est la baseline suivie du mécanisme : c'est la formulation de `docs/store-listing.md`
+§1.3, et la baseline ne se reformule jamais (§6 du même document). L'option 2 est la rotation à
+passer le jour où le rendez-vous quotidien est installé et où c'est lui qu'on veut vendre.
+
+### Nouveautés de cette version — 4000 caractères max
+
+```
+Première version de StatOwrel.
+
+Une question par jour, la même pour tout le monde. Elle tombe à 7h du matin. Tu réponds en deux taps, tu découvres dans quel pourcentage tu tombes, puis ce que tes potes ont répondu.
+
+Ta série monte tant que tu ne rates pas un jour. Ton calendrier garde toutes les questions déjà posées, y compris celles d'avant ton arrivée : tu peux y répondre après coup pour compléter ta collection.
+
+Tes potes s'ajoutent par leur nom d'utilisateur exact. Pas de recherche, pas d'annuaire, pas de profils publics. Quand l'un d'eux répond à une journée, une pastille apparaît sur la case du calendrier.
+
+Et aussi : un rappel le soir si tu n'as pas encore joué, une découverte du jour si tu as déjà répondu, et la suppression de ton compte depuis les réglages, en deux taps.
+
+Une question, une réponse, une statistique, tes potes. Moins de trente secondes par jour.
+
+Un souci, une idée, une question à proposer : écris-nous.
+```
+
+Ton : tutoiement, aucun emoji, aucun markdown, paragraphes courts — conformément à
+`docs/store-listing.md` §6.
+
+> ⚠️ **Ne rien ajouter ici sur le partage du résultat ni sur la proposition de questions.** Ni
+> l'un ni l'autre n'existe dans le binaire (`docs/production-checklist.md` §1.3 et §1.4) ; le
+> bouton de proposition est visible mais n'ouvre rien. Décrire une fonctionnalité absente est le
+> motif de rejet 2.3.1.
+
+### Description complète — 4000 caractères max
+
+Inchangée depuis la rc2 : `docs/store-listing.md` §1.4 augmenté du bloc `LA NOTIFICATION DE 7H`.
+
+```
+Les questions que personne ne pose. Les réponses que tout le monde veut.
+
+Une par jour. La même pour tout le monde.
+
+StatOwrel est un réseau social entre potes sans feed, sans likes et sans commentaires. Une question personnelle, absurde, celle que personne ne pense à poser. Tu as la journée pour y répondre, et ça te prend dix secondes.
+
+TU RÉPONDS, TU DÉCOUVRES DEUX CHOSES
+
+1. Ta StatOwrel — ta réponse replacée dans la statistique de tous les autres. « Comme 68% des gens, tu es un.e efficace. » Plus ta réponse est minoritaire, plus le résultat est rare : au-dessous de 25% il passe rare, au-dessous de 10% ultra rare.
+
+2. Les réponses de tes potes — débloquées seulement une fois que tu as répondu toi-même. Pas de voyeurisme, pas de triche : on ne regarde pas les autres sans avoir joué.
+
+LA NOTIFICATION DE 7H
+
+Tous les matins à 7h, la question tombe. Tu as jusqu'à minuit. Le soir, un rappel si tu as oublié — et si tu as déjà joué, on te dit plutôt d'aller voir ce que tes potes ont répondu.
+
+LE DOUBLE TAP
+
+Il n'y a pas de bouton « Valider ». Un tap pour choisir ton option, un deuxième sur la même option pour la valider. C'est tout, et c'est étrangement satisfaisant. La réponse est définitive — c'est exactement ce qui rend la statistique honnête.
+
+DES QUESTIONS QU'ON A ENVIE DE SCREENSHOTER
+
+« Ton dentifrice, tu le presses par le bout, au milieu, ou tu l'écrases n'importe comment ? » Méthodique, sauvage, ou anarchiste.
+
+« Tes plantes ? » Arroseur.euse, ou killer.euse.
+
+Intime sans être gênant, jamais moralisateur. Juste la vanne du matin, et la petite vérité qu'elle révèle sur toi.
+
+TA SÉRIE
+
+Réponds avant minuit et ta série monte d'un jour. Rate une journée, elle repart à zéro — pas de joker. Ton meilleur score reste affiché, lui, pour toujours.
+
+TON CALENDRIER EST TON HISTORIQUE
+
+Chaque journée répondue devient une case cochée. Toutes les questions déjà posées sont là, même celles d'avant ton inscription : tu peux y répondre après coup pour compléter ta collection et voir ce que tes potes avaient dit. Un rattrapage ne rallume jamais une série cassée — la série récompense la régularité, la case récompense la collection.
+
+ENTRE POTES, VRAIMENT
+
+Pas de recherche d'utilisateurs, pas d'annuaire, pas de suggestions, pas de profils publics. On ajoute un pote en tapant son nom d'utilisateur exact : le connaître est le prix d'entrée. L'amitié est réciproque, et se retire des deux côtés. Tu ne vois jamais que les réponses de tes amis — il n'y a aucun contenu public dans StatOwrel.
+
+CE QU'IL N'Y A PAS
+
+Pas de fil à scroller. Pas de likes, pas de commentaires, pas de messagerie. Pas de publicité. Pas de classement. Une question, une réponse, une statistique, tes potes. Moins de trente secondes par jour.
+```
+
+Champs courts, inchangés depuis `docs/store-listing.md` :
+
+| Champ | Valeur | Car. |
+|---|---|---|
+| Nom de l'app (iOS) / Titre (Play) | `StatOwrel — question du jour` | 28 |
+| Sous-titre (iOS, 30) | `1 question/jour entre potes` | 27 |
+| Description courte (Play, 80) | `Les questions que personne ne pose. Les réponses que tout le monde veut.` | 72 |
+
+---
+
+## English
+
+**Réserve — à ne pas publier pour la 1.0.** Aucune localisation anglaise n'est prévue : les
+questions elles-mêmes sont en français, une fiche anglaise attirerait un public que l'app ne sert
+pas (`docs/store-listing.md`, en-tête). Ces textes existent pour le jour où une localisation est
+décidée.
+
+### Promotional Text — 170 characters max
+
+**Option 1** (162 characters)
+
+```
+The questions nobody asks. The answers everybody wants. One a day, the same for everyone: you answer, you find out your stat, then you see what your friends said.
+```
+
+**Option 2** (130 characters)
+
+```
+The questions nobody asks. The answers everybody wants. The question drops at 7am, you answer in two taps, and so do your friends.
+```
+
+### What's New — 4000 characters max
+
+```
+First release of StatOwrel.
+
+One question a day, the same one for everybody. It drops at 7am. You answer in two taps, you find out which percentage you fall into, then you see what your friends answered.
+
+Your streak grows as long as you don't miss a day. Your calendar keeps every question already asked, including the ones from before you arrived: you can answer them afterwards to complete your collection.
+
+Friends are added by their exact username. No search, no directory, no public profiles. When one of them answers a day, a dot shows up on that calendar cell.
+
+Also in this release: an evening reminder if you haven't played yet, a nudge to go see your friends' answers if you have, and account deletion straight from the settings.
+
+One question, one answer, one statistic, your friends. Under thirty seconds a day.
+```
+
+---
+
+## Notes pour le reviewer Apple
+
+> ⚠️ **Un champ reste à compléter avant soumission** : les identifiants du compte de démonstration
+> (`docs/production-checklist.md` §2.4).
+
+```
+IDENTIFIANTS DE DÉMONSTRATION
+E-mail : <À COMPLÉTER>
+Mot de passe : <À COMPLÉTER>
+
+L'application est intégralement derrière une connexion : merci d'utiliser le compte de démonstration ci-dessus.
+
+Le compte fourni a déjà répondu à plusieurs journées et compte deux amis, afin que le calendrier, le résultat statistique et la liste d'amis soient tous visibles immédiatement.
+
+PARCOURS EN 30 SECONDES
+1. Au premier lancement, un carrousel de présentation en quatre écrans s'affiche avant la connexion. Le dernier écran demande l'autorisation des notifications ; elle peut être refusée sans conséquence sur le parcours. Une question de démonstration est ensuite proposée : y répondre est facultatif.
+2. Connexion avec l'e-mail et le mot de passe fournis.
+3. L'écran d'accueil affiche la série en cours et le calendrier du mois.
+4. Toucher le bandeau de la question du jour, ou n'importe quelle case du calendrier.
+5. Toucher une option une première fois : elle se sélectionne. La toucher une seconde fois : la réponse est validée. Il n'y a volontairement pas de bouton « Valider » — le second toucher est le bouton.
+6. L'écran bascule sur le résultat : le pourcentage, la statistique de chaque option, et les réponses des amis.
+7. Le second bouton de l'en-tête ouvre le menu : liste d'amis, invitation, réglages, suppression du compte.
+
+CONNEXION AVEC APPLE
+« Se connecter avec Apple » est proposé au même niveau que Google et l'e-mail, conformément à la guideline 4.8.
+
+CONTENU GÉNÉRÉ PAR LES UTILISATEURS
+Les questions ne sont pas publiées par les utilisateurs : elles sont approuvées une par une dans une console de modération avant de pouvoir être diffusées. L'application ne permet pas d'en proposer. Une réponse est le choix d'une option pré-écrite — jamais de texte libre, jamais de photo. Le seul texte qu'un utilisateur écrit est son nom d'utilisateur, visible uniquement de ses amis : il n'y a ni annuaire, ni recherche, ni profil public. Une amitié se retire des deux côtés à tout moment, depuis le menu de la ligne d'ami : retirer un ami est le blocage, il n'y a plus aucun contenu partagé ensuite.
+
+SIGNALER UN UTILISATEUR
+Un nom d'utilisateur inapproprié se signale à l'éditeur depuis la page d'assistance, accessible sans compte : https://statowrel-app.web.app/legal/assistance. Tout signalement est traité sous 24 heures, et le nom d'utilisateur concerné est supprimé ou le compte désactivé.
+
+NOTIFICATIONS
+L'application envoie trois notifications au maximum : la question du jour à 7h, un rappel en fin de journée, et une alerte lors de la réception d'une invitation d'un ami. L'autorisation est demandée au dernier écran du carrousel d'accueil, après explication de ce à quoi elle sert, et se réactive à tout moment depuis le menu.
+
+SUPPRESSION DU COMPTE
+Menu (second bouton de l'en-tête) → « Supprimer mon compte », derrière une confirmation. La suppression est immédiate et définitive : profil, réponses, calendrier, amitiés, jetons de notification, réservation du nom d'utilisateur et compte d'authentification.
+
+CONDITIONS D'UTILISATION, CONFIDENTIALITÉ ET MENTIONS LÉGALES
+Accessibles depuis le bas des écrans de connexion et d'inscription, et depuis le bas du menu :
+https://statowrel-app.web.app/legal/cgu
+https://statowrel-app.web.app/legal/confidentialite
+https://statowrel-app.web.app/legal/mentions-legales
+```
+
+**Permissions demandées par l'app**
+
+| Permission | Quand | Refus |
+|---|---|---|
+| Notifications | Dernier écran du carrousel d'accueil, après une phrase qui dit à quoi elles servent ; redemandable depuis le Menu | Sans conséquence — l'app fonctionne entièrement sans |
+
+L'app ne demande **ni** la localisation, **ni** les contacts, **ni** l'appareil photo, **ni** le
+suivi publicitaire (aucun appel à `AppTrackingTransparency`, aucun SDK publicitaire).
+
+---
+
+## Plan de test QA interne
+
+À exécuter sur le **build 6 `production`**, sur **appareil physique** (iOS et Android), pas sur
+simulateur — les notifications push et la connexion Apple ne fonctionnent pas autrement.
+
+### Delta de la 1.0.0 depuis la rc2 — à passer en priorité
+
+**Réponse de démonstration** *(nécessite `npm run deploy:firestore:production` au préalable)*
+
+- [ ] Répondre à la question de démonstration **puis** se connecter : la réponse est comptée
+      (le correctif l'accepte sur le seul statut `demo`), sans jour de calendrier ni série
+- [ ] Répondre à la question du jour depuis ce même build : aucun `PERMISSION_DENIED`
+
+**Pages légales** *(nécessite `npm run deploy:admin:production` au préalable)*
+
+- [ ] `/legal/protection-des-enfants` **et** l'alias `/legal/child-safety` affichent les normes de
+      sécurité des enfants, en français puis en anglais, au nom de StatOwrel et Quentin Machard SAS
+- [ ] Les CGU affichent l'âge minimum de **16 ans**, aligné sur le classement des fiches
+- [ ] `/legal/cgu`, `/legal/confidentialite`, `/legal/mentions-legales`, `/legal/assistance`
+      répondent toujours — pas la console de modération
+
+### Régression complète
+
+**Onboarding et question de démonstration**
+
+- [ ] Premier lancement sur un appareil vierge : le carrousel s'affiche **avant** tout écran de connexion
+- [ ] Les quatre écrans défilent, le dernier propose l'autorisation des notifications
+- [ ] Refuser l'autorisation : le parcours continue sans blocage
+- [ ] La question de démonstration s'ouvre, la réponse se fait au double tap, le résultat s'affiche
+- [ ] Ne **pas** répondre à la démo, puis se connecter : aucune erreur
+- [ ] Relancer l'app : le carrousel ne réapparaît pas
+
+**Authentification et compte**
+
+- [ ] Inscription e-mail + mot de passe, choix du pseudo, arrivée sur l'écran Stats
+- [ ] Pseudo déjà pris : le message d'erreur est explicite, aucun code `auth/*` brut n'apparaît
+- [ ] Connexion Google (iOS et Android)
+- [ ] Connexion Apple (iOS), **y compris avec « Masquer mon e-mail »**
+- [ ] Déconnexion puis reconnexion : la session persiste au relancement
+- [ ] Suppression de compte : confirmation native, puis déconnexion locale
+- [ ] Après suppression : le pseudo est de nouveau disponible, l'ex-ami ne voit plus l'amitié
+- [ ] Après suppression : les `answer_counts` des questions répondues sont **inchangés** (c'est voulu)
+
+**Question du jour et résultat**
+
+- [ ] Le bandeau de l'écran Stats porte la question tant que la journée est ouverte
+- [ ] Une fois répondu, le bandeau bascule sur « RDV demain » et devient inerte
+- [ ] Double tap : premier tap sélectionne, changement d'option possible, second tap valide
+- [ ] Le résultat s'affiche : phrase de rareté, part de chaque option, la sienne cochée en jaune
+- [ ] Réouvrir une journée répondue : on retombe sur le résultat, pas sur les options
+- [ ] Les réponses des amis n'apparaissent **qu'après** avoir répondu soi-même
+
+**Série, calendrier et stats**
+
+- [ ] Série, record et total de jours répondus cohérents après une réponse
+- [ ] La case du jour se coche, l'accent « aujourd'hui » reste visible
+- [ ] Une journée où un ami a répondu depuis la dernière ouverture porte une pastille rose, qui
+      disparaît quand on ouvre la journée
+- [ ] Le bouton de proposition de question affiche bien sa condition et **n'ouvre rien** (attendu en 1.0)
+
+**Potes**
+
+- [ ] Invitation par pseudo exact ; pseudo inconnu : « Utilisateur introuvable. » sous le champ
+- [ ] L'invité reçoit une notification « Nouvelle invitation », un tap ouvre le menu
+- [ ] L'invitation reçue apparaît en haut de l'écran Stats **et** dans la liste du menu
+- [ ] Accepter, refuser, annuler, retirer : les deux moitiés de l'amitié suivent des deux côtés
+
+**Notifications**
+
+- [ ] Le jeton est enregistré au lancement d'une session connectée, supprimé à la déconnexion
+- [ ] Push de 7h reçue, un tap ouvre la question du jour
+- [ ] Push du soir sans avoir répondu : « … ont répondu à la question du jour. Et toi ? »
+- [ ] Push du soir sans ami ayant répondu : « Ne perds pas ta série… »
+- [ ] Push du soir en ayant déjà répondu : « Découvre la réponse de tes potes… »
+- [ ] Aucun envoi du soir quand aucun ami n'a répondu et que l'on a déjà répondu
+- [ ] Android : les deux canaux (question du jour, invitations) sont distincts dans les réglages système
+- [ ] Permission refusée au carrousel : l'alerte de relance ne revient pas, le bouton du Menu la
+      relève (ou ouvre les réglages système quand elle est grillée)
+
+**Robustesse**
+
+- [ ] `npm run typecheck` et `npm run lint` verts (aucune CI sur ce dépôt)
+- [ ] Mode avion : aucun écran ne reste bloqué sur un chargement infini
+- [ ] Écran de lancement (l'étoile sur le jaune) et icône corrects sur les deux plateformes
+- [ ] Petit écran (iPhone SE) et police système agrandie : rien ne déborde
+- [ ] Le premier tir de `scheduleDailyQuestion` à 07:00 Paris est vérifié dans les logs
+
+---
+
+## Mots-clés
+
+### App Store — français, 100 caractères max, séparés par des virgules sans espace
+
+```
+question,jour,potes,amis,stat,statistique,sondage,quiz,vote,serie,streak,quotidien,matin,entre
+```
+94 caractères. Aucune marque concurrente, aucune répétition du nom ni du sous-titre, singulier et
+sans accent — les trois règles de `docs/store-listing.md` §1.5.
+
+### App Store — anglais (réserve, non publié)
+
+```
+question,daily,friends,stat,poll,quiz,vote,streak,morning,answer,percent,social,habit,mates
+```
+91 caractères.
+
+### Google Play
+
+Play n'a pas de champ de mots-clés : l'indexation se fait sur le titre, la description courte et la
+description complète. Rien à saisir.
+
+---
+
+## Checklist publication
+
+Ce qui doit être vrai **avant** de soumettre le build 6 aux deux stores.
+
+### Bloquants encore ouverts
+
+- [ ] **Signalement d'un utilisateur dans l'app** — guideline 1.2, `docs/production-checklist.md`
+      §2.3. Le contact éditeur de `/legal/assistance` couvre l'exigence « traitement sous 24 h »,
+      mais **pas** le mécanisme de signalement lui-même
+- [ ] `npm run deploy:firestore:production` — le correctif de la réponse de démonstration est
+      côté règles, il n'existe en production qu'une fois déployé
+- [ ] `npm run deploy:admin:production` — les normes de sécurité des enfants et l'âge 16+ ne sont
+      en ligne qu'à hauteur du dernier déploiement Hosting
+- [ ] Page web de demande de suppression de compte (exigée par Play, hors de l'app)
+- [ ] URLs de confidentialité et de support renseignées dans App Store Connect **et** dans la Play
+      Console ; URL des normes de sécurité des enfants (`/legal/protection-des-enfants`)
+      renseignée dans la Play Console
+- [ ] Compte de démonstration créé sur la production, avec des journées répondues et deux amis
+      acceptés, puis renseigné dans les deux consoles
+- [ ] Capability « Sign in with Apple » activée sur l'App ID `fr.quentinmachard.statowrel`
+- [ ] Relecture juridique des cinq pages légales
+
+### Contenu
+
+- [ ] **Au moins 90 questions approuvées** dans le pot (`npm run seed-questions`, puis approbation
+      dans `apps/admin`) — un jour sans question casse la série de tout le monde
+- [ ] `npm run seed-daily-questions` passé sur la production
+- [ ] `npm run seed-demo-question` passé sur la production — sans lui, le carrousel d'accueil
+      ouvre sur une question introuvable
+- [ ] Console de modération déployée et rôle admin accordé
+
+### Visuels
+
+- [ ] Captures 1 à 3 de `docs/store-listing.md` §3.1 aux deux formats iOS et au format Play
+- [ ] Capture 4 : **utiliser la variante de repli** (« TA SÉRIE NE TIENT QU'À TOI. ») — la
+      proposition de questions n'existe pas
+- [ ] Bannière Play 1024×500
+- [ ] Icônes 1024×1024 (iOS) et 512×512 (Play)
+
+### Recette
+
+- [ ] Delta de la 1.0.0 ci-dessus passé en entier, déploiements Firestore et Hosting compris
+- [ ] Plan de test QA passé en entier sur iOS **et** Android, sur appareil physique, sur le build 6
+- [ ] TestFlight interne : au moins une semaine d'usage quotidien réel, c'est le seul moyen de
+      vérifier que le rendez-vous de 7h tient
+- [ ] Piste de test interne Play lancée en parallèle
