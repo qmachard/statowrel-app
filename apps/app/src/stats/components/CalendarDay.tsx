@@ -99,7 +99,7 @@ const PRESSED = StyleSheet.create({
 const LABEL = StyleSheet.create({
   answered: { fontFamily: fonts.head, color: colors['primary-foreground'] },
   today: { fontFamily: fonts.head, color: colors['accent-foreground'] },
-  missed: { fontFamily: fonts.head, color: colors['muted-foreground'] },
+  missed: { fontFamily: fonts.head, color: colors.foreground },
   idle: { fontFamily: fonts.sans, color: colors['muted-foreground'] },
 }) satisfies Record<CalendarDayState, TextStyle>;
 
