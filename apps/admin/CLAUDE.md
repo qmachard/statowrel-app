@@ -85,8 +85,13 @@ npm run deploy:admin:production   # projet production
 ```
 
 Rien à bâtir avant : le bloc `hosting` de `firebase.json` sert `apps/admin/dist` et le construit
-lui-même, son `predeploy` lançant `npm run build:admin`. La réécriture `**` → `/index.html` est ce
-qui fait tenir une SPA derrière un rechargement de page. Les assets portent leur hash dans leur nom,
+lui-même, son `predeploy` lançant `npm run build:admin`. **La console est servie sous `/admin/`** :
+les réécritures `/admin` et `/admin/**` → `/admin/index.html` sont ce qui fait tenir une SPA derrière
+un rechargement de page, et l'attrape-tout `**` → `/index.html` sert la **page de présentation** de
+la racine — `apps/admin/index.html`, une page statique sans bundle qui porte sa propre copie des
+tokens, comme celles de `public/legal/`. Vite bâtit les deux : `build.rollupOptions.input` déclare
+`index.html` (l'accueil) et `admin/index.html` (la console), d'où `dist/index.html` et
+`dist/admin/index.html` autour d'un même `dist/assets/`. Les assets portent leur hash dans leur nom,
 donc `/assets/**` part `immutable` pour un an, tandis que `**/*.html` reste `no-cache` — sans quoi
 un déploiement resterait invisible le temps du cache par défaut de Hosting sur le document d'entrée.
 
@@ -102,7 +107,7 @@ confidentialité, celle d'assistance et celle des normes de sécurité des enfan
 obligatoires des fiches), donc elle ne change pas. **Six réécritures explicites doublent ces
 chemins** avant le `**` attrape-tout — cinq pages, plus l'alias anglais `/legal/child-safety` que
 la Play Console peut recevoir —, alors que `cleanUrls` suffirait : sans l'un ni l'autre, `/legal/cgu`
-répond 200 *avec la console*, pas 404 — la panne ne ressemble donc jamais à une panne de routage vue
+répond 200 *avec la page d'accueil*, pas 404 — la panne ne ressemble donc jamais à une panne de routage vue
 du dehors. Et la config Hosting n'est en ligne qu'à hauteur du dernier `npm run deploy:admin` :
 changer `firebase.json` ne suffit pas, il faut redéployer. L'identité de l'éditeur — Quentin Machard
 SAS, RCS Laval 891 303 893, et l'adresse de contact — est écrite en dur dans les cinq pages : elle

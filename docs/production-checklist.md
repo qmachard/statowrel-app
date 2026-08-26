@@ -170,10 +170,10 @@ choisir le domaine, à déployer, et à renseigner les URLs dans les deux consol
 - [ ] Vérifier que les URLs répondent en HTTPS sans redirection ni mur de connexion
 - [ ] Faire relire les quatre pages par un juriste
 
-> La réécriture SPA de `firebase.json` (`"source": "**"` → `/index.html`) sert `apps/admin` sur
-> **toutes** les routes. Chacune des cinq pages porte donc sa propre réécriture explicite avant
-> l'attrape-tout : sans elle, `/legal/confidentialite` répond 200 **avec la console**, ce qui ne
-> ressemble pas à une panne de routage vu du dehors.
+> L'attrape-tout de `firebase.json` (`"source": "**"` → `/index.html`) sert la page de présentation
+> sur **toutes** les routes qui ne sont ni un fichier ni `/admin/**`. Chacune des cinq pages porte
+> donc sa propre réécriture explicite avant l'attrape-tout : sans elle, `/legal/confidentialite`
+> répond 200 **avec la page d'accueil**, ce qui ne ressemble pas à une panne de routage vu du dehors.
 
 ### 2.3 🔴 Signalement d'un utilisateur
 
