@@ -15,6 +15,7 @@ import { USER_COLLECTION, type UserData, userConverter } from '@statowrel/models
 
 import { auth } from '@/lib/firebase';
 import { getDocumentRef } from '@/lib/firestore';
+import { mark } from '@/lib/startupTrace';
 
 import { createUserProfile, syncUserProfile } from './profile';
 
@@ -49,23 +50,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // on the way out.
   const [ loaded, setLoaded ] = useState<{ uid: string; profile: UserData | null } | null>(null);
 
-  useEffect(() => onAuthStateChanged(auth, (nextUser) => {
-    setUser(nextUser);
+  useEffect(() => {
+    mark('AuthContext: subscribing to onAuthStateChanged');
 
-    if (nextUser === null) {
-      setInitializing(false);
+    return onAuthStateChanged(auth, (nextUser) => {
+      mark(`AuthContext: auth state fired, signedIn=${String(nextUser !== null)}`);
+      setUser(nextUser);
 
-      return;
-    }
+      if (nextUser === null) {
+        setInitializing(false);
 
-    // Mirrors Auth back into the profile, and nothing more: what it writes
-    // comes back through the subscription below, which is what holds the state.
-    // Failing is survivable — the copy in Firestore is a mirror, Auth stays the
-    // source of truth — so this never blocks the session.
-    syncUserProfile(nextUser).catch((error: unknown) => {
-      console.warn('[auth] could not sync the user profile', error);
+        return;
+      }
+
+      // Mirrors Auth back into the profile, and nothing more: what it writes
+      // comes back through the subscription below, which is what holds the state.
+      // Failing is survivable — the copy in Firestore is a mirror, Auth stays the
+      // source of truth — so this never blocks the session.
+      syncUserProfile(nextUser).catch((error: unknown) => {
+        console.warn('[auth] could not sync the user profile', error);
+      });
     });
-  }), []);
+  }, []);
 
   useEffect(() => {
     if (user === null) {
@@ -74,13 +80,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const uid = user.uid;
 
+    mark('AuthContext: subscribing to the profile snapshot');
+
     return onSnapshot(
       getDocumentRef(USER_COLLECTION, uid, userConverter),
       (snapshot) => {
+        mark(`AuthContext: profile snapshot fired, fromCache=${String(snapshot.metadata.fromCache)} exists=${String(snapshot.exists())}`);
         setLoaded({ uid, profile: snapshot.data() ?? null });
         setInitializing(false);
       },
       (error) => {
+        mark(`AuthContext: profile snapshot ERROR ${error instanceof Error ? error.message : String(error)}`);
         // A profile that cannot be read must not lock the user out of the app,
         // and must not send an account that already has a username back through
         // onboarding: the next session restore retries it.

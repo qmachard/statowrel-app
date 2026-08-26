@@ -20,8 +20,11 @@ import { navigationRef } from '@/navigation/navigationRef';
 import { navigationTheme } from '@/navigation/theme';
 import { usePushNotifications } from '@/notifications/data/usePushNotifications';
 import { usePushPermissionNudge } from '@/notifications/data/usePushPermissionNudge';
+import { mark } from '@/lib/startupTrace';
 
 SplashScreen.preventAutoHideAsync();
+
+mark('App.tsx: module evaluated');
 
 const styles = StyleSheet.create({
   root: {
@@ -38,6 +41,8 @@ const SessionGate = () => {
   // an already-signed-in user, nor at one about to be shown the carousel.
   const ready = !initializing && resolved;
 
+  mark(`SessionGate render: initializing=${String(initializing)} resolved=${String(resolved)} user=${String(user !== null)}`);
+
   // Inside the provider and inside the container, which is what it needs: the
   // session tells it whose device to register, and a tapped notification has a
   // navigator to open the day on.
@@ -51,6 +56,7 @@ const SessionGate = () => {
 
   useEffect(() => {
     if (ready) {
+      mark('SessionGate: ready — hiding the splash screen');
       SplashScreen.hideAsync();
     }
   }, [ready]);
@@ -73,10 +79,12 @@ const SessionGate = () => {
 };
 
 export default function App() {
-  const [ fontsLoaded ] = useFonts({
+  const [ fontsLoaded, fontsError ] = useFonts({
     ArchivoBlack_400Regular,
     SpaceGrotesk_400Regular,
   });
+
+  mark(`App render: fontsLoaded=${String(fontsLoaded)} fontsError=${String(fontsError !== null)}`);
 
   if (!fontsLoaded) {
     return null;
