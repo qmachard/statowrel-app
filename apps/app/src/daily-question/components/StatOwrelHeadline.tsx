@@ -45,12 +45,12 @@ const styles = StyleSheet.create({
   emphasis: {
     fontFamily: fonts.head,
   },
-  // The one word the whole screen is about — as big as the sheet allows, and
-  // the reason the result is no longer boxed in a card.
+  // The one word the whole screen is about — large, and the reason the result
+  // is no longer boxed in a card.
   statLabel: {
     fontFamily: fonts.head,
-    fontSize: fontSize['4xl'],
-    lineHeight: fontSize['4xl'] * 1.1,
+    fontSize: fontSize['2xl'],
+    lineHeight: fontSize['2xl'] * 1.1,
     textTransform: 'uppercase',
   },
 });
