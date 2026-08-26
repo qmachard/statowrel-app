@@ -499,7 +499,11 @@ So the rule the rest of this section rests on: **development happens on the emul
 
 ### The emulators
 
-`npm run dev:functions` starts them — functions, Firestore, Auth and Storage together, with the bundle rebuilt on change beside them. The ports live in `firebase.json` (Firestore 8080, Auth 9099, Storage 9199, functions 5001, UI 4000) and `singleProjectMode` holds them to the one project id `.firebaserc` names. The app and the console both switch onto them through env vars rather than a build (`EXPO_PUBLIC_FIREBASE_*_EMULATOR_*` in `apps/app`, `import.meta.env.DEV` in `apps/admin`), which is the one thing the native SDK still lets a restart decide.
+`npm run dev:functions` starts them — functions, Firestore, Auth and Storage together, with the bundle rebuilt on change beside them. The ports live in `firebase.json` (Firestore 8080, Auth 9099, Storage 9199, functions 5001, UI 4000) and `singleProjectMode` holds them to the one project id `.firebaserc` names.
+
+**The four the app talks to bind to `0.0.0.0`**, and that is not a detail: an emulator listens on `127.0.0.1` by default, which a phone can never reach — `localhost` on a device is the device. Everything then fails as `firestore/unavailable`, the transport error, which reads like an outage rather than like a binding. Auth, Firestore, Functions and Storage therefore carry an explicit `host`; the UI and the Hosting emulator keep the loopback, being for the browser sitting next to them. The device still needs the machine's LAN address in `EXPO_PUBLIC_FIREBASE_*_EMULATOR_HOST` — never `localhost`, and `10.0.2.2` on an Android emulator — and those values are inlined into the bundle, so changing them means restarting Metro with `-c`.
+
+What that opens is worth knowing: an emulator enforces no rules worth the name and holds whatever the seed wrote, so binding it wide makes it readable and writable by anything on the same network. It is the development fixture, on a laptop, on a network you chose — but do not run the emulators bound like this on a network you would not hand the fixture to. The app and the console both switch onto them through env vars rather than a build (`EXPO_PUBLIC_FIREBASE_*_EMULATOR_*` in `apps/app`, `import.meta.env.DEV` in `apps/admin`), which is the one thing the native SDK still lets a restart decide.
 
 `start:emulators` runs with `--import=./.firebase-emulator --export-on-exit`, so a session's data survives the next start. That is a convenience, not the source of the fixture: the fixture is the seed below, which is reproducible from nothing.
 
