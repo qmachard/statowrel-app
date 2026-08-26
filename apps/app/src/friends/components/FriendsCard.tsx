@@ -1,5 +1,5 @@
 import type { UserFriendData } from '@statowrel/models';
-import { UserRoundPlus, X } from 'lucide-react-native';
+import { UserRoundPlus, X } from '@/components/icons';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';

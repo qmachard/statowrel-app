@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { CalendarCheck, Trophy } from 'lucide-react-native';
+import { CalendarCheck, Trophy } from '@/components/icons';
 import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

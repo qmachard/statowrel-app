@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation } from '@react-navigation/native';
 import type { InviteFriendOutcome, InviteFriendResult } from '@statowrel/models';
-import { X } from 'lucide-react-native';
+import { X } from '@/components/icons';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, Text, View } from 'react-native';

@@ -1,4 +1,4 @@
-import { Menu, UserRoundPlus } from 'lucide-react-native';
+import { Menu, UserRoundPlus } from '@/components/icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';

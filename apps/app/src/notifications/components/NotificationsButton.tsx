@@ -1,4 +1,4 @@
-import { Bell, BellOff, BellRing } from 'lucide-react-native';
+import { Bell, BellOff, BellRing } from '@/components/icons';
 
 import { Button } from '@/components/Button';
 import { openNotificationSettings } from '@/notifications/data/pushPermission';

@@ -1,6 +1,6 @@
 import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { dailyQuestionDateKey } from '@statowrel/models';
-import { X } from 'lucide-react-native';
+import { X } from '@/components/icons';
 import { type ReactNode, useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 

@@ -1,4 +1,4 @@
-import { EllipsisVertical } from 'lucide-react-native';
+import { EllipsisVertical } from '@/components/icons';
 import { useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 

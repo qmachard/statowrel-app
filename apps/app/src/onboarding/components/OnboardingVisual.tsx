@@ -1,4 +1,4 @@
-import { BellRing } from 'lucide-react-native';
+import { BellRing } from '@/components/icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
