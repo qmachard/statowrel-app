@@ -148,13 +148,39 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   owner: 'qmachard',
   scheme: 'statowrel',
   version: '1.0.0',
+  /*
+   * Portrait, and nothing else — no screen here has a layout that turns.
+   *
+   * On Android this is the whole lock: Expo's plugin writes
+   * `android:screenOrientation="portrait"` onto the main activity. On iOS it
+   * only writes the universal `UISupportedInterfaceOrientations` key — the
+   * `~ipad` variant is written by the `requireFullScreen` plugin instead, which
+   * is why `supportsTablet` below is what actually settles the lock there.
+   */
   orientation: 'portrait',
   userInterfaceStyle: 'automatic',
   icon: './assets/icon.png',
   ios: {
     ...config.ios,
     bundleIdentifier: variant.iosBundleIdentifier,
-    supportsTablet: true,
+    /*
+     * iPhone only (device family `[1]`), and that is what makes the portrait
+     * lock above hold on iOS.
+     *
+     * iPad multitasking requires all four orientations — ITMS-90474 rejects the
+     * bundle without them — so Expo injects them into
+     * `UISupportedInterfaceOrientations~ipad` itself as soon as this is true and
+     * `requireFullScreen` is not. The build was therefore declaring portrait on
+     * iPhone and everything on iPad. `requireFullScreen: true` would stop that
+     * injection, but Apple has deprecated it: as of iOS 27 it no longer opts an
+     * app out of resizing.
+     *
+     * Dropping the iPad is the only lock that holds, and it costs nothing here:
+     * no screen is drawn for a tablet, and docs/store-listing.md §3.2 plans
+     * iPhone screenshots alone — which App Store Connect only accepts while the
+     * binary does not claim the iPad.
+     */
+    supportsTablet: false,
     // Required capability for expo-apple-authentication (docs/prd.md §4.1 —
     // Apple sign-in is mandatory on iOS once another social provider is offered).
     usesAppleSignIn: true,
