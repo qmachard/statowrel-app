@@ -113,7 +113,6 @@ npm run send-test-notification -- --email <email> --nudge --friends 3   # ... th
 - A signed-in account ALWAYS has its `v1_users/{uid}` document upserted by `src/auth/profile.ts`. **The document id is the Firebase Auth UID** — never a ULID, never a generated id. The document only exists once the username sheet has been through: `createUserProfile` reserves `v1_usernames/{handle}` first, then writes the profile — never in one batch, since the rules check the profile's username with a `get()` that a batch's own writes stay invisible to.
 - Firebase error codes are translated in `src/auth/errors.ts`. NEVER surface a raw `auth/*` code to the user.
 - Firestore refs in the app go through `src/lib/firestore.ts` (`getDocumentRef` / `getCollectionRef`), which wires the `@statowrel/models` converter — the client-side twin of `apps/functions/src/libs/firebase-admin.ts`.
-- Firestore **reads** go through `src/lib/firestoreReads.ts` — `readDoc` / `readDocs`, or `getFrozenDoc` for a document that can be served from the SDK's disk cache — never a bare `getDoc` / `getDocs`. Each takes a `domain:what` label (`day:tally`, `stats:month answered`) and logs one line per read in a development build, with what it cost and the running total for the app run: Firestore bills per document returned, so the cost of a screen cannot be read off its code. A listener says the same through `logSnapshot`. Nothing survives a release build — every line is behind `__DEV__`.
 
 ### Firestore Converters
 

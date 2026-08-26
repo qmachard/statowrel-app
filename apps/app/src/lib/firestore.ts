@@ -7,13 +7,13 @@ import {
   Timestamp,
   collection,
   doc,
+  getDoc,
   getDocFromCache,
 } from '@react-native-firebase/firestore';
 
 import type { FirestoreConverter } from '@statowrel/models';
 
 import { db } from './firebase';
-import { logRead, readDoc } from './firestoreReads';
 
 /**
  * Client-side counterpart of `apps/functions/src/libs/firebase-admin.ts`: every
@@ -169,13 +169,12 @@ export const getSubCollectionRef = <TModelData extends DocumentData, TFirebaseDa
  */
 export const getFrozenDoc = async <TModelData extends DocumentData, TFirebaseData extends DocumentData>(
   reference: DocumentReference<TModelData, TFirebaseData>,
-  label: string,
   isFrozen?: (data: TModelData) => boolean,
 ): Promise<DocumentSnapshot<TModelData, TFirebaseData>> => {
   const cached = await getDocFromCache(reference).catch(() => null);
 
   if (cached === null || !cached.exists()) {
-    return await readDoc(reference, label);
+    return await getDoc(reference);
   }
 
   const data = cached.data();
@@ -183,13 +182,5 @@ export const getFrozenDoc = async <TModelData extends DocumentData, TFirebaseDat
   // `data()` answers `undefined` on a document the cache holds as absent, which
   // `exists()` has already ruled out — the check is the type system's, not a
   // second guard.
-  if (isFrozen !== undefined && (data === undefined || !isFrozen(data))) {
-    return await readDoc(reference, label);
-  }
-
-  // The one read this whole helper exists for, and the only line in the log
-  // that costs nothing (`firestoreReads`).
-  logRead(label, reference.path, 0, 'cache');
-
-  return cached;
+  return isFrozen === undefined || (data !== undefined && isFrozen(data)) ? cached : await getDoc(reference);
 };

@@ -97,7 +97,7 @@ export const useFriendAnswers = (questionId: string | null, enabled: boolean): F
       DAILY_QUESTION_ANSWER_COLLECTION,
       friendId,
       dailyQuestionAnswerConverter,
-    ), 'day:friend answer')))
+    ))))
       .then((snapshots) => {
         if (cancelled) {
           return;

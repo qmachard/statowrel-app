@@ -1,3 +1,4 @@
+import { getDoc } from '@react-native-firebase/firestore';
 import { useEffect, useState } from 'react';
 
 import {
@@ -8,7 +9,6 @@ import {
 } from '@statowrel/models';
 
 import { getDocumentRef } from '@/lib/firestore';
-import { readDoc } from '@/lib/firestoreReads';
 
 export interface DemoQuestionView {
   /** `null` while it loads, and for good when there is none to pose. */
@@ -35,7 +35,7 @@ export const useDemoQuestion = (): DemoQuestionView => {
   useEffect(() => {
     let cancelled = false;
 
-    readDoc(getDocumentRef(QUESTION_COLLECTION, DEMO_QUESTION_ID, questionConverter), 'demo:question')
+    getDoc(getDocumentRef(QUESTION_COLLECTION, DEMO_QUESTION_ID, questionConverter))
       .then((snapshot) => {
         const data = snapshot.data() ?? null;
 

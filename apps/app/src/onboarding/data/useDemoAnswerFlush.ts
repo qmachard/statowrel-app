@@ -1,3 +1,4 @@
+import { getDoc } from '@react-native-firebase/firestore';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
@@ -13,7 +14,6 @@ import { useAuth } from '@/auth/AuthContext';
 import { submitAnswer } from '@/daily-question/data/submitAnswer';
 import { firebaseErrorCode } from '@/lib/firebaseError';
 import { getDocumentRef, getSubDocumentRef } from '@/lib/firestore';
-import { readDoc } from '@/lib/firestoreReads';
 
 import { clearPendingDemoAnswer, readPendingDemoAnswer } from './demoAnswerStore';
 
@@ -56,16 +56,16 @@ const flushPendingDemoAnswer = async (userId: string, cancelled: () => boolean):
     // the pick, or this same account having been through the carousel twice.
     // An answer is final (docs/prd.md §4.2), so the rules would refuse the
     // write anyway; reading is what tells that refusal from a deployment one.
-    readDoc(getSubDocumentRef(
+    getDoc(getSubDocumentRef(
       QUESTION_COLLECTION,
       DEMO_QUESTION_ID,
       DAILY_QUESTION_ANSWER_COLLECTION,
       userId,
       dailyQuestionAnswerConverter,
-    ), 'demo:own answer').catch(failingAt('read-answer')),
+    )).catch(failingAt('read-answer')),
     // Read for its `status`, which is what tells `submitAnswer` to write a
     // demo's shape — an empty day, never late.
-    readDoc(getDocumentRef(QUESTION_COLLECTION, DEMO_QUESTION_ID, questionConverter), 'demo:question')
+    getDoc(getDocumentRef(QUESTION_COLLECTION, DEMO_QUESTION_ID, questionConverter))
       .catch(failingAt('read-question')),
   ]);
 

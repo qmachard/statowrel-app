@@ -7,9 +7,10 @@ import {
   type UserCalendarMonthDayData,
   userCalendarMonthConverter,
 } from '@statowrel/models';
+import { getDoc } from '@react-native-firebase/firestore';
+
 import { isPastMonth } from '@/lib/dates';
 import { getDocumentRef, getFrozenDoc, getSubDocumentRef } from '@/lib/firestore';
-import { readDoc } from '@/lib/firestoreReads';
 
 /**
  * One month of the Stats calendar, as the screen consumes it — the two halves
@@ -140,16 +141,14 @@ const fetchCalendarMonth = async (userId: string, monthKey: string): Promise<Cal
   const publishedRef = getDocumentRef(DAILY_QUESTION_MONTH_COLLECTION, monthKey, dailyQuestionMonthConverter);
 
   const [ published, answered ] = await Promise.all([
-    isPastMonth(monthKey)
-      ? getFrozenDoc(publishedRef, 'stats:month published')
-      : readDoc(publishedRef, 'stats:month published'),
-    readDoc(getSubDocumentRef(
+    isPastMonth(monthKey) ? getFrozenDoc(publishedRef) : getDoc(publishedRef),
+    getDoc(getSubDocumentRef(
       USER_COLLECTION,
       userId,
       USER_CALENDAR_MONTH_COLLECTION,
       monthKey,
       userCalendarMonthConverter,
-    ), 'stats:month answered'),
+    )),
   ]);
 
   return {

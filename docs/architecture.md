@@ -529,7 +529,7 @@ The emulator is *too fast* to test one thing the app leans on. An answer is writ
 ANSWER_TRIGGER_DELAY_MS=3000
 ```
 
-`onDailyQuestionAnswerCreated` then sits on the answer that long before counting it, which is the window the sheet spends folding its own answer into a tally that does not carry it yet. The Metro log says which branch was taken (`[daily-question] own answer · …`), and the reads around it are one line each (`apps/app/src/lib/firestoreReads.ts`). Reopening the day once the delay has elapsed shows the other branch.
+`onDailyQuestionAnswerCreated` then sits on the answer that long before counting it, which is the window the sheet spends folding its own answer into a tally that does not carry it yet. The emulator UI is where that shows: the answer document appears with a null `counted_at` while the card is already up, and the marker lands a delay later. Reopening the day after that takes the other branch — same number on screen, reached the other way.
 
 It cannot leak into production: the trigger also checks `FUNCTIONS_EMULATOR`, which a deployed function never sets, so a value that found its way into a real deploy delays nothing.
 

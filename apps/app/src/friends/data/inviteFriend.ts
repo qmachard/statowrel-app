@@ -5,10 +5,10 @@ import {
   USERNAME_COLLECTION,
   usernameConverter,
 } from '@statowrel/models';
+import { getDoc } from '@react-native-firebase/firestore';
 
 import { FriendNotFoundError } from '@/friends/errors';
 import { getDocumentRef } from '@/lib/firestore';
-import { readDoc } from '@/lib/firestoreReads';
 import { callFunction } from '@/lib/functions';
 
 /**
@@ -33,10 +33,7 @@ import { callFunction } from '@/lib/functions';
  * `inviteFailure` rather than surfacing them.
  */
 export const inviteFriend = async (username: string): Promise<InviteFriendResult> => {
-  const reservation = await readDoc(
-    getDocumentRef(USERNAME_COLLECTION, username, usernameConverter),
-    'friends:username lookup',
-  );
+  const reservation = await getDoc(getDocumentRef(USERNAME_COLLECTION, username, usernameConverter));
 
   if (!reservation.exists()) {
     throw new FriendNotFoundError(username);

@@ -1,4 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { getDoc } from '@react-native-firebase/firestore';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 import {
@@ -20,7 +21,6 @@ import { useAuth } from '@/auth/AuthContext';
 import { getAnswersVersion, readAnswer, subscribeToAnswers } from '@/daily-question/data/answerStore';
 import { isPastMonth } from '@/lib/dates';
 import { getDocumentRef, getFrozenDoc, getSubDocumentRef } from '@/lib/firestore';
-import { readDoc } from '@/lib/firestoreReads';
 
 /**
  * What a day can look like to the app — the four dead ends are as much part of
@@ -149,7 +149,7 @@ const readAuthorName = async (authorId: string): Promise<string | null> => {
   }
 
   try {
-    const snapshot = await readDoc(getDocumentRef(USER_COLLECTION, authorId, userConverter), 'day:author');
+    const snapshot = await getDoc(getDocumentRef(USER_COLLECTION, authorId, userConverter));
 
     return snapshot.data()?.username ?? null;
   } catch {
@@ -236,9 +236,7 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     // a day out of the archive is then a `v1_questions` subscription and
     // nothing else. The current month is re-read, since it gains a day at every
     // 07:00 draw — including one that may have landed while the app slept.
-    (isPastMonth(monthKey)
-      ? getFrozenDoc(monthRef, 'day:month index')
-      : readDoc(monthRef, 'day:month index'))
+    (isPastMonth(monthKey) ? getFrozenDoc(monthRef) : getDoc(monthRef))
       .then((snapshot) => {
         if (!cancelled) {
           setDayState({
@@ -274,7 +272,7 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
 
     let cancelled = false;
 
-    readDoc(getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter), 'day:tally')
+    getDoc(getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter))
       .then((snapshot) => {
         if (cancelled) {
           return;
@@ -384,33 +382,15 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
         userId,
         dailyQuestionAnswerConverter,
       ),
-      'day:own answer',
       // A cached answer is only settled once it carries its marker: the trigger
       // writes it a beat after the answer is created, so a copy taken in that
       // beat would answer « not counted » for ever (`getFrozenDoc`).
       (data) => data.counted_at !== null,
     )
       .then((snapshot) => {
-        if (cancelled) {
-          return;
+        if (!cancelled) {
+          setAnswerState({ key: answerKey, answer: snapshot.data() ?? null, readAgainst });
         }
-
-        const answer = snapshot.data() ?? null;
-
-        if (__DEV__ && answer !== null) {
-          // The one line the read log cannot carry, and the one this read
-          // exists for: whether the tally already carries this answer, or the
-          // card has to fold it in on its own. Which read it was matters as
-          // much as what it found — only one chained to a landed tally proves
-          // anything, the one fired on the way in proves nothing and is only
-          // there to say whether the day was answered at all.
-          console.log(
-            `[daily-question] own answer · ${answer.counted_at === null ? 'not counted yet' : 'counted'}`
-            + ` · ${readAgainst === null ? 'read on the way in, proves nothing' : 'read against the tally on screen'}`,
-          );
-        }
-
-        setAnswerState({ key: answerKey, answer, readAgainst });
       })
       .catch((error: unknown) => {
         // The day itself still renders: not knowing whether it was answered is

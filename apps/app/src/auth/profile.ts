@@ -1,5 +1,5 @@
 import type { User } from '@react-native-firebase/auth';
-import { Timestamp, setDoc, updateDoc } from '@react-native-firebase/firestore';
+import { Timestamp, getDoc, setDoc, updateDoc } from '@react-native-firebase/firestore';
 
 import {
   type AuthProviderId,
@@ -14,7 +14,6 @@ import {
 
 import { isFirebaseError } from '@/lib/firebaseError';
 import { getDocumentRef } from '@/lib/firestore';
-import { readDoc } from '@/lib/firestoreReads';
 
 import { UsernameTakenError } from './errors';
 
@@ -45,7 +44,7 @@ const sameProviders = (left: AuthProviderId[], right: AuthProviderId[]): boolean
  */
 export const syncUserProfile = async (user: User): Promise<UserData | null> => {
   const ref = getDocumentRef(USER_COLLECTION, user.uid, userConverter);
-  const snapshot = await readDoc(ref, 'auth:profile upsert');
+  const snapshot = await getDoc(ref);
 
   if (!snapshot.exists()) {
     return null;
@@ -116,7 +115,7 @@ export const createUserProfile = async (
   const handle = normalizeUsername(username);
   const now = new Date().toISOString();
   const reservationRef = getDocumentRef(USERNAME_COLLECTION, handle, usernameConverter);
-  const reservation = await readDoc(reservationRef, 'auth:username reservation');
+  const reservation = await getDoc(reservationRef);
 
   // Firestore would refuse the write on its own — a `create` on an existing
   // document is denied outright — but reading first tells a handle someone else

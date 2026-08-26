@@ -15,7 +15,6 @@ import { USER_COLLECTION, type UserData, userConverter } from '@statowrel/models
 
 import { auth } from '@/lib/firebase';
 import { getDocumentRef } from '@/lib/firestore';
-import { logSnapshot } from '@/lib/firestoreReads';
 
 import { createUserProfile, syncUserProfile } from './profile';
 
@@ -74,16 +73,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const uid = user.uid;
-    const profileRef = getDocumentRef(USER_COLLECTION, uid, userConverter);
 
     return onSnapshot(
-      profileRef,
+      getDocumentRef(USER_COLLECTION, uid, userConverter),
       (snapshot) => {
-        // One of the app's two remaining listeners, and the one that earns it:
-        // the counters above the calendar are the answer trigger's to move, so
-        // the streak lands without a refresh. A snapshot served from the cache
-        // costs nothing, which is why the flag decides rather than the call.
-        logSnapshot('auth:profile', profileRef.path, snapshot.metadata.fromCache ? 0 : 1);
         setLoaded({ uid, profile: snapshot.data() ?? null });
         setInitializing(false);
       },
