@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react-native';
+import { Check } from '@/components/icons';
 import { Pressable, StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
 
 import { shadows } from '@/design/shadows';

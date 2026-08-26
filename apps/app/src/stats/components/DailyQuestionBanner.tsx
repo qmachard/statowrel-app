@@ -1,4 +1,4 @@
-import { Check, ChevronRight, MessageCircleQuestionMark } from 'lucide-react-native';
+import { Check, ChevronRight, MessageCircleQuestionMark } from '@/components/icons';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { shadows } from '@/design/shadows';

@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react-native';
+import { Check } from '@/components/icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { formatShare } from '@/daily-question/helpers/statowrel';

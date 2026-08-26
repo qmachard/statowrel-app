@@ -1,4 +1,4 @@
-import { Lightbulb, Lock } from 'lucide-react-native';
+import { Lightbulb, Lock } from '@/components/icons';
 
 import { Button } from '@/components/Button';
 

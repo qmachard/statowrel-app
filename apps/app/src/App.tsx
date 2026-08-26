@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -23,6 +23,16 @@ import { usePushPermissionNudge } from '@/notifications/data/usePushPermissionNu
 
 SplashScreen.preventAutoHideAsync();
 
+/**
+ * How long the splash screen may wait on the session and the carousel flag
+ * before the app opens anyway. The gate below exists to spare a signed-in user
+ * a flash of the sign-in screen — but its slowest link is the first Firestore
+ * snapshot of the profile, and on some Android devices that snapshot can hang
+ * outright (invertase/react-native-firebase#8787). Past this point, a stuck
+ * splash is worse than a screen still loading its data.
+ */
+const SPLASH_TIMEOUT_MS = 6000;
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -32,11 +42,20 @@ const styles = StyleSheet.create({
 const SessionGate = () => {
   const { user, initializing } = useAuth();
   const { resolved, seen, markSeen } = useOnboardingSeen();
+  const [ timedOut, setTimedOut ] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setTimedOut(true), SPLASH_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Hold the splash screen until the persisted session is restored *and* the
   // carousel flag has been read, so the app never flashes the sign-in screen at
-  // an already-signed-in user, nor at one about to be shown the carousel.
-  const ready = !initializing && resolved;
+  // an already-signed-in user, nor at one about to be shown the carousel — but
+  // never past the timeout: opening on a screen whose data is still loading
+  // beats a splash that hangs with it.
+  const ready = (!initializing && resolved) || timedOut;
 
   // Inside the provider and inside the container, which is what it needs: the
   // session tells it whose device to register, and a tapped notification has a
