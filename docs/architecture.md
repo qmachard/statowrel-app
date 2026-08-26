@@ -159,7 +159,6 @@ Only the shared half is immutable: a month of `v1_daily_question_months` is froz
 | Field | Type | Notes |
 |---|---|---|
 | `username` | `string` | handle, unique app-wide, typed on the onboarding sheet — never pre-filled from a provider; `v1_usernames` below is what makes it unique |
-| `photo_url` | `string \| null` | avatar; `null` until the user picks one |
 | `email` | `string \| null` | mirrored from Firebase Auth, which stays the source of truth |
 | `auth_providers` | `AuthProviderId[]` | `password` / `google.com` / `apple.com` / `facebook.com`, mirrored from Auth at each sign-in |
 | `created_at` | `UniversalTimestamp` | |

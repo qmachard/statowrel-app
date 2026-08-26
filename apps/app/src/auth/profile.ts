@@ -61,13 +61,10 @@ export const syncUserProfile = async (user: User): Promise<UserData | null> => {
 
   const email = user.email ?? null;
   const authProviders = authProvidersOf(user);
-  // The avatar belongs to the user once the profile exists — only fill it in
-  // when it is still missing, never overwrite a chosen one. The username is
-  // never touched here: it is the user's, and it is bound to a reservation.
-  const photoUrl = current.photo_url ?? user.photoURL ?? null;
 
-  const isUpToDate = current.photo_url === photoUrl
-    && current.email === email
+  // The username is never touched here: it is the user's, and it is bound to a
+  // reservation.
+  const isUpToDate = current.email === email
     && sameProviders(current.auth_providers, authProviders);
 
   if (isUpToDate) {
@@ -82,7 +79,6 @@ export const syncUserProfile = async (user: User): Promise<UserData | null> => {
   // update() does not run the converter (see the repo's CLAUDE.md), so
   // `updated_at` is written as a Timestamp here rather than as an ISO string.
   await updateDoc(ref, {
-    photo_url: photoUrl,
     email,
     auth_providers: authProviders,
     updated_at: Timestamp.now(),
@@ -90,7 +86,6 @@ export const syncUserProfile = async (user: User): Promise<UserData | null> => {
 
   return {
     ...current,
-    photo_url: photoUrl,
     email,
     auth_providers: authProviders,
     updated_at: new Date().toISOString(),
@@ -149,7 +144,6 @@ export const createUserProfile = async (
 
   const profile: UserData = {
     username: handle,
-    photo_url: current?.photo_url ?? user.photoURL ?? null,
     email: user.email ?? null,
     auth_providers: authProvidersOf(user),
     // Carried over when the document predates the username: `firestore.rules`

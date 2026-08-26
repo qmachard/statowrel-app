@@ -118,7 +118,7 @@ export const MenuScreen = () => {
           <Avatar
             size="xl"
             name={profile?.username ?? user.email ?? '?'}
-            uri={profile?.photo_url ?? user.photoURL}
+            uri={user.photoURL}
           />
 
           <Text style={styles.name} numberOfLines={1}>

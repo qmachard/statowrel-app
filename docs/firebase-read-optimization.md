@@ -64,7 +64,8 @@ Ce que ça change réellement, et il faut être précis, parce que la conclusion
   d'un snapshot initial complet — au moins tant que la déconnexion est courte. Les chiffres des
   postes à listener (#1, #6a, #12) sont donc des majorants depuis la migration ; ils n'ont pas été
   remesurés.
-- **Ça ne s'applique pas à un document qui bouge** : un `photo_url` (#2), un mois de calendrier de
+- **Ça ne s'applique pas à un document qui bouge** : un profil `v1_users` (#2, avant que la lecture
+  ne soit supprimée), un mois de calendrier de
   l'utilisateur (#3), le compteur `answer_counts` (#6). Pour ceux-là, un cache écrit à la main avec
   sa propre politique de fraîcheur reste la seule réponse.
 
@@ -153,9 +154,10 @@ lecture est **supprimée**. Le produit n'a pas encore de système de photo de pr
 ami est l'avatar DiceBear généré depuis son handle (`src/lib/avatars.ts`), et `friend_username` est
 déjà porté par la moitié d'amitié. `useFriendAvatars` lisait donc un `photo_url` par ami pour un
 étage d'`Avatar` que rien n'alimente vraiment ; le hook est supprimé et les lignes d'amis rendent
-l'avatar généré directement. (Un `photo_url` peut être non nul aujourd'hui — recopié du provider
-par `syncUserProfile` — mais il ne reste affiché que sur son propre écran Menu, qui le lit
-gratuitement via l'abonnement `AuthContext`.)
+l'avatar généré directement. Dans la foulée, `photo_url` a été **retiré du modèle `v1_users`**
+lui-même : l'écran Menu affiche la photo du provider en la lisant directement sur Firebase Auth
+(`user.photoURL`), sans miroir Firestore — plus rien à synchroniser dans `syncUserProfile` non
+plus.
 
 Le jour où un vrai système de photo de profil arrive, la suite est déjà décidée : **dénormaliser
 `photo_url` sur `v1_user_friends`**, écrit par le backend (callable d'invitation + fan-out sur
