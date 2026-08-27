@@ -23,6 +23,12 @@ export interface ProposeQuestionCardProps {
  */
 const RULE = `Gagne ${STREAK_STATCOIN_REWARD} StatCoins pour chaque série de ${STREAK_STATCOIN_MILESTONE} réussie`;
 
+/**
+ * The currency's own symbol, set after the amount the way € is — the short form
+ * the button wears once the subtitle above has spelled the name out.
+ */
+const PRICE = `${QUESTION_STATCOIN_COST}§`;
+
 /** French takes the singular at zero, so this is not `> 0`. */
 const statcoinsLabel = (statcoins: number): string => (
   `${statcoins} ${statcoins > 1 ? 'StatCoins' : 'StatCoin'}`
@@ -83,15 +89,18 @@ export const ProposeQuestionCard = ({ statcoins, onPress }: ProposeQuestionCardP
       <CardFooter>
         {/* `Button` owns its own surface and takes no `style`, so the width is
             the wrapper's business — the footer is a row, and this is its only
-            child. The price rides in the label with the coin behind it: it is
-            what the button *does*, not a caveat under it, and it stays there
-            once it can be paid — a purchase should say what it costs. */}
+            child. The price sits in the button's trailing slot rather than in
+            its label: it is what the action costs, not what the action is, so
+            it gets the sans face a step down instead of the label's own. It
+            stays there once it can be paid — a purchase should say what it
+            costs. The screen reader is given the two together, since « 100§ »
+            read out on its own says nothing. */}
         <View style={styles.action}>
           <Button
-            label={`Poser une question ${QUESTION_STATCOIN_COST}`}
+            label="Poser une question"
+            trailingLabel={PRICE}
+            accessibilityLabel={`Poser une question, ${QUESTION_STATCOIN_COST} StatCoins`}
             variant={affordable ? 'default' : 'outline'}
-            icon={Coins}
-            iconPosition="end"
             disabled={!affordable || onPress === undefined}
             onPress={onPress}
           />

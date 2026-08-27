@@ -33,6 +33,13 @@ export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> 
    * variant's own foreground, and read as the button's accessibility hint.
    */
   description?: string;
+  /**
+   * A short string set at the end of the button, past the label — a price, a
+   * count. Sans-serif and a step down, so it reads as a qualifier of the
+   * action rather than as part of it, and coloured by the variant like
+   * everything else here: a caller supplies the text, never the surface.
+   */
+  trailingLabel?: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
   icon?: ButtonIcon;
@@ -65,6 +72,13 @@ const styles = StyleSheet.create({
     // Dimmed rather than recoloured: every variant already hands it a
     // foreground that reads on its own surface.
     opacity: 0.75,
+  },
+  // Not dimmed the way `description` is: a price is information the button
+  // carries, not a caveat under it. The hierarchy comes from the face and the
+  // size alone.
+  trailingLabel: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.sm,
   },
   disabled: {
     opacity: 0.6,
@@ -183,6 +197,7 @@ const isIconOnly = (size: ButtonSize) => size.startsWith('icon');
 export const Button = ({
   label,
   description,
+  trailingLabel,
   variant = 'default',
   size = 'default',
   icon: Icon,
@@ -196,6 +211,10 @@ export const Button = ({
   const foreground = FOREGROUND[variant];
 
   const renderIcon = () => (Icon ? <Icon color={foreground} size={ICON_SIZE[size]} /> : null);
+
+  const renderTrailingLabel = () => (trailingLabel === undefined || iconOnly ? null : (
+    <Text style={[ styles.trailingLabel, LABEL[variant] ]}>{trailingLabel}</Text>
+  ));
 
   const renderCopy = () => {
     if (iconOnly) {
@@ -243,6 +262,7 @@ export const Button = ({
             <>
               {iconPosition === 'start' ? renderIcon() : null}
               {renderCopy()}
+              {renderTrailingLabel()}
               {iconPosition === 'end' ? renderIcon() : null}
             </>
           )}
