@@ -14,6 +14,8 @@ import { type QuestionStatus, questionLastModifiedAt } from '@statowrel/models';
 
 import { Button } from '@/components/Button';
 import { DataTableColumnHeader } from '@/components/DataTable';
+import { DropdownMenu } from '@/components/DropdownMenu';
+import { PencilIcon } from '@/components/icons';
 
 import type { QuestionAuthors } from './data/useQuestionAuthors';
 import type { ModeratedQuestion } from './data/useQuestions';
@@ -185,23 +187,28 @@ export const buildQuestionColumns = (actions: QuestionRowActions) => helper.colu
       const question = row.original;
       const busy = actions.pendingId === question.id;
 
-      return (
-        <div className="table__actions-inner">
-          {isApprovable(question.status) ? (
-            // On a refused question, approving is a reversal rather than the
-            // verdict to reach for — so it wears the same discreet shape
-            // « Rejeter » wears everywhere else, and « Éditer » stays the solid
-            // button of the row.
-            <Button
-              variant={question.status === 'rejected' ? 'ghost' : 'primary'}
-              small
-              disabled={busy}
-              onClick={() => actions.onApprove(question)}
-            >
+      const edit = (
+        <Button
+          variant="secondary"
+          small
+          icon
+          aria-label="Éditer la question"
+          title="Éditer"
+          onClick={() => actions.onEdit(question)}
+        >
+          <PencilIcon />
+        </Button>
+      );
+
+      // A question waiting on a verdict wears both of them: that is the whole
+      // job of the screen, and burying either one behind a « … » would make the
+      // moderator open a menu on every row of the pot.
+      if (question.status === 'pending') {
+        return (
+          <div className="table__actions-inner">
+            <Button small disabled={busy} onClick={() => actions.onApprove(question)}>
               {busy ? '…' : 'Approuver'}
             </Button>
-          ) : null}
-          {isRejectable(question.status) ? (
             <Button
               variant="ghost"
               small
@@ -210,10 +217,34 @@ export const buildQuestionColumns = (actions: QuestionRowActions) => helper.colu
             >
               Rejeter
             </Button>
+            {edit}
+          </div>
+        );
+      }
+
+      // Once a verdict is in, the other one is a reversal — reachable, but not
+      // sitting on the row. `used` and `demo` have none to reverse: a drawn
+      // question has left the pot for good, and the onboarding sample was never
+      // in it.
+      const reversal = isApprovable(question.status)
+        ? { label: 'Approuver', run: () => actions.onApprove(question) }
+        : isRejectable(question.status)
+          ? { label: 'Rejeter', run: () => actions.onReject(question) }
+          : null;
+
+      return (
+        <div className="table__actions-inner">
+          {edit}
+          {reversal ? (
+            <DropdownMenu label="Autres actions">
+              <button type="button" className="menu__item" disabled={busy} onClick={reversal.run}>
+                {reversal.label}
+              </button>
+              <button type="button" className="menu__item" onClick={() => actions.onEdit(question)}>
+                Éditer
+              </button>
+            </DropdownMenu>
           ) : null}
-          <Button variant="secondary" small onClick={() => actions.onEdit(question)}>
-            Éditer
-          </Button>
         </div>
       );
     },

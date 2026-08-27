@@ -187,6 +187,15 @@ h3 {
   padding: 8px 4px;
 }
 
+/*
+ * `.button:hover` above is `.button:hover:not(:disabled)` — three selectors
+ * against this one — so without an equally specific rule a ghost button turns
+ * solid yellow under the pointer, which is the one thing it is not.
+ */
+.button--ghost:hover:not(:disabled) {
+  background: var(--color-muted);
+}
+
 .button--ghost:active:not(:disabled) {
   transform: none;
 }
@@ -213,6 +222,86 @@ h3 {
 
 .button--block {
   width: 100%;
+}
+
+/* Square, and the glyph centred in it — the padding of a text button would
+   leave the icon off-centre against its own line box. */
+.button--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  width: 34px;
+  height: 34px;
+}
+
+.button--ghost.button--icon {
+  text-decoration: none;
+}
+
+.button--small.button--icon {
+  width: 30px;
+  height: 30px;
+}
+
+/* Menu ---------------------------------------------------------------------- */
+
+/*
+ * The panel of `DropdownMenu`, in the browser's top layer: it hangs inside the
+ * table's `overflow-x: auto` box, which would clip anything merely positioned.
+ * `position: fixed` because the top layer is in viewport coordinates, and the
+ * component writes `top` / `left` when it opens.
+ */
+.menu {
+  position: fixed;
+  margin: 0;
+  padding: 6px;
+  min-width: 160px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  background: var(--color-card);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* A popover is `display: none` until it opens; `:popover-open` is what lets the
+   panel be a flex box the rest of the time. */
+.menu:not(:popover-open) {
+  display: none;
+}
+
+.menu::backdrop {
+  background: transparent;
+}
+
+.menu__item {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-foreground);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.menu__item:hover:not(:disabled) {
+  background: var(--color-muted);
+}
+
+.menu__item:focus-visible {
+  outline: var(--border-width) solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.menu__item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Fields ------------------------------------------------------------------ */

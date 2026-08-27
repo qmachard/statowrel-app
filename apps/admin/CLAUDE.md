@@ -29,7 +29,7 @@ s'accordent sur qui est admin. Sans lui, la session existe mais l'écran affich�
 - `src/lib/firestore.ts` — `getDocumentRef` / `getCollectionRef`, qui câblent les converters `@statowrel/models`. Jumeau de `apps/app/src/lib/firestore.ts`.
 - `src/auth/` — `AuthContext` (session + claim `admin`), `SignInScreen` (e-mail + mot de passe, Google), `AccessDeniedScreen`, `errors.ts` (jamais un code `auth/*` affiché), `schemas.ts`.
 - `src/questions/` — `QuestionsTable` (le pot, une ligne par question), `columns.tsx` (les colonnes et le jeu de features TanStack), `QuestionModal` (**la même modale pour créer et pour éditer**), `RejectQuestionModal` (le refus et son motif), `schemas.ts` (zod), `data/saveQuestion.ts` (`createQuestion` / `updateQuestion` / `setQuestionStatus`), `data/useQuestions.ts`, `data/useQuestionAuthors.ts`.
-- `src/components/` — `Button`, `TextField`, `TextAreaField`, `Select`, `Alert`, `DataTable`, bâtis sur les classes de `src/index.css`.
+- `src/components/` — `Button`, `TextField`, `TextAreaField`, `Select`, `Alert`, `DataTable`, `DropdownMenu`, `icons`, bâtis sur les classes de `src/index.css`.
 - `src/index.css` — les tokens neobrutalisme en variables CSS, **portés depuis `apps/app/src/design/tokens.ts`**. L'app mobile reste la source de vérité : on change là-bas, puis ici.
 
 Apple n'est pas proposé : son flux web demande un Services ID et une clé que le build mobile n'a pas,
@@ -89,12 +89,22 @@ squelette est donc shadcn, la peau reste celle du repo.
 
 Cinq colonnes — question + réponses, auteur, statut, dernière modification, actions —, un filtre par
 statut au-dessus du cadre et un tri sur l'auteur ou sur la date de modification, cette dernière
-décroissante par défaut. **Les actions dépendent du statut** : « En attente » prend Approuver /
-Rejeter / Éditer, « Validée » Rejeter / Éditer, « Rejetée » Approuver / Éditer, et « Diffusée »
-comme « Démo » n'ont plus que Éditer — une question tirée a quitté le pot pour de bon, et
-l'échantillon d'onboarding n'y est jamais entré. Sur une question rejetée, « Approuver » passe en
-`ghost` : c'est un retour en arrière et pas le verdict vers lequel aller, donc il prend la forme
-discrète que « Rejeter » porte ailleurs — en noir, pas dans le rouge du destructif.
+décroissante par défaut.
+
+**Les actions dépendent du statut**, et le crayon est le seul bouton que toutes les lignes portent :
+
+| Statut | Actions |
+|---|---|
+| En attente | `Approuver` · `Rejeter` · ✎ |
+| Validée | ✎ · « … » → Rejeter / Éditer |
+| Rejetée | ✎ · « … » → Approuver / Éditer |
+| Diffusée, Démo | ✎ |
+
+Une question qui attend son verdict porte les deux : c'est le travail même de l'écran, et en enterrer
+un derrière un « … » ferait ouvrir un menu à chaque ligne du pot. Une fois le verdict rendu, l'autre
+n'est plus qu'un retour en arrière — atteignable, mais pas posé sur la ligne. « Diffusée » et
+« Démo » n'ont rien à renverser : une question tirée a quitté le pot pour de bon, l'échantillon
+d'onboarding n'y est jamais entré.
 
 **Le tri et le filtre sont côté client** : `useQuestions` diffuse déjà le pot entier, donc un `where` / `orderBy`
 coûterait un index composite et un aller-retour par frappe pour une liste qui tient dans un snapshot
@@ -108,6 +118,15 @@ feature qui n'est pas enregistrée dans `tableFeatures({ … })` n'existe tout s
 aussi pourquoi `DataTableColumnHeader` prend une colonne *structurellement* (trois méthodes) au lieu
 d'un `Column<TFeatures, …>` : générique sur `TableFeatures`, le conditionnel de la librairie ne se
 résout pas et les méthodes de tri restent invisibles.
+
+Le « … » est le `DropdownMenu` de `src/components/` — la **Popover API** de la plateforme plutôt que
+Radix. `popover="auto"` achète les deux comportements qu'un panneau fait main doit réécrire : la
+fermeture au clic dehors ou par Échap, et surtout le **top layer** — le panneau pend dans
+`.table-wrap`, dont l'`overflow-x: auto` rognerait tout ce qui n'est que positionné. L'attribut est
+posé depuis une ref, les typages React 18 étant antérieurs à l'API, et le placement est calculé à
+l'ouverture plutôt qu'en CSS anchor positioning, que tous les navigateurs n'ont pas encore. Pas de
+`role="menu"` : ce motif doit à l'utilisateur les flèches et la saisie au vol, là où un disclosure de
+deux boutons lui doit Tab, Échap et un nom — ce qu'il est.
 
 Le filtre est un **select natif à la shadcn** (`components/Select.tsx`) : un vrai `<select>`, donc le
 clavier, la saisie au vol et le sélecteur mobile restent ceux de la plateforme. `appearance: none`
