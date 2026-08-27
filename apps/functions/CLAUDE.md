@@ -128,6 +128,30 @@ not a moderator's edit, and stamping it would make every question look freshly e
 author's profile is gone is left alone rather than stamped — there is nothing to credit.
 
 ```bash
+npm run backfill-statcoins                               # credit what past streaks owe
+npm run backfill-statcoins -- --dry-run                  # ... listing what it would write
+npm run backfill-statcoins -- --production
+```
+
+Pays the milestone rewards of `docs/prd.md` §4.7 to the accounts that earned them before the
+currency existed. The answer trigger only ever pays on answers given *since* the wallet shipped;
+everybody who was already running streaks is owed what those streaks would have paid.
+
+**It replays the history rather than reading `streak_count`.** A profile carries the streak running
+now and the best one ever reached, and neither answers the question the script asks: how many
+milestones has this account crossed, across every streak it has ever run? Somebody who kept a 40-day
+streak last spring and stopped carries `streak_count: 0` and is owed 400§. So each account's answers
+are read back — one collection-group query on `user_id`, ordered by `date`, the index being the one
+`users-deleteAccount` already needs — and the streak is rebuilt day by day, `streakStatcoinReward`
+deciding each crossing exactly as the trigger does. Demo answers are dropped (empty `date`, and never
+a day) and so are late ones, a catch-up never moving a streak.
+
+Re-runnable, and that is the property to keep: it credits `owed − statcoins_earned`, never the total,
+so a second pass finds nothing and a milestone the trigger paid in between is accounted for.
+`increment` and `update()` rather than a whole-document `set()`, which would carry back counters read
+a moment earlier. Admin SDK and not a client: the rules deny every client write that moves a wallet.
+
+```bash
 npm run send-test-notification -- --email moi@exemple.fr   # every device of that account
 npm run send-test-notification -- --uid <uid> --date 2026-08-19
 npm run send-test-notification -- --token 'ExponentPushToken[…]' --body 'Coucou'

@@ -76,6 +76,8 @@ npm run send-test-notification -- --all --dry-run   # ... listing every register
 npm run send-test-notification -- --email <email> --nudge --friends 3   # ... the 18:00 nudge instead
 npm run backfill-question-authors             # stamps v1_questions.author_username from each author's profile
 npm run backfill-question-authors -- --dry-run  # ... says what it would write (also --production)
+npm run backfill-statcoins                    # pays the StatCoins owed for streaks run before the currency existed
+npm run backfill-statcoins -- --dry-run       # ... says what it would write (also --production)
 ```
 
 **IMPORTANT**: After modifying any file in `packages/models`, ALWAYS run `npm run typecheck` to verify no type errors were introduced across the monorepo.
