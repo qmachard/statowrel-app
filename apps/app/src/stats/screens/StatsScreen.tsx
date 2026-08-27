@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { CalendarCheck, Trophy } from '@/components/icons';
+import { CalendarCheck, Coins, Trophy } from '@/components/icons';
 import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,10 +18,10 @@ import { resolveStreakCount } from '@/stats/helpers/streak';
 /**
  * The root of the app (docs/prd.md §5.1, §5.2), from top to bottom: the
  * invitations waiting on an answer, the day's banner — the question while it is
- * still open, « RDV demain » once it has been answered — the streak and its
- * counters on a scrolling strip, the calendar, and under it what the streak
- * eventually buys: proposing a question (§4.7). The daily question sheet lands
- * on top of it (§5.4).
+ * still open, « RDV demain » once it has been answered — the streak, its
+ * counters and the token wallet on a scrolling strip, the calendar, and under
+ * it what that wallet buys: proposing a question (§4.7). The daily question
+ * sheet lands on top of it (§5.4).
  */
 const styles = StyleSheet.create({
   safeArea: {
@@ -53,6 +53,11 @@ export const StatsScreen = () => {
   // The profile is null while it loads, and stays null until the onboarding
   // sheet has created it. Zeros rather than nothing invented, nothing crashing.
   const streakCount = profile === null ? 0 : resolveStreakCount(profile, today);
+
+  // The wallet is read straight off the profile, which `AuthContext` subscribes
+  // to — so the tokens a milestone just paid land on the strip on their own,
+  // without this screen asking for them.
+  const tokens = profile?.token_balance ?? 0;
 
   // The banner is the day's status line, whichever side of the answer one is
   // on: the question while it waits, « RDV demain » once it has been given. It
@@ -101,6 +106,10 @@ export const StatsScreen = () => {
             value={profile?.answers_count ?? 0}
             unit="jours"
           />
+          {/* Last on the strip, and it is the only tile that is not a record of
+              the past: what the three before it have earned, and the only
+              number here that can go down. */}
+          <StatTile icon={Coins} label="Jetons" value={tokens} unit="à dépenser" />
         </StatsStrip>
 
         <StatsCalendar
@@ -110,9 +119,9 @@ export const StatsScreen = () => {
           archiveStart={archiveStart}
         />
 
-        {/* Under the calendar, because it is the calendar it reads: the streak
-            is the sum of those days, and the proposal is what it unlocks. */}
-        <ProposeQuestionButton streak={streakCount} />
+        {/* Under the calendar, because it is what the calendar buys: the days
+            answered pay the tokens (§4.7), and this is what they are for. */}
+        <ProposeQuestionButton tokens={tokens} />
       </ScrollView>
     </SafeAreaView>
   );
