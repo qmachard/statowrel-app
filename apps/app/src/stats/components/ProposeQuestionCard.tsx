@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/Card';
-import { colors, fontSize, fonts } from '@/design/tokens';
+import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 
 export interface ProposeQuestionCardProps {
   /** The wallet as the profile carries it — `statcoin_balance`, 0 while it loads. */
@@ -38,14 +38,6 @@ const spokenAmountLabel = (amount: number): string => `${amount} StatCoins`;
 const BALANCE_UNIT = 'StatCoins (§)';
 
 /**
- * How far the balance may shrink before it gives up and clips. It only ever
- * shrinks on the narrowest phones — « 120 StatCoins (§) » set at the size below
- * is a shade under 300pt, which a 375pt screen carries and a 320pt one does
- * not.
- */
-const BALANCE_MIN_SCALE = 0.7;
-
-/**
  * How the currency works, said in one sentence under the title — the whole of
  * docs/prd.md §4.7's earning rule, and the only place the app states it.
  */
@@ -57,14 +49,27 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
   },
-  // The amount and its currency on one line and at one size — the scale of the
-  // streak's own count, and deliberately: they are the two numbers the screen
-  // is about, and one of them turns into the other.
+  // The count over its unit, the anatomy `StreakCard` already uses — which is
+  // also what lets the name be spelled out: « 120 StatCoins (§) » set on one
+  // line at the count's size would wrap on any narrow phone.
   balance: {
-    textAlign: 'center',
+    alignItems: 'center',
+    gap: spacing(1),
+  },
+  // The scale of the streak's own count, and deliberately: they are the two
+  // numbers the screen is about, and one of them turns into the other.
+  balanceCount: {
     fontFamily: fonts.head,
     fontSize: fontSize['4xl'],
     lineHeight: fontSize['4xl'],
+    color: colors.foreground,
+  },
+  // Small, but neither grey nor light: it is the currency's own name, the one
+  // place the app writes it, so it carries the page's ink rather than the
+  // dimmed treatment a caption would get.
+  balanceUnit: {
+    fontFamily: fonts.sansMedium,
+    fontSize: fontSize.xs,
     color: colors.foreground,
   },
   // The footer is `muted` and edge to edge by default; the button is the only
@@ -100,18 +105,10 @@ export const ProposeQuestionCard = ({ statcoins, onPress }: ProposeQuestionCardP
       </CardHeader>
 
       <CardContent style={styles.content}>
-        {/* Held on one line and shrunk to fit rather than wrapped: the name
-            belongs beside the number at the number's own size, and only the
-            narrowest screens cannot carry it there. */}
-        <Text
-          style={styles.balance}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={BALANCE_MIN_SCALE}
-          accessibilityLabel={spokenAmountLabel(statcoins)}
-        >
-          {statcoins} {BALANCE_UNIT}
-        </Text>
+        <View style={styles.balance} accessible accessibilityLabel={spokenAmountLabel(statcoins)}>
+          <Text style={styles.balanceCount}>{statcoins}</Text>
+          <Text style={styles.balanceUnit}>{BALANCE_UNIT}</Text>
+        </View>
       </CardContent>
 
       <CardFooter>
