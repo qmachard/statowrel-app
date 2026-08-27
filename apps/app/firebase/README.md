@@ -34,6 +34,49 @@ to, and that is a per-developer, per-environment choice. A contributor
 pointing a build at their own Firebase project must not have to fight the
 repo for it.
 
+## Android SHA-1
+
+**A `google-services.json` alone does not make Google sign-in work on Android.**
+Play services resolves the Android OAuth client from the package name *plus the
+SHA-1 of the certificate the installed binary is signed with*, and refuses the
+sign-in — `DEVELOPER_ERROR`, after showing the account picker — when no
+registered fingerprint matches. iOS never hits this: it resolves through the
+`iosClientId` and URL scheme that `eas.json` carries.
+
+Every fingerprint an install can present has to be registered on the matching
+Android app in the Firebase console (Project settings → Your apps → *Add
+fingerprint*). There are **two per identifier**, and registering one and not the
+other is what produces a Google sign-in that works on a preview build and fails
+once the app comes from the store:
+
+| Fingerprint | Where it comes from | Which install presents it |
+|---|---|---|
+| EAS upload key | `APP_VARIANT=production eas credentials` → Android → Keystore | An APK/AAB installed by hand from the EAS dashboard |
+| Play app signing key | Play Console → Test and release → **App integrity** → App signing key certificate | Anything installed from Play, internal testing included |
+
+Play App Signing is the whole subtlety: Google **re-signs** the uploaded AAB with
+its own key, so the store build presents a fingerprint the upload key never had.
+
+`fr.quentinmachard.statowrel.dev` is a separate Firebase app with its own
+fingerprint list — a `development` build needs its own EAS keystore SHA-1 there.
+
+After adding a fingerprint:
+
+```bash
+# 1. Re-download google-services.json from the console, over the local copy.
+# 2. Re-push it to EAS — the file variable holds a snapshot, not a link.
+APP_VARIANT=production eas env:set \
+  --environment preview --environment production \
+  --name GOOGLE_SERVICES_JSON --type file --visibility secret \
+  --value ./firebase/google-services.production.json
+
+# 3. Rebuild. The fingerprint is checked against the binary, so nothing short
+#    of a new build picks it up — and no OTA update can.
+
+# Checks the app config against the Firebase/Google Cloud one before you burn a build:
+npx @react-native-google-signin/config-doctor
+```
+
 ## Builds
 
 EAS never sees a gitignored file, so an EAS build reads them from **file**
