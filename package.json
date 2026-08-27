@@ -25,6 +25,7 @@
     "send-test-notification": "npm run build:models && node apps/functions/scripts/send-test-notification.mjs",
     "seed-demo-question": "npm run build:models && node apps/functions/scripts/seed-demo-question.mjs",
     "seed-emulator": "npm run build:models && node apps/functions/scripts/seed-emulator.mjs",
+    "backfill-question-authors": "npm run build:models && node apps/functions/scripts/backfill-question-authors.mjs",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

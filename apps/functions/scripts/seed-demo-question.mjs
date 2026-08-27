@@ -126,7 +126,9 @@ if (existing === null) {
     label,
     options,
     status: 'demo',
+    // The sample belongs to nobody: no author to credit, so no handle to carry.
     author_id: '',
+    author_username: null,
     rejection_reason: null,
     // A demo question is never a day: everything the daily cycle owns stays
     // null. Its answers carry an empty `date` and `late: false` rather than a

@@ -76,6 +76,37 @@ export interface QuestionFirebaseData {
   status: QuestionStatus;
   /** Author of the question, credited on the question screen once it is drawn. */
   author_id: string;
+  /**
+   * The author's `username`, copied from their profile when the question is
+   * written, so the credit line of docs/prd.md §5.4 costs nothing: the day
+   * screen already holds the question, and the moderation console already
+   * streams the whole pot. Without it, naming an author is one profile read per
+   * opening of a day and one per distinct author of a pot that never shrinks.
+   *
+   * Same trade, and the same reasoning, as `friend_username` on
+   * `v1_user_friend`: a display cache, not the truth —
+   * `v1_users/{author_id}.username` stays it, and `v1_usernames` stays what
+   * makes it unique. It is safe to copy because it is *checkable*:
+   * `firestore.rules` runs the same `get()` on the reservation that the
+   * friendship's own `friendUsernameIsTheirs()` runs, so a client cannot drop a
+   * question credited under somebody else's handle.
+   *
+   * Nullable, and not only for a question nobody proposed (a seeded catalogue
+   * entry, the onboarding demo): the field is younger than the collection, so
+   * every question written before it carries none. A null one falls back to
+   * reading the profile — the same shape as `questionLastModifiedAt` falling
+   * back to `created_at` — until `npm run backfill-question-authors` has run.
+   *
+   * **The credit follows a rename.** Renaming a handle does not exist yet
+   * (docs/prd.md §4.1) and cannot be a client write — `v1_usernames` is
+   * `allow update, delete: if false`, freeing a reservation being the backend's
+   * job. The day that job exists, it owns propagating this copy onto its
+   * author's questions, alongside the `v1_user_friends` copies: the alternative
+   * is showing two different handles for one person in the same app, which is
+   * worse than a fan-out over the handful of documents §4.7 lets anybody
+   * propose.
+   */
+  author_username: string | null;
   /** Reason sent back to the author. Null unless `status` is `rejected`. */
   rejection_reason: string | null;
   /**
@@ -192,6 +223,7 @@ export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebas
     })),
     status: data.status,
     author_id: data.author_id,
+    author_username: data.author_username ?? null,
     rejection_reason: data.rejection_reason ?? null,
     broadcast_at: data.broadcast_at ? TimestampClass.fromDate(new Date(data.broadcast_at)) : null,
     broadcast_on: data.broadcast_on ?? null,
@@ -208,6 +240,7 @@ export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebas
       options: parseOptions(data.options),
       status: data.status ?? 'pending',
       author_id: data.author_id ?? '',
+      author_username: data.author_username ?? null,
       rejection_reason: data.rejection_reason ?? null,
       broadcast_at: parseTimestamp(data.broadcast_at ?? null),
       broadcast_on: data.broadcast_on ?? null,

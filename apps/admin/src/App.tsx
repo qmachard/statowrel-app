@@ -6,12 +6,13 @@ import { SignInScreen } from './auth/SignInScreen';
 import { Button } from './components/Button';
 import { QuestionModal } from './questions/QuestionModal';
 import { QuestionsTable } from './questions/QuestionsTable';
+import type { QuestionAuthor } from './questions/data/saveQuestion';
 import type { ModeratedQuestion } from './questions/data/useQuestions';
 
 /** Closed, writing a new question, or editing an existing one — the modal's three states. */
 type ModalState = { open: false } | { open: true; question: ModeratedQuestion | null };
 
-const ModerationScreen = ({ authorId }: { authorId: string }) => {
+const ModerationScreen = ({ author }: { author: QuestionAuthor }) => {
   const { user, signOut } = useAuth();
   const [ modal, setModal ] = useState<ModalState>({ open: false });
 
@@ -44,7 +45,7 @@ const ModerationScreen = ({ authorId }: { authorId: string }) => {
           // defaults rather than reset after mounting.
           key={modal.question?.id ?? 'new'}
           question={modal.question}
-          authorId={authorId}
+          author={author}
           onClose={() => setModal({ open: false })}
         />
       ) : null}
@@ -53,7 +54,7 @@ const ModerationScreen = ({ authorId }: { authorId: string }) => {
 };
 
 const Router = () => {
-  const { user, isAdmin, initializing } = useAuth();
+  const { user, isAdmin, initializing, username } = useAuth();
 
   if (initializing) {
     return (
@@ -73,7 +74,7 @@ const Router = () => {
     return isAdmin === null ? null : <AccessDeniedScreen />;
   }
 
-  return <ModerationScreen authorId={user.uid} />;
+  return <ModerationScreen author={{ id: user.uid, username }} />;
 };
 
 export default function App() {

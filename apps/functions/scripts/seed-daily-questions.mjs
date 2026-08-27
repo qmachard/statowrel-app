@@ -151,6 +151,7 @@ const {
   QUESTION_MAX_OPTIONS,
   QUESTION_MIN_OPTIONS,
   questionConverter,
+  USER_COLLECTION,
 } = await import('@statowrel/models').catch(() => (
   die('Could not load @statowrel/models — run `npm run build:models` first.')
 ));
@@ -166,6 +167,16 @@ const firestore = getFirestore();
 const questionsRef = firestore
   .collection(QUESTION_COLLECTION)
   .withConverter(questionConverter(Timestamp, GeoPoint));
+
+// The credit is carried on the question rather than resolved at display time,
+// so it is resolved once here — `--author` being a single uid. An unknown one
+// credits nobody: the fixture is still worth writing, and the reader falls back
+// to the profile until the backfill passes.
+const authorUsername = author === ''
+  ? null
+  : await firestore.collection(USER_COLLECTION).doc(author).get()
+    .then((snapshot) => snapshot.data()?.username ?? null)
+    .catch((error) => die(`Cannot read ${USER_COLLECTION}/${author} on ${projectId}: ${error.message}`));
 
 const monthRefOf = (date) => firestore
   .collection(DAILY_QUESTION_MONTH_COLLECTION)
@@ -217,6 +228,7 @@ const seedDay = async (date, pick) => {
       options: question.options,
       status: 'used',
       author_id: author,
+      author_username: authorUsername,
       rejection_reason: null,
       broadcast_at: publishedAt.toISOString(),
       broadcast_on: date,

@@ -100,6 +100,7 @@ const {
   QUESTION_COLLECTION,
   QUESTION_MIN_OPTIONS,
   QUESTION_MAX_OPTIONS,
+  USER_COLLECTION,
   questionConverter,
 } = models;
 
@@ -118,6 +119,17 @@ const converter = questionConverter(Timestamp, GeoPoint);
 const existing = await collection.get().catch((error) => die(
   `Cannot read ${QUESTION_COLLECTION} on ${projectId}: ${error.message}`,
 ));
+
+// The credit is carried on the question rather than resolved at display time,
+// so it is resolved here — once for the whole batch, `--author` being a single
+// uid. An unknown uid credits nobody rather than stopping the seed: the pot is
+// still worth writing, and the reader falls back to the profile until the
+// backfill passes.
+const authorUsername = author === ''
+  ? null
+  : await firestore.collection(USER_COLLECTION).doc(author).get()
+    .then((snapshot) => snapshot.data()?.username ?? null)
+    .catch((error) => die(`Cannot read ${USER_COLLECTION}/${author} on ${projectId}: ${error.message}`));
 
 const seen = new Set(existing.docs.map((document) => documentIdentityOf(document.data())));
 
@@ -146,6 +158,7 @@ entries.forEach((entry, index) => {
     options: seedOptionsOf(entry),
     status,
     author_id: author,
+    author_username: authorUsername,
     rejection_reason: null,
     // Everything a drawn question carries stays null: the daily scheduler owns
     // `broadcast_at` / `broadcast_on` / `closes_at`, and `answer_counts` belongs
@@ -160,7 +173,7 @@ entries.forEach((entry, index) => {
 
 console.log(`• ${file}`);
 console.log(`• ${entries.length} question(s) in the file, ${existing.size} already in ${QUESTION_COLLECTION} on ${projectId}${emulator ? ` (emulator ${emulator})` : ''}`);
-console.log(`• ${pending.length} to write as "${status}", ${skipped} already there`);
+console.log(`• ${pending.length} to write as "${status}"${authorUsername ? ` credited to @${authorUsername}` : ''}, ${skipped} already there`);
 
 if (dryRun) {
   pending.forEach((question) => console.log(`  + ${question.label} — ${question.options.map((option) => option.label).join(' / ')}`));
