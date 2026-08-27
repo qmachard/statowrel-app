@@ -52,6 +52,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.destructive,
   },
+  forgotPassword: {
+    textAlign: 'center',
+    fontFamily: fonts.sans,
+    fontSize: fontSize.sm,
+    color: colors['muted-foreground'],
+    textDecorationLine: 'underline',
+  },
   alternatives: {
     gap: spacing(3),
   },
@@ -150,6 +157,13 @@ export const SignInScreen = () => {
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <Button label="Se connecter" loading={isSubmitting} onPress={onSubmit} />
+
+            <Text
+              style={styles.forgotPassword}
+              onPress={() => navigation.navigate('ForgotPassword')}
+            >
+              Mot de passe oublié ?
+            </Text>
           </View>
 
           <View style={styles.alternatives}>
