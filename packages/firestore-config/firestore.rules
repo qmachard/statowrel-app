@@ -248,9 +248,9 @@ service cloud.firestore {
       // proposal callable debits it — both admin-side, past these rules — so
       // every client-side move of it is a forged balance.
       function keepsWallet() {
-        return request.resource.data.get('token_balance', 0) == resource.data.get('token_balance', 0)
-               && request.resource.data.get('tokens_earned', 0) == resource.data.get('tokens_earned', 0)
-               && request.resource.data.get('tokens_spent', 0) == resource.data.get('tokens_spent', 0);
+        return request.resource.data.get('statcoin_balance', 0) == resource.data.get('statcoin_balance', 0)
+               && request.resource.data.get('statcoins_earned', 0) == resource.data.get('statcoins_earned', 0)
+               && request.resource.data.get('statcoins_spent', 0) == resource.data.get('statcoins_spent', 0);
       }
 
       // A new profile opens empty, and that is checked rather than assumed:
@@ -261,7 +261,7 @@ service cloud.firestore {
       // The streak is pinned here too, and not for symmetry: the payout is
       // computed from `streak_count` and `streak_last_answered_on`, so a
       // profile created with a streak of 9 answered yesterday is worth 100
-      // tokens tomorrow. Forging a score was vanity; forging it is now
+      // StatCoins tomorrow. Forging a score was vanity; forging it is now
       // counterfeiting.
       //
       // `create` only ever fires on a document that does not exist, so nothing
@@ -273,9 +273,9 @@ service cloud.firestore {
                && request.resource.data.get('streak_best', 0) == 0
                && request.resource.data.get('answers_count', 0) == 0
                && request.resource.data.get('streak_last_answered_on', null) == null
-               && request.resource.data.get('token_balance', 0) == 0
-               && request.resource.data.get('tokens_earned', 0) == 0
-               && request.resource.data.get('tokens_spent', 0) == 0;
+               && request.resource.data.get('statcoin_balance', 0) == 0
+               && request.resource.data.get('statcoins_earned', 0) == 0
+               && request.resource.data.get('statcoins_spent', 0) == 0;
       }
 
       allow read: if isAuthenticated();

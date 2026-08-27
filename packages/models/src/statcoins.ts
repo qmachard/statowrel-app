@@ -7,12 +7,12 @@
  * tells the user what they can afford. A constant duplicated across those three
  * is a constant that drifts, and a currency that drifts is a bug people notice.
  *
- * The wallet lives on the profile (`v1_users`: `token_balance`, `tokens_earned`,
- * `tokens_spent`), maintained by the backend alone — `firestore.rules` denies
+ * The wallet lives on the profile (`v1_users`: `statcoin_balance`, `statcoins_earned`,
+ * `statcoins_spent`), maintained by the backend alone — `firestore.rules` denies
  * the client every write that moves it.
  *
  * **Why 100 and not 1.** One streak milestone could just as well have handed
- * over a single token worth one question. It hands over a hundred so the unit
+ * over a single coin worth one question. It hands over a hundred so the unit
  * stays smaller than the price: a pack bought in-app, a reward for watching an
  * ad, a gift between friends — none of those are worth a whole question, and
  * none of them can exist if the smallest coin *is* a question. Neither the pack
@@ -24,15 +24,15 @@
  * (10, 20, 30…), and only on the day the milestone is crossed.
  *
  * A milestone rather than a per-day drip because the reward has to be an event:
- * ten tokens a day would fund a question just as fast and celebrate nothing.
+ * ten StatCoins a day would fund a question just as fast and celebrate nothing.
  */
-export const STREAK_TOKEN_MILESTONE = 10;
+export const STREAK_STATCOIN_MILESTONE = 10;
 
 /** What crossing a milestone pays. */
-export const STREAK_TOKEN_REWARD = 100;
+export const STREAK_STATCOIN_REWARD = 100;
 
 /** What proposing a question costs (docs/prd.md §4.7) — one milestone, exactly. */
-export const QUESTION_TOKEN_COST = 100;
+export const QUESTION_STATCOIN_COST = 100;
 
 /**
  * What a day's answer pays out, from the streak before it and the streak after.
@@ -44,15 +44,15 @@ export const QUESTION_TOKEN_COST = 100;
  * streak ever advances by more than one — the reward follows the ground
  * covered, not the digit it landed on.
  */
-export const streakTokenReward = (previousStreak: number, nextStreak: number): number => {
+export const streakStatcoinReward = (previousStreak: number, nextStreak: number): number => {
   if (nextStreak <= previousStreak) {
     return 0;
   }
 
   // Never negative past the guard above: a bigger streak can only sit in the
   // same milestone bracket or a later one.
-  const crossed = Math.floor(nextStreak / STREAK_TOKEN_MILESTONE)
-    - Math.floor(previousStreak / STREAK_TOKEN_MILESTONE);
+  const crossed = Math.floor(nextStreak / STREAK_STATCOIN_MILESTONE)
+    - Math.floor(previousStreak / STREAK_STATCOIN_MILESTONE);
 
-  return crossed * STREAK_TOKEN_REWARD;
+  return crossed * STREAK_STATCOIN_REWARD;
 };

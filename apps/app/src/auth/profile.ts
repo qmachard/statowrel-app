@@ -159,9 +159,9 @@ export const createUserProfile = async (
     // The wallet opens empty, and the rules check that it does: a create is the
     // one write a client makes to these fields, so it is the one place a
     // balance could be invented (docs/prd.md §4.7).
-    token_balance: current?.token_balance ?? 0,
-    tokens_earned: current?.tokens_earned ?? 0,
-    tokens_spent: current?.tokens_spent ?? 0,
+    statcoin_balance: current?.statcoin_balance ?? 0,
+    statcoins_earned: current?.statcoins_earned ?? 0,
+    statcoins_spent: current?.statcoins_spent ?? 0,
   };
 
   await setDoc(getDocumentRef(USER_COLLECTION, user.uid, userConverter), profile);

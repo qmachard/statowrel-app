@@ -285,7 +285,7 @@ const {
   QUESTION_MAX_OPTIONS,
   QUESTION_MIN_OPTIONS,
   questionConverter,
-  streakTokenReward,
+  streakStatcoinReward,
   USER_CALENDAR_MONTH_COLLECTION,
   USER_COLLECTION,
   USER_FRIEND_COLLECTION,
@@ -527,9 +527,9 @@ const profiles = new Map(castUsernames.map((username) => [ username, {
   streak_count: 0,
   streak_best: 0,
   streak_last_answered_on: null,
-  token_balance: 0,
-  tokens_earned: 0,
-  tokens_spent: 0,
+  statcoin_balance: 0,
+  statcoins_earned: 0,
+  statcoins_spent: 0,
 } ]));
 
 /**
@@ -549,10 +549,10 @@ const advanceStreak = (state, dateKey) => {
   state.streak_best = Math.max(state.streak_best, state.streak_count);
   state.streak_last_answered_on = dateKey;
 
-  const reward = streakTokenReward(previousStreak, state.streak_count);
+  const reward = streakStatcoinReward(previousStreak, state.streak_count);
 
-  state.token_balance += reward;
-  state.tokens_earned += reward;
+  state.statcoin_balance += reward;
+  state.statcoins_earned += reward;
 };
 
 for (const day of world) {
@@ -828,7 +828,7 @@ console.log(`  Sign in     ${email} / ${password}${' '.repeat(2)}(also admin —
 console.log(`  Today       ${today} · « ${todaysDay?.label ?? '—'} »`);
 console.log(`  Answered    ${todayAnswered ? 'yes — the sheet opens on the result card' : 'no — the day is yours to answer'}`);
 console.log(`  Streak      ${main.streak_count} day(s), best ${main.streak_best}, ${main.answers_count} answered`);
-console.log(`  Wallet      ${main.token_balance} token(s), ${main.tokens_earned} earned`);
+console.log(`  Wallet      ${main.statcoin_balance} StatCoin(s), ${main.statcoins_earned} earned`);
 console.log(`  Friends     ${friendUsernames.join(', ') || '—'} · 1 invitation from ${INVITER} · 1 sent to ${INVITEE}`);
 console.log(`  Moderation  ${POT_PENDING} pending, ${POT_APPROVED} approved, ${POT_REJECTED} rejected`);
 console.log(`  Onboarding  the demo question is in, with ${DEMO_ANSWERS} answers behind it`);
