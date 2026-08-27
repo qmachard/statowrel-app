@@ -95,12 +95,17 @@ levier d'acquisition du produit, mais son absence n'empêche ni la soumission ni
 
 ### 1.4 ⚪ Proposition de questions depuis l'app
 
-`docs/prd.md` §4.7 n'existe que côté modération (`apps/admin`). L'app ne permet pas de proposer une
-question, et l'écran « Mes questions » du menu n'est pas là.
+`docs/prd.md` §4.7 est ouvert côté app : la carte sous le calendrier mène au formulaire, le callable
+`questions-proposeQuestion` débite les 100 StatCoins et écrit la question `pending`, et un rejet les
+rembourse. Ce qui manque, c'est l'écran « Mes questions » du menu (§5.3) : l'auteur ne relit ni le
+statut de ses propositions ni le motif d'un refus.
 
-Conséquence pour l'examen : c'est ce qui permet aujourd'hui de déclarer un contenu utilisateur
-**entièrement pré-modéré**. Le jour où l'app ouvre la proposition, la §1.9 de
-`docs/store-listing.md` est à revoir.
+Conséquence pour l'examen : **l'app porte désormais du contenu utilisateur**. Il reste
+**entièrement pré-modéré** — une question proposée n'est visible de personne tant qu'un modérateur ne
+l'a pas approuvée, et elle n'est lue que le jour où elle est tirée —, donc la déclaration tient. Mais
+elle n'est plus « pas de contenu utilisateur du tout » : la §1.9 de `docs/store-listing.md` est à
+relire avec cette formulation-là, et le signalement de contenu (et non plus seulement d'utilisateur)
+devient une question ouverte pour la ligne directrice 1.2 d'Apple.
 
 ### 1.5 ⚪ Lien et code d'invitation
 
