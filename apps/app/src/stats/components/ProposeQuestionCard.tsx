@@ -1,5 +1,4 @@
 import { QUESTION_STATCOIN_COST, STREAK_STATCOIN_MILESTONE, STREAK_STATCOIN_REWARD } from '@statowrel/models';
-import { Coins } from '@/components/icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -31,6 +30,14 @@ const amountLabel = (amount: number): string => `${amount}§`;
 const spokenAmountLabel = (amount: number): string => `${amount} StatCoins`;
 
 /**
+ * The currency named beside its symbol, the way a listing writes « Euro (€) ».
+ * It is the one place the interface spells the name out, so it is also where
+ * `§` is taught — everywhere else, on this card and past it, the symbol stands
+ * alone.
+ */
+const BALANCE_UNIT = 'StatCoins (§)';
+
+/**
  * How the currency works, said in one sentence under the title — the whole of
  * docs/prd.md §4.7's earning rule, and the only place the app states it.
  */
@@ -42,18 +49,25 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
   },
+  // The count over its unit, the anatomy `StreakCard` already uses — which is
+  // also what lets the name be spelled out: « 120 StatCoins (§) » set on one
+  // line at the size below would wrap on any narrow phone.
   balance: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing(2),
+    gap: spacing(1),
   },
   // The scale of the streak's own count, and deliberately: they are the two
   // numbers the screen is about, and one of them turns into the other.
-  balanceLabel: {
+  balanceCount: {
     fontFamily: fonts.head,
     fontSize: fontSize['4xl'],
     lineHeight: fontSize['4xl'],
     color: colors.foreground,
+  },
+  balanceUnit: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.xs,
+    color: colors['muted-foreground'],
   },
   // The footer is `muted` and edge to edge by default; the button is the only
   // thing in it, so it takes the whole width.
@@ -61,9 +75,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
-/** Sized against the count beside it rather than against the body text. */
-const COIN_SIZE = spacing(7);
 
 /**
  * The bottom of the Stats screen (docs/prd.md §5.2), under the calendar: what
@@ -92,8 +103,8 @@ export const ProposeQuestionCard = ({ statcoins, onPress }: ProposeQuestionCardP
 
       <CardContent style={styles.content}>
         <View style={styles.balance} accessible accessibilityLabel={spokenAmountLabel(statcoins)}>
-          <Coins size={COIN_SIZE} color={colors.foreground} />
-          <Text style={styles.balanceLabel}>{amountLabel(statcoins)}</Text>
+          <Text style={styles.balanceCount}>{statcoins}</Text>
+          <Text style={styles.balanceUnit}>{BALANCE_UNIT}</Text>
         </View>
       </CardContent>
 
