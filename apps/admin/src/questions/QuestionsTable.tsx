@@ -44,8 +44,13 @@ export const QuestionsTable = ({ onEdit }: QuestionsTableProps) => {
   const [ sorting, setSorting ] = useState<SortingState>(INITIAL_SORTING);
   const [ columnFilters, setColumnFilters ] = useState<ColumnFiltersState>([]);
 
+  // Only the questions written before `author_username` existed: the rest name
+  // their author off the row, which is what keeps opening the console from
+  // costing one profile read per author of a pot that never shrinks.
   const authorIds = useMemo(
-    () => [ ...new Set(questions.map((question) => question.author_id)) ].sort(),
+    () => [ ...new Set(
+      questions.filter((question) => !question.author_username).map((question) => question.author_id),
+    ) ].sort(),
     [ questions ],
   );
   const authors = useQuestionAuthors(authorIds);

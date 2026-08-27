@@ -84,7 +84,7 @@ export interface QuestionRowActions {
   onReject: (question: ModeratedQuestion) => void;
   /** Id of the question a write is in flight for, so its row's buttons wait it out. */
   pendingId: string | null;
-  /** Handle per author UID, filled in as the profiles come back. */
+  /** Fallback handle per author UID, for the questions carrying none — filled in as the profiles come back. */
   authors: QuestionAuthors;
 }
 
@@ -114,9 +114,10 @@ export const buildQuestionColumns = (actions: QuestionRowActions) => helper.colu
     ),
   }),
 
-  // Reads through `actions.authors` rather than off the row: a question carries
-  // its author's UID alone, and the handle arrives one profile read later.
-  helper.accessor((question) => actions.authors[question.author_id] ?? '', {
+  // The handle the question carries, and `actions.authors` only as the fallback
+  // for the questions written before it did — one profile read per distinct
+  // author, arriving after the first paint.
+  helper.accessor((question) => question.author_username || actions.authors[question.author_id] || '', {
     id: 'author',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Auteur" />,
     sortFn: 'text',

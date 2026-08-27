@@ -1,4 +1,4 @@
-import { Timestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { ulid } from 'ulid';
 
 import {
@@ -6,7 +6,9 @@ import {
   type QuestionData,
   type QuestionOptionData,
   type QuestionStatus,
+  USER_COLLECTION,
   questionConverter,
+  userConverter,
 } from '@statowrel/models';
 
 import { getDocumentRef } from '@/lib/firestore';
@@ -29,6 +31,28 @@ const withOptionIds = (options: QuestionValues['options']): QuestionOptionData[]
 );
 
 /**
+ * The author's handle, resolved once — at creation, and never again: a question
+ * carries the copy from then on, so neither the day screen nor this table has a
+ * profile to read to name its author. A missing profile credits nobody rather
+ * than failing the write; the reader's fallback is what picks it up later.
+ */
+const readAuthorUsername = async (authorId: string): Promise<string | null> => {
+  if (authorId === '') {
+    return null;
+  }
+
+  try {
+    const snapshot = await getDoc(getDocumentRef(USER_COLLECTION, authorId, userConverter));
+
+    return snapshot.data()?.username ?? null;
+  } catch (cause) {
+    console.warn('[questions] could not read the author profile', cause);
+
+    return null;
+  }
+};
+
+/**
  * Drops a proposal into the moderation pot (docs/prd.md §4.7).
  *
  * The document id is a ULID. Everything a drawn question carries stays null:
@@ -42,6 +66,7 @@ export const createQuestion = async (authorId: string, values: QuestionValues): 
     options: withOptionIds(values.options),
     status: 'pending',
     author_id: authorId,
+    author_username: await readAuthorUsername(authorId),
     rejection_reason: null,
     broadcast_at: null,
     broadcast_on: null,
@@ -57,6 +82,8 @@ export const createQuestion = async (authorId: string, values: QuestionValues): 
 /**
  * Rewrites the wording of an existing question, and nothing else — an `update()`
  * on the two fields a moderator edits rather than a whole-document `set()`,
+ * and never the paternity: `author_id` and its `author_username` copy are set
+ * when the question is written and are not what an edit is about,
  * which would carry back the `answer_counts` and the broadcast stamps read a
  * moment ago and revert whatever the backend wrote in between.
  */

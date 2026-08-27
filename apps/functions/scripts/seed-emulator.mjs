@@ -411,6 +411,12 @@ const world = dates.map((date) => {
     questionId: ulid(),
     label: entry.question.trim(),
     options: seedOptionsOf(entry),
+    // A third of the days are credited to a friend, so the day screen's credit
+    // line is exercised — the rest have nobody to credit, like a seeded
+    // catalogue entry. Picked here rather than at write time because the
+    // question carries both the uid and the handle, and the two have to name
+    // the same account.
+    authorUsername: random() < 0.33 && friendUsernames.length > 0 ? pickOne(friendUsernames) : null,
     answers: [],
   };
 });
@@ -611,9 +617,8 @@ for (const day of world) {
     label: day.label,
     options: day.options,
     status: 'used',
-    // A third of them credited to a friend, so the day screen's credit line is
-    // exercised — the rest have nobody to credit, like a seeded catalogue entry.
-    author_id: random() < 0.33 && friendUsernames.length > 0 ? uidOf(pickOne(friendUsernames)) : '',
+    author_id: day.authorUsername === null ? '' : uidOf(day.authorUsername),
+    author_username: day.authorUsername,
     rejection_reason: null,
     broadcast_at: publishedAt,
     broadcast_on: day.date,
@@ -637,13 +642,16 @@ const pot = [
 ];
 
 for (const { entry, status } of pot) {
+  const author = pickOne(castUsernames);
+
   writer.set(questionsRef.doc(ulid()), {
     label: entry.question.trim(),
     options: seedOptionsOf(entry),
     status,
     // A proposal comes from somebody; an approved question waiting to be drawn
     // may as well too.
-    author_id: uidOf(pickOne(castUsernames)),
+    author_id: uidOf(author),
+    author_username: author,
     rejection_reason: status === 'rejected' ? REJECTION_REASON : null,
     broadcast_at: null,
     broadcast_on: null,
@@ -666,6 +674,7 @@ for (const { entry, status } of pot) {
     options,
     status: 'demo',
     author_id: '',
+    author_username: null,
     rejection_reason: null,
     // A demo is never a day: everything the daily cycle owns stays null.
     broadcast_at: null,

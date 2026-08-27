@@ -9,12 +9,16 @@ import { getDocumentRef } from '@/lib/firestore';
 export type QuestionAuthors = Record<string, string>;
 
 /**
- * Resolves the handles behind the `author_id`s of the pot.
+ * Resolves the handles behind the `author_id`s the pot has left uncredited.
  *
- * One `getDoc` per *distinct* author, once — a question carries its author's
- * UID and nothing else, and denormalising the handle onto `v1_questions` would
- * mean a fan-out write on every rename. Read rather than subscribed: a handle
- * is stable, and the backoffice does not need to watch it move.
+ * **Temporary.** A question carries its author's handle now
+ * (`author_username`), so the column reads it off the row and this hook only
+ * sees the questions written before that field existed — the same fallback
+ * `questionLastModifiedAt` makes onto `created_at`. Delete it, and the filter
+ * feeding it, once `npm run backfill-question-authors` has run in production.
+ *
+ * One `getDoc` per *distinct* author, once. Read rather than subscribed: a
+ * handle is stable, and the backoffice does not need to watch it move.
  *
  * A UID whose profile is missing — a seeded question, an account deleted since —
  * is cached as an empty string, so the failed read is not retried on every

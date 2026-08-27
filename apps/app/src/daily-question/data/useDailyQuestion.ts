@@ -75,7 +75,13 @@ export interface DailyQuestionView {
    * to wait for when nothing was just written.
    */
   resultSettled: boolean;
-  /** Pseudo of whoever proposed the question — the credit of docs/prd.md §5.4. */
+  /**
+   * Pseudo of whoever proposed the question — the credit of docs/prd.md §5.4.
+   *
+   * Read off the question itself, which carries a copy of its author's handle:
+   * naming an author costs nothing, where it used to cost one `v1_users` read
+   * per opening of a day.
+   */
   authorName: string | null;
 }
 
@@ -142,12 +148,14 @@ const statusOf = (day: DayState | null, question: QuestionState | null): DailyQu
 /**
  * The author's username, or `null` — a missing profile is not worth failing the
  * screen over, the credit line simply doesn't render.
+ *
+ * **Temporary.** The question carries its author's handle now
+ * (`author_username`), so this read only runs for the questions written before
+ * that field existed — the same fallback `questionLastModifiedAt` makes onto
+ * `created_at`. Delete it, and the effect below, once
+ * `npm run backfill-question-authors` has run in production.
  */
 const readAuthorName = async (authorId: string): Promise<string | null> => {
-  if (authorId === '') {
-    return null;
-  }
-
   try {
     const snapshot = await getDoc(getDocumentRef(USER_COLLECTION, authorId, userConverter));
 
@@ -308,27 +316,37 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
 
   const question = questionState?.questionId === questionId ? questionState : null;
   const authorId = question?.question?.author_id ?? null;
+  // `|| null` and not `??`: a handle stamped empty is as good as absent, and
+  // must fall back rather than render « proposée par @ ».
+  const authorUsername = question?.question?.author_username || null;
 
-  // The credit is its own read, keyed by the author rather than by the day: the
-  // author of a broadcast question never changes, so it survives every
-  // `answer_counts` snapshot the subscription above hands over.
+  // The author the credit still has to be read for: nobody, unless the question
+  // predates `author_username` and does name somebody. A question that carries
+  // its handle is the whole point of the field — opening a day then reads no
+  // profile at all — and one crediting nobody has none to read.
+  const authorIdToRead = authorUsername === null && authorId !== null && authorId !== '' ? authorId : null;
+
+  // The fallback read, keyed by the author rather than by the day: the author of
+  // a broadcast question never changes, so it survives every `answer_counts`
+  // snapshot the re-reads above hand over. Goes away with `readAuthorName`
+  // itself once the backfill has run in production.
   useEffect(() => {
-    if (authorId === null) {
+    if (authorIdToRead === null) {
       return undefined;
     }
 
     let cancelled = false;
 
-    void readAuthorName(authorId).then((name) => {
+    void readAuthorName(authorIdToRead).then((name) => {
       if (!cancelled) {
-        setAuthorState({ authorId, name });
+        setAuthorState({ authorId: authorIdToRead, name });
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [ authorId ]);
+  }, [ authorIdToRead ]);
 
   const answerKey = `${questionId ?? ''}:${userId ?? ''}`;
 
@@ -427,6 +445,6 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     answer: answerRead?.answer ?? sessionAnswer,
     ownAnswerPending,
     resultSettled,
-    authorName: authorState?.authorId === authorId ? authorState.name : null,
+    authorName: authorUsername ?? (authorState?.authorId === authorIdToRead ? authorState.name : null),
   };
 };
