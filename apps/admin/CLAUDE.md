@@ -28,8 +28,8 @@ s'accordent sur qui est admin. Sans lui, la session existe mais l'écran affich�
 - `src/lib/firebase.ts` — `initializeApp` + `getAuth` + `getFirestore`, branchés sur les émulateurs quand les `VITE_FIREBASE_*_EMULATOR_*` sont posés — en `dev` seulement, `import.meta.env.DEV` gardant le déploiement à l'abri d'un `.env.local` oublié. Pas de `initializeAuth` : la persistance `indexedDB` du build navigateur suffit, contrairement à `apps/app`.
 - `src/lib/firestore.ts` — `getDocumentRef` / `getCollectionRef`, qui câblent les converters `@statowrel/models`. Jumeau de `apps/app/src/lib/firestore.ts`.
 - `src/auth/` — `AuthContext` (session + claim `admin`), `SignInScreen` (e-mail + mot de passe, Google), `AccessDeniedScreen`, `errors.ts` (jamais un code `auth/*` affiché), `schemas.ts`.
-- `src/questions/` — `QuestionsTable` (le pot, une ligne par question), `columns.tsx` (les colonnes et le jeu de features TanStack), `QuestionModal` (**la même modale pour créer et pour éditer**), `schemas.ts` (zod), `data/saveQuestion.ts` (`createQuestion` / `updateQuestion` / `setQuestionStatus` / `deleteQuestion`), `data/useQuestions.ts`.
-- `src/components/` — `Button`, `TextField`, `Alert`, `DataTable`, bâtis sur les classes de `src/index.css`.
+- `src/questions/` — `QuestionsTable` (le pot, une ligne par question), `columns.tsx` (les colonnes et le jeu de features TanStack), `QuestionModal` (**la même modale pour créer et pour éditer**), `RejectQuestionModal` (le refus et son motif), `schemas.ts` (zod), `data/saveQuestion.ts` (`createQuestion` / `updateQuestion` / `setQuestionStatus`), `data/useQuestions.ts`, `data/useQuestionAuthors.ts`.
+- `src/components/` — `Button`, `TextField`, `TextAreaField`, `Select`, `Alert`, `DataTable`, bâtis sur les classes de `src/index.css`.
 - `src/index.css` — les tokens neobrutalisme en variables CSS, **portés depuis `apps/app/src/design/tokens.ts`**. L'app mobile reste la source de vérité : on change là-bas, puis ici.
 
 Apple n'est pas proposé : son flux web demande un Services ID et une clé que le build mobile n'a pas,
@@ -60,16 +60,23 @@ chaîne ISO : `updateDoc` ne passe pas par le converter (voir le `CLAUDE.md` rac
 admin-only et c'est le joker `isAdmin()` qui l'ouvre. Abonné plutôt que lu une fois, donc un verdict
 rendu depuis FireCMS au même moment apparaît dans le tableau sans rechargement.
 
-`deleteQuestion` est le « Retirer » du tableau — la suppression pure et simple du document, derrière
-une confirmation native. Il n'apparaît que sur une question **jamais diffusée** : une fois qu'elle
-est tombée, `v1_daily_question_months` pointe dessus, sa sous-collection porte les réponses de tout
-le monde et le calendrier l'ouvre — la supprimer laisserait le mois pointer dans le vide. La
-condition tient sur `broadcast_at`, pas sur le statut `used` : les deux coïncident aujourd'hui, mais
-c'est le tampon qui est le fait (même raisonnement que `firestore.rules`).
+**Rejeter passe par sa propre modale** (`RejectQuestionModal`) : un refus porte son motif, renvoyé à
+l'auteur, et c'est le seul champ que le modèle exige à côté du statut `rejected` — donc un formulaire
+(`react-hook-form` + `zod`, comme partout) plutôt qu'un bouton sec. Rejeter une question déjà refusée
+est ce qui réécrit son motif, alors le champ s'ouvre sur celui qu'elle porte déjà. Approuver, à
+l'inverse, remet `rejection_reason` à `null` : les deux ne tiennent jamais ensemble.
 
-Rejeter n'est pas encore là : un rejet demande sa raison, renvoyée à l'auteur, donc un champ de saisie
-en plus du bouton. `setQuestionStatus` prend déjà le paramètre. Tant qu'il manque, un rejet se pose à
-la main depuis la console Firebase.
+Rien ne supprime une question depuis la console : une question diffusée est pointée par
+`v1_daily_question_months` et porte les réponses de tout le monde, et une question du pot se sort du
+pot en la refusant. Une suppression, si elle devient nécessaire, se pose à la main depuis la console
+Firebase.
+
+`useQuestionAuthors` résout les pseudos derrière les `author_id` — un `getDoc` par auteur *distinct*,
+une fois, jamais un abonnement : un pseudo ne bouge pas et le backoffice n'a pas à le regarder
+bouger. Dénormaliser le pseudo sur `v1_questions` coûterait un fan-out à chaque renommage. Un UID
+dont le profil manque est mis en cache à vide, donc la lecture ratée n'est pas rejouée à chaque
+snapshot — et la cellule distingue les trois cas : pas d'UID (question semée) « — », UID sans réponse
+encore « … », UID revenu vide « Compte introuvable ».
 
 ## Le tableau
 
@@ -80,9 +87,14 @@ en classes Tailwind, et les brancher ici demanderait une seconde source de véri
 de `src/index.css`, alors que celui-ci est déjà une copie de `apps/app/src/design/tokens.ts`. Le
 squelette est donc shadcn, la peau reste celle du repo.
 
-Quatre colonnes — question + réponses, statut, dernière modification, actions —, un filtre par
-statut au-dessus du cadre et un tri sur la date de modification, décroissant par défaut. **Le tri et
-le filtre sont côté client** : `useQuestions` diffuse déjà le pot entier, donc un `where` / `orderBy`
+Cinq colonnes — question + réponses, auteur, statut, dernière modification, actions —, un filtre par
+statut au-dessus du cadre et un tri sur l'auteur ou sur la date de modification, cette dernière
+décroissante par défaut. **Les actions dépendent du statut** : « En attente » prend Approuver /
+Rejeter / Éditer, « Validée » Rejeter / Éditer, « Rejetée » Approuver / Éditer, et « Diffusée »
+comme « Démo » n'ont plus que Éditer — une question tirée a quitté le pot pour de bon, et
+l'échantillon d'onboarding n'y est jamais entré.
+
+**Le tri et le filtre sont côté client** : `useQuestions` diffuse déjà le pot entier, donc un `where` / `orderBy`
 coûterait un index composite et un aller-retour par frappe pour une liste qui tient dans un snapshot
 — et un `orderBy('updated_at')` laisserait de côté toutes les questions écrites avant que le champ
 existe, Firestore ignorant les documents auxquels manque le champ trié. `questionLastModifiedAt`
@@ -94,6 +106,11 @@ feature qui n'est pas enregistrée dans `tableFeatures({ … })` n'existe tout s
 aussi pourquoi `DataTableColumnHeader` prend une colonne *structurellement* (trois méthodes) au lieu
 d'un `Column<TFeatures, …>` : générique sur `TableFeatures`, le conditionnel de la librairie ne se
 résout pas et les méthodes de tri restent invisibles.
+
+Le filtre est un **select natif à la shadcn** (`components/Select.tsx`) : un vrai `<select>`, donc le
+clavier, la saisie au vol et le sélecteur mobile restent ceux de la plateforme. `appearance: none`
+est ce qui lui fait porter la même peau que `.field__input` — et ce qui lui retire la flèche du
+navigateur, d'où le chevron dessiné à côté, en `currentColor` et hors du flux du pointeur.
 
 `tsconfig.json` épingle `react` sur les typages de cette app : `apps/app` tire `@types/react` 19, que
 npm hisse à la racine, et une `.d.ts` de librairie lue depuis là renverrait un `ReactNode` que React

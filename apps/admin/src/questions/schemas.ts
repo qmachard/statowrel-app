@@ -44,3 +44,20 @@ export const questionSchema = z.object({
 });
 
 export type QuestionValues = z.infer<typeof questionSchema>;
+
+const REJECTION_REASON_MAX_LENGTH = 280;
+
+/**
+ * A rejection carries its reason, which is what the author reads back — the one
+ * field the model requires alongside the `rejected` status, so the form asks
+ * for it rather than letting a blank one through.
+ */
+export const rejectionSchema = z.object({
+  rejection_reason: z
+    .string()
+    .trim()
+    .min(1, 'Explique le refus : l\'auteur le lira.')
+    .max(REJECTION_REASON_MAX_LENGTH, `${REJECTION_REASON_MAX_LENGTH} caractères maximum.`),
+});
+
+export type RejectionValues = z.infer<typeof rejectionSchema>;

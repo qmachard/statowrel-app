@@ -64,7 +64,7 @@ h3 {
 /* Layout ------------------------------------------------------------------ */
 
 .page {
-  max-width: 1040px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px 20px 64px;
   display: flex;
@@ -120,7 +120,7 @@ h3 {
 }
 
 .app-header__inner {
-  max-width: 1040px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 16px 20px;
   display: flex;
@@ -250,10 +250,66 @@ h3 {
   outline-offset: 2px;
 }
 
+.field__input--area {
+  resize: vertical;
+  min-height: 92px;
+  line-height: 1.4;
+}
+
 .field__error {
   color: var(--color-accent);
   font-size: 13px;
   font-weight: 700;
+}
+
+/* Native select ------------------------------------------------------------ */
+
+/*
+ * shadcn's *native* select: a real <select>, so the keyboard, the type-ahead
+ * and the mobile picker stay the platform's. `appearance: none` is what lets
+ * the control wear the same skin as `.field__input`, and it is also what takes
+ * the browser's arrow away — hence the chevron drawn beside it.
+ */
+.select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.select__control {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  appearance: none;
+  padding: 10px 40px 10px 14px;
+  background: var(--color-input);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-foreground);
+  cursor: pointer;
+  width: 100%;
+  min-width: 180px;
+}
+
+.select__control:hover {
+  background: var(--color-muted);
+}
+
+.select__control:focus-visible {
+  outline: var(--border-width) solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.select__control:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Behind the pointer, so clicking the chevron still opens the control. */
+.select__chevron {
+  position: absolute;
+  right: 14px;
+  pointer-events: none;
 }
 
 /* Feedback ---------------------------------------------------------------- */
@@ -363,19 +419,13 @@ h3 {
   flex-wrap: wrap;
 }
 
-.table-toolbar__filter {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* The filter is a `.field` label, which is a column flex box — left alone it
+   would stretch the select across the toolbar. */
+.table-toolbar .field {
+  flex: 0 0 auto;
 }
 
-/* Native <select>: the arrow, the keyboard and the mobile picker are the
-   browser's, so only the neobrutalist skin is left. */
-.field__input--select {
-  width: auto;
-  min-width: 160px;
-  cursor: pointer;
-}
+
 
 /* Wide content scrolls inside its own box — the page itself never does. */
 .table-wrap {
@@ -389,7 +439,18 @@ h3 {
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 780px;
+  min-width: 1000px;
+}
+
+/*
+ * The question column absorbs whatever the shrink-wrapped ones leave: on an
+ * `auto` layout a cell asking for 100% takes the remainder rather than the
+ * whole row, which is what keeps « Ton dentifrice… » on one line instead of
+ * three.
+ */
+.table__main {
+  width: 100%;
+  min-width: 260px;
 }
 
 .table th,
@@ -447,6 +508,12 @@ h3 {
   font-size: 14px;
 }
 
+.table__author {
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 /* The badge and the draw date it sits above: both read as one line each, and
    the question column is the one meant to absorb the width. */
 .table__status {
@@ -487,6 +554,10 @@ h3 {
   width: min(560px, calc(100vw - 40px));
   max-height: calc(100vh - 80px);
   overflow-y: auto;
+}
+
+.modal--narrow {
+  width: min(440px, calc(100vw - 40px));
 }
 
 .modal::backdrop {

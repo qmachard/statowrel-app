@@ -6,9 +6,12 @@ import { QUESTION_STATUSES, type QuestionStatus } from '@statowrel/models';
 
 import { Alert } from '@/components/Alert';
 import { DataTable } from '@/components/DataTable';
+import { Select } from '@/components/Select';
 
+import { RejectQuestionModal } from './RejectQuestionModal';
 import { STATUS_LABELS, buildQuestionColumns, questionsTableFeatures } from './columns';
-import { deleteQuestion, setQuestionStatus } from './data/saveQuestion';
+import { setQuestionStatus } from './data/saveQuestion';
+import { useQuestionAuthors } from './data/useQuestionAuthors';
 import { type ModeratedQuestion, useQuestions } from './data/useQuestions';
 
 /** Newest change first — the order a moderator comes back to the pot in. */
@@ -34,8 +37,15 @@ export const QuestionsTable = ({ onEdit }: QuestionsTableProps) => {
   const { questions, loading, error } = useQuestions();
   const [ actionError, setActionError ] = useState<string | null>(null);
   const [ pendingId, setPendingId ] = useState<string | null>(null);
+  const [ rejecting, setRejecting ] = useState<ModeratedQuestion | null>(null);
   const [ sorting, setSorting ] = useState<SortingState>(INITIAL_SORTING);
   const [ columnFilters, setColumnFilters ] = useState<ColumnFiltersState>([]);
+
+  const authorIds = useMemo(
+    () => [ ...new Set(questions.map((question) => question.author_id)) ].sort(),
+    [ questions ],
+  );
+  const authors = useQuestionAuthors(authorIds);
 
   const approve = async (question: ModeratedQuestion) => {
     setPendingId(question.id);
@@ -52,33 +62,16 @@ export const QuestionsTable = ({ onEdit }: QuestionsTableProps) => {
     }
   };
 
-  const remove = async (question: ModeratedQuestion) => {
-    if (!window.confirm(`Retirer « ${question.label} » ? Cette question sera supprimée définitivement.`)) {
-      return;
-    }
-
-    setPendingId(question.id);
-
-    try {
-      await deleteQuestion(question.id);
-    } catch (cause) {
-      console.warn('[questions] could not remove the question', cause);
-      setActionError('La question n\'a pas pu être retirée. Réessaie.');
-    } finally {
-      setPendingId(null);
-    }
-  };
-
   const columns = useMemo(() => buildQuestionColumns({
     onEdit,
     onApprove: (question) => { void approve(question); },
-    onRemove: (question) => { void remove(question); },
+    onReject: setRejecting,
     pendingId,
-  // `approve` and `remove` are redefined on every render but close over
-  // nothing that moves — the state setters alone — so what the cells need to
-  // see change is the id a write is in flight for, and rebuilding the columns
-  // on every render would throw the memo away.
-  }), [ onEdit, pendingId ]);
+    authors,
+  // `approve` is redefined on every render but closes over nothing that moves —
+  // the state setters alone — so what the cells need to see change is the id a
+  // write is in flight for and the handles as they land.
+  }), [ onEdit, pendingId, authors ]);
 
   const table = useTable({
     features: questionsTableFeatures,
@@ -110,23 +103,20 @@ export const QuestionsTable = ({ onEdit }: QuestionsTableProps) => {
   return (
     <div className="stack">
       <div className="table-toolbar">
-        <label className="table-toolbar__filter">
-          <span className="field__label">Statut</span>
-          <select
-            className="field__input field__input--select"
-            value={statusFilter}
-            onChange={(event) => {
-              const value = event.target.value;
+        <Select
+          label="Statut"
+          value={statusFilter}
+          onChange={(event) => {
+            const value = event.target.value;
 
-              table.getColumn('status')?.setFilterValue(value === ALL_STATUSES ? undefined : value);
-            }}
-          >
-            <option value={ALL_STATUSES}>Tous</option>
-            {QUESTION_STATUSES.map((status: QuestionStatus) => (
-              <option key={status} value={status}>{STATUS_LABELS[status]}</option>
-            ))}
-          </select>
-        </label>
+            table.getColumn('status')?.setFilterValue(value === ALL_STATUSES ? undefined : value);
+          }}
+        >
+          <option value={ALL_STATUSES}>Tous</option>
+          {QUESTION_STATUSES.map((status: QuestionStatus) => (
+            <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+          ))}
+        </Select>
         <span className="spacer" />
         <p className="empty">
           {table.getRowModel().rows.length} / {questions.length} question(s)
@@ -137,6 +127,16 @@ export const QuestionsTable = ({ onEdit }: QuestionsTableProps) => {
         table={table}
         empty={<p className="empty">Aucune question dans ce statut.</p>}
       />
+
+      {rejecting ? (
+        <RejectQuestionModal
+          // Keyed by what it refuses, so the field opens on that question's own
+          // reason instead of being reset after mounting.
+          key={rejecting.id}
+          question={rejecting}
+          onClose={() => setRejecting(null)}
+        />
+      ) : null}
     </div>
   );
 };
