@@ -92,7 +92,9 @@ statut au-dessus du cadre et un tri sur l'auteur ou sur la date de modification,
 décroissante par défaut. **Les actions dépendent du statut** : « En attente » prend Approuver /
 Rejeter / Éditer, « Validée » Rejeter / Éditer, « Rejetée » Approuver / Éditer, et « Diffusée »
 comme « Démo » n'ont plus que Éditer — une question tirée a quitté le pot pour de bon, et
-l'échantillon d'onboarding n'y est jamais entré.
+l'échantillon d'onboarding n'y est jamais entré. Sur une question rejetée, « Approuver » passe en
+`ghost` : c'est un retour en arrière et pas le verdict vers lequel aller, donc il prend la forme
+discrète que « Rejeter » porte ailleurs — en noir, pas dans le rouge du destructif.
 
 **Le tri et le filtre sont côté client** : `useQuestions` diffuse déjà le pot entier, donc un `where` / `orderBy`
 coûterait un index composite et un aller-retour par frappe pour une liste qui tient dans un snapshot

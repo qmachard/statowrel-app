@@ -188,7 +188,16 @@ export const buildQuestionColumns = (actions: QuestionRowActions) => helper.colu
       return (
         <div className="table__actions-inner">
           {isApprovable(question.status) ? (
-            <Button small disabled={busy} onClick={() => actions.onApprove(question)}>
+            // On a refused question, approving is a reversal rather than the
+            // verdict to reach for — so it wears the same discreet shape
+            // « Rejeter » wears everywhere else, and « Éditer » stays the solid
+            // button of the row.
+            <Button
+              variant={question.status === 'rejected' ? 'ghost' : 'primary'}
+              small
+              disabled={busy}
+              onClick={() => actions.onApprove(question)}
+            >
               {busy ? '…' : 'Approuver'}
             </Button>
           ) : null}
