@@ -1,45 +1,44 @@
-import { useState } from 'react';
+import type { ColumnFiltersState, SortingState } from '@tanstack/react-table';
+import { useTable } from '@tanstack/react-table';
+import { useMemo, useState } from 'react';
 
-import type { QuestionStatus } from '@statowrel/models';
+import { QUESTION_STATUSES, type QuestionStatus } from '@statowrel/models';
 
 import { Alert } from '@/components/Alert';
-import { Button } from '@/components/Button';
+import { DataTable } from '@/components/DataTable';
 
-import { setQuestionStatus } from './data/saveQuestion';
+import { STATUS_LABELS, buildQuestionColumns, questionsTableFeatures } from './columns';
+import { deleteQuestion, setQuestionStatus } from './data/saveQuestion';
 import { type ModeratedQuestion, useQuestions } from './data/useQuestions';
 
-const STATUS_LABELS: Record<QuestionStatus, string> = {
-  pending: 'En attente',
-  approved: 'Validée',
-  rejected: 'Rejetée',
-  used: 'Diffusée',
-  demo: 'Démo',
-};
+/** Newest change first — the order a moderator comes back to the pot in. */
+const INITIAL_SORTING: SortingState = [ { id: 'updated_at', desc: true } ];
 
-/**
- * A question already in the pot, or already out of it, has nothing left to
- * approve — and neither has the onboarding sample: approving it would drop it
- * into the daily draw, where it would run as a real day nobody wrote it for.
- */
-const isApprovable = (status: QuestionStatus): boolean => (
-  status !== 'approved' && status !== 'used' && status !== 'demo'
-);
+const ALL_STATUSES = '';
 
-const formatDay = (value: string): string => (
-  new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
-);
-
-interface RowProps {
-  question: ModeratedQuestion;
+export interface QuestionsTableProps {
   onEdit: (question: ModeratedQuestion) => void;
-  onError: (message: string) => void;
 }
 
-const Row = ({ question, onEdit, onError }: RowProps) => {
-  const [ approving, setApproving ] = useState(false);
+/**
+ * The whole moderation pot as a data table (docs/prd.md §4.7).
+ *
+ * Sorting and filtering are client-side: `useQuestions` already streams the pot
+ * whole, so a `where` / `orderBy` pair would buy a composite index and a
+ * reload per keystroke for a list that fits in one snapshot. It would also drop
+ * every question written before `updated_at` existed — Firestore skips
+ * documents missing the field an `orderBy` names — whereas
+ * `questionLastModifiedAt` falls those back onto `created_at`.
+ */
+export const QuestionsTable = ({ onEdit }: QuestionsTableProps) => {
+  const { questions, loading, error } = useQuestions();
+  const [ actionError, setActionError ] = useState<string | null>(null);
+  const [ pendingId, setPendingId ] = useState<string | null>(null);
+  const [ sorting, setSorting ] = useState<SortingState>(INITIAL_SORTING);
+  const [ columnFilters, setColumnFilters ] = useState<ColumnFiltersState>([]);
 
-  const approve = async () => {
-    setApproving(true);
+  const approve = async (question: ModeratedQuestion) => {
+    setPendingId(question.id);
 
     try {
       // Approving clears any rejection reason: the two never hold together, and
@@ -47,57 +46,54 @@ const Row = ({ question, onEdit, onError }: RowProps) => {
       await setQuestionStatus(question.id, 'approved');
     } catch (cause) {
       console.warn('[questions] could not approve the question', cause);
-      onError('L\'approbation n\'a pas pu être enregistrée. Réessaie.');
+      setActionError('L\'approbation n\'a pas pu être enregistrée. Réessaie.');
     } finally {
-      setApproving(false);
+      setPendingId(null);
     }
   };
 
-  return (
-    <tr>
-      <td>
-        <strong>{question.label}</strong>
-        <ul className="proposal__options">
-          {question.options.map((option) => (
-            <li key={option.id}>
-              {option.label} — <em>tu es un.e {option.stat_label}</em>
-            </li>
-          ))}
-        </ul>
-        {question.rejection_reason ? (
-          <p className="field__error">{question.rejection_reason}</p>
-        ) : null}
-      </td>
-      <td>
-        <span className={`badge badge--${question.status}`}>{STATUS_LABELS[question.status]}</span>
-        {question.broadcast_on ? (
-          <p className="empty">Tirée le {formatDay(question.broadcast_on)}</p>
-        ) : null}
-      </td>
-      <td className="table__actions">
-        <div className="table__actions-inner">
-          <Button variant="secondary" small onClick={() => onEdit(question)}>
-            Éditer
-          </Button>
-          {isApprovable(question.status) ? (
-            <Button small onClick={() => { void approve(); }} disabled={approving}>
-              {approving ? '…' : 'Approuver'}
-            </Button>
-          ) : null}
-        </div>
-      </td>
-    </tr>
-  );
-};
+  const remove = async (question: ModeratedQuestion) => {
+    if (!window.confirm(`Retirer « ${question.label} » ? Cette question sera supprimée définitivement.`)) {
+      return;
+    }
 
-export interface QuestionsTableProps {
-  onEdit: (question: ModeratedQuestion) => void;
-}
+    setPendingId(question.id);
 
-/** The whole moderation pot, one row per question, newest first. */
-export const QuestionsTable = ({ onEdit }: QuestionsTableProps) => {
-  const { questions, loading, error } = useQuestions();
-  const [ actionError, setActionError ] = useState<string | null>(null);
+    try {
+      await deleteQuestion(question.id);
+    } catch (cause) {
+      console.warn('[questions] could not remove the question', cause);
+      setActionError('La question n\'a pas pu être retirée. Réessaie.');
+    } finally {
+      setPendingId(null);
+    }
+  };
+
+  const columns = useMemo(() => buildQuestionColumns({
+    onEdit,
+    onApprove: (question) => { void approve(question); },
+    onRemove: (question) => { void remove(question); },
+    pendingId,
+  // `approve` and `remove` are redefined on every render but close over
+  // nothing that moves — the state setters alone — so what the cells need to
+  // see change is the id a write is in flight for, and rebuilding the columns
+  // on every render would throw the memo away.
+  }), [ onEdit, pendingId ]);
+
+  const table = useTable({
+    features: questionsTableFeatures,
+    columns,
+    data: questions,
+    state: { sorting, columnFilters },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    // One column at a time: the header cycles asc / desc and never clears, so
+    // the table always has an order to show.
+    enableSortingRemoval: false,
+    enableMultiSort: false,
+  });
+
+  const statusFilter = (columnFilters.find((filter) => filter.id === 'status')?.value ?? ALL_STATUSES) as string;
 
   if (error || actionError) {
     return <Alert tone="error">{error ?? actionError ?? ''}</Alert>;
@@ -112,26 +108,35 @@ export const QuestionsTable = ({ onEdit }: QuestionsTableProps) => {
   }
 
   return (
-    <div className="table-wrap">
-      <table className="table">
-        <thead>
-          <tr>
-            <th scope="col">Question</th>
-            <th scope="col">Statut</th>
-            <th scope="col" className="table__actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {questions.map((question) => (
-            <Row
-              key={question.id}
-              question={question}
-              onEdit={onEdit}
-              onError={setActionError}
-            />
-          ))}
-        </tbody>
-      </table>
+    <div className="stack">
+      <div className="table-toolbar">
+        <label className="table-toolbar__filter">
+          <span className="field__label">Statut</span>
+          <select
+            className="field__input field__input--select"
+            value={statusFilter}
+            onChange={(event) => {
+              const value = event.target.value;
+
+              table.getColumn('status')?.setFilterValue(value === ALL_STATUSES ? undefined : value);
+            }}
+          >
+            <option value={ALL_STATUSES}>Tous</option>
+            {QUESTION_STATUSES.map((status: QuestionStatus) => (
+              <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+            ))}
+          </select>
+        </label>
+        <span className="spacer" />
+        <p className="empty">
+          {table.getRowModel().rows.length} / {questions.length} question(s)
+        </p>
+      </div>
+
+      <DataTable
+        table={table}
+        empty={<p className="empty">Aucune question dans ce statut.</p>}
+      />
     </div>
   );
 };

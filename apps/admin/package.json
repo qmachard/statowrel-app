@@ -13,6 +13,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
     "@statowrel/models": "*",
+    "@tanstack/react-table": "^9.2.3",
     "firebase": "^12.18.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

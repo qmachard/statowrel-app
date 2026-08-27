@@ -1,4 +1,4 @@
-import { updateDoc, setDoc } from 'firebase/firestore';
+import { Timestamp, deleteDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { ulid } from 'ulid';
 
 import {
@@ -48,6 +48,7 @@ export const createQuestion = async (authorId: string, values: QuestionValues): 
     closes_at: null,
     answer_counts: {},
     created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   await setDoc(questionRef(ulid()), question);
@@ -63,6 +64,10 @@ export const updateQuestion = async (id: string, values: QuestionValues): Promis
   await updateDoc(questionRef(id), {
     label: values.label,
     options: withOptionIds(values.options),
+    // A `Timestamp` and not an ISO string: `update()` does not run the
+    // converter (see the repo's CLAUDE.md), so the value written here is the
+    // value stored.
+    updated_at: Timestamp.now(),
   });
 };
 
@@ -77,5 +82,22 @@ export const setQuestionStatus = async (
   status: QuestionStatus,
   rejectionReason: string | null = null,
 ): Promise<void> => {
-  await updateDoc(questionRef(id), { status, rejection_reason: rejectionReason });
+  await updateDoc(questionRef(id), {
+    status,
+    rejection_reason: rejectionReason,
+    updated_at: Timestamp.now(),
+  });
+};
+
+/**
+ * Takes a question back out of the pot for good.
+ *
+ * Only ever called on a question that was never broadcast: once it has dropped
+ * as a day, `v1_daily_question_months` points at it, its sub-collection holds
+ * everyone's answers and the calendar opens on it — deleting it would leave the
+ * month pointing at nothing. The backoffice hides the button in that case, and
+ * `isRemovable` in `QuestionsTable` is where that condition lives.
+ */
+export const deleteQuestion = async (id: string): Promise<void> => {
+  await deleteDoc(questionRef(id));
 };

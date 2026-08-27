@@ -120,11 +120,36 @@ export interface QuestionFirebaseData {
    */
   answer_counts: Record<string, number>;
   created_at: UniversalTimestamp;
+  /**
+   * Last time a moderator changed the question — its wording, its options or
+   * its status — and the instant the daily scheduler stamped the broadcast on
+   * it. Not touched by the answer trigger: an incoming answer moves
+   * `answer_counts`, not the question itself, and stamping it there would make
+   * every drawn question look freshly edited all day long.
+   *
+   * Nullable because the field is younger than the pot: a question written
+   * before it existed carries none, and the backoffice falls back to
+   * `created_at` (see `questionLastModifiedAt`).
+   */
+  updated_at: UniversalTimestamp | null;
 }
 
 export type QuestionOptionData = ModelData<QuestionOptionFirebaseData>;
 
 export type QuestionData = ModelData<QuestionFirebaseData>;
+
+/**
+ * When a question was last touched, for the backoffice's « Dernière
+ * modification » column and its sort.
+ *
+ * Falls back to `created_at` rather than to nothing: `updated_at` is younger
+ * than the collection, so a question nobody has edited since it was written
+ * has none, and an empty cell would read as missing data instead of « jamais
+ * modifiée ».
+ */
+export const questionLastModifiedAt = (question: Pick<QuestionData, 'created_at' | 'updated_at'>): string => (
+  question.updated_at ?? question.created_at
+);
 
 /** Resolves the option an answer points at. Returns `null` for an option removed since. */
 export const findQuestionOption = (
@@ -173,6 +198,7 @@ export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebas
     closes_at: data.closes_at ? TimestampClass.fromDate(new Date(data.closes_at)) : null,
     answer_counts: parseAnswerCounts(data.answer_counts),
     created_at: TimestampClass.fromDate(new Date(data.created_at)),
+    updated_at: data.updated_at ? TimestampClass.fromDate(new Date(data.updated_at)) : null,
   }),
   fromFirestore: (snap) => {
     const data = snap.data();
@@ -188,6 +214,7 @@ export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebas
       closes_at: parseTimestamp(data.closes_at ?? null),
       answer_counts: parseAnswerCounts(data.answer_counts),
       created_at: parseTimestamp(data.created_at ?? null, 'now'),
+      updated_at: parseTimestamp(data.updated_at ?? null),
     };
   },
 });

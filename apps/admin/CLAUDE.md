@@ -28,8 +28,8 @@ s'accordent sur qui est admin. Sans lui, la session existe mais l'écran affich�
 - `src/lib/firebase.ts` — `initializeApp` + `getAuth` + `getFirestore`, branchés sur les émulateurs quand les `VITE_FIREBASE_*_EMULATOR_*` sont posés — en `dev` seulement, `import.meta.env.DEV` gardant le déploiement à l'abri d'un `.env.local` oublié. Pas de `initializeAuth` : la persistance `indexedDB` du build navigateur suffit, contrairement à `apps/app`.
 - `src/lib/firestore.ts` — `getDocumentRef` / `getCollectionRef`, qui câblent les converters `@statowrel/models`. Jumeau de `apps/app/src/lib/firestore.ts`.
 - `src/auth/` — `AuthContext` (session + claim `admin`), `SignInScreen` (e-mail + mot de passe, Google), `AccessDeniedScreen`, `errors.ts` (jamais un code `auth/*` affiché), `schemas.ts`.
-- `src/questions/` — `QuestionsTable` (le pot, une ligne par question), `QuestionModal` (**la même modale pour créer et pour éditer**), `schemas.ts` (zod), `data/saveQuestion.ts` (`createQuestion` / `updateQuestion` / `setQuestionStatus`), `data/useQuestions.ts`.
-- `src/components/` — `Button`, `TextField`, `Alert`, bâtis sur les classes de `src/index.css`.
+- `src/questions/` — `QuestionsTable` (le pot, une ligne par question), `columns.tsx` (les colonnes et le jeu de features TanStack), `QuestionModal` (**la même modale pour créer et pour éditer**), `schemas.ts` (zod), `data/saveQuestion.ts` (`createQuestion` / `updateQuestion` / `setQuestionStatus` / `deleteQuestion`), `data/useQuestions.ts`.
+- `src/components/` — `Button`, `TextField`, `Alert`, `DataTable`, bâtis sur les classes de `src/index.css`.
 - `src/index.css` — les tokens neobrutalisme en variables CSS, **portés depuis `apps/app/src/design/tokens.ts`**. L'app mobile reste la source de vérité : on change là-bas, puis ici.
 
 Apple n'est pas proposé : son flux web demande un Services ID et une clé que le build mobile n'a pas,
@@ -52,17 +52,52 @@ une option tapée pour la première fois.
 
 `updateQuestion` et `setQuestionStatus` passent par `updateDoc` sur les seuls champs concernés, jamais
 par un `set()` de tout le document : celui-ci renverrait les `answer_counts` et les tampons de
-diffusion lus une seconde plus tôt, écrasant ce que le backend a écrit entre-temps. Ces deux écritures
-ne touchent aucun timestamp — si un jour l'une d'elles en écrit un, ce sera un `Timestamp` et pas une
-chaîne ISO, `updateDoc` ne passant pas par le converter (voir le `CLAUDE.md` racine).
+diffusion lus une seconde plus tôt, écrasant ce que le backend a écrit entre-temps. Les deux posent
+`updated_at` — la colonne « Dernière modification le » du tableau — avec un `Timestamp` et pas une
+chaîne ISO : `updateDoc` ne passe pas par le converter (voir le `CLAUDE.md` racine).
 
 `useQuestions` lit le pot entier, `orderBy('created_at', 'desc')`, sans filtre : l'interface est
 admin-only et c'est le joker `isAdmin()` qui l'ouvre. Abonné plutôt que lu une fois, donc un verdict
 rendu depuis FireCMS au même moment apparaît dans le tableau sans rechargement.
 
+`deleteQuestion` est le « Retirer » du tableau — la suppression pure et simple du document, derrière
+une confirmation native. Il n'apparaît que sur une question **jamais diffusée** : une fois qu'elle
+est tombée, `v1_daily_question_months` pointe dessus, sa sous-collection porte les réponses de tout
+le monde et le calendrier l'ouvre — la supprimer laisserait le mois pointer dans le vide. La
+condition tient sur `broadcast_at`, pas sur le statut `used` : les deux coïncident aujourd'hui, mais
+c'est le tampon qui est le fait (même raisonnement que `firestore.rules`).
+
 Rejeter n'est pas encore là : un rejet demande sa raison, renvoyée à l'auteur, donc un champ de saisie
 en plus du bouton. `setQuestionStatus` prend déjà le paramètre. Tant qu'il manque, un rejet se pose à
 la main depuis la console Firebase.
+
+## Le tableau
+
+`QuestionsTable` est un **data-table à la shadcn** : la structure de shadcn/ui — `columns.tsx`,
+un `<DataTable>` générique, un en-tête de colonne triable — sur le moteur qu'elle utilise,
+`@tanstack/react-table` (v9). **Ni Tailwind ni Radix**, en revanche : le registre shadcn est écrit
+en classes Tailwind, et les brancher ici demanderait une seconde source de vérité des tokens à côté
+de `src/index.css`, alors que celui-ci est déjà une copie de `apps/app/src/design/tokens.ts`. Le
+squelette est donc shadcn, la peau reste celle du repo.
+
+Quatre colonnes — question + réponses, statut, dernière modification, actions —, un filtre par
+statut au-dessus du cadre et un tri sur la date de modification, décroissant par défaut. **Le tri et
+le filtre sont côté client** : `useQuestions` diffuse déjà le pot entier, donc un `where` / `orderBy`
+coûterait un index composite et un aller-retour par frappe pour une liste qui tient dans un snapshot
+— et un `orderBy('updated_at')` laisserait de côté toutes les questions écrites avant que le champ
+existe, Firestore ignorant les documents auxquels manque le champ trié. `questionLastModifiedAt`
+(dans `@statowrel/models`) est ce qui les rattrape en retombant sur `created_at`.
+
+La v9 de TanStack n'est pas la v8 que documente shadcn : `useTable` remplace `useReactTable`, et une
+feature qui n'est pas enregistrée dans `tableFeatures({ … })` n'existe tout simplement pas — ni son
+état ni ses méthodes. `columns.tsx` n'enregistre donc que le tri et le filtre par colonne. C'est
+aussi pourquoi `DataTableColumnHeader` prend une colonne *structurellement* (trois méthodes) au lieu
+d'un `Column<TFeatures, …>` : générique sur `TableFeatures`, le conditionnel de la librairie ne se
+résout pas et les méthodes de tri restent invisibles.
+
+`tsconfig.json` épingle `react` sur les typages de cette app : `apps/app` tire `@types/react` 19, que
+npm hisse à la racine, et une `.d.ts` de librairie lue depuis là renverrait un `ReactNode` que React
+18 refuse.
 
 ## Développement local
 

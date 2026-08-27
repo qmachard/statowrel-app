@@ -64,7 +64,7 @@ h3 {
 /* Layout ------------------------------------------------------------------ */
 
 .page {
-  max-width: 720px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 20px 20px 64px;
   display: flex;
@@ -120,7 +120,7 @@ h3 {
 }
 
 .app-header__inner {
-  max-width: 720px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 16px 20px;
   display: flex;
@@ -189,6 +189,16 @@ h3 {
 
 .button--ghost:active:not(:disabled) {
   transform: none;
+}
+
+/* `--small` comes later in this file and would otherwise put the offset shadow
+   back on a button that has no border to cast it. */
+.button--ghost.button--small {
+  box-shadow: none;
+}
+
+.button--danger {
+  color: var(--color-accent);
 }
 
 .button--small {
@@ -345,6 +355,28 @@ h3 {
 
 /* Moderation table ---------------------------------------------------------- */
 
+/* The filters sit above the frame, not inside it: the box scrolls sideways. */
+.table-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.table-toolbar__filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Native <select>: the arrow, the keyboard and the mobile picker are the
+   browser's, so only the neobrutalist skin is left. */
+.field__input--select {
+  width: auto;
+  min-width: 160px;
+  cursor: pointer;
+}
+
 /* Wide content scrolls inside its own box — the page itself never does. */
 .table-wrap {
   overflow-x: auto;
@@ -357,7 +389,7 @@ h3 {
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 560px;
+  min-width: 780px;
 }
 
 .table th,
@@ -382,6 +414,45 @@ h3 {
   background: var(--color-muted);
 }
 
+/* Sits in the <th>, so it inherits the header's own font and background. */
+.table__sort {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table__sort:hover {
+  text-decoration: underline;
+}
+
+.table__sort:focus-visible {
+  outline: var(--border-width) solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.table__sort-glyph {
+  font-size: 12px;
+}
+
+.table__date {
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+/* The badge and the draw date it sits above: both read as one line each, and
+   the question column is the one meant to absorb the width. */
+.table__status {
+  white-space: nowrap;
+}
+
 /*
  * The cell stays a table cell — laying it out as a flex box detaches it from the
  * row, and the borders stop lining up. The buttons get their own box inside.
@@ -391,10 +462,13 @@ h3 {
   white-space: nowrap;
 }
 
+/* One line: the cell is shrink-wrapped (`width: 1%`), so wrapping would stack
+   the three buttons on top of each other instead of widening the column. */
 .table__actions-inner {
   display: flex;
+  align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 /* Modal --------------------------------------------------------------------- */
