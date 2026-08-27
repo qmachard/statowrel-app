@@ -70,6 +70,31 @@ const requireGoogleSignIn = () => {
   return google;
 };
 
+/**
+ * `CommonStatusCodes.DEVELOPER_ERROR`, written out because the library stopped
+ * exporting it: `statusCodes` carries five names in v16 and this is not one of
+ * them, while the Android module still rejects `signIn()` with the *numeric*
+ * code as a string (`RNGoogleSigninModule#handleSignInTaskResult`). Android
+ * only — an iOS `GIDSignIn` error numbers a different thing entirely, hence the
+ * platform guard at the call site.
+ *
+ * It is never the user's doing. Play services resolves the Android OAuth client
+ * from the package name plus the SHA-1 of the certificate the installed binary
+ * is signed with, and refuses the sign-in when no registered fingerprint
+ * matches — *after* showing the account picker, so it reads as « I picked my
+ * account and it failed ».
+ *
+ * Play App Signing is what lets it survive a green preview build: Google
+ * re-signs the uploaded AAB, so a build installed from the store presents the
+ * app signing key's fingerprint and not the EAS upload key's. Registering one
+ * and not the other is a store-only failure.
+ *
+ * Nothing the app can do about it at runtime, so the user is sent to the door
+ * that still opens and the console gets the cause — see
+ * apps/app/firebase/README.md § Android SHA-1.
+ */
+const ANDROID_DEVELOPER_ERROR = '10';
+
 export const signInWithGoogle = async (): Promise<UserCredential> => {
   const { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } = requireGoogleSignIn();
 
@@ -96,6 +121,26 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
 
     if (isErrorWithCode(error) && error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
       throw new SignInUnavailableError('Les services Google Play ne sont pas disponibles sur cet appareil.');
+    }
+
+    if (Platform.OS === 'android' && isErrorWithCode(error) && error.code === ANDROID_DEVELOPER_ERROR) {
+      console.warn(
+        '[auth] Google sign-in refused with DEVELOPER_ERROR: this build\'s package name and signing ' +
+          'certificate SHA-1 match no OAuth client of the Firebase project. Register the fingerprint ' +
+          '(Play App Signing key for a store build, EAS upload key for an internal one), re-download ' +
+          'google-services.json and rebuild — see apps/app/firebase/README.md.',
+      );
+
+      /*
+       * No door is named on purpose. An account created through Google carries
+       * no password, and the app has no reset flow, so « use your e-mail »
+       * would send exactly the users hitting this at a sign-in that cannot
+       * succeed and a sign-up that answers auth/email-already-in-use. Only a
+       * rebuilt binary fixes this, and nothing else the user does will.
+       */
+      throw new SignInUnavailableError(
+        'La connexion Google ne fonctionne pas sur cette version de l\'app. Elle sera rétablie par une prochaine mise à jour.',
+      );
     }
 
     throw error;

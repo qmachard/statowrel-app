@@ -404,6 +404,16 @@ milliers de comptes, ou fausser les `answer_counts` qui font tout l'intérêt du
 - [ ] Vérifier les identifiants de signature : `eas credentials` pour les deux plateformes
 - [ ] Sauvegarder la clé de signature Android **hors d'EAS** — la perdre interdit toute mise à jour
       de l'app à vie (ou activer Play App Signing, qui règle le problème pour de bon)
+- [ ] **Enregistrer les deux empreintes SHA-1 Android** sur l'app Firebase `fr.quentinmachard.statowrel`
+      (Paramètres du projet → Vos applications → « Ajouter une empreinte ») : celle de la clé d'upload
+      EAS (`APP_VARIANT=production eas credentials`) **et** celle de la clé de signature Play
+      (Play Console → Test et publication → Intégrité de l'app). Sans la seconde, la connexion Google
+      marche sur un APK EAS et échoue sur tout ce qui vient du Play Store — Play re-signe l'AAB, donc
+      le binaire distribué ne présente pas l'empreinte d'upload. Puis re-télécharger
+      `google-services.json`, re-pousser la variable fichier `GOOGLE_SERVICES_JSON` et **rebuilder** :
+      l'empreinte est vérifiée contre le binaire, aucun OTA ne la rattrape.
+      Voir `apps/app/firebase/README.md` § Android SHA-1 ; `npx @react-native-google-signin/config-doctor`
+      vérifie l'accord avant de lancer le build.
 - [ ] `version` reste `1.0.0` dans `app.config.ts` ; `autoIncrement` et
       `appVersionSource: "remote"` gèrent déjà le numéro de build
 
@@ -418,7 +428,8 @@ seul le premier porte la configuration finale.
 - [ ] Installer sur un **appareil physique neuf**, pas un simulateur
 - [ ] Parcours complet sur les deux plateformes :
   - [ ] Inscription e-mail, choix du pseudo, arrivée sur l'écran Stats
-  - [ ] Connexion Google
+  - [ ] Connexion Google — **sur un build installé depuis Play**, pas seulement sur l'APK EAS :
+        c'est la signature de Play qui décide (§4.2)
   - [ ] Connexion Apple (iOS), **y compris avec « Masquer mon e-mail »** — le profil accepte un
         `email` nul, à vérifier de bout en bout
   - [ ] Double tap : premier tap, changement d'option, second tap, bascule sur le résultat
