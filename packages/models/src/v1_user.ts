@@ -22,7 +22,7 @@ export const isAuthProviderId = (value: string): value is AuthProviderId => (
 );
 
 /**
- * Profile and answering stats of an app user — see docs/prd.md §2 and §6.
+ * Profile, answering stats and wallet of an app user — see docs/prd.md §2 and §6.
  *
  * The document id is the Firebase Auth UID, not a ULID: it is the key every
  * other collection points at (`author_id`, `user_id`, friendships) and the one
@@ -30,9 +30,9 @@ export const isAuthProviderId = (value: string): value is AuthProviderId => (
  * written by the app itself, once the pseudo has been chosen on the onboarding
  * screen (`src/auth/profile.ts`).
  *
- * Profile, sign-in identities and answering stats. The PRD's `invite_code` is
- * still to be modelled, and so is its `photo_url` the day a real profile-photo
- * system ships — today every face is generated from the handle
+ * Profile, sign-in identities, answering stats and the StatCoin wallet. The PRD's
+ * `invite_code` is still to be modelled, and so is its `photo_url` the day a
+ * real profile-photo system ships — today every face is generated from the handle
  * (`apps/app/src/lib/avatars.ts`), and the Menu screen's own avatar reads the
  * provider picture straight off Firebase Auth, so Firestore carries no photo.
  */
@@ -81,6 +81,32 @@ export interface UserFirebaseData {
   answers_count: number;
   /** `YYYY-MM-DD` of the last on-time answer, the value `streak_count` is computed against. Null until the first one. */
   streak_last_answered_on: string | null;
+  /**
+   * The wallet — what the account can spend right now (docs/prd.md §4.7).
+   *
+   * Credited `STREAK_STATCOIN_REWARD` every `STREAK_STATCOIN_MILESTONE` consecutive
+   * days answered on time, debited `QUESTION_STATCOIN_COST` by proposing a
+   * question. Both moves belong to the backend, like the streak above and for
+   * the same reason: an update that changes this from a client is a forged
+   * balance, and `firestore.rules` refuses it.
+   *
+   * The app seeds it at 0 on a genuinely new profile and never touches it
+   * again — a create that seeds anything else is refused too, because a forged
+   * opening balance is a free question.
+   */
+  statcoin_balance: number;
+  /**
+   * Lifetime StatCoins credited to the account, and lifetime StatCoins debited
+   * from it. Not derivable from each other and from the balance the day they
+   * come from anywhere but a streak — a bought pack, a watched ad, a gift — so
+   * both are stored rather than one inferred.
+   *
+   * Nothing reads them yet. They are the trace a currency has to keep from its
+   * first day: a balance alone cannot say how it got there, and the answer is
+   * not reconstructible after the fact.
+   */
+  statcoins_earned: number;
+  statcoins_spent: number;
 }
 
 export type UserData = ModelData<UserFirebaseData>;
@@ -102,6 +128,9 @@ export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (Ti
     streak_best: data.streak_best,
     answers_count: data.answers_count,
     streak_last_answered_on: data.streak_last_answered_on ?? null,
+    statcoin_balance: data.statcoin_balance,
+    statcoins_earned: data.statcoins_earned,
+    statcoins_spent: data.statcoins_spent,
   }),
   fromFirestore: (snap) => {
     const data = snap.data();
@@ -116,6 +145,11 @@ export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (Ti
       streak_best: data.streak_best ?? 0,
       answers_count: data.answers_count ?? 0,
       streak_last_answered_on: data.streak_last_answered_on ?? null,
+      // The wallet is younger than the collection, so every profile written
+      // before it carries none — an empty wallet, not a missing one.
+      statcoin_balance: data.statcoin_balance ?? 0,
+      statcoins_earned: data.statcoins_earned ?? 0,
+      statcoins_spent: data.statcoins_spent ?? 0,
     };
   },
 });

@@ -128,6 +128,48 @@ not a moderator's edit, and stamping it would make every question look freshly e
 author's profile is gone is left alone rather than stamped — there is nothing to credit.
 
 ```bash
+npm run backfill-statcoins                               # rebuild the counters, credit what streaks owe
+npm run backfill-statcoins -- --dry-run                  # ... reporting every account, writing nothing
+npm run backfill-statcoins -- --production
+```
+
+Rebuilds each account's streak counters from its answers and pays the milestone rewards of
+`docs/prd.md` §4.7 that those streaks earned before the currency existed. Two jobs, one replay,
+because they are the same computation: the answer trigger only ever pays on answers given since the
+wallet shipped, and the counters that payout is owed against are themselves values a trigger has been
+incrementing one answer at a time — which drift. A profile carrying 18 answers, a best streak of 17
+and a current streak of 12 is describing 29 days it does not have.
+
+**The answers are the record**, so they are what everything is settled against. Reading `streak_count`
+would not do even for the payout alone: a profile carries the streak running now and the best one ever
+reached, and neither says how many milestones the account has crossed across every streak it has run —
+somebody who kept a 40-day streak last spring and stopped carries `streak_count: 0` and is owed 400§.
+So each account's answers are read back and the streak is rebuilt day by day, `streakStatcoinReward`
+deciding each crossing exactly as the trigger does. `answers_count`, `streak_count`, `streak_best` and
+`streak_last_answered_on` come out of the same pass.
+
+**It recovers the answers that predate `date` and `late`.** Those fields are younger than the
+collection, and the histories this script exists for are exactly the old ones — an answer without them
+would be dropped, taking a whole streak down in silence and reporting the account as owing nothing,
+which is the one wrong answer this script can give. So a missing field is read off the parent question
+instead: `broadcast_on` *is* the day, `closes_at` is what `late` was decided against. One read per
+question, cached across the run. Demo answers are still dropped, being no day at all.
+
+The collection-group query is an equality on `user_id` with **no `orderBy`** — the days are sorted in
+the replay. An `orderBy('date')` would silently drop every document missing that field, which is
+precisely the legacy answer being recovered, and the pairing would need a composite index this script
+should not depend on. The equality needs only the field override `users-deleteAccount` already does.
+
+Re-runnable, and that is the property to keep: the wallet is credited `owed − statcoins_earned`, never
+the total, and a counter already holding its replayed value is not written — so a second pass finds
+nothing, and a milestone the trigger paid in between is accounted for. `update()` rather than a
+whole-document `set()`, which would carry back fields read a moment earlier. Admin SDK and not a
+client: the rules deny every client write that moves a wallet or a counter.
+
+`--dry-run` reports **every** account, not only the ones it would touch — « no answers found », « owed
+nothing » and « already settled » read identically from the outside, and only the first is a problem.
+
+```bash
 npm run send-test-notification -- --email moi@exemple.fr   # every device of that account
 npm run send-test-notification -- --uid <uid> --date 2026-08-19
 npm run send-test-notification -- --token 'ExponentPushToken[…]' --body 'Coucou'

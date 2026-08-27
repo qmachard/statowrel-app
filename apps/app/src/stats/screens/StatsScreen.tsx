@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, pagePadding, spacing } from '@/design/tokens';
 import { InvitationsCard } from '@/friends/components/InvitationsCard';
 import { DailyQuestionBanner } from '@/stats/components/DailyQuestionBanner';
-import { ProposeQuestionButton } from '@/stats/components/ProposeQuestionButton';
+import { ProposeQuestionCard } from '@/stats/components/ProposeQuestionCard';
 import { StatTile } from '@/stats/components/StatTile';
 import { StatsCalendar } from '@/stats/components/StatsCalendar';
 import { StatsHeader } from '@/stats/components/StatsHeader';
@@ -19,8 +19,8 @@ import { resolveStreakCount } from '@/stats/helpers/streak';
  * The root of the app (docs/prd.md §5.1, §5.2), from top to bottom: the
  * invitations waiting on an answer, the day's banner — the question while it is
  * still open, « RDV demain » once it has been answered — the streak and its
- * counters on a scrolling strip, the calendar, and under it what the streak
- * eventually buys: proposing a question (§4.7). The daily question sheet lands
+ * counters on a scrolling strip, the calendar, and under it the StatCoin wallet
+ * and what it buys: proposing a question (§4.7). The daily question sheet lands
  * on top of it (§5.4).
  */
 const styles = StyleSheet.create({
@@ -53,6 +53,11 @@ export const StatsScreen = () => {
   // The profile is null while it loads, and stays null until the onboarding
   // sheet has created it. Zeros rather than nothing invented, nothing crashing.
   const streakCount = profile === null ? 0 : resolveStreakCount(profile, today);
+
+  // The wallet is read straight off the profile, which `AuthContext` subscribes
+  // to — so the StatCoins a milestone just paid land on the card below on their
+  // own, without this screen asking for them.
+  const statcoins = profile?.statcoin_balance ?? 0;
 
   // The banner is the day's status line, whichever side of the answer one is
   // on: the question while it waits, « RDV demain » once it has been given. It
@@ -110,9 +115,12 @@ export const StatsScreen = () => {
           archiveStart={archiveStart}
         />
 
-        {/* Under the calendar, because it is the calendar it reads: the streak
-            is the sum of those days, and the proposal is what it unlocks. */}
-        <ProposeQuestionButton streak={streakCount} />
+        {/* Under the calendar, because it is what the calendar buys: the days
+            answered pay the StatCoins (§4.7), and this is what they are for.
+            The balance lives here rather than on the strip above — it belongs
+            beside the price it is saved towards, and stating it twice on one
+            screen, in two framings, reads as two different things. */}
+        <ProposeQuestionCard statcoins={statcoins} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -285,6 +285,7 @@ const {
   QUESTION_MAX_OPTIONS,
   QUESTION_MIN_OPTIONS,
   questionConverter,
+  streakStatcoinReward,
   USER_CALENDAR_MONTH_COLLECTION,
   USER_COLLECTION,
   USER_FRIEND_COLLECTION,
@@ -520,23 +521,38 @@ console.log(`  · ${castUsernames.length} accounts in Auth (password: ${password
 
 const writer = createWriter();
 
-/** Counters and streak, replayed below over the answers each account gave. */
+/** Counters, streak and wallet, replayed below over the answers each account gave. */
 const profiles = new Map(castUsernames.map((username) => [ username, {
   answers_count: 0,
   streak_count: 0,
   streak_best: 0,
   streak_last_answered_on: null,
+  statcoin_balance: 0,
+  statcoins_earned: 0,
+  statcoins_spent: 0,
 } ]));
 
-/** Mirrors `apps/functions/src/domains/daily-questions/helpers/streak.ts` — an on-time answer only. */
+/**
+ * Mirrors `apps/functions/src/domains/daily-questions/helpers/streak.ts` — an
+ * on-time answer only — and the milestone payout the answer trigger makes in
+ * the same transaction (docs/prd.md §4.7). The reward itself comes from
+ * `@statowrel/models`, so a seeded wallet and a real one cannot disagree.
+ */
 const advanceStreak = (state, dateKey) => {
   if (state.streak_last_answered_on !== null && state.streak_last_answered_on >= dateKey) {
     return;
   }
 
+  const previousStreak = state.streak_count;
+
   state.streak_count = state.streak_last_answered_on === previousDateKey(dateKey, 1) ? state.streak_count + 1 : 1;
   state.streak_best = Math.max(state.streak_best, state.streak_count);
   state.streak_last_answered_on = dateKey;
+
+  const reward = streakStatcoinReward(previousStreak, state.streak_count);
+
+  state.statcoin_balance += reward;
+  state.statcoins_earned += reward;
 };
 
 for (const day of world) {
@@ -812,6 +828,7 @@ console.log(`  Sign in     ${email} / ${password}${' '.repeat(2)}(also admin —
 console.log(`  Today       ${today} · « ${todaysDay?.label ?? '—'} »`);
 console.log(`  Answered    ${todayAnswered ? 'yes — the sheet opens on the result card' : 'no — the day is yours to answer'}`);
 console.log(`  Streak      ${main.streak_count} day(s), best ${main.streak_best}, ${main.answers_count} answered`);
+console.log(`  Wallet      ${main.statcoin_balance} StatCoin(s), ${main.statcoins_earned} earned`);
 console.log(`  Friends     ${friendUsernames.join(', ') || '—'} · 1 invitation from ${INVITER} · 1 sent to ${INVITEE}`);
 console.log(`  Moderation  ${POT_PENDING} pending, ${POT_APPROVED} approved, ${POT_REJECTED} rejected`);
 console.log(`  Onboarding  the demo question is in, with ${DEMO_ANSWERS} answers behind it`);

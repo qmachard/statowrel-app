@@ -110,7 +110,7 @@ Re-export every new model from `src/index.ts`.
 
 **The handle is denormalized, and the credit follows a rename.** `author_username` is copied onto the question for the same reason `friend_username` is copied onto a friendship edge: naming the author of docs/prd.md §5.4 would otherwise be one `v1_users` read per opening of a day in the app, and one per distinct author of a pot that never shrinks in the console. It is safe to copy because it is *checkable* — `firestore.rules` runs the same `get()` on `v1_usernames` that the friendship's own `friendUsernameIsTheirs()` runs, so nobody drops a question credited under a borrowed pseudo — and the `get()` sits behind a null check, a rules read being billed like any other.
 
-It is a display cache and not the truth: `v1_users/{author_id}.username` stays it. Renaming a handle does not exist yet (`docs/prd.md` §4.1) and cannot be a client write — `v1_usernames` is `allow update, delete: if false`, freeing a reservation being the backend's job — so **the day that job exists it owns propagating this copy onto its author's questions**, alongside the `v1_user_friends` copies it already has to backfill. The alternative, freezing the credit at publication, would show two different handles for one person in the same app; the fan-out it costs is over the handful of documents §4.7 lets anybody propose, gated behind a 30-day streak.
+It is a display cache and not the truth: `v1_users/{author_id}.username` stays it. Renaming a handle does not exist yet (`docs/prd.md` §4.1) and cannot be a client write — `v1_usernames` is `allow update, delete: if false`, freeing a reservation being the backend's job — so **the day that job exists it owns propagating this copy onto its author's questions**, alongside the `v1_user_friends` copies it already has to backfill. The alternative, freezing the credit at publication, would show two different handles for one person in the same app; the fan-out it costs is over the handful of documents §4.7 lets anybody propose, each one paid for in StatCoins.
 
 The field is younger than the collection, so a question written before it carries none, and both readers fall back to the profile read while it does — the same shape as `questionLastModifiedAt` falling back to `created_at`. `npm run backfill-question-authors` (`apps/functions/scripts/`) is what ends that: it walks the pot, resolves each distinct author once, and stamps the copy through the admin SDK, `update` on a question being denied to every client. The fallback and the `useQuestionAuthors` hook behind it come out once that pass has run in production.
 
@@ -161,7 +161,7 @@ Only the shared half is immutable: a month of `v1_daily_question_months` is froz
 
 ### `v1_users`
 
-`packages/models/src/v1_user.ts` — the app user's profile and answering stats. The document id is the **Firebase Auth UID**, not a ULID: it is the key `author_id`, `user_id` and friendships point at, and the one `firestore.rules` compares against `request.auth.uid`.
+`packages/models/src/v1_user.ts` — the app user's profile, answering stats and StatCoin wallet. The document id is the **Firebase Auth UID**, not a ULID: it is the key `author_id`, `user_id` and friendships point at, and the one `firestore.rules` compares against `request.auth.uid`.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -174,8 +174,13 @@ Only the shared half is immutable: a month of `v1_daily_question_months` is froz
 | `streak_best` | `number` | longest `streak_count` ever reached |
 | `answers_count` | `number` | total days answered, catch-ups included — days predating the account among them, which is why the Stats tile is labelled « Total » over « jours » and not « depuis l'inscription ». The tile reads the field rather than counting, since the calendar only ever loads one month |
 | `streak_last_answered_on` | `string \| null` (`YYYY-MM-DD`) | day of the last on-time answer; `null` until the first one |
+| `statcoin_balance` | `number` | the wallet (`docs/prd.md` §4.7). Credited `STREAK_STATCOIN_REWARD` (100) every `STREAK_STATCOIN_MILESTONE` (10) consecutive days answered on time, in the answer trigger's own transaction; debited by proposing a question |
+| `statcoins_earned` | `number` | lifetime credited |
+| `statcoins_spent` | `number` | lifetime debited. Stored rather than inferred from the two above: the day StatCoins also come from a bought pack, a watched ad or a gift, `earned − balance` stops being what was spent |
 
-The profile half of the document is written by the app itself, at first sign-in — `apps/app/src/auth/profile.ts`, under the owner-only `create`/`update` rules. The counters belong to the backend: the app seeds them at sign-up and `firestore.rules` rejects an update that moves one, so a forged score is not a thing a client can write. Only the PRD's `invite_code` is still to be modelled.
+The profile half of the document is written by the app itself, at first sign-in — `apps/app/src/auth/profile.ts`, under the owner-only `create`/`update` rules. The counters and the wallet belong to the backend: the app seeds them at sign-up and `firestore.rules` rejects an update that moves one, so a forged score is not a thing a client can write. Only the PRD's `invite_code` is still to be modelled.
+
+**The wallet made the `create` worth closing too.** `keepsBackendCounters()` only ever guarded an *update* — nothing stopped a client from writing its own profile with counters already in it, which cost nothing while they were a score. They are money now: a profile opened with a balance is a free question, and one opened with a streak of 9 answered yesterday is worth 100 StatCoins tomorrow, since the payout is computed from `streak_count` and `streak_last_answered_on`. `startsEmpty()` pins all seven fields to their zero on `create`, which only ever fires on a document that does not exist — completing a profile that predates a username is a `set` over an existing one, an update, and goes through `keepsBackendCounters()` as before.
 
 ### `v1_usernames`
 

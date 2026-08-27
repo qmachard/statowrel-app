@@ -238,11 +238,48 @@ service cloud.firestore {
         return request.resource.data.get('streak_count', 0) == resource.data.get('streak_count', 0)
                && request.resource.data.get('streak_best', 0) == resource.data.get('streak_best', 0)
                && request.resource.data.get('answers_count', 0) == resource.data.get('answers_count', 0)
-               && request.resource.data.get('streak_last_answered_on', null) == resource.data.get('streak_last_answered_on', null);
+               && request.resource.data.get('streak_last_answered_on', null) == resource.data.get('streak_last_answered_on', null)
+               && keepsWallet();
+      }
+
+      // The wallet (docs/prd.md §4.7) is the same deal as the counters above,
+      // and a stricter one: those are a score, this is what a question is paid
+      // with. The answer trigger credits it at every streak milestone and the
+      // proposal callable debits it — both admin-side, past these rules — so
+      // every client-side move of it is a forged balance.
+      function keepsWallet() {
+        return request.resource.data.get('statcoin_balance', 0) == resource.data.get('statcoin_balance', 0)
+               && request.resource.data.get('statcoins_earned', 0) == resource.data.get('statcoins_earned', 0)
+               && request.resource.data.get('statcoins_spent', 0) == resource.data.get('statcoins_spent', 0);
+      }
+
+      // A new profile opens empty, and that is checked rather than assumed:
+      // `keepsBackendCounters()` only guards an *update*, so without this a
+      // client could simply create its own profile with a balance already in
+      // it — a free question, and no write to undo it afterwards.
+      //
+      // The streak is pinned here too, and not for symmetry: the payout is
+      // computed from `streak_count` and `streak_last_answered_on`, so a
+      // profile created with a streak of 9 answered yesterday is worth 100
+      // StatCoins tomorrow. Forging a score was vanity; forging it is now
+      // counterfeiting.
+      //
+      // `create` only ever fires on a document that does not exist, so nothing
+      // written before these fields can be caught by it — completing a profile
+      // that predates a username is a `set` over an existing document, which
+      // is an update and goes through `keepsBackendCounters()` instead.
+      function startsEmpty() {
+        return request.resource.data.get('streak_count', 0) == 0
+               && request.resource.data.get('streak_best', 0) == 0
+               && request.resource.data.get('answers_count', 0) == 0
+               && request.resource.data.get('streak_last_answered_on', null) == null
+               && request.resource.data.get('statcoin_balance', 0) == 0
+               && request.resource.data.get('statcoins_earned', 0) == 0
+               && request.resource.data.get('statcoins_spent', 0) == 0;
       }
 
       allow read: if isAuthenticated();
-      allow create: if isOwner(user_id) && isValidProfile() && ownsUsername();
+      allow create: if isOwner(user_id) && isValidProfile() && ownsUsername() && startsEmpty();
       allow update: if isOwner(user_id)
                     && isValidProfile()
                     && ownsUsername()
