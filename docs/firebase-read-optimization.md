@@ -6,6 +6,12 @@ optimisations qui réduisent la facture sans changer le produit.
 
 Écrit à partir du code réellement présent. Chaque constat pointe le fichier et la ligne.
 
+> **Révision** — relu contre `main` après le passage à React Native Firebase, le badge des potes et
+> le passage de la question du jour en lecture unique. #2, #4 et #6a sont corrigés ; #3 l'est à
+> moitié. Deux constats s'ajoutent : le fan-out d'écritures du badge dans la transaction de réponse
+> (#13) et le handle de l'auteur relu à chaque ouverture du jour (#14). Le correctif de #5 est
+> réécrit : la dénormalisation qu'il proposait existe désormais, il n'y a plus qu'à la lire.
+
 ## Modèle de coût utilisé
 
 Firestore facture **par document renvoyé**, jamais par requête. Trois conséquences qui structurent
@@ -93,6 +99,8 @@ Coût quotidien estimé au scénario de référence, avant / après.
 | 10 | Mois de la question relu par l'écran du jour | 200 000 | 0 | 🟡 |
 | 11 | Fan-out push — collection group entière ×2 | 200 000 | 200 000 | 🟠 (latence) |
 | 12 | Console d'admin — tout le pot, sans filtre | variable | variable | ⚪ |
+| 13 | Badge des potes — fan-out d'écritures dans la transaction de réponse | 1 000 000 (+1 M écritures) | 1 000 000 | 🔴 *(nouveau)* |
+| 14 | Handle de l'auteur relu à chaque ouverture du jour | 150 000 | ~5 000 | 🟡 *(nouveau)* |
 
 **Total ≈ 25 M lectures/jour → ~5 M** — de l'ordre de **270 $/mois → 55 $/mois**, et surtout deux
 murs de scalabilité levés (#5 et #6) qui cassent avant de coûter cher.
@@ -250,20 +258,38 @@ tourne donc sur le défaut de 60 s des fonctions v2. Le nudge de 18:00 **échoue
 avant, autour de 10 à 20 k répondeurs — et ses 3 tentatives Cloud Tasks échoueront de la même façon,
 en refacturant le coût à chaque essai.
 
-**Correctif** — maintenir un index dénormalisé des amitiés acceptées :
-`v1_users/{uid}/v1_user_friends_index/current`, un document unique portant `accepted_ids: string[]`,
-écrit par le trigger d'amitié (`friends/triggers/onFriendCreated.ts`) et par les suppressions
-(`friendships.ts`). Le digest lit alors **1 document par répondeur au lieu de F**, et peut le faire
-via `getAll()` du SDK admin — qui facture toujours 1 lecture par document mais les récupère en un
-seul RPC par lot de ~500.
+**Correctif** — *réécrit : la donnée qu'il fallait dénormaliser existe désormais.*
 
-- Lectures : 1,05 M → **150 k/jour** (7×).
-- Aller-retours : ~2 500 → **~100**. Le timeout disparaît.
-- Prix à payer : 2 écritures supplémentaires par changement d'amitié — un événement rare.
+> Ce paragraphe proposait initialement de maintenir un index `accepted_ids: string[]` par
+> utilisateur, et écartait l'alternative « push » — le trigger de réponse incrémentant un compteur
+> chez chacun des F amis — au motif qu'elle coûte F écritures par réponse. Cette alternative a été
+> implémentée depuis, pour le badge du calendrier (#13). Le nudge ne l'utilise pas encore, et paie
+> donc les deux : la dénormalisation *et* le recalcul.
 
-L'alternative « push » (le trigger de réponse incrémente un compteur chez chacun des F amis) coûte
-F **écritures** par réponse, soit 1 M écritures/jour à 0,108 $/100 k = 3× le prix des lectures
-qu'elle économise. À écarter.
+Le trigger de réponse écrit maintenant `friend_answer_counts.{DD}` dans le mois de calendrier de
+chaque ami accepté (`onAnswerCreated.ts`). Le mois d'un utilisateur porte donc déjà, pour chaque
+jour, **les deux valeurs dont le nudge a besoin** :
+
+- `days.{DD}` présent ⇒ cet utilisateur a répondu (l'ensemble `answered`) ;
+- `friend_answer_counts.{DD}` ⇒ combien de ses potes ont répondu (la `Map` `friendsAnswered`).
+
+Le digest se réduit alors à **une lecture par utilisateur destinataire** de
+`v1_users/{uid}/v1_user_calendar_months/{YYYY-MM}` — les mêmes UID que `sendPushToUsers` obtient
+déjà en lisant les appareils, récupérés par `getAll()` du SDK admin (facturé au document, mais un
+seul RPC par lot de ~500). Le balayage des réponses du jour et la requête d'amis par répondeur
+disparaissent tous les deux.
+
+- Lectures : 1,05 M → **~100 k/jour** (une par destinataire, plus rien qui dépende de F).
+- Aller-retours : ~2 500 → **~200**. Le timeout disparaît.
+- Prix à payer : **aucun** — ni modèle ni écriture supplémentaires, la donnée est déjà écrite.
+
+Cas limites à vérifier à l'implémentation : un utilisateur sans document de mois (il n'a rien
+répondu et aucun pote n'a répondu) lit comme absent, donc « pas répondu, 0 pote » — ce qui est la
+bonne ligne (« Ne perds pas ta série… »). Et une réponse de rattrapage sur un jour passé incrémente
+le compteur de ce jour-là, pas celui du jour courant, donc elle ne pollue pas le nudge du soir.
+
+L'index `accepted_ids` reste la bonne réponse si le fan-out de #13 est retiré au profit d'un
+recalcul — les deux corrections sont exclusives, il ne faut pas les faire toutes les deux.
 
 **Étape suivante, quand 100 k sera dépassé** — découper le fan-out en tâches Cloud Tasks paginées
 (une tâche par tranche de N utilisateurs) plutôt qu'une seule fonction qui tient tout en mémoire.
@@ -299,6 +325,12 @@ contention, réessaient, et finissent par échouer — ce qui fait perdre non se
 aussi la projection calendrier et la série, écrites dans la même transaction.
 
 **C'est un mur produit avant d'être un mur de coût**, et il arrive bien avant 100 k utilisateurs.
+
+**Et la transaction s'est allongée depuis.** Elle porte maintenant, en plus, une requête sur les
+amis acceptés et jusqu'à 400 écritures de fan-out (#13). Plus une transaction tient longtemps ses
+verrous, plus la fenêtre de collision sur le document chaud est large — les deux problèmes se
+multiplient au lieu de s'additionner. Sortir `answer_counts` du document que tout le monde lit est
+donc plus urgent qu'à la rédaction de ce paragraphe, pas moins.
 
 **Correctif, en deux temps**
 
@@ -481,6 +513,80 @@ par ouverture d'onglet.
 
 ---
 
+## 13. 🔴 Le badge des potes met un fan-out d'écritures dans la transaction de réponse
+
+*Nouveau — apparu avec le badge du calendrier (docs/prd.md §5.2), postérieur à la première
+rédaction de ce document.*
+
+**Où** — `apps/functions/src/domains/daily-questions/triggers/steps/onAnswerCreated.ts` (le bloc
+`countedFriendIds.forEach`), et `apps/functions/src/domains/daily-questions/helpers/friendsAnswers.ts`
+(`acceptedFriendsQuery`)
+
+À chaque réponse, la transaction du trigger lit la liste des amis acceptés de l'auteur, puis écrit
+`friend_answer_counts.{DD}` dans le mois de calendrier de **chacun** d'eux — plafonnée à 400 amis
+pour ne pas dépasser les 500 écritures d'une transaction.
+
+Le choix est bon sur le fond, et il faut le dire clairement : compter côté client coûterait une
+lecture par ami et par jour affiché, contre la lecture unique que le mois coûte aujourd'hui — les
+règles n'autorisant à lire les réponses d'un ami qu'une question à la fois. Le badge n'était pas
+gratuitement finançable autrement. Ce qui pose problème, c'est **où** ces écritures sont faites.
+
+**Coût** — à 50 000 réponses et 20 amis : ~1 M lectures **et ~1 M écritures** par jour, soit
+~43 $/mois (les écritures coûtant 3× les lectures, elles dominent). C'est de l'argent, pas un mur.
+
+**Le mur est la contention.** La transaction touche désormais 1 + 3 + F documents, dont deux
+catégories chaudes :
+
+- Le document de la question, qui reçoit un incrément par réponse de toute la base (#6b).
+- Les mois de calendrier des amis — et une amitié étant réciproque, deux potes qui répondent en même
+  temps écrivent chacun dans le document que l'autre est en train de lire-écrire. En pleine ruée du
+  matin, avec 20 amis, la probabilité qu'au moins un document de la transaction soit en conflit
+  n'est plus marginale. Firestore réessaie, puis abandonne — et un abandon ici ne perd pas qu'un
+  badge : la projection calendrier, la série et `answer_counts` sont dans la même transaction.
+
+**Correctif** — sortir le fan-out de la transaction, sans le supprimer.
+
+1. La transaction garde ce qui doit être atomique et ce dont dépend l'app : la projection du jour,
+   les compteurs, l'incrément `answer_counts` et son marqueur `counted_at` — ce dernier couple étant
+   explicitement indissociable (`useDailyQuestion` en dépend pour savoir si le tally qu'il tient
+   porte déjà la réponse qui vient d'être écrite).
+2. Le fan-out part **après**, en `BulkWriter` ou en lots de 500, et seulement sur l'exécution qui a
+   réellement créé l'entrée de calendrier — l'idempotence est déjà portée par ce marqueur, donc une
+   relivraison du trigger ne recompte rien.
+3. Le prix à payer, à assumer explicitement : un crash entre la transaction et le fan-out perd le
+   badge de cette réponse-là, définitivement (la relivraison abandonnera sur le marqueur). C'est un
+   compteur d'affichage, contre le risque actuel de perdre une série. Le bon sens du compromis.
+
+**Étape suivante** — si le badge devient chaud à son tour (des groupes d'amis très larges), le
+sortir du mois de calendrier vers un document par jour et par utilisateur, ou l'agréger dans le même
+mouvement que #5.
+
+---
+
+## 14. 🟡 Le handle de l'auteur est relu à chaque ouverture du jour
+
+*Nouveau — la lecture existait déjà, elle n'était pas relevée.*
+
+**Où** — `apps/app/src/daily-question/data/useDailyQuestion.ts` (`readAuthorName`)
+
+Un `getDoc` sur `v1_users/{author_id}` pour la ligne de crédit de docs/prd.md §5.4. L'effet est
+keyé sur `authorId`, mais l'état vit dans le composant : chaque navigation vers l'écran du jour le
+remonte et refait la lecture. C'est exactement la forme qu'avait le problème des avatars (#2), à un
+document par jour ouvert au lieu d'un par ami.
+
+**Coût** — ~150 k lectures/jour au scénario de référence.
+
+**Correctif** — un cache module keyé par UID, comme celui que `useFriendAvatars` avait, sans son
+défaut : lu une fois par auteur et par lancement au lieu d'une fois par montage. Un `getFrozenDoc`
+ne convient pas ici — un profil n'est pas figé, même si un handle ne bouge en pratique jamais.
+
+La vraie réponse, le jour où les questions proposées par les utilisateurs existeront pour de bon
+(docs/prd.md §4.7), est de porter `author_username` sur `v1_questions` au tirage — la console
+d'admin fait la même lecture de son côté (`apps/admin/src/questions/data/useQuestionAuthors.ts`) et
+en profiterait. Comme pour `friend_username` sur l'amitié, la copie se backfille côté backend.
+
+---
+
 ## Ce qui est déjà bien fait
 
 Autant le dire, pour ne pas défaire ce qui va :
@@ -519,21 +625,26 @@ Autant le dire, pour ne pas défaire ce qui va :
 **Avant d'ouvrir les vannes** — les deux murs de scalabilité, qui cassent le produit et pas
 seulement la facture :
 
-1. #6a — abonnement question → lecture unique (petit diff, gros effet).
-2. #5 — index des amis acceptés pour le nudge de 18:00.
-3. #6b — compteur `answer_counts` shardé ou déporté.
-4. #11 — fan-out push paginé en Cloud Tasks.
+1. ~~#6a — abonnement question → lecture unique.~~ *Fait.*
+2. **#13 — sortir le fan-out du badge de la transaction de réponse.** Le plus urgent des trois
+   restants : c'est celui qui peut faire échouer une série, et il aggrave #6b.
+3. #6b — compteur `answer_counts` shardé ou déporté hors du document que tout le monde lit.
+4. #5 — nudge de 18:00 : lire les mois de calendrier des destinataires plutôt que recalculer.
+   Le correctif a été réécrit — la donnée est déjà là depuis #13, il n'y a plus rien à
+   dénormaliser.
+5. #11 — fan-out push paginé en Cloud Tasks.
 
 **Ensuite, par ratio gain/effort** — tout est côté app et sans risque produit :
 
-5. #1 — abonnement unique à la liste d'amis.
-6. ~~#2 — cache disque des avatars.~~ *Fait — la lecture de profil par ami est supprimée, l'avatar
+6. #1 — abonnement unique à la liste d'amis.
+7. ~~#2 — cache disque des avatars.~~ *Fait — la lecture de profil par ami est supprimée, l'avatar
    est généré depuis le handle porté par l'amitié.*
-7. #3 — calendrier : ne plus forcer au focus, persister le mois de l'utilisateur *(la moitié
-   globale est faite)*.
-8. #8, #9, #10 — trois lectures redondantes, quelques lignes chacune.
-9. #7 — enregistrement d'appareil au plus une fois par jour.
-10. ~~#4 — cache des réponses d'amis.~~ *Fait — `getFrozenDoc`.*
+8. #3 — calendrier : ne plus forcer au focus *(la moitié globale est faite : `getFrozenDoc` sur les
+   mois passés)*. Le mois de l'utilisateur ne peut pas être figé — le badge #13 l'écrit depuis
+   l'extérieur — donc c'est la politique de focus qui porte tout le gain restant.
+9. #8, #9, #10, #14 — quatre lectures redondantes, quelques lignes chacune.
+10. #7 — enregistrement d'appareil au plus une fois par jour.
+11. ~~#4 — cache des réponses d'amis.~~ *Fait — `getFrozenDoc`.*
 
 **Après le lancement** : #12.
 
