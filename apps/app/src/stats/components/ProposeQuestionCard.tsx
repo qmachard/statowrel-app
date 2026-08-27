@@ -18,33 +18,41 @@ export interface ProposeQuestionCardProps {
 }
 
 /**
+ * An amount of StatCoins, in the currency's own symbol — set after the number
+ * the way € is, and written here rather than at each of the three call sites
+ * below so the symbol has one home.
+ */
+const amountLabel = (amount: number): string => `${amount}§`;
+
+/**
+ * The same amount for a screen reader, which would read the symbol as a section
+ * sign or skip it outright. Every `§` on this card has one of these behind it.
+ */
+const spokenAmountLabel = (amount: number): string => `${amount} StatCoins`;
+
+/**
  * How the currency works, said in one sentence under the title — the whole of
  * docs/prd.md §4.7's earning rule, and the only place the app states it.
  */
-const RULE = `Gagne ${STREAK_STATCOIN_REWARD} StatCoins pour chaque série de ${STREAK_STATCOIN_MILESTONE} réussie`;
-
-/**
- * The currency's own symbol, set after the amount the way € is — the short form
- * the button wears once the subtitle above has spelled the name out.
- */
-const PRICE = `${QUESTION_STATCOIN_COST}§`;
-
-/** French takes the singular at zero, so this is not `> 0`. */
-const statcoinsLabel = (statcoins: number): string => (
-  `${statcoins} ${statcoins > 1 ? 'StatCoins' : 'StatCoin'}`
-);
+const RULE = `Gagne ${amountLabel(STREAK_STATCOIN_REWARD)} pour chaque série de ${STREAK_STATCOIN_MILESTONE} réussie`;
 
 const styles = StyleSheet.create({
-  // The balance is a chip, not a headline: the card's subject is what it buys,
-  // and the number is only there to say how close one is to buying it.
+  // The wallet is the card's one number, so it sits in the middle of it rather
+  // than against the left edge the header reads from.
+  content: {
+    alignItems: 'center',
+  },
   balance: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(2),
   },
+  // The scale of the streak's own count, and deliberately: they are the two
+  // numbers the screen is about, and one of them turns into the other.
   balanceLabel: {
     fontFamily: fonts.head,
-    fontSize: fontSize.base,
+    fontSize: fontSize['4xl'],
+    lineHeight: fontSize['4xl'],
     color: colors.foreground,
   },
   // The footer is `muted` and edge to edge by default; the button is the only
@@ -53,6 +61,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+/** Sized against the count beside it rather than against the body text. */
+const COIN_SIZE = spacing(7);
 
 /**
  * The bottom of the Stats screen (docs/prd.md §5.2), under the calendar: what
@@ -66,8 +77,8 @@ const styles = StyleSheet.create({
  * once, shows the balance, and carries the price on the button that spends it.
  *
  * The rule stays put once the price is covered. It is not a condition being
- * chased, it is how the economy works, and it is as true with 500 StatCoins in
- * hand as with none.
+ * chased, it is how the economy works, and it is as true with 500§ in hand as
+ * with none.
  */
 export const ProposeQuestionCard = ({ statcoins, onPress }: ProposeQuestionCardProps) => {
   const affordable = statcoins >= QUESTION_STATCOIN_COST;
@@ -79,10 +90,10 @@ export const ProposeQuestionCard = ({ statcoins, onPress }: ProposeQuestionCardP
         <CardDescription>{RULE}</CardDescription>
       </CardHeader>
 
-      <CardContent>
-        <View style={styles.balance}>
-          <Coins size={18} color={colors.foreground} />
-          <Text style={styles.balanceLabel}>{statcoinsLabel(statcoins)}</Text>
+      <CardContent style={styles.content}>
+        <View style={styles.balance} accessible accessibilityLabel={spokenAmountLabel(statcoins)}>
+          <Coins size={COIN_SIZE} color={colors.foreground} />
+          <Text style={styles.balanceLabel}>{amountLabel(statcoins)}</Text>
         </View>
       </CardContent>
 
@@ -93,13 +104,12 @@ export const ProposeQuestionCard = ({ statcoins, onPress }: ProposeQuestionCardP
             its label: it is what the action costs, not what the action is, so
             it gets the sans face a step down instead of the label's own. It
             stays there once it can be paid — a purchase should say what it
-            costs. The screen reader is given the two together, since « 100§ »
-            read out on its own says nothing. */}
+            costs. */}
         <View style={styles.action}>
           <Button
             label="Poser une question"
-            trailingLabel={PRICE}
-            accessibilityLabel={`Poser une question, ${QUESTION_STATCOIN_COST} StatCoins`}
+            trailingLabel={amountLabel(QUESTION_STATCOIN_COST)}
+            accessibilityLabel={`Poser une question, ${spokenAmountLabel(QUESTION_STATCOIN_COST)}`}
             variant={affordable ? 'default' : 'outline'}
             disabled={!affordable || onPress === undefined}
             onPress={onPress}
