@@ -14,8 +14,11 @@ import { setQuestionStatus } from './data/saveQuestion';
 import { useQuestionAuthors } from './data/useQuestionAuthors';
 import { type ModeratedQuestion, useQuestions } from './data/useQuestions';
 
-/** Newest change first — the order a moderator comes back to the pot in. */
-const INITIAL_SORTING: SortingState = [ { id: 'updated_at', desc: true } ];
+/**
+ * Newest proposal first — the order the pot arrives in, and the one
+ * `useQuestions` already streams, so the first paint is not a reshuffle.
+ */
+const INITIAL_SORTING: SortingState = [ { id: 'created_at', desc: true } ];
 
 const ALL_STATUSES = '';
 

@@ -87,9 +87,11 @@ en classes Tailwind, et les brancher ici demanderait une seconde source de véri
 de `src/index.css`, alors que celui-ci est déjà une copie de `apps/app/src/design/tokens.ts`. Le
 squelette est donc shadcn, la peau reste celle du repo.
 
-Cinq colonnes — question + réponses, auteur, statut, dernière modification, actions —, un filtre par
-statut au-dessus du cadre et un tri sur l'auteur ou sur la date de modification, cette dernière
-décroissante par défaut.
+Six colonnes — question + réponses, auteur, statut, date de création, dernière modification,
+actions —, un filtre par statut au-dessus du cadre et un tri sur l'auteur ou sur l'une des deux
+dates. **Le tri par défaut est la création, décroissante** : c'est l'ordre dans lequel le pot arrive
+(`useQuestions` le lit déjà en `orderBy('created_at', 'desc')`), donc le premier rendu ne rebat pas
+les lignes.
 
 **Le crayon et le « ⋮ » sont sur toutes les lignes**, calés à droite de la colonne ; ce que le statut
 change, ce sont les boutons posés devant eux et le contenu du menu :

@@ -164,6 +164,17 @@ export const buildQuestionColumns = (actions: QuestionRowActions) => helper.colu
     ),
   }),
 
+  helper.accessor('created_at', {
+    id: 'created_at',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Date de création" />,
+    sortFn: 'datetime',
+    enableColumnFilter: false,
+    meta: { cellClassName: 'table__status' },
+    cell: ({ getValue }) => (
+      <span className="table__date">{formatDayTime(getValue())}</span>
+    ),
+  }),
+
   helper.accessor((question) => questionLastModifiedAt(question), {
     id: 'updated_at',
     header: ({ column }) => (
