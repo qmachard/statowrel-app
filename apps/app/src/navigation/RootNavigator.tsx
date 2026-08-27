@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useAuth } from '@/auth/AuthContext';
+import { ForgotPasswordScreen } from '@/auth/screens/ForgotPasswordScreen';
 import { SignInScreen } from '@/auth/screens/SignInScreen';
 import { SignUpScreen } from '@/auth/screens/SignUpScreen';
 import { DailyQuestionScreen } from '@/daily-question/screens/DailyQuestionScreen';
@@ -71,6 +72,7 @@ export const RootNavigator = () => {
         <>
           <Stack.Screen name="SignIn" component={SignInScreen} />
           <Stack.Screen name="SignUp" component={SignUpScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         </>
       )}
     </Stack.Navigator>

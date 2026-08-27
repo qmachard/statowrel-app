@@ -8,6 +8,8 @@ export type RootStackParamList = {
   Menu: undefined;
   SignIn: undefined;
   SignUp: undefined;
+  /** Ask Firebase for a password reset link (docs/prd.md §4.1). */
+  ForgotPassword: undefined;
 };
 
 // Registering the root param list globally is what makes `useNavigation()` and

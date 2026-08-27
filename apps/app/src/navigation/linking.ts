@@ -9,6 +9,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       SignIn: 'sign-in',
       SignUp: 'sign-up',
+      ForgotPassword: 'forgot-password',
       Stats: '',
       DailyQuestion: 'question/:date?',
       InviteFriend: 'invite',

@@ -29,6 +29,10 @@ export const signUpSchema = z.object({
 
 export type SignUpValues = z.infer<typeof signUpSchema>;
 
+export const resetPasswordSchema = z.object({ email });
+
+export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
+
 /**
  * The username is asked for once, on its own sheet, after the first sign-in.
  *

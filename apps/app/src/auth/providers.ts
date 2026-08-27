@@ -3,6 +3,7 @@ import {
   OAuthProvider,
   type UserCredential,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -10,6 +11,7 @@ import {
 import { Platform } from 'react-native';
 
 import { auth } from '@/lib/firebase';
+import { firebaseErrorCode } from '@/lib/firebaseError';
 import { unregisterDeviceForPush } from '@/notifications/data/deviceRegistration';
 
 import { SignInCancelledError, SignInUnavailableError } from './errors';
@@ -172,6 +174,26 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 export const signUpWithEmail = async (email: string, password: string): Promise<UserCredential> => (
   createUserWithEmailAndPassword(auth, email, password)
 );
+
+/**
+ * Sends the reset link Firebase itself hosts — the app never sees the new
+ * password, and there is no in-app form to type it in (docs/prd.md §4.1).
+ *
+ * An address nobody holds is swallowed rather than reported: the screen says
+ * the same thing whether or not the account exists, so the form cannot be used
+ * to tell which e-mails are registered. Firebase's own e-mail enumeration
+ * protection already answers that way — this covers the projects where it is
+ * turned off.
+ */
+export const sendPasswordReset = async (email: string): Promise<void> => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (error) {
+    if (firebaseErrorCode(error) !== 'auth/user-not-found') {
+      throw error;
+    }
+  }
+};
 
 export const signOut = async (): Promise<void> => {
   // Before Firebase's own sign-out, while the write is still the user's to
