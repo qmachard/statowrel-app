@@ -1,12 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
-import { CalendarCheck, Coins, Trophy } from '@/components/icons';
+import { CalendarCheck, Trophy } from '@/components/icons';
 import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, pagePadding, spacing } from '@/design/tokens';
 import { InvitationsCard } from '@/friends/components/InvitationsCard';
 import { DailyQuestionBanner } from '@/stats/components/DailyQuestionBanner';
-import { ProposeQuestionButton } from '@/stats/components/ProposeQuestionButton';
+import { ProposeQuestionCard } from '@/stats/components/ProposeQuestionCard';
 import { StatTile } from '@/stats/components/StatTile';
 import { StatsCalendar } from '@/stats/components/StatsCalendar';
 import { StatsHeader } from '@/stats/components/StatsHeader';
@@ -18,10 +18,10 @@ import { resolveStreakCount } from '@/stats/helpers/streak';
 /**
  * The root of the app (docs/prd.md §5.1, §5.2), from top to bottom: the
  * invitations waiting on an answer, the day's banner — the question while it is
- * still open, « RDV demain » once it has been answered — the streak, its
- * counters and the token wallet on a scrolling strip, the calendar, and under
- * it what that wallet buys: proposing a question (§4.7). The daily question
- * sheet lands on top of it (§5.4).
+ * still open, « RDV demain » once it has been answered — the streak and its
+ * counters on a scrolling strip, the calendar, and under it the wallet and what
+ * it buys: proposing a question (§4.7). The daily question sheet lands on top
+ * of it (§5.4).
  */
 const styles = StyleSheet.create({
   safeArea: {
@@ -55,7 +55,7 @@ export const StatsScreen = () => {
   const streakCount = profile === null ? 0 : resolveStreakCount(profile, today);
 
   // The wallet is read straight off the profile, which `AuthContext` subscribes
-  // to — so the tokens a milestone just paid land on the strip on their own,
+  // to — so the tokens a milestone just paid move the gauge below on their own,
   // without this screen asking for them.
   const tokens = profile?.token_balance ?? 0;
 
@@ -106,10 +106,6 @@ export const StatsScreen = () => {
             value={profile?.answers_count ?? 0}
             unit="jours"
           />
-          {/* Last on the strip, and it is the only tile that is not a record of
-              the past: what the three before it have earned, and the only
-              number here that can go down. */}
-          <StatTile icon={Coins} label="Jetons" value={tokens} unit="à dépenser" />
         </StatsStrip>
 
         <StatsCalendar
@@ -120,8 +116,11 @@ export const StatsScreen = () => {
         />
 
         {/* Under the calendar, because it is what the calendar buys: the days
-            answered pay the tokens (§4.7), and this is what they are for. */}
-        <ProposeQuestionButton tokens={tokens} />
+            answered pay the tokens (§4.7), and this is what they are for. The
+            balance lives here rather than on the strip above — a number is only
+            legible against the price it is saved towards, and stating it twice
+            on one screen, in two framings, reads as two different things. */}
+        <ProposeQuestionCard tokens={tokens} />
       </ScrollView>
     </SafeAreaView>
   );
