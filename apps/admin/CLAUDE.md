@@ -23,11 +23,20 @@ entrer. C'est le claim que teste `isAdmin()` dans `firestore.rules`, donc l'inte
 s'accordent sur qui est admin. Sans lui, la session existe mais l'écran affiché est
 `AccessDeniedScreen`.
 
+Le contexte lit **aussi le pseudo du modérateur**, sur son propre `v1_users` — une question écrite
+ici est créditée à qui l'écrit, et la question porte le pseudo (`author_username`) plutôt que de le
+faire résoudre à l'affichage. Une lecture par session, à côté du claim et pas après lui : les deux
+sont indépendantes, donc la porte ne paie aucune latence qu'elle ne payait déjà pour le
+rafraîchissement du jeton, et les régler toutes les deux avant d'ouvrir la console est ce qui évite
+que la première question d'une session parte sans crédit. Un modérateur n'a aucune raison d'avoir un
+compte dans l'app : profil manquant ou illisible est un état normal, `username` vaut `null`, la
+question s'écrit sans crédit — jamais un refus d'entrer.
+
 ## Structure
 
 - `src/lib/firebase.ts` — `initializeApp` + `getAuth` + `getFirestore`, branchés sur les émulateurs quand les `VITE_FIREBASE_*_EMULATOR_*` sont posés — en `dev` seulement, `import.meta.env.DEV` gardant le déploiement à l'abri d'un `.env.local` oublié. Pas de `initializeAuth` : la persistance `indexedDB` du build navigateur suffit, contrairement à `apps/app`.
 - `src/lib/firestore.ts` — `getDocumentRef` / `getCollectionRef`, qui câblent les converters `@statowrel/models`. Jumeau de `apps/app/src/lib/firestore.ts`.
-- `src/auth/` — `AuthContext` (session + claim `admin`), `SignInScreen` (e-mail + mot de passe, Google), `AccessDeniedScreen`, `errors.ts` (jamais un code `auth/*` affiché), `schemas.ts`.
+- `src/auth/` — `AuthContext` (session, claim `admin`, et le pseudo du modérateur — voir plus bas), `SignInScreen` (e-mail + mot de passe, Google), `AccessDeniedScreen`, `errors.ts` (jamais un code `auth/*` affiché), `schemas.ts`.
 - `src/questions/` — `QuestionsTable` (le pot, une ligne par question), `columns.tsx` (les colonnes et le jeu de features TanStack), `QuestionModal` (**la même modale pour créer et pour éditer**), `RejectQuestionModal` (le refus et son motif), `schemas.ts` (zod), `data/saveQuestion.ts` (`createQuestion` / `updateQuestion` / `setQuestionStatus`), `data/useQuestions.ts`, `data/useQuestionAuthors.ts`.
 - `src/components/` — `Button`, `TextField`, `TextAreaField`, `Select`, `Alert`, `DataTable`, `DropdownMenu`, `icons`, bâtis sur les classes de `src/index.css`.
 - `src/index.css` — les tokens neobrutalisme en variables CSS, **portés depuis `apps/app/src/design/tokens.ts`**. L'app mobile reste la source de vérité : on change là-bas, puis ici.
@@ -42,9 +51,14 @@ après coup.
 
 ## Écrire, éditer, approuver
 
-`createQuestion` écrit `v1_questions/{ULID}` avec `status: 'pending'`, `author_id` = l'UID connecté et
-tout ce qu'une question tirée porte laissé à `null` — `broadcast_at`, `broadcast_on`, `closes_at` — ce
-que `firestore.rules` exige d'une création.
+`createQuestion` écrit `v1_questions/{ULID}` avec `status: 'pending'`, `author_id` = l'UID connecté,
+`author_username` = son pseudo, et tout ce qu'une question tirée porte laissé à `null` —
+`broadcast_at`, `broadcast_on`, `closes_at` — ce que `firestore.rules` exige d'une création. Les deux
+moitiés de l'auteur arrivent ensemble, en `QuestionAuthor`, depuis `AuthContext` : les résoudre ici
+coûterait une lecture de profil par question écrite. Une création dont l'`author_username` n'est pas
+celui de l'`author_id` est refusée par les règles, qui le vérifient contre la réservation
+`v1_usernames` — le joker `isAdmin()` passe devant, mais la règle existe pour le jour où l'app
+proposera des questions.
 
 **Un ULID d'option ne se régénère jamais.** Une réponse et `answer_counts` pointent dessus, donc
 l'édition fait remonter l'id existant à travers le formulaire (champ caché) et n'en mint un que pour
@@ -71,12 +85,15 @@ Rien ne supprime une question depuis la console : une question diffusée est poi
 pot en la refusant. Une suppression, si elle devient nécessaire, se pose à la main depuis la console
 Firebase.
 
-`useQuestionAuthors` résout les pseudos derrière les `author_id` — un `getDoc` par auteur *distinct*,
-une fois, jamais un abonnement : un pseudo ne bouge pas et le backoffice n'a pas à le regarder
-bouger. Dénormaliser le pseudo sur `v1_questions` coûterait un fan-out à chaque renommage. Un UID
-dont le profil manque est mis en cache à vide, donc la lecture ratée n'est pas rejouée à chaque
-snapshot — et la cellule distingue les trois cas : pas d'UID (question semée) « — », UID sans réponse
-encore « … », UID revenu vide « Compte introuvable ».
+**La colonne auteur lit le pseudo sur la question** (`author_username`), pas sur un profil : le pot ne
+décroît jamais, et le résoudre par auteur distinct à chaque chargement de la console était une
+lecture par auteur, indéfiniment. `useQuestionAuthors` reste comme **repli temporaire**, sur les
+seules questions écrites avant que le champ existe — un `getDoc` par auteur *distinct*, une fois,
+jamais un abonnement : un pseudo ne bouge pas et le backoffice n'a pas à le regarder bouger. Il sort
+du dépôt, avec le filtre qui l'alimente, quand `npm run backfill-question-authors` sera passé en
+production. Un UID dont le profil manque est mis en cache à vide, donc la lecture ratée n'est pas
+rejouée à chaque snapshot — et la cellule distingue les trois cas : pas d'UID (question semée) « — »,
+UID sans réponse encore « … », UID revenu vide « Compte introuvable ».
 
 ## Le tableau
 

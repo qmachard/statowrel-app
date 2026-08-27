@@ -8,7 +8,7 @@ import { Alert } from '@/components/Alert';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 
-import { createQuestion, updateQuestion } from './data/saveQuestion';
+import { type QuestionAuthor, createQuestion, updateQuestion } from './data/saveQuestion';
 import type { ModeratedQuestion } from './data/useQuestions';
 import { type QuestionValues, questionSchema } from './schemas';
 
@@ -32,7 +32,8 @@ const valuesOf = (question: ModeratedQuestion | null): QuestionValues => (
 export interface QuestionModalProps {
   /** The question being edited, or null to write a new one. */
   question: ModeratedQuestion | null;
-  authorId: string;
+  /** Who a new question is credited to — ignored on an edit, which never touches paternity. */
+  author: QuestionAuthor;
   onClose: () => void;
 }
 
@@ -44,7 +45,7 @@ export interface QuestionModalProps {
  * Mounted only while open and keyed by the question it edits, so the form is
  * built from the right defaults instead of being reset after the fact.
  */
-export const QuestionModal = ({ question, authorId, onClose }: QuestionModalProps) => {
+export const QuestionModal = ({ question, author, onClose }: QuestionModalProps) => {
   const dialog = useRef<HTMLDialogElement>(null);
   const [ error, setError ] = useState<string | null>(null);
 
@@ -73,7 +74,7 @@ export const QuestionModal = ({ question, authorId, onClose }: QuestionModalProp
       if (question) {
         await updateQuestion(question.id, values);
       } else {
-        await createQuestion(authorId, values);
+        await createQuestion(author, values);
       }
 
       onClose();

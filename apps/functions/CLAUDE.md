@@ -84,7 +84,7 @@ npm run seed-questions -- --dry-run           # ... writing nothing, listing wha
 npm run seed-questions -- ./other.json --production --status approved --author <uid>
 ```
 
-Seeds the moderation pot. Questions land as `pending`, so a batch goes through the moderation console before the daily draw — which only picks from the approved pot — can reach it; `--status approved` skips that pass. The script mints a ULID per document and per option and writes through `questionConverter`, so it cannot drift from the model: everything a drawn question owns (`broadcast_at`, `broadcast_on`, `closes_at`, `answer_counts`) stays empty, and `author_id` is blank, which the app reads as "no credit line". It is re-runnable — a question whose label and option labels are already in the collection is skipped, never rewritten, since a rewrite would repoint the answers recorded against its option ids.
+Seeds the moderation pot. Questions land as `pending`, so a batch goes through the moderation console before the daily draw — which only picks from the approved pot — can reach it; `--status approved` skips that pass. The script mints a ULID per document and per option and writes through `questionConverter`, so it cannot drift from the model: everything a drawn question owns (`broadcast_at`, `broadcast_on`, `closes_at`, `answer_counts`) stays empty, and `author_id` is blank, which the app reads as "no credit line". `--author <uid>` credits the batch to somebody, and the script resolves that uid's handle **once** for the whole run: a question carries `author_username` alongside `author_id`, so naming its author costs no read when it is drawn. It is re-runnable — a question whose label and option labels are already in the collection is skipped, never rewritten, since a rewrite would repoint the answers recorded against its option ids.
 
 Reads Firestore rather than Auth, so the emulator variable here is `FIRESTORE_EMULATOR_HOST`. The npm script at the repo root builds `@statowrel/models` first; run it from `apps/functions` and that build is on you.
 
@@ -107,6 +107,25 @@ npm run seed-demo-question -- --production
 Writes the one question the onboarding carousel poses (`docs/prd.md` §5.6) — a fixed document id, so the app reads a single document and `firestore.rules` can open it up by status alone. It sits outside the moderation lifecycle: `demo`, never approved, never drawn. It does take answers — the rules let one through on its status — but they count in its own `answer_counts` and nowhere else: no calendar, no streak, no `answers_count`, since a demo is not a day.
 
 So the starting tally still matters. The first visitor would otherwise land on « Comme 100% des gens… » — hence a fabricated one here, the same `fabricateAnswerCounts` the daily seeder uses, which real answers then add to. Non-destructive in both directions: a document already there keeps its wording and its options, only its status moves, and a tally it already carries is never overwritten. A question that has been broadcast is refused outright — turning a day of the calendar into the demo would leave that day pointing at something no screen can render as a day.
+
+```bash
+npm run backfill-question-authors                        # stamp author_username across v1_questions
+npm run backfill-question-authors -- --dry-run           # ... listing what it would write
+npm run backfill-question-authors -- --production
+```
+
+Fills `author_username` on the questions written before the field existed. The credit of `docs/prd.md`
+§5.4 is carried on the question so naming its author costs no profile read; the app and the console
+both fall back to reading `v1_users/{author_id}` while the copy is missing, and this pass is what ends
+that fallback — until it has run in production, opening a day still bills one read per credit.
+
+One read per *distinct* author, however many questions they wrote. Admin SDK and not a client:
+`firestore.rules` denies every `update` on a question to every client, which is exactly what keeps the
+copy from being forged. `update()` and not `set()`, so a whole-document write cannot revert the
+`answer_counts` and broadcast stamps read a moment earlier, and `updated_at` is left alone — this is
+not a moderator's edit, and stamping it would make every question look freshly edited in the console's
+« dernière modification ». Re-runnable: a question already carrying a handle is skipped, and one whose
+author's profile is gone is left alone rather than stamped — there is nothing to credit.
 
 ```bash
 npm run send-test-notification -- --email moi@exemple.fr   # every device of that account

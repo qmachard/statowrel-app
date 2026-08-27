@@ -1,4 +1,4 @@
-import { Timestamp, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { ulid } from 'ulid';
 
 import {
@@ -6,9 +6,7 @@ import {
   type QuestionData,
   type QuestionOptionData,
   type QuestionStatus,
-  USER_COLLECTION,
   questionConverter,
-  userConverter,
 } from '@statowrel/models';
 
 import { getDocumentRef } from '@/lib/firestore';
@@ -31,26 +29,19 @@ const withOptionIds = (options: QuestionValues['options']): QuestionOptionData[]
 );
 
 /**
- * The author's handle, resolved once — at creation, and never again: a question
- * carries the copy from then on, so neither the day screen nor this table has a
- * profile to read to name its author. A missing profile credits nobody rather
- * than failing the write; the reader's fallback is what picks it up later.
+ * Whoever the question is credited to — the signed-in moderator, both halves of
+ * them: the UID the rules check ownership on, and the handle the question
+ * carries so naming its author costs no read (`author_username`).
+ *
+ * Handed in rather than resolved here, and by `AuthContext`, which reads the
+ * profile once when the session opens: resolving it at this call site would be
+ * one profile read per question written. A `null` handle is a moderator with no
+ * app account — the question is written uncredited rather than not written.
  */
-const readAuthorUsername = async (authorId: string): Promise<string | null> => {
-  if (authorId === '') {
-    return null;
-  }
-
-  try {
-    const snapshot = await getDoc(getDocumentRef(USER_COLLECTION, authorId, userConverter));
-
-    return snapshot.data()?.username ?? null;
-  } catch (cause) {
-    console.warn('[questions] could not read the author profile', cause);
-
-    return null;
-  }
-};
+export interface QuestionAuthor {
+  id: string;
+  username: string | null;
+}
 
 /**
  * Drops a proposal into the moderation pot (docs/prd.md §4.7).
@@ -60,13 +51,13 @@ const readAuthorUsername = async (authorId: string): Promise<string | null> => {
  * `firestore.rules` denies a create that pre-fills them. `answer_counts` is
  * seeded empty and never written by hand — the answer trigger owns that map.
  */
-export const createQuestion = async (authorId: string, values: QuestionValues): Promise<void> => {
+export const createQuestion = async (author: QuestionAuthor, values: QuestionValues): Promise<void> => {
   const question: QuestionData = {
     label: values.label,
     options: withOptionIds(values.options),
     status: 'pending',
-    author_id: authorId,
-    author_username: await readAuthorUsername(authorId),
+    author_id: author.id,
+    author_username: author.username,
     rejection_reason: null,
     broadcast_at: null,
     broadcast_on: null,
