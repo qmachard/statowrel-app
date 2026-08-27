@@ -9,6 +9,7 @@ import {
   monthKeyOf,
   QUESTION_COLLECTION,
   questionConverter,
+  streakTokenReward,
   USER_CALENDAR_MONTH_COLLECTION,
   USER_COLLECTION,
   type QuestionData,
@@ -186,7 +187,11 @@ const countAnswerOntoFriends = async (
  *    calendar loads in a single read;
  * 3. the author's counters — `answers_count` always, the streak only when the
  *    answer is on time, since a catch-up completes the calendar without ever
- *    restoring a streak.
+ *    restoring a streak, and the tokens that streak just earned when it crossed
+ *    a milestone (docs/prd.md §4.7). The payout rides in this transaction
+ *    rather than in a trigger of its own: the balance is money, and money that
+ *    can be credited without the streak that owes it can also be credited
+ *    twice.
  *
  * The friends' badge is **not** among them — it is fanned out afterwards, see
  * `countAnswerOntoFriends` for why it does not belong here.
@@ -299,15 +304,40 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
       return true;
     }
 
+    // A catch-up answer completes the calendar and leaves the streak where it
+    // was (docs/prd.md §4.6) — so it earns nothing either: the tokens follow
+    // the streak, and there is no streak to follow here.
+    const streak = answer.late ? null : nextStreakState(user, date);
+    const reward = streak === null ? 0 : streakTokenReward(user.streak_count, streak.streak_count);
+
     const counters: UpdateData<UserFirebaseData> = {
       answers_count: FieldValue.increment(1),
       // update() does not run the converter (see the repo's CLAUDE.md), so this
       // is a Timestamp and not an ISO string.
       updated_at: Timestamp.now(),
-      ...(answer.late ? {} : nextStreakState(user, date)),
+      ...(streak ?? {}),
+      // The milestone payout of docs/prd.md §4.7, credited in the very
+      // transaction that moves the streak it is owed to — the two cannot
+      // disagree, and the redelivery this trigger has to survive bails out well
+      // before here on the calendar entry above. `increment` rather than a
+      // computed total for the usual reason: the balance is also moved by
+      // spending it, and this write must not carry back a value read a moment
+      // ago.
+      ...(reward > 0
+        ? { token_balance: FieldValue.increment(reward), tokens_earned: FieldValue.increment(reward) }
+        : {}),
     };
 
     transaction.update(userRef, counters);
+
+    if (reward > 0) {
+      logger.info('Streak milestone reached, tokens credited', {
+        date,
+        streak: streak?.streak_count,
+        tokens: reward,
+        user_id: userId,
+      });
+    }
 
     return true;
   });
