@@ -1,36 +1,51 @@
 #!/usr/bin/env node
 //
-// Pays the StatCoins of docs/prd.md §4.7 to the accounts that earned them
-// before the currency existed.
-//
-// The milestone payout is made by the answer trigger, in the transaction that
-// moves the streak — so it only ever runs on answers given *since* the wallet
-// shipped. Everybody already carrying a streak, or having run one at some point
-// in the past, is owed what those streaks would have paid. This pass is what
-// settles that, once.
+// Rebuilds each account's streak counters from its answers, and pays the
+// StatCoins of docs/prd.md §4.7 that those streaks earned before the currency
+// existed.
 //
 //   npm run backfill-statcoins                  # default project (.firebaserc)
 //   npm run backfill-statcoins -- --production
-//   npm run backfill-statcoins -- --dry-run     # writes nothing, says what it would write
+//   npm run backfill-statcoins -- --dry-run     # writes nothing, reports every account
 //
-// **It replays the history rather than reading `streak_count`.** A profile
-// carries the streak running *now* and the best one ever reached, and neither
-// answers the question this script asks: how many milestones has this account
-// crossed, over every streak it has ever run? Somebody who kept a 40-day streak
-// last spring and answered nothing since carries `streak_count: 0` — and is
-// owed 400§. So the answers are read back and the streak is rebuilt day by day,
-// with `streakStatcoinReward` deciding each crossing exactly as the trigger
-// does. The rule lives in `@statowrel/models` for this: a backfill computing a
+// Two jobs, one replay, because they are the same computation. The milestone
+// payout is made by the answer trigger in the transaction that moves the
+// streak, so it only ever runs on answers given *since* the wallet shipped;
+// everybody already running streaks is owed what those streaks would have paid.
+// And the counters that payout is owed against — `streak_count`, `streak_best`,
+// `answers_count`, `streak_last_answered_on` — are themselves derived values a
+// trigger has been incrementing one answer at a time, which drift: a profile
+// carrying 18 answers, a best streak of 17 and a current streak of 12 is
+// describing 29 days it does not have.
+//
+// **The answers are the record.** They are what the calendar months, the
+// counters and the wallet are all derived from, so they are what everything
+// here is settled against — the streak is rebuilt day by day, with
+// `streakStatcoinReward` deciding each milestone exactly as the trigger does.
+// The rule lives in `@statowrel/models` for that reason: a backfill computing a
 // payout its own way is a backfill that disagrees with production.
 //
-// Re-runnable, and this is the property to preserve: what it credits is the
+// Reading `streak_count` instead would not do even for the payout alone. A
+// profile carries the streak running *now* and the best one ever reached, and
+// neither answers the question this script asks: how many milestones has this
+// account crossed, over every streak it has ever run? Somebody who kept a
+// 40-day streak last spring and answered nothing since carries
+// `streak_count: 0` — and is owed 400§.
+//
+// Re-runnable, and this is the property to preserve: the wallet is credited the
 // difference between what a history owes and `statcoins_earned`, never the
-// total. Run it twice and the second pass finds nothing to do; run it after the
-// trigger has paid a milestone of its own and it accounts for that too. An
-// account already owed nothing more is skipped rather than written.
+// total, and a counter already holding its replayed value is not written. Run
+// it twice and the second pass finds nothing to do; run it after the trigger
+// has paid a milestone of its own and it accounts for that too.
+//
+// `--dry-run` reports **every** account, not only the ones it would touch: an
+// account it passes over has to say why — no answers found at all, answers that
+// bought nothing, or a debt the trigger has already settled. Those three read
+// identically from the outside, and only one of them is a problem.
 //
 // Admin SDK and not a client: `firestore.rules` denies every client write that
-// moves the wallet, which is exactly what keeps a balance from being forged.
+// moves the wallet or the counters, which is exactly what keeps them from being
+// forged.
 //
 // Authenticates with Application Default Credentials:
 //   gcloud auth application-default login
@@ -79,6 +94,7 @@ const models = await import('@statowrel/models').catch((error) => die(
 const {
   DAILY_QUESTION_ANSWER_COLLECTION,
   previousDateKey,
+  QUESTION_COLLECTION,
   streakStatcoinReward,
   USER_COLLECTION,
 } = models;
@@ -91,41 +107,145 @@ initializeApp({
 
 const firestore = getFirestore();
 
-// `previousDateKey` defaults its step count, but the step is what this replay
-// is about — so it is passed, and named, rather than left implicit.
-const previousDayKeyOf = (dateKey) => previousDateKey(dateKey, 1);
+/**
+ * Milliseconds off whatever a raw read hands back — a `Timestamp` on a document
+ * written through a converter, an ISO string on one written by a raw `update()`
+ * before the converters covered it (see the repo's CLAUDE.md).
+ */
+const toMillis = (value) => {
+  if (value == null) {
+    return null;
+  }
+
+  if (typeof value.toMillis === 'function') {
+    return value.toMillis();
+  }
+
+  const parsed = Date.parse(value);
+
+  return Number.isNaN(parsed) ? null : parsed;
+};
 
 /**
- * What one account's answers would have paid, replayed in order.
+ * The day a question ran and the instant it closed, read once per question
+ * however many answers point at it.
+ *
+ * This exists for the accounts this script is *for*. `date` and `late` were
+ * added to the answer model after the first answers were written, so the oldest
+ * histories — exactly the ones carrying streaks that predate the currency —
+ * hold answers without them. Dropping those would take a whole history down in
+ * silence and report the account as owing nothing, which is the one wrong
+ * answer this script can give. So a missing field is resolved from the parent
+ * question instead: `broadcast_on` *is* the day, and `closes_at` is what `late`
+ * was decided against in the first place.
+ */
+const questions = new Map();
+
+const questionOf = async (questionId) => {
+  if (questionId === null || questionId === undefined || questionId === '') {
+    return null;
+  }
+
+  if (!questions.has(questionId)) {
+    const snapshot = await firestore.collection(QUESTION_COLLECTION).doc(questionId).get().catch((error) => die(
+      `Cannot read ${QUESTION_COLLECTION}/${questionId} on ${projectId}: ${error.message}`,
+    ));
+
+    questions.set(questionId, snapshot.data() ?? null);
+  }
+
+  return questions.get(questionId);
+};
+
+/**
+ * One answer as this replay needs it: the day it counted for, and whether it
+ * was a catch-up. `null` for an answer that counted for no day at all — the
+ * onboarding demo, or a question that was never broadcast.
+ */
+const readAnswer = async (document) => {
+  const answer = document.data();
+  // `question_id` is denormalized on the answer; the path is the fallback for a
+  // document written before it was.
+  const questionId = answer.question_id ?? document.ref.parent.parent?.id ?? null;
+  const dated = typeof answer.date === 'string' && answer.date !== '';
+
+  let day = dated ? answer.date : null;
+
+  if (day === null) {
+    const question = await questionOf(questionId);
+
+    if (question === null || question.status === 'demo') {
+      return null;
+    }
+
+    day = typeof question.broadcast_on === 'string' && question.broadcast_on !== '' ? question.broadcast_on : null;
+
+    if (day === null) {
+      return null;
+    }
+  }
+
+  if (typeof answer.late === 'boolean') {
+    return { day, late: answer.late, recovered: !dated };
+  }
+
+  const question = await questionOf(questionId);
+  const closesAt = toMillis(question?.closes_at);
+  const answeredAt = toMillis(answer.answered_at);
+
+  // Neither instant known: the answer is taken as on time. It is the reading
+  // that credits rather than the one that silently withholds, and this branch
+  // only ever covers documents old enough to predate both fields.
+  return { day, late: closesAt !== null && answeredAt !== null && answeredAt > closesAt, recovered: true };
+};
+
+/**
+ * Everything one account's answers add up to, replayed in day order.
  *
  * Mirrors `nextStreakState` and the trigger's own call to
  * `streakStatcoinReward`: a day following the last one continues the streak,
- * anything further back restarts it at 1, and each milestone crossed pays.
+ * anything further back restarts it at 1, and each milestone crossed pays. A
+ * catch-up answer completes the calendar and leaves the streak where it was
+ * (docs/prd.md §4.6), so it counts towards `answers_count` and nothing else.
  *
- * Late answers never reach here — a catch-up completes the calendar and leaves
- * the streak where it was (docs/prd.md §4.6), so it earns nothing.
+ * `streak` comes back as the trigger would have left it — the run ending on the
+ * last on-time day, alive or not. Whether it is still alive is the app's
+ * reading (`resolveStreakCount`) and not a stored value: the midnight scheduler
+ * that would zero it does not exist yet.
  */
-const owedFor = (dateKeys) => {
+const replay = (entries) => {
+  const onTime = entries.filter((entry) => !entry.late).map((entry) => entry.day).sort();
+
   let streak = 0;
+  let best = 0;
   let lastAnsweredOn = null;
   let owed = 0;
 
-  dateKeys.forEach((dateKey) => {
+  onTime.forEach((day) => {
     // A day at or behind the last one counted is not a new day of the streak.
-    // It cannot happen from a sorted list of distinct keys; it is here because
+    // It cannot happen from a sorted list of distinct days; it is here because
     // the trigger's own guard is, and the two must not diverge.
-    if (lastAnsweredOn !== null && lastAnsweredOn >= dateKey) {
+    if (lastAnsweredOn !== null && lastAnsweredOn >= day) {
       return;
     }
 
     const previous = streak;
 
-    streak = lastAnsweredOn === previousDayKeyOf(dateKey) ? streak + 1 : 1;
-    lastAnsweredOn = dateKey;
+    streak = lastAnsweredOn === previousDateKey(day, 1) ? streak + 1 : 1;
+    best = Math.max(best, streak);
+    lastAnsweredOn = day;
     owed += streakStatcoinReward(previous, streak);
   });
 
-  return owed;
+  return {
+    // Catch-ups included: the tile rewards the collection, not the regularity.
+    answersCount: entries.length,
+    onTimeDays: onTime.length,
+    streak,
+    best,
+    lastAnsweredOn,
+    owed,
+  };
 };
 
 const users = await firestore.collection(USER_COLLECTION).get().catch((error) => die(
@@ -139,54 +259,99 @@ if (users.empty) {
   process.exit(0);
 }
 
-// One collection-group query per account — `user_id ==`, ordered by `date`,
-// backed by the composite index in `packages/firestore-config`. The answers are
-// the record the calendar months are derived from, so they are what a payout is
-// settled against.
-const settlements = [];
+// One collection-group query per account, on `user_id` alone — the days are
+// sorted in the replay rather than by an `orderBy('date')`, for two reasons
+// that both bite in production and neither in the emulator. An `orderBy`
+// silently drops every document missing the field it orders on, which is
+// precisely the legacy answer this script has to recover; and the pairing needs
+// its own composite index, which would turn an undeployed
+// `firestore.indexes.json` into a failure of *this* script. An equality on
+// `user_id` needs only the field override `users-deleteAccount` already
+// depends on.
+const audit = [];
 
 for (const user of users.docs) {
   const answers = await firestore
     .collectionGroup(DAILY_QUESTION_ANSWER_COLLECTION)
     .where('user_id', '==', user.id)
-    .orderBy('date')
     .get()
     .catch((error) => die(
       `Cannot read the answers of ${user.id} on ${projectId}: ${error.message}`
-      + '\nA collection-group query needs its index — see packages/firestore-config.',
+      + '\nA collection-group equality needs its field override — see packages/firestore-config.',
     ));
 
-  const dateKeys = answers.docs
-    .map((answer) => answer.data())
-    // The onboarding demo is answered by everybody and was never a day: it
-    // carries an empty `date`, which would sort first and be replayed as one.
-    // A late answer is a catch-up, which never moves a streak.
-    .filter((answer) => answer.late !== true && typeof answer.date === 'string' && answer.date !== '')
-    .map((answer) => answer.date);
+  const entries = (await Promise.all(answers.docs.map(readAnswer))).filter((entry) => entry !== null);
+  const replayed = replay(entries);
+  const profile = user.data();
 
-  const owed = owedFor(dateKeys);
-  const earned = user.data().statcoins_earned ?? 0;
-  const delta = owed - earned;
+  const earned = profile.statcoins_earned ?? 0;
+  const delta = replayed.owed - earned;
+
+  // Only what actually moves is written. The wallet is incremented — it moves
+  // under this script, and what is owed is the difference — while the counters
+  // are absolute: they are derived from the answers rather than accumulated, so
+  // the replayed value *is* the value.
+  const changes = {};
 
   if (delta > 0) {
-    settlements.push({ ref: user.ref, username: user.data().username ?? user.id, days: dateKeys.length, owed, earned, delta });
+    changes.statcoin_balance = FieldValue.increment(delta);
+    changes.statcoins_earned = FieldValue.increment(delta);
   }
+
+  const moved = [
+    [ 'answers_count', replayed.answersCount, profile.answers_count ?? 0 ],
+    [ 'streak_count', replayed.streak, profile.streak_count ?? 0 ],
+    [ 'streak_best', replayed.best, profile.streak_best ?? 0 ],
+    [ 'streak_last_answered_on', replayed.lastAnsweredOn, profile.streak_last_answered_on ?? null ],
+  ].filter(([ , next, current ]) => next !== current);
+
+  moved.forEach(([ field, next ]) => { changes[field] = next; });
+
+  audit.push({
+    ref: user.ref,
+    username: profile.username ?? user.id,
+    answers: answers.size,
+    counted: entries.length,
+    recovered: entries.filter((entry) => entry.recovered).length,
+    onTimeDays: replayed.onTimeDays,
+    owed: replayed.owed,
+    earned,
+    delta,
+    moved,
+    changes,
+    touched: Object.keys(changes).length > 0,
+  });
 }
 
-console.log(`• ${settlements.length} account(s) owed StatCoins for streaks run before the currency existed`);
+const settlements = audit.filter(({ touched }) => touched);
+const credited = settlements.reduce((sum, settlement) => sum + Math.max(settlement.delta, 0), 0);
+
+console.log(`• ${settlements.length} account(s) to settle — ${credited}§ owed in total`);
+
+// Every account, not only the ones being written: « nothing owed » and « no
+// answers found » look the same from the outside, and only one of them means
+// the script is not seeing what it should.
+if (dryRun) {
+  audit.forEach(({ username, answers, counted, recovered, onTimeDays, owed, earned, delta, moved }) => {
+    const wallet = delta > 0 ? `+${delta}§` : (owed === 0 ? 'nothing owed' : `settled (${earned}§ earned)`);
+
+    console.log(`  · @${username} — ${answers} answer(s), ${counted} on a day, ${onTimeDays} on time → ${wallet}`);
+
+    if (recovered > 0) {
+      console.log(`      ${recovered} predate \`date\`/\`late\` — read off their question instead`);
+    }
+
+    moved.forEach(([ field, next, current ]) => console.log(`      ${field}: ${current} → ${next}`));
+  });
+}
 
 if (settlements.length === 0) {
   console.log('✔ Nothing to do.');
   process.exit(0);
 }
 
-const total = settlements.reduce((sum, settlement) => sum + settlement.delta, 0);
-
 if (dryRun) {
-  settlements.forEach(({ username, days, owed, earned, delta }) => console.log(
-    `  + @${username} — ${days} day(s) on time, owed ${owed}§, already earned ${earned}§ → +${delta}§`,
-  ));
-  console.log(`✔ --dry-run: nothing was written (${total}§ would have been credited).`);
+  console.log('✔ --dry-run: nothing was written.');
   process.exit(0);
 }
 
@@ -194,18 +359,13 @@ for (let offset = 0; offset < settlements.length; offset += BATCH_SIZE) {
   const batch = firestore.batch();
 
   // `update()` and not `set()`: a whole-document write would carry back the
-  // counters read a moment ago and revert whatever the answer trigger wrote in
-  // between. `increment` for the same reason — the balance moves under this
-  // script, and the difference is what is owed, never the total.
+  // profile fields read a moment ago and revert whatever the user or the
+  // trigger wrote in between.
   //
   // update() does not run the converter (see the repo's CLAUDE.md), so
   // `updated_at` is a Timestamp and not an ISO string.
-  settlements.slice(offset, offset + BATCH_SIZE).forEach(({ ref, delta }) => {
-    batch.update(ref, {
-      statcoin_balance: FieldValue.increment(delta),
-      statcoins_earned: FieldValue.increment(delta),
-      updated_at: Timestamp.now(),
-    });
+  settlements.slice(offset, offset + BATCH_SIZE).forEach(({ ref, changes }) => {
+    batch.update(ref, { ...changes, updated_at: Timestamp.now() });
   });
 
   await batch.commit().catch((error) => die(`Batch commit failed on ${projectId}: ${error.message}`));
@@ -213,4 +373,4 @@ for (let offset = 0; offset < settlements.length; offset += BATCH_SIZE) {
   console.log(`  … ${Math.min(offset + BATCH_SIZE, settlements.length)}/${settlements.length}`);
 }
 
-console.log(`✔ Credited ${total}§ across ${settlements.length} account(s) on ${projectId}.`);
+console.log(`✔ Settled ${settlements.length} account(s) on ${projectId} — ${credited}§ credited.`);
