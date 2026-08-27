@@ -64,3 +64,59 @@ export const DELETE_ACCOUNT_CALLABLE = 'users-deleteAccount';
 export interface DeleteAccountResult {
   outcome: 'deleted';
 }
+
+/**
+ * Proposing a question, paid for in StatCoins (docs/prd.md §4.7).
+ *
+ * **A callable, and the only door left.** `firestore.rules` used to let an
+ * author write their own `pending` question straight into `v1_questions`, which
+ * was fine while a proposal was free and is not any more: a price nothing
+ * collects is not a price. So `v1_questions` is now `allow create: if false`
+ * for every client, and this is where the debit and the write happen together —
+ * one transaction, so a question cannot exist without having been paid for and
+ * a wallet cannot be emptied without a question coming out of it.
+ *
+ * Named after the namespace `apps/functions/src/index.ts` re-exports the domain
+ * under, like `INVITE_FRIEND_CALLABLE` above.
+ */
+export const PROPOSE_QUESTION_CALLABLE = 'questions-proposeQuestion';
+
+/**
+ * One option of a proposed question — its two labels and nothing else.
+ *
+ * No `id`: an option's ULID is minted backend-side, alongside the question's
+ * own. It is what a recorded answer points at (`v1_question.ts`), so it is not
+ * a thing a client gets to choose.
+ */
+export interface ProposeQuestionOptionPayload {
+  /** Shown as the option — e.g. « Par le bout ». */
+  label: string;
+  /** The StatOwrel it earns — e.g. « méthodique », rendered « tu es un.e méthodique ». */
+  stat_label: string;
+}
+
+export interface ProposeQuestionPayload {
+  /** The question itself, at most `QUESTION_LABEL_MAX_LENGTH` characters. */
+  label: string;
+  /** Between `QUESTION_MIN_OPTIONS` and `QUESTION_MAX_OPTIONS` options, in display order. */
+  options: ProposeQuestionOptionPayload[];
+}
+
+/**
+ * What the proposal left behind. Everything that is *not* one — an empty
+ * wallet, a malformed question, a profile that does not exist — comes back as
+ * an `HttpsError`, since none of them wrote anything and none of them debited
+ * anything.
+ */
+export interface ProposeQuestionResult {
+  /** The question's own id, `pending` in the moderation pot from this moment. */
+  question_id: string;
+  /**
+   * The wallet as the debit left it.
+   *
+   * Handed back rather than left to the profile snapshot the app already holds:
+   * the screen has to say what the question just cost the moment it says the
+   * question is in, and a subscription lands when it lands.
+   */
+  statcoin_balance: number;
+}
