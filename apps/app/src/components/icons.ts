@@ -23,7 +23,9 @@ export { default as EllipsisVertical } from 'lucide-react-native/icons/ellipsis-
 export { default as Lightbulb } from 'lucide-react-native/icons/lightbulb';
 export { default as Lock } from 'lucide-react-native/icons/lock';
 export { default as Menu } from 'lucide-react-native/icons/menu';
+export { default as Plus } from 'lucide-react-native/icons/plus';
 export { default as MessageCircleQuestionMark } from 'lucide-react-native/icons/message-circle-question-mark';
+export { default as Trash2 } from 'lucide-react-native/icons/trash-2';
 export { default as Trophy } from 'lucide-react-native/icons/trophy';
 export { default as UserRoundPlus } from 'lucide-react-native/icons/user-round-plus';
 export { default as X } from 'lucide-react-native/icons/x';

@@ -8,6 +8,7 @@ import { DailyQuestionScreen } from '@/daily-question/screens/DailyQuestionScree
 import { colors } from '@/design/tokens';
 import { InviteFriendScreen } from '@/friends/screens/InviteFriendScreen';
 import { MenuScreen } from '@/menu/screens/MenuScreen';
+import { ProposeQuestionScreen } from '@/questions/screens/ProposeQuestionScreen';
 import { StatsScreen } from '@/stats/screens/StatsScreen';
 
 import type { RootStackParamList } from './types';
@@ -60,6 +61,20 @@ export const RootNavigator = () => {
           <Stack.Screen
             name="InviteFriend"
             component={InviteFriendScreen}
+            options={{
+              presentation: 'formSheet',
+              sheetAllowedDetents: 'fitToContents',
+              sheetGrabberVisible: true,
+            }}
+          />
+          {/* The proposal form of docs/prd.md §4.7, opened from the card under
+              the calendar — the same kind of sheet as the invitation, for the
+              same reason: a short form posed over Stats that nothing is blocked
+              on. It grows with the options it is given, so it caps itself and
+              scrolls past the cap (see the screen). */}
+          <Stack.Screen
+            name="ProposeQuestion"
+            component={ProposeQuestionScreen}
             options={{
               presentation: 'formSheet',
               sheetAllowedDetents: 'fitToContents',

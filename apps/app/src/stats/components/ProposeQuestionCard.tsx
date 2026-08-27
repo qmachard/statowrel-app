@@ -4,30 +4,18 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/Card';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
+import { amountLabel, spokenAmountLabel } from '@/lib/statcoins';
 
 export interface ProposeQuestionCardProps {
   /** The wallet as the profile carries it — `statcoin_balance`, 0 while it loads. */
   statcoins: number;
   /**
-   * Opens the proposal form of docs/prd.md §4.7. Left out until that form
-   * exists, which keeps the button inert even to whoever has paid for it — a
-   * locked door is better than one that opens onto nothing.
+   * Opens the proposal form of docs/prd.md §4.7 (`src/questions/`). Still
+   * optional, and the button stays inert without it: the card is rendered by
+   * one screen, and a door that opens onto nothing is worse than a locked one.
    */
   onPress?: () => void;
 }
-
-/**
- * An amount of StatCoins, in the currency's own symbol — set after the number
- * the way € is, and written here rather than at each of the three call sites
- * below so the symbol has one home.
- */
-const amountLabel = (amount: number): string => `${amount}§`;
-
-/**
- * The same amount for a screen reader, which would read the symbol as a section
- * sign or skip it outright. Every `§` on this card has one of these behind it.
- */
-const spokenAmountLabel = (amount: number): string => `${amount} StatCoins`;
 
 /**
  * The currency named beside its symbol, the way a listing writes « Euro (€) ».
