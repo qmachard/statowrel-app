@@ -187,64 +187,70 @@ export const buildQuestionColumns = (actions: QuestionRowActions) => helper.colu
       const question = row.original;
       const busy = actions.pendingId === question.id;
 
-      const edit = (
-        <Button
-          variant="secondary"
-          small
-          icon
-          aria-label="Éditer la question"
-          title="Éditer"
-          onClick={() => actions.onEdit(question)}
-        >
-          <PencilIcon />
-        </Button>
-      );
-
-      // A question waiting on a verdict wears both of them: that is the whole
-      // job of the screen, and burying either one behind a « … » would make the
-      // moderator open a menu on every row of the pot.
-      if (question.status === 'pending') {
-        return (
-          <div className="table__actions-inner">
-            <Button small disabled={busy} onClick={() => actions.onApprove(question)}>
-              {busy ? '…' : 'Approuver'}
-            </Button>
-            <Button
-              variant="ghost"
-              small
-              className="button--danger"
-              onClick={() => actions.onReject(question)}
-            >
-              Rejeter
-            </Button>
-            {edit}
-          </div>
-        );
-      }
-
-      // Once a verdict is in, the other one is a reversal — reachable, but not
-      // sitting on the row. `used` and `demo` have none to reverse: a drawn
-      // question has left the pot for good, and the onboarding sample was never
-      // in it.
-      const reversal = isApprovable(question.status)
-        ? { label: 'Approuver', run: () => actions.onApprove(question) }
-        : isRejectable(question.status)
-          ? { label: 'Rejeter', run: () => actions.onReject(question) }
-          : null;
+      // Every action the status allows, in one list: the « ⋮ » holds all of
+      // them on every row, and the buttons beside it are shortcuts to the ones
+      // worth a click of their own.
+      const verdicts = [
+        isApprovable(question.status)
+          ? { key: 'approve', label: 'Approuver', run: () => actions.onApprove(question) }
+          : null,
+        isRejectable(question.status)
+          ? { key: 'reject', label: 'Rejeter', run: () => actions.onReject(question) }
+          : null,
+      ].filter((verdict) => verdict !== null);
 
       return (
         <div className="table__actions-inner">
-          {edit}
-          {reversal ? (
-            <DropdownMenu label="Autres actions">
-              <button type="button" className="menu__item" disabled={busy} onClick={reversal.run}>
-                {reversal.label}
-              </button>
-              <button type="button" className="menu__item" onClick={() => actions.onEdit(question)}>
-                Éditer
-              </button>
-            </DropdownMenu>
+          {/*
+            A question waiting on a verdict wears both of them: that is the
+            whole job of the screen, and burying either one behind the menu
+            would make the moderator open it on every row of the pot. Once a
+            verdict is in, the other one is a reversal — reachable from the
+            menu, not posted on the row.
+          */}
+          {question.status === 'pending' ? (
+            <>
+              <Button small disabled={busy} onClick={() => actions.onApprove(question)}>
+                {busy ? '…' : 'Approuver'}
+              </Button>
+              <Button
+                variant="ghost"
+                small
+                className="button--danger"
+                onClick={() => actions.onReject(question)}
+              >
+                Rejeter
+              </Button>
+            </>
           ) : null}
+
+          <Button
+            variant="secondary"
+            small
+            icon
+            aria-label="Éditer la question"
+            title="Éditer"
+            onClick={() => actions.onEdit(question)}
+          >
+            <PencilIcon />
+          </Button>
+
+          <DropdownMenu label="Autres actions">
+            {verdicts.map((verdict) => (
+              <button
+                key={verdict.key}
+                type="button"
+                className="menu__item"
+                disabled={busy}
+                onClick={verdict.run}
+              >
+                {verdict.label}
+              </button>
+            ))}
+            <button type="button" className="menu__item" onClick={() => actions.onEdit(question)}>
+              Éditer
+            </button>
+          </DropdownMenu>
         </div>
       );
     },

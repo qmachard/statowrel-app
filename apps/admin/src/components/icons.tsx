@@ -24,10 +24,10 @@ export const PencilIcon = () => (
   </svg>
 );
 
-export const EllipsisIcon = () => (
+export const EllipsisVerticalIcon = () => (
   <svg {...iconProps}>
-    <circle cx="3" cy="8" r="1.5" fill="currentColor" />
+    <circle cx="8" cy="3" r="1.5" fill="currentColor" />
     <circle cx="8" cy="8" r="1.5" fill="currentColor" />
-    <circle cx="13" cy="8" r="1.5" fill="currentColor" />
+    <circle cx="8" cy="13" r="1.5" fill="currentColor" />
   </svg>
 );

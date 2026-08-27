@@ -623,6 +623,9 @@ h3 {
 .table__actions-inner {
   display: flex;
   align-items: center;
+  /* Flushed right: the column is as wide as its busiest row, so left-aligned
+     buttons would leave the « ⋮ » of every other row floating mid-cell. */
+  justify-content: flex-end;
   gap: 8px;
   flex-wrap: nowrap;
 }

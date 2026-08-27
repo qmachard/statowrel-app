@@ -91,20 +91,25 @@ Cinq colonnes — question + réponses, auteur, statut, dernière modification, 
 statut au-dessus du cadre et un tri sur l'auteur ou sur la date de modification, cette dernière
 décroissante par défaut.
 
-**Les actions dépendent du statut**, et le crayon est le seul bouton que toutes les lignes portent :
+**Le crayon et le « ⋮ » sont sur toutes les lignes**, calés à droite de la colonne ; ce que le statut
+change, ce sont les boutons posés devant eux et le contenu du menu :
 
-| Statut | Actions |
-|---|---|
-| En attente | `Approuver` · `Rejeter` · ✎ |
-| Validée | ✎ · « … » → Rejeter / Éditer |
-| Rejetée | ✎ · « … » → Approuver / Éditer |
-| Diffusée, Démo | ✎ |
+| Statut | Sur la ligne | Dans le « ⋮ » |
+|---|---|---|
+| En attente | `Approuver` · `Rejeter` · ✎ · ⋮ | Approuver / Rejeter / Éditer |
+| Validée | ✎ · ⋮ | Rejeter / Éditer |
+| Rejetée | ✎ · ⋮ | Approuver / Éditer |
+| Diffusée, Démo | ✎ · ⋮ | Éditer |
 
-Une question qui attend son verdict porte les deux : c'est le travail même de l'écran, et en enterrer
-un derrière un « … » ferait ouvrir un menu à chaque ligne du pot. Une fois le verdict rendu, l'autre
-n'est plus qu'un retour en arrière — atteignable, mais pas posé sur la ligne. « Diffusée » et
-« Démo » n'ont rien à renverser : une question tirée a quitté le pot pour de bon, l'échantillon
-d'onboarding n'y est jamais entré.
+Le menu porte **tout ce que le statut permet**, et les boutons à côté sont des raccourcis vers ceux
+qui valent un clic à eux seuls. Une question qui attend son verdict porte donc les deux en clair :
+c'est le travail même de l'écran, et en enterrer un ferait ouvrir le menu à chaque ligne du pot. Une
+fois le verdict rendu, l'autre n'est plus qu'un retour en arrière — atteignable, pas posé sur la
+ligne. « Diffusée » et « Démo » n'ont rien à renverser : une question tirée a quitté le pot pour de
+bon, l'échantillon d'onboarding n'y est jamais entré.
+
+La colonne étant aussi large que sa ligne la plus chargée, les actions sont **alignées à droite** :
+sans quoi le « ⋮ » de toutes les autres lignes flotterait au milieu de la cellule.
 
 **Le tri et le filtre sont côté client** : `useQuestions` diffuse déjà le pot entier, donc un `where` / `orderBy`
 coûterait un index composite et un aller-retour par frappe pour une liste qui tient dans un snapshot

@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useRef } from 'react';
 
 import { Button } from './Button';
-import { EllipsisIcon } from './icons';
+import { EllipsisVerticalIcon } from './icons';
 
 /** Gap between the trigger and the panel, and the margin the panel keeps off the viewport. */
 const OFFSET = 6;
@@ -91,7 +91,7 @@ export const DropdownMenu = ({ label, children }: DropdownMenuProps) => {
         aria-haspopup="true"
         onClick={toggle}
       >
-        <EllipsisIcon />
+        <EllipsisVerticalIcon />
       </Button>
       <div
         ref={panel}
