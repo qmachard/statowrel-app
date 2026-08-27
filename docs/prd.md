@@ -145,6 +145,7 @@ Immédiatement après avoir répondu :
 
 - +1 à chaque journée où l'on a répondu avant minuit.
 - **0** dès qu'une journée est manquée. Pas de joker : répondre en retard depuis le calendrier (§4.2) complète la journée dans le calendrier et débloque la carte, mais ne rallume pas le streak cassé.
+- **Tous les 10 jours, la série verse 100 jetons** (§4.7) — c'est ce que la régularité achète, en plus du chiffre.
 - Streak visible sur son profil et à côté de son nom dans la liste des amis.
 - Rappel push à 21h si la question du jour n'a pas été répondue et que le streak est en cours.
   **Pas encore fait** — mais la relance de 18h (§4.5) couvre déjà l'essentiel : elle part à qui n'a pas répondu, et son message de repli est justement la série. Celui de 21h est le second coup, à trancher avec la question du §9 (« utile ou harcèlement ? ») et avec les réglages de notifications du §5.3, qui n'existent pas non plus.
@@ -152,14 +153,18 @@ Immédiatement après avoir répondu :
 
 ### 4.7 Proposition de questions
 
-- La proposition **se mérite** : elle s'ouvre à une série de **30 jours**. Écrire la question que tout le monde lira demande d'avoir répondu à celle des autres un mois durant.
-- N'importe quel utilisateur ayant atteint ce palier peut proposer une question : intitulé + **2 à 6** options, chacune avec son « tu es un.e ... ».
+- La proposition **se paie**, en jetons. Écrire la question que tout le monde lira demande d'avoir répondu à celle des autres.
+- **Chaque dixième jour d'une série** (10, 20, 30…) verse **100 jetons**. Une série cassée repart de zéro, et le palier suivant se regagne — le droit de proposer n'est jamais acquis une fois pour toutes.
+- **Une question coûte 100 jetons**, soit un palier exactement.
+- Le jeton est **la monnaie de l'app**, pas un compteur de proposition : c'est pour ça qu'un palier en verse cent et non un. La plus petite pièce doit rester plus petite que le prix, sans quoi rien ne peut jamais valoir moins qu'une question — ni un pack acheté, ni une pub regardée, ni un cadeau entre potes. **Aucune de ces trois sources n'est au programme**, seule la divisibilité qui les rendra possibles l'est.
+- Le porte-monnaie vit sur le profil (`token_balance`, et `tokens_earned` / `tokens_spent` pour la trace) et n'est **jamais** écrit par le client : c'est le trigger de réponse qui crédite, dans la transaction même qui fait avancer la série, et le callable de proposition qui débite.
+- N'importe quel utilisateur ayant de quoi payer peut proposer une question : intitulé + **2 à 6** options, chacune avec son « tu es un.e ... ».
 - La question part en file de modération (statut `pending`).
 - Le modérateur valide, édite ou rejette depuis le backoffice d'administration. Une raison de rejet est renvoyée à l'auteur.
 - Une question validée rejoint le **pot commun** et devient éligible au tirage au sort.
 - L'auteur est notifié quand sa question est validée, puis quand elle est effectivement tirée. Son nom d'utilisateur est crédité sur l'écran de la question.
 - Une question déjà tirée ne peut pas ressortir (v1 : jamais de rediffusion).
-  **Pas encore fait**, sauf la porte : le palier des 30 jours est affiché sur l'écran Stats (§5.2), avec la série en cours qui monte vers lui. Le formulaire, la file de modération côté app et les notifications à l'auteur restent à écrire — la console de modération, elle, sait déjà lire un `pending`.
+  **État d'implémentation.** La monnaie existe : le palier verse vraiment ses 100 jetons — dans la transaction du trigger de réponse, donc jamais sans la série qui les doit et jamais deux fois —, `firestore.rules` interdit au client de bouger le porte-monnaie *et* de s'ouvrir un profil avec un solde ou une série déjà dedans (un compteur truqué vaut désormais de l'argent), et l'écran Stats affiche le solde en quatrième tuile de sa ligne. Le bouton « Proposer une question » (§5.2) annonce le prix et reste **inerte** : la dépense n'existe pas encore. Restent à écrire le callable de proposition et son formulaire, le remboursement du jeton quand une question est rejetée, le suivi de ses propres propositions (§5.3) et les notifications à l'auteur — la console de modération, elle, sait déjà lire un `pending`.
 
 ## 5. Navigation & écrans
 
@@ -190,7 +195,7 @@ La racine de l'app. De haut en bas :
 
 **3. Bandeau question du jour.** Tant que la question du jour est ouverte et sans réponse, un bandeau `accent` pleine largeur — bordure noire, ombre dure, texte blanc — annonce son intitulé, précédé d'un pictogramme de bulle interrogative, et ouvre la modale question (§5.4). C'est le même token `accent` que la case d'aujourd'hui dans le calendrier : la journée en cours porte une seule couleur. Une fois la journée répondue, le bandeau ne disparaît pas : il garde sa place et rend sa surface — le sable `muted` d'une case inactive du calendrier, sans bordure, sans ombre, texte `muted-foreground` —, un check et « Prochaine question à 7h » au-dessus de « RDV demain », et plus rien à toucher : la journée est jouée, on revient à son résultat par la case du calendrier (§5.5). Il ne s'efface que les jours où aucune question n'est tombée.
 
-**4. Ligne de stats.** Le streak et ses compteurs tiennent sur **une seule ligne**, à défilement horizontal, débordant jusqu'aux deux bords de l'écran. En tête, la carte streak, large de 70% de l'écran — ce qui dépasse est l'amorce de la tuile suivante, et c'est elle qui dit que la ligne défile : `primary` bordée, la même ombre dure que les tuiles qui la suivent, le libellé puis le nombre de jours en `font-head` et « jours d'affilée » à gauche, un grand pictogramme de flamme à droite. Quand le streak est à 0, elle passe en `muted` avec « Réponds aujourd'hui pour repartir ». Suivent deux tuiles `card` plus étroites, bordure noire, ombre dure : le meilleur streak jamais atteint (`streak_best`) et le nombre total de jours répondus depuis l'inscription. Les trois chiffres sont sur la même échelle typographique — le streak tient sa place par sa surface, sa couleur et sa largeur, pas par la taille de son chiffre — et la ligne rend sa hauteur au calendrier.
+**4. Ligne de stats.** Le streak et ses compteurs tiennent sur **une seule ligne**, à défilement horizontal, débordant jusqu'aux deux bords de l'écran. En tête, la carte streak, large de 70% de l'écran — ce qui dépasse est l'amorce de la tuile suivante, et c'est elle qui dit que la ligne défile : `primary` bordée, la même ombre dure que les tuiles qui la suivent, le libellé puis le nombre de jours en `font-head` et « jours d'affilée » à gauche, un grand pictogramme de flamme à droite. Quand le streak est à 0, elle passe en `muted` avec « Réponds aujourd'hui pour repartir ». Suivent trois tuiles `card` plus étroites, bordure noire, ombre dure : le meilleur streak jamais atteint (`streak_best`), le nombre total de jours répondus depuis l'inscription, et les **jetons** disponibles (§4.7) — la seule des quatre qui ne raconte pas le passé, et la seule dont le nombre peut redescendre. Les quatre chiffres sont sur la même échelle typographique — le streak tient sa place par sa surface, sa couleur et sa largeur, pas par la taille de son chiffre — et la ligne rend sa hauteur au calendrier.
 
 **5. Calendrier mensuel.** Une grille de cases carrées, une par jour, bordure noire, coins arrondis (`rounded`), séparées par une gouttière régulière. Quatre états :
 
@@ -208,7 +213,7 @@ La racine de l'app. De haut en bas :
 
   **État d'implémentation.** Fait. Le compteur (`friend_answer_counts`) vit sur le mois de calendrier de l'utilisateur, que l'écran lit déjà — le badge ne coûte aucune lecture — et c'est le trigger de réponse qui l'incrémente chez chaque pote accepté de celui qui répond. Le « déjà vu », lui, est local à l'appareil (`AsyncStorage`) : c'est une propriété de l'écran qu'on a regardé, pas du compte. Un deuxième téléphone rebadge donc chaque journée une fois. Comme le mois n'est pas écouté, la pastille apparaît au retour sur l'écran ou au pull-to-refresh, pas à la seconde où le pote répond.
 
-**6. Proposer une question.** Sous le calendrier, un bouton « Proposer une question » (§4.7) et rien autour : pas de carte, pas de jauge — la condition tient dans la petite ligne que le bouton porte sous son label, « Valide d'abord une série de 30 j ». Les deux lignes sont un bloc calé à gauche, l'icône à côté d'elles. Sous le palier le bouton est `outline` et cadenassé, rien à toucher. Au palier il passe en `primary` et la petite ligne disparaît : la condition n'a plus rien à dire. Le formulaire derrière n'existe pas encore, et tant qu'il n'existe pas le bouton reste inerte même pour qui a gagné le droit de le presser.
+**6. Proposer une question.** Sous le calendrier, un bouton « Proposer une question » (§4.7) et rien autour : pas de carte, pas de jauge — le prix tient dans la petite ligne que le bouton porte sous son label. Les deux lignes sont un bloc calé à gauche, l'icône à côté d'elles. Sans de quoi payer le bouton est `outline` et cadenassé, sa petite ligne disant ce qui manque — « Il te manque 40 jetons » — et rien à toucher. Une fois payable il passe en `primary` et la ligne devient le prix, « 100 jetons » : elle ne disparaît pas, un achat doit dire ce qu'il coûte. D'où viennent les jetons est l'affaire de la ligne de stats plus haut, pas celle de cette ligne-ci. Le formulaire derrière n'existe pas encore, et tant qu'il n'existe pas le bouton reste inerte même pour qui peut se le payer.
 
 ### 5.3 Écran Profil
 

@@ -17,13 +17,19 @@ Shared infrastructure — do not duplicate it in a model file:
 
 ## `src/callables.ts`
 
-The wire contracts of the callable Cloud Functions — one of the two modules here describing no Firestore collection. It carries each callable's deployed name (`INVITE_FRIEND_CALLABLE`), its payload and its result, because this package is the only one both `apps/app` and `apps/functions` depend on: a callable's payload has a converter's problem — two sides serialising the same shape with no compiler between them unless it is written down once. Fields stay `snake_case` like everywhere else, even though nothing here is stored.
+The wire contracts of the callable Cloud Functions — one of the three modules here describing no Firestore collection. It carries each callable's deployed name (`INVITE_FRIEND_CALLABLE`), its payload and its result, because this package is the only one both `apps/app` and `apps/functions` depend on: a callable's payload has a converter's problem — two sides serialising the same shape with no compiler between them unless it is written down once. Fields stay `snake_case` like everywhere else, even though nothing here is stored.
 
 ## `src/daily_question_time.ts`
 
 The daily cycle's clock: `parisTimeToInstant`, the two instants a day key stands for — `publicationTimeOf` (07:00 Europe/Paris, `PUBLICATION_HOUR`) and `closingTimeOf` (the following Paris midnight) — and `FRIENDS_ANSWERS_HOUR`, the 18:00 the evening nudge is scheduled on (docs/prd.md §4.5), an hour rather than an instant since nothing stores it. No collection either, but the two values it computes are what `v1_questions`' `broadcast_at` and `closes_at` *mean*, so they belong beside the models rather than inside the scheduler that happens to write them: the seeding script (`npm run seed-daily-questions`) stamps the same fields from outside the functions runtime.
 
 Day-key arithmetic stays in `v1_daily_question_month.ts`, next to `dailyQuestionDateKey` — `dateKeyParts`, `previousDateKey`, `monthKeyOf`, `monthDayKeyOf`, `dateKeyOf`.
+
+## `src/tokens.ts`
+
+The currency (docs/prd.md §4.7): what a streak milestone pays (`STREAK_TOKEN_MILESTONE`, `STREAK_TOKEN_REWARD`), what a question costs (`QUESTION_TOKEN_COST`), and `streakTokenReward(previous, next)` — the payout read off the milestone *crossed* rather than off the new streak's last digit, so a streak that did not move pays nothing. No collection either: the wallet it moves is three fields on `v1_users`. It lives here because three sides have to agree on the same numbers — the answer trigger that credits, the callable that debits, and the screen that says what can be afforded — and a constant copied three times is a constant that drifts.
+
+Keep it dependency-free (constants and pure functions on primitives): `v1_user.ts` documents the wallet in its terms, and a module importing back would only close a loop for nothing.
 
 ## Models (`src/`)
 
