@@ -42,9 +42,10 @@ const answererIdsOf = async (questionId: string): Promise<Set<string>> => {
  * One user's accepted friendships — the same half of the friendship the app's
  * friend list reads, and the one whose document id is the friend's UID.
  *
- * Handed over as a query rather than as a result so the answer trigger can run
- * it inside its own transaction, where the fan-out onto the friends' calendars
- * has to be read and written atomically with the answer it comes from.
+ * Handed over as a query rather than as a result because its two callers read
+ * it differently: the nudge walks it for every answerer of the day, the answer
+ * trigger runs it once, after its transaction has committed, to fan the badge
+ * out onto those friends' calendars.
  */
 export const acceptedFriendsQuery = (
   userRef: DocumentReference<UserData>,
