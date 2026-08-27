@@ -56,6 +56,9 @@ const drawDailyQuestion = async (date: string): Promise<DailyQuestionMonthDayDat
     broadcast_at: Timestamp.fromDate(publishedAt),
     broadcast_on: date,
     closes_at: Timestamp.fromDate(closingTimeOf(date)),
+    // The draw is the last thing that happens *to* a question, so it moves the
+    // stamp the backoffice sorts on.
+    updated_at: Timestamp.fromDate(publishedAt),
   });
   // `merge` deep-merges maps, so this adds one entry to the month rather than
   // replacing the days already in it.

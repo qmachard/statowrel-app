@@ -23,7 +23,15 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@statowrel/models": ["../../packages/models/src"]
+      "@statowrel/models": ["../../packages/models/src"],
+
+      /* `apps/app` pulls @types/react 19, which npm hoists to the repo root,
+         while this app is on React 18 and keeps its own copy nested. A library
+         d.ts under the root resolves `react` to 19 and hands back a `ReactNode`
+         that 18 rejects (19's includes `bigint`). Pinning the name here makes
+         the whole program agree on one React typing — this app's. */
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"]
     }
   },
   "include": ["src"],
