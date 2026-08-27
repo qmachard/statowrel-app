@@ -1,6 +1,7 @@
 import { type App, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import {
+  type BulkWriter,
   type DocumentData,
   getFirestore,
   type FirestoreDataConverter,
@@ -79,6 +80,25 @@ export const createWriteBatch = () => {
   const app = initFirebase();
 
   return getFirestore(app).batch();
+};
+
+/**
+ * A `BulkWriter` — many independent writes, committed as fast as the backend
+ * takes them.
+ *
+ * What a batch is not: a batch is atomic, which buys nothing when the writes
+ * have nothing to do with one another, and costs a 500-write ceiling plus an
+ * all-or-nothing failure. A `BulkWriter` has neither — it retries each write on
+ * its own when the document it lands on is contended, which is exactly the
+ * shape of a fan-out onto documents other writers are also touching.
+ *
+ * The caller owns the flush: `close()` (or `flush()`) is what waits for the
+ * writes to land, and a caller that returns without awaiting it loses them.
+ */
+export const createBulkWriter = (): BulkWriter => {
+  const app = initFirebase();
+
+  return getFirestore(app).bulkWriter();
 };
 
 export const getDocumentRef = <TModelData extends DocumentData, TFirebaseData extends DocumentData = TModelData>(collection: string, identifier: string, converter: FirestoreConverter<TModelData, TFirebaseData>): DocumentReference<TModelData, TFirebaseData> => {
