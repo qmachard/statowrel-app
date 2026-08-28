@@ -552,7 +552,9 @@ Two things it does deliberately. **Today is left unanswered** unless `--answer-t
 
 It **wipes Firestore and Auth first, every time**, and there is no flag not to: the world it writes is one whole — the day's tally counts the answers it forged, each answer is projected, each streak is the replay of those answers — and layering a second run on top of a first leaves answers no calendar carries, which is precisely the state the trigger reads as an answer it has still to count.
 
-`--seed <n>` picks the world; the same value gives the same one, tallies included. The knobs are `--days`, `--friends`, `--crowd`, `--email` and `--password`.
+**The wallets are granted, not only earned.** The replay pays what each streak's milestones owe, exactly as the answer trigger does — but on a month of history holed twice that lands somewhere between nothing and one question, so whether the proposal form of docs/prd.md §4.7 opens at all would depend on `--seed`. A dev environment should not have to be lucky: every seeded account starts with `--statcoins` (500 by default, five questions' worth) on top of what it earned. The grant moves `statcoins_earned` with the balance, so `balance = earned − spent` holds and the fixture reads as a wallet that was paid rather than one that was tampered with. `--statcoins 0` is how the empty-wallet path is looked at — the sheet refusing a proposal it cannot pay for.
+
+`--seed <n>` picks the world; the same value gives the same one, tallies included. The knobs are `--days`, `--friends`, `--crowd`, `--statcoins`, `--email` and `--password`.
 
 ### The beat between an answer and its tally
 

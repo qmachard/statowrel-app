@@ -70,6 +70,7 @@ npm run seed-daily-questions         # broadcasts the 5 days before today, so th
 npm run seed-demo-question           # writes the onboarding's demo question, tally included
 npm run seed-emulator                # fills the running emulator with a whole app: account, day, friends, answers
 npm run seed-emulator -- --days 60 --friends 6 --answer-today
+npm run seed-emulator -- --statcoins 0   # ... wallets holding only what the streaks earned (500 granted by default)
 npm run seed-emulator -- --dry-run   # ... says what it would write (also --crowd, --email, --password, --seed)
 npm run send-test-notification -- --email <email>   # pushes the day's notification to that account's devices
 npm run send-test-notification -- --all --dry-run   # ... listing every registered device, sending nothing
