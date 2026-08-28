@@ -263,7 +263,7 @@ domains/{domain-name}/
 └── index.ts                                 # re-exports Cloud Function registrations only
 ```
 
-`src/index.ts` re-exports each domain as a namespace (`export * as health from './domains/health'`), so Firebase names functions `<domain>-<exportName>` (e.g. `health-healthApi`). `src/domains/health` is a minimal working example (`GET /ping`) proving the wiring end-to-end; it's a template to copy, not a real feature.
+`src/index.ts` re-exports each domain as a namespace (`export * as questions from './domains/questions'`), so Firebase names functions `<domain>-<exportName>` (e.g. `questions-proposeQuestion`). A domain holds only the folders it needs: `api/` is the shape an HTTP route would take, and no domain ships one today — the `health` domain that used to hold the `GET /ping` example was removed once it was clear nothing ever called it.
 
 `api/` and `callables/` are two ways out of the same domain, and the client decides which. An **HTTP route** is for a caller that is not the app — a webhook, a browser, `curl`. A **callable** is for the app: the ID token travels with the call and is verified by the runtime, so `request.auth` is already there and no token middleware has to be written; failures come back as `HttpsError` codes the client reads as `functions/*`. A callable's wire shape (name, payload, result) lives in `@statowrel/models`'s `callables.ts` — one of the two modules of that package describing no Firestore collection, with `daily_question_time.ts` — so both sides compile against the same type.
 
