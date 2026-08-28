@@ -8,6 +8,7 @@ import { DailyQuestionScreen } from '@/daily-question/screens/DailyQuestionScree
 import { colors } from '@/design/tokens';
 import { InviteFriendScreen } from '@/friends/screens/InviteFriendScreen';
 import { MenuScreen } from '@/menu/screens/MenuScreen';
+import { ProposeQuestionScreen } from '@/questions/screens/ProposeQuestionScreen';
 import { StatsScreen } from '@/stats/screens/StatsScreen';
 
 import type { RootStackParamList } from './types';
@@ -65,6 +66,18 @@ export const RootNavigator = () => {
               sheetAllowedDetents: 'fitToContents',
               sheetGrabberVisible: true,
             }}
+          />
+          {/* The proposal form of docs/prd.md §4.7, opened from the card under
+              the calendar. A **full-screen** modal and not a sheet, unlike the
+              invitation: this form grows — six answers are twelve inputs — and
+              it is typed into with the keyboard up, so it wants the whole
+              screen rather than a detent that re-measures under it. Its own
+              close button is the way out, `fullScreenModal` offering no
+              gesture. */}
+          <Stack.Screen
+            name="ProposeQuestion"
+            component={ProposeQuestionScreen}
+            options={{ presentation: 'fullScreenModal' }}
           />
           <Stack.Screen name="Menu" component={MenuScreen} />
         </>

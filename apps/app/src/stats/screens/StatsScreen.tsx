@@ -120,7 +120,10 @@ export const StatsScreen = () => {
             The balance lives here rather than on the strip above — it belongs
             beside the price it is saved towards, and stating it twice on one
             screen, in two framings, reads as two different things. */}
-        <ProposeQuestionCard statcoins={statcoins} />
+        <ProposeQuestionCard
+          statcoins={statcoins}
+          onPress={() => navigation.navigate('ProposeQuestion')}
+        />
       </ScrollView>
     </SafeAreaView>
   );

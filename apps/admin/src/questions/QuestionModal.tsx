@@ -145,7 +145,7 @@ export const QuestionModal = ({ question, author, onClose }: QuestionModalProps)
               />
               <TextField
                 label="StatOwrel"
-                hint="Affichée comme « tu es un.e … ». Ex. « méthodique »"
+                hint="Facultative. Affichée comme « tu es un.e … ». Ex. « méthodique »"
                 error={errors.options?.[index]?.stat_label?.message}
                 {...register(`options.${index}.stat_label`)}
               />

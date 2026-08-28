@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
-import { QUESTION_MAX_OPTIONS, QUESTION_MIN_OPTIONS } from '@statowrel/models';
-
-const QUESTION_MAX_LENGTH = 120;
-const OPTION_MAX_LENGTH = 60;
-/** « tu es un.e … » — a StatOwrel is one word, two at most. */
-const STAT_LABEL_MAX_LENGTH = 30;
+import {
+  QUESTION_LABEL_MAX_LENGTH,
+  QUESTION_MAX_OPTIONS,
+  QUESTION_MIN_OPTIONS,
+  QUESTION_OPTION_LABEL_MAX_LENGTH,
+  QUESTION_OPTION_STAT_LABEL_MAX_LENGTH,
+} from '@statowrel/models';
 
 const optionSchema = z.object({
   /**
@@ -18,25 +19,30 @@ const optionSchema = z.object({
     .string()
     .trim()
     .min(1, 'Renseigne la réponse.')
-    .max(OPTION_MAX_LENGTH, `${OPTION_MAX_LENGTH} caractères maximum.`),
+    .max(QUESTION_OPTION_LABEL_MAX_LENGTH, `${QUESTION_OPTION_LABEL_MAX_LENGTH} caractères maximum.`),
+  // Optional, like everywhere else (docs/prd.md §4.7): a moderator editing a
+  // question posed without a StatOwrel must not be made to invent one to save
+  // their edit.
   stat_label: z
     .string()
     .trim()
-    .min(1, 'Renseigne la StatOwrel.')
-    .max(STAT_LABEL_MAX_LENGTH, `${STAT_LABEL_MAX_LENGTH} caractères maximum.`),
+    .max(QUESTION_OPTION_STAT_LABEL_MAX_LENGTH, `${QUESTION_OPTION_STAT_LABEL_MAX_LENGTH} caractères maximum.`),
 });
 
 /**
- * Mirrors what `firestore.rules` accepts on a `v1_questions` create — 2 to 6
- * options — so the form refuses what the database would refuse anyway, with a
- * message instead of a `permission-denied`.
+ * The lengths and the 2-to-6 count both come from `@statowrel/models`, which is
+ * where they now live: the app's own proposal form (docs/prd.md §4.7) and the
+ * callable behind it refuse exactly the same thing, and three copies of a limit
+ * is a limit that drifts. This console writes through the `isAdmin()` wildcard
+ * rather than through the rules' own `v1_questions` block, so what it refuses
+ * here is all that stands between a moderator and a malformed question.
  */
 export const questionSchema = z.object({
   label: z
     .string()
     .trim()
     .min(1, 'Renseigne ta question.')
-    .max(QUESTION_MAX_LENGTH, `${QUESTION_MAX_LENGTH} caractères maximum.`),
+    .max(QUESTION_LABEL_MAX_LENGTH, `${QUESTION_LABEL_MAX_LENGTH} caractères maximum.`),
   options: z
     .array(optionSchema)
     .min(QUESTION_MIN_OPTIONS, `Il faut au moins ${QUESTION_MIN_OPTIONS} options.`)

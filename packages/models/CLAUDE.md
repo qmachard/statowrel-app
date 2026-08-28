@@ -17,7 +17,7 @@ Shared infrastructure — do not duplicate it in a model file:
 
 ## `src/callables.ts`
 
-The wire contracts of the callable Cloud Functions — one of the three modules here describing no Firestore collection. It carries each callable's deployed name (`INVITE_FRIEND_CALLABLE`), its payload and its result, because this package is the only one both `apps/app` and `apps/functions` depend on: a callable's payload has a converter's problem — two sides serialising the same shape with no compiler between them unless it is written down once. Fields stay `snake_case` like everywhere else, even though nothing here is stored.
+The wire contracts of the callable Cloud Functions — one of the three modules here describing no Firestore collection. It carries each callable's deployed name (`INVITE_FRIEND_CALLABLE`, `DELETE_ACCOUNT_CALLABLE`, `PROPOSE_QUESTION_CALLABLE`), its payload and its result, because this package is the only one both `apps/app` and `apps/functions` depend on: a callable's payload has a converter's problem — two sides serialising the same shape with no compiler between them unless it is written down once. Fields stay `snake_case` like everywhere else, even though nothing here is stored.
 
 ## `src/daily_question_time.ts`
 
@@ -36,6 +36,8 @@ Keep it dependency-free (constants and pure functions on primitives): `v1_user.t
 One file per Firestore collection, **named after the collection but singular**: `v1_questions` → `src/v1_question.ts`, `v1_users` → `src/v1_user.ts`. The collection's own (plural) name lives in the file's `<NAME>_COLLECTION` constant — never hardcode it at a call site.
 
 A sub-collection follows the same rule and keeps the `v1_` prefix, with one extra constraint: its name must be **globally unique**, because a collection group is global to the database and keyed by the last path segment alone — a bare `answers` would collide with any other `answers` sub-collection added later, and could not be versioned on its own. `v1_questions/{question_id}/v1_daily_question_answers` → `src/v1_daily_question_answer.ts`: the name says `daily_question` rather than echoing its parent because it holds answers to the question *as the daily question*, which only a broadcast question has.
+
+`v1_question.ts` also holds what a question is *bounded* by, beside the shape it bounds: `QUESTION_MIN_OPTIONS` / `QUESTION_MAX_OPTIONS`, and the three lengths `QUESTION_LABEL_MAX_LENGTH` / `QUESTION_OPTION_LABEL_MAX_LENGTH` / `QUESTION_OPTION_STAT_LABEL_MAX_LENGTH`. Three forms now refuse the same thing — the moderation console's, the app's proposal form, and the `questions-proposeQuestion` callable behind it, which is the only one of the three a client cannot skip — and a limit copied three times is a limit that drifts.
 
 `v1_question.ts` is the reference implementation — copy its shape. It follows the `customerConverter`-style pattern from planexplora-hub (`toFirestore` / `fromFirestore`, `<Name>FirebaseData` raw type, `<Name>Data` app type via `ModelData<...>`, a `<NAME>_COLLECTION` constant).
 

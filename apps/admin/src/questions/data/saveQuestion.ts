@@ -59,6 +59,11 @@ export const createQuestion = async (author: QuestionAuthor, values: QuestionVal
     author_id: author.id,
     author_username: author.username,
     rejection_reason: null,
+    // A moderator writing straight into the pot pays nothing (docs/prd.md
+    // §4.7): the price is collected by `questions-proposeQuestion`, and a
+    // question that cost nothing has nothing to hand back when it is rejected.
+    statcoin_cost: null,
+    refunded_at: null,
     broadcast_at: null,
     broadcast_on: null,
     closes_at: null,

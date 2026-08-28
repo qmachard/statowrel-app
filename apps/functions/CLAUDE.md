@@ -41,7 +41,9 @@ Every ref helper takes a `FirestoreConverter` from `@statowrel/models` — never
 
 ## Triggers are delivered at least once
 
-A Firestore trigger can fire twice for the same write, so anything it does has to be idempotent — and "increment a counter" never is on its own. Read a marker inside a transaction and bail out before writing, rather than adding a flag nobody else needs: `triggers/steps/onAnswerCreated.ts` uses the day's own entry in the author's calendar month, which the same transaction writes. The onboarding demo is the exception that proves the rule — it is projected into no calendar, so it has no free marker, and `counted_at` on the answer document is the flag it had to grow.
+A Firestore trigger can fire twice for the same write, so anything it does has to be idempotent — and "increment a counter" never is on its own. Read a marker inside a transaction and bail out before writing, rather than adding a flag nobody else needs: `triggers/steps/onAnswerCreated.ts` uses the day's own entry in the author's calendar month, which the same transaction writes. The onboarding demo is the exception that proves the rule — it is projected into no calendar, so it has no free marker, and `counted_at` on the answer document is the flag it had to grow. `refunded_at` on a question is the second one, and for a stronger reason: `questions-onQuestionUpdated` also fires again on every *later* edit of a question already sitting at `rejected`, so redelivery is not even the interesting case — and what it guards is money.
+
+A trigger on a hot collection is worth a word too. `v1_questions` takes an `answer_counts` increment on every answer given in the app, and a Firestore trigger cannot be filtered on a field, so `questions-onQuestionUpdated` runs on that whole path: its step returns on the status before it reads anything, which is what keeps the common case at one invocation and no Firestore read.
 
 One more thing that catches people out: `DocumentReference.update()` does **not** run the converter (only `set()` and reads do), so a timestamp written through it must be a `Timestamp`, never an ISO string.
 

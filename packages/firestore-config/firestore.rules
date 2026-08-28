@@ -60,36 +60,25 @@ service cloud.firestore {
       // carousel waits on the phone and is written once the visitor signs up.
       allow get: if resource.data.status == 'demo';
 
-      // The handle carried on the question is a copy of its author's, kept so
-      // the credit line of docs/prd.md §5.4 costs no profile read — same trade,
-      // and the same check, as `friendUsernameIsTheirs()` below. The
-      // reservation is the authority on who holds a handle, so the copy has to
-      // agree with it: without this, `isOwner(author_id)` alone would let
-      // anybody drop a question credited under somebody else's pseudo. A handle
-      // that was never reserved has no document, so the expression errors and
-      // the write is denied.
+      // **Nobody creates a question from a client any more.** An author used to
+      // write their own `pending` proposal here, which was fine while proposing
+      // was free: docs/prd.md §4.7 now prices it at `QUESTION_STATCOIN_COST`,
+      // and a price a direct write walks around is not a price. The wallet it
+      // debits is already closed to the client (`keepsWallet()` below), so
+      // leaving this open would have been the one hole left — pay nothing,
+      // write the question anyway.
       //
-      // A null one is let through — a question nobody proposed has no author to
-      // name — and so is an absent one, read through `get()` with a default the
-      // same way `keepsBackendCounters()` reads the profile's counters: the
-      // field is younger than the collection, and a missing-field access errors,
-      // which would deny the write outright. The `get()` sits behind that null
-      // check on purpose: a rules `get()` is billed like any other read, so a
-      // question with no credit pays for none.
-      function authorUsernameIsTheirs() {
-        return request.resource.data.get('author_username', null) == null
-               || get(
-                    /databases/$(database)/documents/v1_usernames/$(request.resource.data.author_username)
-                  ).data.user_id == request.resource.data.author_id;
-      }
-
-      allow create: if isOwner(request.resource.data.author_id)
-                    && authorUsernameIsTheirs()
-                    && request.resource.data.status == 'pending'
-                    && request.resource.data.rejection_reason == null
-                    && request.resource.data.broadcast_at == null
-                    && request.resource.data.options.size() >= 2
-                    && request.resource.data.options.size() <= 6;
+      // `questions-proposeQuestion` is the door instead: it debits the profile
+      // and writes the question in one transaction, admin-side, past this rule.
+      // Which is also what retired the `authorUsernameIsTheirs()` check that
+      // stood here — the callable reads the handle off the very profile it
+      // debits, so there is no client-supplied copy left to check against the
+      // reservation.
+      //
+      // The moderation console is unaffected: it writes through the `isAdmin()`
+      // wildcard at the top of this file, and rules are OR'ed — `if false` here
+      // means "the app never", not "nobody".
+      allow create: if false;
       allow update, delete: if false;
 
       // One answer per person per broadcast question, and the document id is

@@ -1,5 +1,5 @@
 import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { dailyQuestionDateKey } from '@statowrel/models';
+import { dailyQuestionDateKey, statLabelOf } from '@statowrel/models';
 import { X } from '@/components/icons';
 import { type ReactNode, useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -173,7 +173,11 @@ export const DailyQuestionScreen = () => {
       // subscribed to Firestore any more: it drops the answered month from the
       // calendar cache and holds the day until the answer trigger has projected
       // it, and `useDailyQuestion` reads it straight back.
-      rememberAnswer(written, question.options.find((option) => option.id === optionId)?.stat_label ?? '');
+      // Through `statLabelOf`, like every other reader: a StatOwrel is optional
+      // (docs/prd.md §4.7), and this copy is what the calendar cell shows until
+      // the answer trigger lands its own — which takes the same fallback.
+      rememberAnswer(written, statLabelOf(question.options.find((option) => option.id === optionId)
+        ?? { id: '', label: '', stat_label: '' }));
       setCelebrating(true);
     } catch (error) {
       console.warn('[daily-question] could not save the answer', date, error);

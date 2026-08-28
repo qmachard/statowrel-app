@@ -5,7 +5,13 @@ import { shadows } from '@/design/shadows';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 
 export interface TextFieldProps extends TextInputProps {
-  label: string;
+  /**
+   * Left out when the field sits under a heading that already names it — a list
+   * of answers labelled « Réponse 1 » once, over two inputs. Pass
+   * `accessibilityLabel` then: the label is what a screen reader is otherwise
+   * given, and a placeholder is not a name.
+   */
+  label?: string;
   error?: string;
   /** Fixed marker sitting inside the field, ahead of the value — the `@` of a handle. */
   prefix?: string;
@@ -85,7 +91,7 @@ export const TextField = ({ label, error, prefix, editable = true, style, onFocu
 
   return (
     <View style={styles.root}>
-      <Text style={styles.label}>{label}</Text>
+      {label === undefined ? null : <Text style={styles.label}>{label}</Text>}
 
       <View style={[ styles.ring, focused ? styles.ringFocused : null ]}>
         <View

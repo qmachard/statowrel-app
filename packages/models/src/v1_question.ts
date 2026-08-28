@@ -13,6 +13,24 @@ export const QUESTION_MIN_OPTIONS = 2;
 export const QUESTION_MAX_OPTIONS = 6;
 
 /**
+ * What a question's text is bounded by, and what each option's two labels are.
+ *
+ * They lived in the moderation console until the app grew a proposal form of
+ * its own (docs/prd.md §4.7): three forms now have to refuse the same thing —
+ * the console's, the app's, and the callable behind the app's, which is the
+ * only one of the three a client cannot skip. A limit copied three times is a
+ * limit that drifts, so it is written down once, here, beside the shape it
+ * bounds.
+ *
+ * The numbers are a product decision rather than a storage one: the question is
+ * the quizz card read in one glance (docs/prd.md §5.4), and a StatOwrel is
+ * « tu es un.e … » — one word, two at most.
+ */
+export const QUESTION_LABEL_MAX_LENGTH = 120;
+export const QUESTION_OPTION_LABEL_MAX_LENGTH = 60;
+export const QUESTION_OPTION_STAT_LABEL_MAX_LENGTH = 30;
+
+/**
  * Moderation lifecycle (docs/prd.md §4.7): a user proposes a question
  * (`pending`), a moderator approves or rejects it, and it becomes `used` once
  * it has been drawn as a daily question. A used question is never redrawn.
@@ -50,7 +68,16 @@ export interface QuestionOptionFirebaseData {
   id: string;
   /** Option shown to the user — e.g. "Par le bout". */
   label: string;
-  /** StatOwrel earned by picking this option — e.g. "méthodique", rendered as "tu es un.e méthodique". */
+  /**
+   * StatOwrel earned by picking this option — e.g. "méthodique", rendered as
+   * "tu es un.e méthodique".
+   *
+   * **Optional** (docs/prd.md §4.7): a question can be posed without one, and
+   * plenty read better that way — an option that is already an adjective is its
+   * own StatOwrel. Empty rather than null, like every other string here, and
+   * read through `statLabelOf` below, which falls back to `label`: the result
+   * screen of §5.5 always has a word to say.
+   */
   stat_label: string;
 }
 
@@ -109,6 +136,35 @@ export interface QuestionFirebaseData {
   author_username: string | null;
   /** Reason sent back to the author. Null unless `status` is `rejected`. */
   rejection_reason: string | null;
+  /**
+   * What its author paid to propose it (docs/prd.md §4.7) —
+   * `QUESTION_STATCOIN_COST` as it stood the moment the proposal callable
+   * debited them, stamped by that same transaction.
+   *
+   * Null on every question nobody paid for: the seeded catalogue, the
+   * onboarding demo, anything a moderator writes straight from the console.
+   * Which is the whole reason it is stored rather than assumed from the
+   * current price — a rejection hands back what was actually taken, and a
+   * question that cost nothing gives nothing back.
+   */
+  statcoin_cost: number | null;
+  /**
+   * When `statcoin_cost` was paid back to its author, the question having been
+   * rejected (docs/prd.md §4.7).
+   *
+   * The refund trigger's idempotency marker, and the reason it is a field
+   * rather than something derived: a Firestore trigger is delivered *at least*
+   * once, a question sitting at `rejected` offers nothing a redelivery could be
+   * told apart by, and crediting a wallet twice is counterfeiting. It is read
+   * inside the very transaction that credits, so the marker cannot exist
+   * without the refund it announces.
+   *
+   * A question refunded once is never refunded again, whatever the moderation
+   * does with it afterwards: approving a rejected question puts it back in the
+   * pot without taking the money back, which is a moderator's call to make and
+   * not a second transaction to run.
+   */
+  refunded_at: UniversalTimestamp | null;
   /**
    * Instant the question is broadcast as the daily question — the day it was
    * drawn, at the 07:00 Paris drop time. Null until the question is drawn.
@@ -190,6 +246,20 @@ export const findQuestionOption = (
   options?.find((option) => option.id === optionId) ?? null
 );
 
+/**
+ * The StatOwrel an option earns — « efficace » — falling back to the option's
+ * own label when it was posed without one.
+ *
+ * Here rather than in either runtime because both need it and it is one rule:
+ * the app says it on the result screen of docs/prd.md §5.5 and in the friends'
+ * rows, and the answer trigger copies it onto the calendar month it projects.
+ * A fallback written twice is a fallback that drifts, and the two would drift
+ * across a screen and its own read model.
+ */
+export const statLabelOf = (option: QuestionOptionData): string => (
+  option.stat_label.length > 0 ? option.stat_label : option.label
+);
+
 const parseAnswerCounts = (
   counts: Record<string, number> | null | undefined,
 ): Record<string, number> => (
@@ -225,6 +295,8 @@ export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebas
     author_id: data.author_id,
     author_username: data.author_username ?? null,
     rejection_reason: data.rejection_reason ?? null,
+    statcoin_cost: data.statcoin_cost ?? null,
+    refunded_at: data.refunded_at ? TimestampClass.fromDate(new Date(data.refunded_at)) : null,
     broadcast_at: data.broadcast_at ? TimestampClass.fromDate(new Date(data.broadcast_at)) : null,
     broadcast_on: data.broadcast_on ?? null,
     closes_at: data.closes_at ? TimestampClass.fromDate(new Date(data.closes_at)) : null,
@@ -242,6 +314,8 @@ export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebas
       author_id: data.author_id ?? '',
       author_username: data.author_username ?? null,
       rejection_reason: data.rejection_reason ?? null,
+      statcoin_cost: typeof data.statcoin_cost === 'number' ? data.statcoin_cost : null,
+      refunded_at: parseTimestamp(data.refunded_at ?? null),
       broadcast_at: parseTimestamp(data.broadcast_at ?? null),
       broadcast_on: data.broadcast_on ?? null,
       closes_at: parseTimestamp(data.closes_at ?? null),

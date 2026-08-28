@@ -104,7 +104,30 @@ const resolveVariant = (): Variant => {
   );
 };
 
-const variant = VARIANT_CONFIG[resolveVariant()];
+const variantName = resolveVariant();
+
+const variant = VARIANT_CONFIG[variantName];
+
+/**
+ * Whether this build is the one that talks to the **emulator suite**, and
+ * therefore the one — and the only one — allowed to speak plain HTTP.
+ *
+ * `npm run dev:functions` serves Auth, Firestore and Functions over `http://`
+ * on the LAN, and both platforms refuse cleartext by default: iOS through App
+ * Transport Security, Android through `usesCleartextTraffic`. Firestore slips
+ * past on iOS because its emulator connection is gRPC on its own socket, which
+ * is precisely what makes the wall so confusing when it finally shows up — the
+ * app reads and writes happily, and the first callable dies with « the resource
+ * could not be loaded because the App Transport Security policy requires the
+ * use of a secure connection », a message naming neither the emulator nor the
+ * host it could not reach.
+ *
+ * Scoped to `development` on purpose: `preview` and `production` keep the
+ * platform defaults, so the binary a reviewer sees carries no cleartext
+ * exception at all. And since both knobs are native, turning them on takes a
+ * **new dev client** — never a Metro restart.
+ */
+const isDevelopment = variantName === 'development';
 
 /**
  * Reversed Google OAuth iOS client id (`com.googleusercontent.apps.…`), taken
@@ -222,6 +245,12 @@ const plugins: NonNullable<ExpoConfig['plugins']> = [
         useFrameworks: 'static',
         forceStaticLinking: [ 'RNFBApp', 'RNFBAuth', 'RNFBFirestore', 'RNFBFunctions' ],
       },
+      android: {
+        // Android's half of the same exception — see `isDevelopment`. Cleartext
+        // has been off by default since API 28, so a release-flavoured dev build
+        // hits the identical wall the iOS one does, one platform later.
+        usesCleartextTraffic: isDevelopment,
+      },
     },
   ],
   'expo-apple-authentication',
@@ -314,7 +343,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     usesAppleSignIn: true,
     infoPlist: {
       ...config.ios?.infoPlist,
-      ITSAppUsesNonExemptEncryption: false
+      ITSAppUsesNonExemptEncryption: false,
+      // Cleartext to the emulator suite, development builds only — see
+      // `isDevelopment`. `NSAllowsLocalNetworking` is the targeted key and
+      // covers the LAN address a phone reaches the Mac on; `NSAllowsArbitraryLoads`
+      // sits beside it because ATS's own rules for what counts as "local" are
+      // narrower than they read, and a dev client that cannot reach its backend
+      // is worth less than a dev client with a broad exception it never ships.
+      ...(isDevelopment
+        ? { NSAppTransportSecurity: { NSAllowsLocalNetworking: true, NSAllowsArbitraryLoads: true } }
+        : {}),
     },
   },
   android: {

@@ -53,12 +53,19 @@ après coup.
 
 `createQuestion` écrit `v1_questions/{ULID}` avec `status: 'pending'`, `author_id` = l'UID connecté,
 `author_username` = son pseudo, et tout ce qu'une question tirée porte laissé à `null` —
-`broadcast_at`, `broadcast_on`, `closes_at` — ce que `firestore.rules` exige d'une création. Les deux
+`broadcast_at`, `broadcast_on`, `closes_at`. `statcoin_cost` reste `null` lui aussi : une question
+écrite d'ici n'a rien coûté (docs/prd.md §4.7), donc elle ne rend rien si elle est rejetée. Les deux
 moitiés de l'auteur arrivent ensemble, en `QuestionAuthor`, depuis `AuthContext` : les résoudre ici
-coûterait une lecture de profil par question écrite. Une création dont l'`author_username` n'est pas
-celui de l'`author_id` est refusée par les règles, qui le vérifient contre la réservation
-`v1_usernames` — le joker `isAdmin()` passe devant, mais la règle existe pour le jour où l'app
-proposera des questions.
+coûterait une lecture de profil par question écrite.
+
+**Cette console est la seule à pouvoir écrire dans `v1_questions`.** Le bloc `v1_questions` de
+`firestore.rules` est passé à `allow create: if false` le jour où proposer est devenu payant : côté
+app, tout passe par le callable `questions-proposeQuestion`, qui débite et écrit dans la même
+transaction. Ici rien ne change — le joker `isAdmin()` en tête de fichier passe devant, et les règles
+sont OR'ées — mais cela veut dire que **le schéma zod de cette page est tout ce qui sépare un
+modérateur d'une question malformée** : il n'y a plus de règle derrière pour la refuser. Ses bornes
+viennent de `@statowrel/models` (`QUESTION_LABEL_MAX_LENGTH`, les deux longueurs d'option, le compte
+2 à 6), partagées avec le formulaire de l'app et avec le callable.
 
 **Un ULID d'option ne se régénère jamais.** Une réponse et `answer_counts` pointent dessus, donc
 l'édition fait remonter l'id existant à travers le formulaire (champ caché) et n'en mint un que pour
@@ -73,6 +80,12 @@ chaîne ISO : `updateDoc` ne passe pas par le converter (voir le `CLAUDE.md` rac
 `useQuestions` lit le pot entier, `orderBy('created_at', 'desc')`, sans filtre : l'interface est
 admin-only et c'est le joker `isAdmin()` qui l'ouvre. Abonné plutôt que lu une fois, donc un verdict
 rendu depuis FireCMS au même moment apparaît dans le tableau sans rechargement.
+
+**Rejeter rembourse.** Passer une question en `rejected` déclenche `questions-onQuestionUpdated`, qui
+rend à son auteur le `statcoin_cost` que la question porte — donc rien sur une question semée, sur la
+démo ou sur une question écrite d'ici, qui n'ont rien coûté, et une seule fois quoi qu'il arrive
+(`refunded_at`). Rejeter une question déjà remboursée puis la ré-approuver ne redébite personne :
+c'est un modérateur qui remet une question dans le pot, pas un second achat.
 
 **Rejeter passe par sa propre modale** (`RejectQuestionModal`) : un refus porte son motif, renvoyé à
 l'auteur, et c'est le seul champ que le modèle exige à côté du statut `rejected` — donc un formulaire
