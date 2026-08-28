@@ -3,6 +3,8 @@ import { DAILY_QUESTION_TIME_ZONE, type Identifiable, type QuestionData } from '
 import type { EmailMessage } from '@/domains/notifications';
 import { initFirebase } from '@/libs/firebase-admin';
 
+import template from '../emails/moderationDigest.fr.html';
+
 /**
  * How many questions the mail names before it stops counting them out.
  *
@@ -20,6 +22,39 @@ const escapeHtml = (text: string): string => (
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
 );
+
+/**
+ * Replaces the `{{KEY}}` placeholders `values` names, and leaves every other
+ * one standing.
+ *
+ * A function replacement rather than a string one, so what lands is taken
+ * literally: a `$&` in a question's label is a question's label, not a
+ * backreference. Nothing rescans what it inserted either, which is what lets
+ * the caller run this over the template *before* any user content is in it and
+ * over each row *after*.
+ */
+const fillPlaceholders = (source: string, values: Record<string, string>): string => (
+  source.replace(/\{\{(\w+)\}\}/g, (placeholder, key: string) => values[key] ?? placeholder)
+);
+
+/**
+ * Replaces one `<!--NAME-->…<!--/NAME-->` block of the template with whatever
+ * `render` makes of the fragment inside it.
+ *
+ * The markers sit around a *sample* row rather than at an insertion point, so
+ * the template file stays openable in a browser and reviewable as the mail it
+ * is — the repetition is the only thing code adds.
+ */
+const fillBlock = (source: string, name: string, render: (fragment: string) => string): string => {
+  const block = new RegExp(`[ \\t]*<!--${name}-->\\s*([\\s\\S]*?)\\s*<!--/${name}-->[ \\t]*\\n?`);
+  const found = source.match(block);
+
+  if (found === null) {
+    throw new Error(`The moderation digest template has no ${name} block`);
+  }
+
+  return source.replace(block, () => render(found[1]));
+};
 
 /**
  * The moderation console's own URL, derived from the project rather than
@@ -43,7 +78,7 @@ const dateFormatter = new Intl.DateTimeFormat('fr-FR', {
   year: 'numeric',
 });
 
-/** « le 12/03/2026 », or nothing at all when the stamp is unreadable — a date is a detail, not a reason to fail the digest. */
+/** « 12/03/2026 », or nothing at all when the stamp is unreadable — a date is a detail, not a reason to fail the digest. */
 const proposedOn = (question: Identifiable<QuestionData>): string => {
   const date = new Date(question.created_at);
 
@@ -59,6 +94,16 @@ const subjectOf = (count: number): string => (
     : `${count} questions à modérer sur StatOwrel`
 );
 
+const introOf = (count: number): string => (
+  count === 1
+    ? 'Une question attend une décision dans la console de modération.'
+    : `${count} questions attendent une décision dans la console de modération.`
+);
+
+const moreOf = (remaining: number): string => (
+  `… et ${remaining} autre${remaining > 1 ? 's' : ''}.`
+);
+
 const textBodyOf = (questions: Identifiable<QuestionData>[], url: string): string => {
   const lines = questions.slice(0, LISTED_QUESTIONS).map((question) => (
     `- « ${question.label} » — ${authorOf(question)}, ${proposedOn(question)}`
@@ -67,35 +112,55 @@ const textBodyOf = (questions: Identifiable<QuestionData>[], url: string): strin
   const remaining = questions.length - lines.length;
 
   return [
-    questions.length === 1
-      ? 'Une question attend une décision dans la console de modération.'
-      : `${questions.length} questions attendent une décision dans la console de modération.`,
+    introOf(questions.length),
     '',
     ...lines,
-    ...(remaining > 0 ? [ `- … et ${remaining} autre${remaining > 1 ? 's' : ''}.` ] : []),
+    ...(remaining > 0 ? [ `- ${moreOf(remaining)}` ] : []),
     '',
     `Modérer : ${url}`,
   ].join('\n');
 };
 
+/**
+ * The branded body, off `emails/moderationDigest.fr.html` — one copy of the
+ * wording, inlined into the bundle by esbuild's `text` loader and read from
+ * disk by `scripts/send-moderation-digest.mjs`, so what a dry run shows is what
+ * Wednesday morning sends.
+ */
 const htmlBodyOf = (questions: Identifiable<QuestionData>[], url: string): string => {
-  const rows = questions.slice(0, LISTED_QUESTIONS).map((question) => (
-    `<li style="margin:0 0 12px;"><strong>${escapeHtml(question.label)}</strong><br />`
-    + `<span style="color:#666;">${escapeHtml(authorOf(question))} — ${proposedOn(question)}</span></li>`
+  const listed = questions.slice(0, LISTED_QUESTIONS);
+  const remaining = questions.length - listed.length;
+
+  // The outer placeholders go in first, while nothing user-written is in the
+  // string yet; the rows are spliced after, and never rescanned. A label
+  // reading `{{URL}}` is then a label and not a link.
+  let body = fillPlaceholders(template, { INTRO: escapeHtml(introOf(questions.length)), URL: url });
+
+  body = fillBlock(body, 'QUESTION_ROW', (row) => listed.map((question) => fillPlaceholders(row, {
+    LABEL: escapeHtml(question.label),
+    AUTHOR: escapeHtml(authorOf(question)),
+    DATE: proposedOn(question),
+  })).join(''));
+
+  body = fillBlock(body, 'MORE_ROW', (row) => (
+    remaining > 0 ? fillPlaceholders(row, { MORE: escapeHtml(moreOf(remaining)) }) : ''
   ));
 
-  const remaining = questions.length - rows.length;
+  // What is left of the comments is the note to whoever edits the template, and
+  // a moderator opening the source of their mail has no use for it. The block
+  // markers are already gone, consumed above; nothing here relies on a
+  // conditional comment, which this would eat too.
+  body = body.replace(/[ \t]*<!--[\s\S]*?-->[ \t]*\n?/g, '');
 
-  return [
-    '<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:#111;">',
-    `<p>${questions.length === 1
-      ? 'Une question attend une décision dans la console de modération.'
-      : `<strong>${questions.length} questions</strong> attendent une décision dans la console de modération.`}</p>`,
-    `<ul style="padding-left:20px;">${rows.join('')}</ul>`,
-    ...(remaining > 0 ? [ `<p style="color:#666;">… et ${remaining} autre${remaining > 1 ? 's' : ''}.</p>` ] : []),
-    `<p><a href="${url}" style="display:inline-block;background:#111;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;">Ouvrir la console</a></p>`,
-    '</div>',
-  ].join('');
+  const unfilled = body.match(/\{\{(\w+)\}\}/);
+
+  if (unfilled !== null) {
+    // A placeholder nobody fills would ship as `{{FOO}}` in somebody's inbox,
+    // which is the kind of thing a template edit introduces silently.
+    throw new Error(`The moderation digest template left ${unfilled[0]} unfilled`);
+  }
+
+  return body;
 };
 
 /**
