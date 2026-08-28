@@ -250,9 +250,16 @@ export const ProposeQuestionScreen = () => {
                       control={control}
                       name={`options.${index}.stat_label`}
                       render={({ field: { onChange, onBlur, value } }) => (
+                        // The StatOwrel is the only field here that needs
+                        // naming — « Réponse N » above already names the answer
+                        // itself — and « Tu es un.e » names it better than the
+                        // word StatOwrel would: it is the sentence the result
+                        // screen finishes with what is typed under it
+                        // (docs/prd.md §5.5).
                         <TextField
-                          accessibilityLabel={`StatOwrel de la réponse ${index + 1}, facultative`}
-                          placeholder="Tu es…"
+                          label="Tu es un.e"
+                          accessibilityLabel={`Tu es un.e, réponse ${index + 1}, facultatif`}
+                          placeholder="méthodique"
                           maxLength={QUESTION_OPTION_STAT_LABEL_MAX_LENGTH}
                           value={value}
                           onBlur={onBlur}
