@@ -1,6 +1,7 @@
+import { getIdToken } from '@react-native-firebase/auth';
 import { type Functions, connectFunctionsEmulator, getFunctions, httpsCallable } from '@react-native-firebase/functions';
 
-import { app } from './firebase';
+import { app, auth } from './firebase';
 
 /**
  * Client-side counterpart of `apps/functions/src/libs/firebase-admin.ts`'s
@@ -32,6 +33,20 @@ if (process.env.EXPO_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR_HOST && process.env.EXPO
  * `src/friends/errors.ts`).
  */
 export const callFunction = async <TPayload, TResult>(name: string, payload: TPayload): Promise<TResult> => {
+  // **Probe, and a candidate fix in the same line.** The backend sees no
+  // `Authorization` header on a call made from a signed-in session — a known
+  // react-native-firebase complaint (invertase/react-native-firebase#8492,
+  // #6622) rather than anything the callable does. Asking the user for their
+  // ID token first is the cheapest theory: it forces the native auth interop
+  // the Functions SDK reads through to resolve a token before the request is
+  // built. If it turns out not to be what fixes it, this line goes.
+  const user = auth.currentUser;
+  const token = user === null ? null : await getIdToken(user);
+
+  if (__DEV__) {
+    console.log(`[functions] ${name}: user ${user?.uid ?? 'none'}, token ${token === null ? 'none' : `${token.length} chars`}`);
+  }
+
   const { data } = await httpsCallable<TPayload, TResult>(functions, name)(payload);
 
   return data;
