@@ -85,7 +85,7 @@ npm run check-google-signin -- --expect <SHA-1>  # ... and whether that one is a
 
 **IMPORTANT**: After modifying any file in `packages/models`, ALWAYS run `npm run typecheck` to verify no type errors were introduced across the monorepo.
 
-**IMPORTANT**: There are no PR-gating CI checks. Run `npm run typecheck` and `npm run lint` manually before merging.
+**IMPORTANT**: `.github/workflows/ci.yml` runs `typecheck`, `lint` and `build` as three parallel jobs on every pull request and on every push to `main`. `build` is the one the other two do not cover: it is the esbuild bundle `firebase deploy` actually ships and the Vite build of the console, neither of which a `tsc --noEmit` says anything about. `apps/app` is built by EAS, not by CI. Run the three locally before pushing all the same — a red PR costs a cycle.
 
 **IMPORTANT**: There is only one Firebase project — `.firebaserc` aliases both `default` and `production` to `statowrel-app`. **Development happens on the emulators** (`npm run dev:functions`, then `npm run seed-emulator`), never on the project: every other script writes to the real thing with or without `--production`. `seed-emulator` is the only one that cannot — it refuses both flags and talks to the emulator ports alone. See docs/architecture.md § Environments.
 

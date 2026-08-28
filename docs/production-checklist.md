@@ -436,8 +436,9 @@ milliers de comptes, ou fausser les `answer_counts` qui font tout l'intérêt du
 À faire sur un build **`production`**, pas `preview` — même si les deux partagent l'identifiant,
 seul le premier porte la configuration finale.
 
-- [ ] `npm run typecheck` et `npm run lint` verts (il n'y a **aucune CI** sur ce dépôt : personne
-      d'autre ne le fera)
+- [ ] `npm run typecheck`, `npm run lint` et `npm run build` verts — la CI
+      (`.github/workflows/ci.yml`) les passe sur chaque PR, mais rien ne les rejoue sur le tag
+      qu'on soumet : c'est ici que ça se vérifie une dernière fois
 - [ ] `npm run build:prod:ios` et `npm run build:prod:android`
 - [ ] Installer sur un **appareil physique neuf**, pas un simulateur
 - [ ] Parcours complet sur les deux plateformes :
