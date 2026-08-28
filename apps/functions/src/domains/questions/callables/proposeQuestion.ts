@@ -82,19 +82,6 @@ const payloadSchema = z.object({
 export const proposeQuestion = onCall<unknown, Promise<ProposeQuestionResult>>(
   { region: REGION_CLOUD },
   async (request) => {
-    // **Temporary, and emulator-only.** The app gets `unauthenticated` from a
-    // signed-in session while the very same call made with curl and a token
-    // from the Auth emulator goes through — so the question is whether the
-    // token is attached at all. `FUNCTIONS_EMULATOR` guards it the way
-    // `ANSWER_TRIGGER_DELAY_MS` is guarded: this can never log on a deployed
-    // function. Comes out as soon as it has answered.
-    if (process.env.FUNCTIONS_EMULATOR) {
-      logger.info('propose auth', {
-        header: request.rawRequest.headers.authorization ? 'present' : 'absent',
-        uid: request.auth?.uid ?? null,
-      });
-    }
-
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Sign in to propose a question.');
     }
