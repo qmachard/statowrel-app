@@ -436,8 +436,9 @@ milliers de comptes, ou fausser les `answer_counts` qui font tout l'intérêt du
 À faire sur un build **`production`**, pas `preview` — même si les deux partagent l'identifiant,
 seul le premier porte la configuration finale.
 
-- [ ] `npm run typecheck` et `npm run lint` verts (il n'y a **aucune CI** sur ce dépôt : personne
-      d'autre ne le fera)
+- [ ] `npm run typecheck`, `npm run lint` et `npm run build` verts — la CI
+      (`.github/workflows/ci.yml`) les passe sur chaque PR, mais rien ne les rejoue sur le tag
+      qu'on soumet : c'est ici que ça se vérifie une dernière fois
 - [ ] `npm run build:prod:ios` et `npm run build:prod:android`
 - [ ] Installer sur un **appareil physique neuf**, pas un simulateur
 - [ ] Parcours complet sur les deux plateformes :
@@ -499,6 +500,14 @@ monde se casse le lendemain. Un jour sans question est le pire incident possible
 - [ ] Vérifier que la console est bien fermée aux comptes sans le claim `admin`
 - [ ] Vérifier que le premier jour est amorcé : `npm run seed-daily-questions` diffuse les cinq
       jours précédents, pour qu'un nouvel arrivant ne tombe pas sur un calendrier vide
+- [ ] Renseigner la clé d'envoi du digest **avant** le premier déploiement des functions :
+      `firebase functions:secrets:set RESEND_API_KEY` — sans elle, le déploiement s'arrête pour
+      la réclamer, et `questions-scheduleModerationDigest` échoue à 08:00
+- [ ] Vérifier le domaine d'envoi chez Resend et poser `RESEND_FROM` dans l'environnement des
+      functions : sans lui, l'expéditeur partagé de Resend ne délivre qu'à l'adresse du compte
+      Resend, donc à un seul modérateur
+- [ ] Vérifier qu'un matin avec des questions `pending` produit bien un e-mail, et qu'un matin
+      sans n'en produit aucun (`firebase functions:log --only questions-scheduleModerationDigest`)
 
 ### 5.3 🟡 Le premier matin
 

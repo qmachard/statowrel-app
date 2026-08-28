@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+# A PR pushed to twice in a minute does not need its first run finished.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # turbo's `typecheck` dependsOn `^build`, so this builds @statowrel/models
+      # first: every workspace typechecks against the published .d.ts, not the
+      # source, which is what the other three do locally.
+      - run: npm run typecheck
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # What typecheck does not cover: the esbuild bundle `firebase deploy`
+      # actually ships (`apps/functions/dist`) and the Vite build of the
+      # console. Both are deploy-blockers a `tsc --noEmit` says nothing about.
+      # `apps/app` has no build script — it is built by EAS, not here.
+      - run: npm run build

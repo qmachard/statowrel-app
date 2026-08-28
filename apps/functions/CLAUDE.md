@@ -66,6 +66,18 @@ There are none, deliberately. `initFirebase()` calls `initializeApp()` with no a
 
 Adding a `defineString()` param is not free: the Firebase CLI resolves params **at deploy time** and stops to ask for every one it cannot find in `.env` / `.env.<projectId>`, so an unset param turns every deploy into an interactive prompt. Add one only for a value the runtime genuinely cannot provide, and ship its value in `.env.<projectId>` at the same time. `.env*` is gitignored — a param holding a credential must never be committed.
 
+**Secrets are the exception, and there is one.** `RESEND_API_KEY` (`defineSecret`, declared in `src/domains/notifications/helpers/resendEmail.ts`) is what the moderation digest sends through. A `defineSecret()` is asked for **once**, stored in Secret Manager, and read from there by every later deploy — which is exactly what a credential needs, since the alternative is a `.env` file that must never be committed. Set it before the first deploy that includes a mail-sending function:
+
+```bash
+firebase functions:secrets:set RESEND_API_KEY
+```
+
+A secret is only readable by the functions that name it in their own `secrets: []`; a function that forgets to is handed an empty string, which `sendEmails` refuses out loud rather than silently not sending.
+
+Two plain `process.env` reads ride alongside it, because neither is a credential and neither is worth a deploy-time prompt: `RESEND_FROM` (the sender — unset, it falls back to Resend's shared `onboarding@resend.dev`, which only delivers to the address the Resend account was opened with) and `EXPO_ACCESS_TOKEN` (see below).
+
+**Those two go in a `.env` file in *this* directory, and that takes `configDir`.** Firebase reads `.env` / `.env.<projectId>` / `.env.<alias>` — plus `.env.local` for the emulator alone — from the functions `source` directory by default, and `source` here is the generated `apps/functions/dist`, which `npm run clean` wipes before every build. So a `.env` put there cannot survive a deploy, and one put here was read by nothing. `firebase.json` therefore sets `"configDir": "apps/functions"` on the functions entry, which is the one knob that moves the lookup off `source` — without it, `RESEND_FROM`, `EXPO_ACCESS_TOKEN` and the emulator's `ANSWER_TRIGGER_DELAY_MS` are all silently ignored. `.env.example` lists them; every other `.env*` is gitignored, and **a credential never goes in one** — that is what the secret above is for.
+
 ## Ops scripts (`scripts/`)
 
 Plain `.mjs`, run directly with node — outside `src/`, so they are neither type-checked nor reachable from the bundle's entry point, and never reach the deploy artifact.
@@ -188,6 +200,21 @@ It then does the one thing the backend does not: it polls `/push/getReceipts`. A
 **There is no emulator for Expo push.** `FIRESTORE_EMULATOR_HOST` (plus `FIREBASE_AUTH_EMULATOR_HOST` for `--email`) decides where the *tokens* are read from and nothing else: the token is real, the phone is real, the banner really lands. Hence a target is required rather than defaulted, and `--all` is refused on production without `--force`.
 
 Two failures it names rather than leaves to be guessed: no device at all (the app was never launched signed-in on a real phone — a simulator never gets a token), and a `--date` no question ran, whose tap would open a dead end.
+
+```bash
+npm run send-moderation-digest -- --dry-run              # reads the pot, sends nothing
+npm run send-moderation-digest -- --dry-run --html       # ... showing the HTML body instead
+npm run send-moderation-digest -- --to moi@exemple.fr    # really sends, to that address only
+npm run send-moderation-digest -- --production --force   # ... to every real moderator
+```
+
+The same thing for the 08:00 digest, and for the same reason: it leaves the backend and only comes back in an inbox tomorrow morning. It builds exactly what `questions-scheduleModerationDigest` builds — the same subject, the same pot oldest first, the same twenty-line cap, the same link — off a **second copy** of the wording, since a `.mjs` cannot import the TypeScript in `src/`. Change `helpers/moderationDigest.ts`, change this too.
+
+The behaviour worth checking by hand is the one that produces nothing: an empty pot ends the run with « the 08:00 run would send nothing at all », because a morning with no mail and a morning with a broken digest look identical from an inbox. It also reports the moderators it resolved, which doubles as a check that `npm run set-admin` did what it claimed.
+
+**A target is required rather than defaulted.** `--dry-run` or `--to <email>` say what a run is for; mailing every account holding the `admin` claim needs `--force`, the default of a script that reaches real inboxes not being "all of them". `--to` also overrides the claim walk entirely, which is how the mail gets read on one's own address before anybody else sees it.
+
+**There is no emulator for Resend**, exactly as there is none for Expo push: `FIRESTORE_EMULATOR_HOST` (plus `FIREBASE_AUTH_EMULATOR_HOST` for the moderator list) decides where the *questions* are read from and nothing else. And a real send reads `RESEND_API_KEY` from the environment — the deployed function reads the same value out of Secret Manager, which a script cannot.
 
 ## Deploy
 
