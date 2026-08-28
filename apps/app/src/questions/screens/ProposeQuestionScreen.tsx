@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { SuccessCheck } from '@/components/animations';
-import { Plus, X } from '@/components/icons';
+import { Plus, Trash2, X } from '@/components/icons';
 import { TextField } from '@/components/TextField';
 import { borderWidth, colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { amountLabel, spokenAmountLabel } from '@/lib/statcoins';
@@ -81,6 +81,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing(2),
+  },
+  // A second dimming, on top of the 0.6 `Button` already applies when it is
+  // disabled — so this reads at about 0.3. One cran is enough on a filled
+  // surface; on a `ghost`, where the icon is the only ink there is, 0.6 still
+  // looks like a button one may press.
+  removeDisabled: {
+    opacity: 0.5,
   },
   // Both labels of an answer take this, and neither takes `TextField`'s own:
   // two label treatments inside one block read as a mistake rather than as a
@@ -235,14 +242,16 @@ export const ProposeQuestionScreen = () => {
                             third answer moves every row it is added to, and a
                             row that shifts under the finger is worse than a
                             control that says it is unavailable. */}
-                        <Button
-                          label={`Retirer la réponse ${index + 1}`}
-                          variant="ghost"
-                          size="icon-sm"
-                          icon={X}
-                          disabled={fields.length <= QUESTION_MIN_OPTIONS}
-                          onPress={() => remove(index)}
-                        />
+                        <View style={fields.length <= QUESTION_MIN_OPTIONS ? styles.removeDisabled : null}>
+                          <Button
+                            label={`Retirer la réponse ${index + 1}`}
+                            variant="ghost"
+                            size="icon-sm"
+                            icon={Trash2}
+                            disabled={fields.length <= QUESTION_MIN_OPTIONS}
+                            onPress={() => remove(index)}
+                          />
+                        </View>
                       </View>
 
                       <Controller
