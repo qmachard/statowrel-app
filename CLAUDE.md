@@ -78,6 +78,8 @@ npm run backfill-question-authors             # stamps v1_questions.author_usern
 npm run backfill-question-authors -- --dry-run  # ... says what it would write (also --production)
 npm run backfill-statcoins                    # rebuilds the streak counters from the answers, pays what the streaks owe
 npm run backfill-statcoins -- --dry-run       # ... reports every account, writes nothing (also --production)
+npm run check-google-signin                    # says which Android fingerprints Firebase really turned into OAuth clients
+npm run check-google-signin -- --expect <SHA-1>  # ... and whether that one is among them (also --variant development)
 ```
 
 **IMPORTANT**: After modifying any file in `packages/models`, ALWAYS run `npm run typecheck` to verify no type errors were introduced across the monorepo.
