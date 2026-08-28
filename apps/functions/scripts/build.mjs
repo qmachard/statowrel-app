@@ -53,6 +53,10 @@ const options = {
   // Everything on the registry is installed by the build machine from the
   // generated manifest; only the workspace package has to travel inlined.
   external: Object.keys(manifest.dependencies),
+  // An e-mail body is written as an HTML file and imported as text, so the
+  // template is reviewable as the mail it is and the deployed function still
+  // reads nothing from disk.
+  loader: { '.html': 'text' },
 };
 
 await writeArtifactManifest();

@@ -2,15 +2,14 @@
 //
 // Sends the moderation digest by hand — the one part of the morning that cannot
 // be checked from a screen, since it leaves the backend and only comes back in
-// somebody's inbox at 08:00.
+// somebody's inbox on Wednesday morning.
 //
-// It builds exactly what `questions-scheduleModerationDigest` builds: the same
-// subject, the same list of the `pending` pot oldest first, the same twenty-line
-// cap and the same link onto the console — so a mail that reads right here is a
-// mail that will read right tomorrow morning. The two are separate copies of the
-// same wording (a `.mjs` cannot import the TypeScript in `src/`), which is the
-// same trade `send-test-notification.mjs` makes: **change one, change the
-// other** (`src/domains/questions/helpers/moderationDigest.ts`).
+// It builds exactly what `questions-scheduleModerationDigest` builds, off the
+// same file: `src/domains/questions/emails/moderationDigest.fr.html` is read
+// from disk here and inlined into the deployed bundle over there, so the mail
+// that reads right in a dry run is the mail that lands tomorrow morning. Only
+// the filling is duplicated — a `.mjs` cannot import the TypeScript in `src/`
+// — so `helpers/moderationDigest.ts` and this have to agree on it.
 //
 //   npm run send-moderation-digest -- --dry-run           # reads the pot, sends nothing
 //   npm run send-moderation-digest -- --dry-run --html    # ... showing the HTML body instead
@@ -36,6 +35,10 @@
 // A real send reads `RESEND_API_KEY` from the environment — the deployed
 // function reads the same value out of Secret Manager, which a script cannot.
 // `RESEND_FROM` is the sender, and falls back to Resend's shared one.
+
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -152,14 +155,43 @@ const adminEmails = async () => {
 };
 
 // ---------------------------------------------------------------------------
-// The digest itself — the copy of `helpers/moderationDigest.ts`.
+// The digest itself.
+//
+// The wording is `src/domains/questions/emails/moderationDigest.fr.html`, read
+// here from disk and inlined into the bundle by esbuild over there — one copy,
+// so a dry run shows what Wednesday morning sends. The filling below is the copy: a `.mjs`
+// cannot import the TypeScript in `src/`, so `helpers/moderationDigest.ts` and
+// this have to agree. Change one, change the other.
 // ---------------------------------------------------------------------------
+
+const TEMPLATE_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), '../src/domains/questions/emails/moderationDigest.fr.html');
+
+const template = await readFile(TEMPLATE_PATH, 'utf-8').catch(() => (
+  die(`Could not read the e-mail template at ${TEMPLATE_PATH}.`)
+));
 
 const escapeHtml = (text) => text
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
+
+/** Fills the `{{KEY}}` placeholders `values` names and leaves the others standing. */
+const fillPlaceholders = (source, values) => (
+  source.replace(/\{\{(\w+)\}\}/g, (placeholder, key) => values[key] ?? placeholder)
+);
+
+/** Replaces one `<!--NAME-->…<!--/NAME-->` block with whatever `render` makes of the fragment inside it. */
+const fillBlock = (source, name, render) => {
+  const block = new RegExp(`[ \\t]*<!--${name}-->\\s*([\\s\\S]*?)\\s*<!--/${name}-->[ \\t]*\\n?`);
+  const found = source.match(block);
+
+  if (found === null) {
+    die(`The e-mail template has no ${name} block.`);
+  }
+
+  return source.replace(block, () => render(found[1]));
+};
 
 const consoleUrl = `https://${projectId}.web.app/admin`;
 
@@ -182,6 +214,14 @@ const subjectOf = (count) => (
   count === 1 ? '1 question à modérer sur StatOwrel' : `${count} questions à modérer sur StatOwrel`
 );
 
+const introOf = (count) => (
+  count === 1
+    ? 'Une question attend une décision dans la console de modération.'
+    : `${count} questions attendent une décision dans la console de modération.`
+);
+
+const moreOf = (remaining) => `… et ${remaining} autre${remaining > 1 ? 's' : ''}.`;
+
 const textBodyOf = (questions) => {
   const lines = questions.slice(0, LISTED_QUESTIONS)
     .map((question) => `- « ${question.label} » — ${authorOf(question)}, ${proposedOn(question)}`);
@@ -189,35 +229,41 @@ const textBodyOf = (questions) => {
   const remaining = questions.length - lines.length;
 
   return [
-    questions.length === 1
-      ? 'Une question attend une décision dans la console de modération.'
-      : `${questions.length} questions attendent une décision dans la console de modération.`,
+    introOf(questions.length),
     '',
     ...lines,
-    ...(remaining > 0 ? [ `- … et ${remaining} autre${remaining > 1 ? 's' : ''}.` ] : []),
+    ...(remaining > 0 ? [ `- ${moreOf(remaining)}` ] : []),
     '',
     `Modérer : ${consoleUrl}`,
   ].join('\n');
 };
 
 const htmlBodyOf = (questions) => {
-  const rows = questions.slice(0, LISTED_QUESTIONS).map((question) => (
-    `<li style="margin:0 0 12px;"><strong>${escapeHtml(question.label)}</strong><br />`
-    + `<span style="color:#666;">${escapeHtml(authorOf(question))} — ${proposedOn(question)}</span></li>`
+  const listed = questions.slice(0, LISTED_QUESTIONS);
+  const remaining = questions.length - listed.length;
+
+  let body = fillPlaceholders(template, { INTRO: escapeHtml(introOf(questions.length)), URL: consoleUrl });
+
+  body = fillBlock(body, 'QUESTION_ROW', (row) => listed.map((question) => fillPlaceholders(row, {
+    LABEL: escapeHtml(question.label),
+    AUTHOR: escapeHtml(authorOf(question)),
+    DATE: proposedOn(question),
+  })).join(''));
+
+  body = fillBlock(body, 'MORE_ROW', (row) => (
+    remaining > 0 ? fillPlaceholders(row, { MORE: escapeHtml(moreOf(remaining)) }) : ''
   ));
 
-  const remaining = questions.length - rows.length;
+  // The note to whoever edits the template does not belong in a moderator's mail.
+  body = body.replace(/[ \t]*<!--[\s\S]*?-->[ \t]*\n?/g, '');
 
-  return [
-    '<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:#111;">',
-    `<p>${questions.length === 1
-      ? 'Une question attend une décision dans la console de modération.'
-      : `<strong>${questions.length} questions</strong> attendent une décision dans la console de modération.`}</p>`,
-    `<ul style="padding-left:20px;">${rows.join('')}</ul>`,
-    ...(remaining > 0 ? [ `<p style="color:#666;">… et ${remaining} autre${remaining > 1 ? 's' : ''}.</p>` ] : []),
-    `<p><a href="${consoleUrl}" style="display:inline-block;background:#111;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;">Ouvrir la console</a></p>`,
-    '</div>',
-  ].join('');
+  const unfilled = body.match(/\{\{(\w+)\}\}/);
+
+  if (unfilled !== null) {
+    die(`The e-mail template left ${unfilled[0]} unfilled.`);
+  }
+
+  return body;
 };
 
 // ---------------------------------------------------------------------------
@@ -230,7 +276,7 @@ const questions = await pendingQuestions();
 // an empty pot is a morning with no mail at all, not a mail saying there is
 // nothing.
 if (questions.length === 0) {
-  console.log('✔ Nothing waiting for moderation — the 08:00 run would send nothing at all, and neither does this.');
+  console.log('✔ Nothing waiting for moderation — the Wednesday run would send nothing at all, and neither does this.');
   process.exit(0);
 }
 

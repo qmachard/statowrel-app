@@ -208,9 +208,9 @@ npm run send-moderation-digest -- --to moi@exemple.fr    # really sends, to that
 npm run send-moderation-digest -- --production --force   # ... to every real moderator
 ```
 
-The same thing for the 08:00 digest, and for the same reason: it leaves the backend and only comes back in an inbox tomorrow morning. It builds exactly what `questions-scheduleModerationDigest` builds — the same subject, the same pot oldest first, the same twenty-line cap, the same link — off a **second copy** of the wording, since a `.mjs` cannot import the TypeScript in `src/`. Change `helpers/moderationDigest.ts`, change this too.
+The same thing for the weekly digest, and for the same reason: it leaves the backend and only comes back in an inbox tomorrow morning. It builds exactly what `questions-scheduleModerationDigest` builds, **off the same file**: `src/domains/questions/emails/moderationDigest.fr.html` is read from disk here and inlined into the deployed bundle by esbuild's `text` loader, so a dry run renders byte for byte what Wednesday morning sends. Only the filling is duplicated — a `.mjs` cannot import the TypeScript in `src/` — so `helpers/moderationDigest.ts` and the script have to agree on it.
 
-The behaviour worth checking by hand is the one that produces nothing: an empty pot ends the run with « the 08:00 run would send nothing at all », because a morning with no mail and a morning with a broken digest look identical from an inbox. It also reports the moderators it resolved, which doubles as a check that `npm run set-admin` did what it claimed.
+The behaviour worth checking by hand is the one that produces nothing: an empty pot ends the run with « the Wednesday run would send nothing at all », because a week with no mail and a week with a broken digest look identical from an inbox. It also reports the moderators it resolved, which doubles as a check that `npm run set-admin` did what it claimed.
 
 **A target is required rather than defaulted.** `--dry-run` or `--to <email>` say what a run is for; mailing every account holding the `admin` claim needs `--force`, the default of a script that reaches real inboxes not being "all of them". `--to` also overrides the claim walk entirely, which is how the mail gets read on one's own address before anybody else sees it.
 

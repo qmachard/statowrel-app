@@ -1,0 +1,152 @@
+<!--
+  Le corps du digest de modération hebdomadaire, aux couleurs de l'app
+  (apps/app/src/design/tokens.ts) et aux mêmes conventions que
+  firebase/email-templates/password-reset.fr.html : tout est en tables et en
+  styles inline (les clients mail suppriment les feuilles de style), l'ombre
+  portée est une table noire que le padding découvre en bas et à droite plutôt
+  qu'un box-shadow (non supporté par Gmail), et les polices de la marque sont
+  déclarées avec leurs replis système (Gmail ne charge aucune webfont).
+
+  Ce qui le distingue du modèle mot de passe : il n'est pas collé dans la
+  console Firebase, il est envoyé par `questions-scheduleModerationDigest`. Il
+  est donc rempli à l'exécution — {{PLACEHOLDER}} — et les deux blocs entre
+  marqueurs sont des fragments répétés ou retirés par
+  `helpers/moderationDigest.ts`, jamais rendus tels quels. Le fichier reste
+  ouvrable dans un navigateur pour être relu.
+
+  Une seule copie : le bundle esbuild l'inline (loader `text`), et
+  `scripts/send-moderation-digest.mjs` lit le même fichier. Le libellé d'une
+  question est du texte tapé dans l'app, échappé avant d'arriver ici.
+-->
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Questions à modérer</title>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #f7f0d4;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f7f0d4;">
+      <tr>
+        <td align="center" style="padding: 32px 16px 48px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px;">
+            <tr>
+              <td align="left" style="padding-bottom: 24px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #000000; border-radius: 8px;">
+                  <tr>
+                    <td style="padding: 0 4px 4px 0;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffdc59; border: 2px solid #000000; border-radius: 8px;">
+                        <tr>
+                          <td style="padding: 8px 14px; font-family: 'Archivo Black', 'Arial Black', Arial, sans-serif; font-size: 14px; font-weight: 900; line-height: 1; letter-spacing: 0.5px; text-transform: uppercase; color: #000000;">
+                            &#9733; StatOwrel
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #000000; border-radius: 12px;">
+                  <tr>
+                    <td style="padding: 0 6px 6px 0;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border: 2px solid #000000; border-radius: 12px;">
+                        <tr>
+                          <td style="padding: 32px 24px;">
+                            <h1 style="margin: 0 0 16px; font-family: 'Archivo Black', 'Arial Black', Arial, sans-serif; font-size: 28px; font-weight: 900; line-height: 1.2; text-transform: uppercase; color: #000000;">
+                              Questions &agrave; mod&eacute;rer
+                            </h1>
+
+                            <p style="margin: 0 0 24px; font-family: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #000000;">
+                              {{INTRO}}
+                            </p>
+
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 8px;">
+                              <!--QUESTION_ROW-->
+                              <tr>
+                                <td style="padding: 0 0 16px;">
+                                  <p style="margin: 0 0 2px; font-family: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 700; line-height: 1.4; color: #000000;">
+                                    {{LABEL}}
+                                  </p>
+                                  <p style="margin: 0; font-family: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #6b6355;">
+                                    {{AUTHOR}}&nbsp;&middot;&nbsp;{{DATE}}
+                                  </p>
+                                </td>
+                              </tr>
+                              <!--/QUESTION_ROW-->
+                              <!--MORE_ROW-->
+                              <tr>
+                                <td style="padding: 0 0 16px; font-family: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #6b6355;">
+                                  {{MORE}}
+                                </td>
+                              </tr>
+                              <!--/MORE_ROW-->
+                            </table>
+
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #000000; border-radius: 8px;">
+                              <tr>
+                                <td style="padding: 0 4px 4px 0;">
+                                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffdc59; border: 2px solid #000000; border-radius: 8px;">
+                                    <tr>
+                                      <td align="center" style="padding: 14px 24px;">
+                                        <a href="{{URL}}" style="display: inline-block; font-family: 'Archivo Black', 'Arial Black', Arial, sans-serif; font-size: 16px; font-weight: 900; line-height: 1; letter-spacing: 0.5px; text-transform: uppercase; text-decoration: none; color: #000000;">
+                                          Ouvrir la console
+                                        </a>
+                                      </td>
+                                    </tr>
+                                  </table>
+                                </td>
+                              </tr>
+                            </table>
+
+                            <p style="margin: 24px 0 8px; font-family: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #6b6355;">
+                              Le bouton ne marche pas&nbsp;? Colle ce lien dans ton navigateur&nbsp;:
+                            </p>
+
+                            <p style="margin: 0; font-family: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; word-break: break-all; color: #6b6355;">
+                              <a href="{{URL}}" style="color: #d04060; text-decoration: underline;">{{URL}}</a>
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding-top: 24px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #eae1bd; border: 2px solid #000000; border-radius: 12px;">
+                  <tr>
+                    <td style="padding: 16px 20px; font-family: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #000000;">
+                      Une question refus&eacute;e rend ses 100&sect; &agrave; son auteur, une question approuv&eacute;e part dans le tirage du matin. Tant qu'elle attend, elle ne fait ni l'un ni l'autre.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td align="center" style="padding-top: 32px;">
+                <p style="margin: 0 0 8px; font-family: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #6b6355;">
+                  StatOwrel &mdash; une question par jour, la m&ecirc;me pour tout le monde.
+                </p>
+                <p style="margin: 0; font-family: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.6; color: #6b6355;">
+                  <a href="https://statowrel-app.web.app/legal/cgu" style="color: #6b6355; text-decoration: underline;">CGU</a>
+                  &nbsp;&middot;&nbsp;
+                  <a href="https://statowrel-app.web.app/legal/confidentialite" style="color: #6b6355; text-decoration: underline;">Confidentialit&eacute;</a>
+                  &nbsp;&middot;&nbsp;
+                  <a href="https://statowrel-app.web.app/legal/assistance" style="color: #6b6355; text-decoration: underline;">Assistance</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
