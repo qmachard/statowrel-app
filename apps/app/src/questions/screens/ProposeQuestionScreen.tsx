@@ -60,7 +60,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.foreground,
   },
+  // Two label-and-field pairs, set further apart than a label is from the field
+  // it names — which is the whole of the grouping: « Réponse 1 » belongs to the
+  // input under it, « Tu es un.e » to its own.
   option: {
+    gap: spacing(4),
+  },
+  pair: {
     gap: spacing(2),
   },
   // Every answer but the first is preceded by a rule, so the block reads as one
@@ -76,6 +82,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing(2),
   },
+  // Both labels of an answer take this, and neither takes `TextField`'s own:
+  // two label treatments inside one block read as a mistake rather than as a
+  // hierarchy. The rank is carried by the section titles above, a size up and
+  // in the head face. Which is why the two fields are label-less and named
+  // through `accessibilityLabel` instead — the screen owns its labels here.
   optionTitle: {
     fontFamily: fonts.sansMedium,
     fontSize: fontSize.sm,
@@ -213,61 +224,63 @@ export const ProposeQuestionScreen = () => {
 
                 {fields.map((field, index) => (
                   <View key={field.id} style={[ styles.option, index > 0 ? styles.optionSeparated : null ]}>
-                    <View style={styles.optionHeader}>
-                      <Text style={styles.optionTitle}>Réponse {index + 1}</Text>
+                    <View style={styles.pair}>
+                      <View style={styles.optionHeader}>
+                        <Text style={styles.optionTitle}>Réponse {index + 1}</Text>
 
-                      {/* The floor is two, so the last two answers carry no way
-                          out: a form that lets itself be emptied only to refuse
-                          the result says no twice. */}
-                      {fields.length > QUESTION_MIN_OPTIONS ? (
-                        <Button
-                          label={`Retirer la réponse ${index + 1}`}
-                          variant="ghost"
-                          size="icon-sm"
-                          icon={X}
-                          onPress={() => remove(index)}
-                        />
-                      ) : null}
+                        {/* The floor is two, so the last two answers carry no
+                            way out: a form that lets itself be emptied only to
+                            refuse the result says no twice. */}
+                        {fields.length > QUESTION_MIN_OPTIONS ? (
+                          <Button
+                            label={`Retirer la réponse ${index + 1}`}
+                            variant="ghost"
+                            size="icon-sm"
+                            icon={X}
+                            onPress={() => remove(index)}
+                          />
+                        ) : null}
+                      </View>
+
+                      <Controller
+                        control={control}
+                        name={`options.${index}.label`}
+                        render={({ field: { onChange, onBlur, value } }) => (
+                          <TextField
+                            accessibilityLabel={`Réponse ${index + 1}`}
+                            placeholder="Par le bout"
+                            maxLength={QUESTION_OPTION_LABEL_MAX_LENGTH}
+                            value={value}
+                            onBlur={onBlur}
+                            onChangeText={onChange}
+                            error={errors.options?.[index]?.label?.message}
+                          />
+                        )}
+                      />
                     </View>
 
-                    <Controller
-                      control={control}
-                      name={`options.${index}.label`}
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <TextField
-                          accessibilityLabel={`Réponse ${index + 1}`}
-                          placeholder="Par le bout"
-                          maxLength={QUESTION_OPTION_LABEL_MAX_LENGTH}
-                          value={value}
-                          onBlur={onBlur}
-                          onChangeText={onChange}
-                          error={errors.options?.[index]?.label?.message}
-                        />
-                      )}
-                    />
+                    <View style={styles.pair}>
+                      {/* The sentence names the StatOwrel better than the word
+                          would: the result screen finishes exactly this phrase
+                          with what is typed under it (docs/prd.md §5.5). */}
+                      <Text style={styles.optionTitle}>Tu es un.e</Text>
 
-                    <Controller
-                      control={control}
-                      name={`options.${index}.stat_label`}
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        // The StatOwrel is the only field here that needs
-                        // naming — « Réponse N » above already names the answer
-                        // itself — and « Tu es un.e » names it better than the
-                        // word StatOwrel would: it is the sentence the result
-                        // screen finishes with what is typed under it
-                        // (docs/prd.md §5.5).
-                        <TextField
-                          label="Tu es un.e"
-                          accessibilityLabel={`Tu es un.e, réponse ${index + 1}, facultatif`}
-                          placeholder="méthodique"
-                          maxLength={QUESTION_OPTION_STAT_LABEL_MAX_LENGTH}
-                          value={value}
-                          onBlur={onBlur}
-                          onChangeText={onChange}
-                          error={errors.options?.[index]?.stat_label?.message}
-                        />
-                      )}
-                    />
+                      <Controller
+                        control={control}
+                        name={`options.${index}.stat_label`}
+                        render={({ field: { onChange, onBlur, value } }) => (
+                          <TextField
+                            accessibilityLabel={`Tu es un.e, réponse ${index + 1}, facultatif`}
+                            placeholder="méthodique"
+                            maxLength={QUESTION_OPTION_STAT_LABEL_MAX_LENGTH}
+                            value={value}
+                            onBlur={onBlur}
+                            onChangeText={onChange}
+                            error={errors.options?.[index]?.stat_label?.message}
+                          />
+                        )}
+                      />
+                    </View>
                   </View>
                 ))}
 
