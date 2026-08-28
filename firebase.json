@@ -3,6 +3,7 @@
     {
       "source": "apps/functions/dist",
       "codebase": "default",
+      "configDir": "apps/functions",
       "predeploy": [
         "npm run build:functions"
       ]

@@ -76,6 +76,8 @@ A secret is only readable by the functions that name it in their own `secrets: [
 
 Two plain `process.env` reads ride alongside it, because neither is a credential and neither is worth a deploy-time prompt: `RESEND_FROM` (the sender — unset, it falls back to Resend's shared `onboarding@resend.dev`, which only delivers to the address the Resend account was opened with) and `EXPO_ACCESS_TOKEN` (see below).
 
+**Those two go in a `.env` file in *this* directory, and that takes `configDir`.** Firebase reads `.env` / `.env.<projectId>` / `.env.<alias>` — plus `.env.local` for the emulator alone — from the functions `source` directory by default, and `source` here is the generated `apps/functions/dist`, which `npm run clean` wipes before every build. So a `.env` put there cannot survive a deploy, and one put here was read by nothing. `firebase.json` therefore sets `"configDir": "apps/functions"` on the functions entry, which is the one knob that moves the lookup off `source` — without it, `RESEND_FROM`, `EXPO_ACCESS_TOKEN` and the emulator's `ANSWER_TRIGGER_DELAY_MS` are all silently ignored. `.env.example` lists them; every other `.env*` is gitignored, and **a credential never goes in one** — that is what the secret above is for.
+
 ## Ops scripts (`scripts/`)
 
 Plain `.mjs`, run directly with node — outside `src/`, so they are neither type-checked nor reachable from the bundle's entry point, and never reach the deploy artifact.
