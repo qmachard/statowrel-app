@@ -15,9 +15,11 @@ import { z } from 'zod';
  * `questions-proposeQuestion`, all three off `@statowrel/models`: the callable
  * is the check, these two are what spare a round trip and say why in French.
  *
- * Every option carries both halves — the answer and the StatOwrel it earns —
- * because a `stat_label` is what the result screen of docs/prd.md §5.5 is made
- * of: an option without one is an option that cannot be won.
+ * **The StatOwrel is optional.** Plenty of questions read better without one —
+ * an option that is already an adjective is its own StatOwrel — so the field is
+ * left empty rather than invented, and `statLabelOf` falls back to the option's
+ * own label wherever the result of docs/prd.md §5.5 is said. Only the answer
+ * itself is required: an option nobody can read is not an option.
  */
 const optionSchema = z.object({
   label: z
@@ -28,7 +30,6 @@ const optionSchema = z.object({
   stat_label: z
     .string()
     .trim()
-    .min(1, 'Renseigne la StatOwrel.')
     .max(QUESTION_OPTION_STAT_LABEL_MAX_LENGTH, `${QUESTION_OPTION_STAT_LABEL_MAX_LENGTH} caractères maximum.`),
 });
 

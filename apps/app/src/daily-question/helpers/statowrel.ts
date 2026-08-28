@@ -123,8 +123,3 @@ export const buildStatOwrel = (
 
   return { picked, share, shares, total, rarity: rarityOf(share) };
 };
-
-/** The StatOwrel itself — « efficace ». Falls back to the option's own label if a question was written without one. */
-export const statLabelOf = (option: QuestionOptionData): string => (
-  option.stat_label.length > 0 ? option.stat_label : option.label
-);

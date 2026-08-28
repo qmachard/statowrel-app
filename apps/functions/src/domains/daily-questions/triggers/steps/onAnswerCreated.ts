@@ -6,6 +6,7 @@ import {
   type DailyQuestionAnswerData,
   findQuestionOption,
   monthDayKeyOf,
+  statLabelOf,
   monthKeyOf,
   QUESTION_COLLECTION,
   questionConverter,
@@ -25,8 +26,12 @@ import { acceptedFriendsQuery } from '../../helpers/friendsAnswers';
 import { nextStreakState } from '../../helpers/streak';
 
 /**
- * The `stat_label` of the option an answer points at — the one the calendar
+ * The StatOwrel of the option an answer points at — the one the calendar
  * renders inside the answered cell (docs/prd.md §5.2).
+ *
+ * Through `statLabelOf`, so an option posed without a StatOwrel — it is
+ * optional (docs/prd.md §4.7) — projects the option's own label rather than an
+ * empty string, which is what the day screen shows for the same answer.
  *
  * A missing option only costs an empty label: a projection without its label is
  * cosmetic, a day missing from the calendar is not.
@@ -44,7 +49,7 @@ const resolveStatLabel = (question: QuestionData, date: string, optionId: string
     return '';
   }
 
-  return option.stat_label;
+  return statLabelOf(option);
 };
 
 /**

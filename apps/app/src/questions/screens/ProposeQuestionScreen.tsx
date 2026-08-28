@@ -27,6 +27,9 @@ import { type ProposeQuestionValues, emptyOption, proposeQuestionSchema } from '
 /** What proposing does, said once above the form — the price and what follows it. */
 const HELP = `Ta question passe en modération avant d’être tirée. Elle coûte ${amountLabel(QUESTION_STATCOIN_COST)}, rendus si elle est refusée.`;
 
+/** What a StatOwrel is, and that one can be left out — said once, over the options. */
+const OPTIONS_HELP = 'La StatOwrel est ce qu’on gagne en choisissant : « tu es un.e méthodique ». Facultative — sans elle, c’est la réponse qui est reprise.';
+
 /**
  * The tallest this sheet gets before its content starts scrolling inside it.
  *
@@ -75,6 +78,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     textTransform: 'uppercase',
     color: colors.foreground,
+  },
+  optionsHelp: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.xs,
+    color: colors['muted-foreground'],
   },
   // The two halves of an option on one line — the answer and the StatOwrel it
   // earns — because stacking them would make six options twice as tall as the
@@ -206,6 +214,11 @@ export const ProposeQuestionScreen = () => {
                 Réponses ({QUESTION_MIN_OPTIONS} à {QUESTION_MAX_OPTIONS})
               </Text>
 
+              {/* The StatOwrel is the one thing this form has to teach — it is
+                  the word the result screen says — and the one thing it must
+                  not demand: plenty of answers are already their own. */}
+              <Text style={styles.optionsHelp}>{OPTIONS_HELP}</Text>
+
               {fields.map((field, index) => (
                 <View key={field.id} style={styles.option}>
                   <View style={styles.optionLabel}>
@@ -232,7 +245,7 @@ export const ProposeQuestionScreen = () => {
                       name={`options.${index}.stat_label`}
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextField
-                          label="StatOwrel"
+                          label="StatOwrel (facultatif)"
                           placeholder="méthodique"
                           maxLength={QUESTION_OPTION_STAT_LABEL_MAX_LENGTH}
                           value={value}

@@ -91,7 +91,11 @@ export const PROPOSE_QUESTION_CALLABLE = 'questions-proposeQuestion';
 export interface ProposeQuestionOptionPayload {
   /** Shown as the option — e.g. « Par le bout ». */
   label: string;
-  /** The StatOwrel it earns — e.g. « méthodique », rendered « tu es un.e méthodique ». */
+  /**
+   * The StatOwrel it earns — e.g. « méthodique », rendered « tu es un.e
+   * méthodique ». **Optional**: an empty string is a question posed without
+   * one, and every reader falls back to `label` through `statLabelOf`.
+   */
   stat_label: string;
 }
 

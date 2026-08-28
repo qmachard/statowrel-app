@@ -1,6 +1,7 @@
+import { statLabelOf } from '@statowrel/models';
 import { StyleSheet, Text, View, type TextStyle } from 'react-native';
 
-import { type StatOwrel, type StatOwrelRarity, formatShare, statLabelOf } from '@/daily-question/helpers/statowrel';
+import { type StatOwrel, type StatOwrelRarity, formatShare } from '@/daily-question/helpers/statowrel';
 import { FOREGROUND, type Surface } from '@/daily-question/helpers/surface';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 

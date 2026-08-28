@@ -20,10 +20,12 @@ const optionSchema = z.object({
     .trim()
     .min(1, 'Renseigne la réponse.')
     .max(QUESTION_OPTION_LABEL_MAX_LENGTH, `${QUESTION_OPTION_LABEL_MAX_LENGTH} caractères maximum.`),
+  // Optional, like everywhere else (docs/prd.md §4.7): a moderator editing a
+  // question posed without a StatOwrel must not be made to invent one to save
+  // their edit.
   stat_label: z
     .string()
     .trim()
-    .min(1, 'Renseigne la StatOwrel.')
     .max(QUESTION_OPTION_STAT_LABEL_MAX_LENGTH, `${QUESTION_OPTION_STAT_LABEL_MAX_LENGTH} caractères maximum.`),
 });
 

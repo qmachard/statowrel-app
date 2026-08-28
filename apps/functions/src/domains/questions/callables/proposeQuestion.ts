@@ -34,7 +34,11 @@ const payloadSchema = z.object({
   options: z
     .array(z.object({
       label: z.string().trim().min(1).max(QUESTION_OPTION_LABEL_MAX_LENGTH),
-      stat_label: z.string().trim().min(1).max(QUESTION_OPTION_STAT_LABEL_MAX_LENGTH),
+      // The StatOwrel is optional (docs/prd.md §4.7) — hence no `min(1)`, and
+      // a default for a client that leaves the key out entirely. Empty and
+      // never undefined: Firestore refuses undefined, and every reader takes
+      // `statLabelOf`, which falls back to the option's own label.
+      stat_label: z.string().trim().max(QUESTION_OPTION_STAT_LABEL_MAX_LENGTH).default(''),
     }))
     .min(QUESTION_MIN_OPTIONS)
     .max(QUESTION_MAX_OPTIONS),

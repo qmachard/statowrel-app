@@ -68,7 +68,16 @@ export interface QuestionOptionFirebaseData {
   id: string;
   /** Option shown to the user — e.g. "Par le bout". */
   label: string;
-  /** StatOwrel earned by picking this option — e.g. "méthodique", rendered as "tu es un.e méthodique". */
+  /**
+   * StatOwrel earned by picking this option — e.g. "méthodique", rendered as
+   * "tu es un.e méthodique".
+   *
+   * **Optional** (docs/prd.md §4.7): a question can be posed without one, and
+   * plenty read better that way — an option that is already an adjective is its
+   * own StatOwrel. Empty rather than null, like every other string here, and
+   * read through `statLabelOf` below, which falls back to `label`: the result
+   * screen of §5.5 always has a word to say.
+   */
   stat_label: string;
 }
 
@@ -235,6 +244,20 @@ export const findQuestionOption = (
   optionId: string,
 ): QuestionOptionData | null => (
   options?.find((option) => option.id === optionId) ?? null
+);
+
+/**
+ * The StatOwrel an option earns — « efficace » — falling back to the option's
+ * own label when it was posed without one.
+ *
+ * Here rather than in either runtime because both need it and it is one rule:
+ * the app says it on the result screen of docs/prd.md §5.5 and in the friends'
+ * rows, and the answer trigger copies it onto the calendar month it projects.
+ * A fallback written twice is a fallback that drifts, and the two would drift
+ * across a screen and its own read model.
+ */
+export const statLabelOf = (option: QuestionOptionData): string => (
+  option.stat_label.length > 0 ? option.stat_label : option.label
 );
 
 const parseAnswerCounts = (

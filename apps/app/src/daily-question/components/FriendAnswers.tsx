@@ -1,10 +1,9 @@
-import { findQuestionOption, type QuestionData } from '@statowrel/models';
+import { findQuestionOption, statLabelOf, type QuestionData } from '@statowrel/models';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/Card';
 import type { FriendAnswer, FriendAnswersStatus } from '@/daily-question/data/useFriendAnswers';
-import { statLabelOf } from '@/daily-question/helpers/statowrel';
 import { FOREGROUND, type Surface } from '@/daily-question/helpers/surface';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 import { FriendRow } from '@/friends/components/FriendRow';

@@ -95,7 +95,7 @@ Re-export every new model from `src/index.ts`.
 | Field | Type | Notes |
 |---|---|---|
 | `label` | `string` | e.g. "Ton dentifrice, tu le presses…" |
-| `options` | `{ id, label, stat_label }[]` | 2 to 6 entries, in display order — `label` is shown ("Par le bout"), `stat_label` is the StatOwrel earned ("méthodique") |
+| `options` | `{ id, label, stat_label }[]` | 2 to 6 entries, in display order — `label` is shown ("Par le bout"), `stat_label` is the StatOwrel earned ("méthodique") and is **optional**, empty on a question posed without one; every reader goes through `statLabelOf`, which falls back to `label` |
 | `status` | `'pending' \| 'approved' \| 'rejected' \| 'used' \| 'demo'` | moderation lifecycle; `used` questions are never redrawn. `demo` sits outside it: the onboarding sample (`DEMO_QUESTION_ID`), never moderated, never drawn — the draw reads the `approved` pot — and the one status readable without owning the question or having broadcast it |
 | `author_id` | `string` | credited on the question screen once drawn |
 | `author_username` | `string \| null` | the author's handle, copied from their profile when the question is written — null on a question nobody proposed, and on every question written before the field existed |
