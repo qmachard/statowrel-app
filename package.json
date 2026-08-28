@@ -27,6 +27,7 @@
     "seed-emulator": "npm run build:models && node apps/functions/scripts/seed-emulator.mjs",
     "backfill-question-authors": "npm run build:models && node apps/functions/scripts/backfill-question-authors.mjs",
     "backfill-statcoins": "npm run build:models && node apps/functions/scripts/backfill-statcoins.mjs",
+    "check-google-signin": "node apps/app/scripts/check-google-signin.mjs",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

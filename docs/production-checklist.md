@@ -409,11 +409,20 @@ milliers de comptes, ou fausser les `answer_counts` qui font tout l'intérêt du
       EAS (`APP_VARIANT=production eas credentials`) **et** celle de la clé de signature Play
       (Play Console → Test et publication → Intégrité de l'app). Sans la seconde, la connexion Google
       marche sur un APK EAS et échoue sur tout ce qui vient du Play Store — Play re-signe l'AAB, donc
-      le binaire distribué ne présente pas l'empreinte d'upload. Puis re-télécharger
-      `google-services.json`, re-pousser la variable fichier `GOOGLE_SERVICES_JSON` et **rebuilder** :
-      l'empreinte est vérifiée contre le binaire, aucun OTA ne la rattrape.
-      Voir `apps/app/firebase/README.md` § Android SHA-1 ; `npx @react-native-google-signin/config-doctor`
-      vérifie l'accord avant de lancer le build.
+      le binaire distribué ne présente pas l'empreinte d'upload. Une troisième s'ajoute dès qu'un
+      lien de partage interne d'applications est utilisé : Play le signe encore autrement.
+- [ ] **Vérifier que chaque empreinte a bien créé un client OAuth**, ce que la console Firebase
+      n'affiche pas. Ajouter une empreinte est une *demande* de création de client OAuth Android, et
+      Google la refuse en silence — en laissant l'empreinte affichée — quand un client existe déjà
+      pour le même package et le même SHA-1 dans un autre projet
+      (support.google.com/firebase/answer/6401008). Une empreinte affichée n'est donc pas une
+      empreinte qui autorise. Re-télécharger `google-services.json`, puis :
+      `npm run check-google-signin -- --expect <SHA-1 de la clé de signature Play>`, qui liste les
+      empreintes réellement devenues des clients. Puis re-pousser la variable fichier
+      `GOOGLE_SERVICES_JSON`. **Pas besoin de rebuilder pour tester l'enregistrement** : Play services
+      valide le certificat côté serveur, un binaire déjà installé se connecte dès que le client
+      existe. Voir `apps/app/firebase/README.md` § Android SHA-1 ;
+      `npx @react-native-google-signin/config-doctor` vérifie l'accord avant de lancer le build.
 - [ ] `version` reste `1.0.0` dans `app.config.ts` ; `autoIncrement` et
       `appVersionSource: "remote"` gèrent déjà le numéro de build
 

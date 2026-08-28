@@ -45,14 +45,16 @@ registered fingerprint matches. iOS never hits this: it resolves through the
 
 Every fingerprint an install can present has to be registered on the matching
 Android app in the Firebase console (Project settings → Your apps → *Add
-fingerprint*). There are **two per identifier**, and registering one and not the
-other is what produces a Google sign-in that works on a preview build and fails
-once the app comes from the store:
+fingerprint*). There are **two per identifier**, a third once internal app
+sharing is used, and registering one and not the other is what produces a Google
+sign-in that works on a preview build and fails once the app comes from the
+store:
 
 | Fingerprint | Where it comes from | Which install presents it |
 |---|---|---|
 | EAS upload key | `APP_VARIANT=production eas credentials` → Android → Keystore | An APK/AAB installed by hand from the EAS dashboard |
 | Play app signing key | Play Console → Test and release → **App integrity** → App signing key certificate | Anything installed from Play, internal testing included |
+| Internal app sharing key | Play Console → Test and release → **App integrity**, its own section | A build opened from an internal app sharing link |
 
 Play App Signing is the whole subtlety: Google **re-signs** the uploaded AAB with
 its own key, so the store build presents a fingerprint the upload key never had.
@@ -60,22 +62,61 @@ its own key, so the store build presents a fingerprint the upload key never had.
 `fr.quentinmachard.statowrel.dev` is a separate Firebase app with its own
 fingerprint list — a `development` build needs its own EAS keystore SHA-1 there.
 
-After adding a fingerprint:
+### A fingerprint on display that authorises nothing
+
+**A fingerprint listed in the Firebase console is not proof that it authorises
+anything.** Adding one is a *request* to create an Android OAuth client, and
+Google refuses that request — silently, leaving the fingerprint on display —
+when a client already exists for the same package name and SHA-1 in another
+Firebase or Google Cloud project. The pairing has to be unique across every
+project on Earth, and the console never says it was not. This is the state where
+every fingerprint looks registered and every sign-in still answers
+`DEVELOPER_ERROR`.
+
+Two other ways to be in it with a fingerprint on screen: registering the SHA-256
+alone, which mints no OAuth client at all (only the SHA-1 does), and registering
+on the wrong one of the two Android apps.
+
+What the refusal *does* touch is `google-services.json`, which carries one
+`oauth_client` entry per client that was really created. So the freshly
+downloaded file is the machine-readable answer, and reading it is one command:
 
 ```bash
-# 1. Re-download google-services.json from the console, over the local copy.
+npm run check-google-signin
+npm run check-google-signin -- --expect <the SHA-1 Play Console shows>
+```
+
+To repair it, find the conflicting client and delete it — Firebase console of
+the other project (removing the fingerprint deletes its OAuth client with it),
+or Google Cloud console → APIs & Services → Credentials. Then re-add the
+fingerprint here. See
+[the Firebase support page](https://support.google.com/firebase/answer/6401008).
+
+### After adding a fingerprint
+
+```bash
+# 1. Re-download google-services.json from the console, over the local copy,
+#    and check what actually landed:
+npm run check-google-signin
+
 # 2. Re-push it to EAS — the file variable holds a snapshot, not a link.
 APP_VARIANT=production eas env:set \
   --environment preview --environment production \
   --name GOOGLE_SERVICES_JSON --type file --visibility secret \
   --value ./firebase/google-services.production.json
 
-# 3. Rebuild. The fingerprint is checked against the binary, so nothing short
-#    of a new build picks it up — and no OTA update can.
-
 # Checks the app config against the Firebase/Google Cloud one before you burn a build:
 npx @react-native-google-signin/config-doctor
 ```
+
+**No rebuild is needed to test the registration itself**, and this is worth
+knowing before you spend twenty minutes on one. Play services reads the
+certificate off the installed binary and validates it *server-side*, against the
+OAuth clients of the project — so an app already on the phone starts signing in
+as soon as the client exists, within minutes. A build carries the service file,
+never the authorisation. What a rebuild is for is a binary signed with a new
+key, and re-pushing the file above is what keeps the snapshot honest for the
+next one — and for the check.
 
 ## Builds
 
