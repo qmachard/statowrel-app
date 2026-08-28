@@ -228,18 +228,21 @@ export const ProposeQuestionScreen = () => {
                       <View style={styles.optionHeader}>
                         <Text style={styles.optionTitle}>Réponse {index + 1}</Text>
 
-                        {/* The floor is two, so the last two answers carry no
-                            way out: a form that lets itself be emptied only to
-                            refuse the result says no twice. */}
-                        {fields.length > QUESTION_MIN_OPTIONS ? (
-                          <Button
-                            label={`Retirer la réponse ${index + 1}`}
-                            variant="ghost"
-                            size="icon-sm"
-                            icon={X}
-                            onPress={() => remove(index)}
-                          />
-                        ) : null}
+                        {/* Always here, disabled at the floor rather than
+                            taken away. The floor is two — a form that lets
+                            itself be emptied only to refuse the result says no
+                            twice — but a button that comes and goes with the
+                            third answer moves every row it is added to, and a
+                            row that shifts under the finger is worse than a
+                            control that says it is unavailable. */}
+                        <Button
+                          label={`Retirer la réponse ${index + 1}`}
+                          variant="ghost"
+                          size="icon-sm"
+                          icon={X}
+                          disabled={fields.length <= QUESTION_MIN_OPTIONS}
+                          onPress={() => remove(index)}
+                        />
                       </View>
 
                       <Controller
