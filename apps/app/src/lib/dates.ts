@@ -103,3 +103,12 @@ export const formatDayLabel = (date: Date) => (
 
 /** « 14h32 » — the hour a friend answered (docs/prd.md §4.5), on the device's own clock. */
 export const formatTimeLabel = (date: Date) => `${date.getHours()}h${pad(date.getMinutes())}`;
+
+/**
+ * « 19/08 » — the day a proposed question was drawn on, as the Menu screen's
+ * « Mes questions » badge writes it (docs/prd.md §5.3).
+ *
+ * Day and month alone: the badge sits on one line of a list, and a proposal is
+ * read against the weeks around it rather than against a year.
+ */
+export const formatShortDayLabel = (date: Date) => `${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;

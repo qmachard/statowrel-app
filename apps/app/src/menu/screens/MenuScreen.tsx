@@ -16,6 +16,7 @@ import { FriendsCard } from '@/friends/components/FriendsCard';
 import { NotificationsButton } from '@/notifications/components/NotificationsButton';
 import { clearPendingDemoAnswer } from '@/onboarding/data/demoAnswerStore';
 import { resetOnboardingSeen } from '@/onboarding/data/useOnboardingSeen';
+import { MyQuestionsCard } from '@/questions/components/MyQuestionsCard';
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -128,6 +129,11 @@ export const MenuScreen = () => {
         </View>
 
         <FriendsCard onInvite={() => navigation.navigate('InviteFriend')} />
+
+        {/* Under the friends and above the settings: the two lists of docs/prd.md
+            §5.3, in the order that section states them. A drawn proposal opens
+            its day the way a calendar cell does. */}
+        <MyQuestionsCard onOpenDay={(date) => navigation.navigate('DailyQuestion', { date })} />
 
         <View style={styles.settings}>
           {/* Development only, and dropped from a release build by the `__DEV__`
