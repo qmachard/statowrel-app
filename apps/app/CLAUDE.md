@@ -92,6 +92,8 @@ cp apps/app/.env.example apps/app/.env.local   # Google OAuth client ids + emula
 npm run dev:app          # or: npm run dev --workspace=@statowrel/app
 ```
 
+**The emulator suite is plain HTTP, and only the `development` variant may talk to it.** iOS blocks cleartext through App Transport Security and Android through `usesCleartextTraffic`; `app.config.ts` grants both exceptions to that variant alone, so `preview` and `production` ship with the platform defaults. The failure is worth recognising because it is not shaped like a network problem: **Firestore goes on working** — its emulator connection is gRPC on its own socket, which ATS never sees — so the app reads, writes and signs in, and the first callable comes back « the resource could not be loaded because the App Transport Security policy requires the use of a secure connection », under an `unknown` code rather than a `functions/*` one. Both knobs are native: granting them takes a new dev client, never a Metro restart.
+
 Requires a dev client build (`npm run build:dev:ios` / `build:dev:android`) to run on a device/simulator — `expo-dev-client` is installed, so Expo Go is no longer the supported target. **Firebase is a native module here** (`@react-native-firebase/*`), alongside Google and Apple sign-in, so a dev client predating the React Native Firebase migration cannot run this app: rebuild it. And because the Firebase config is baked in at build time, `apps/app/firebase/` has to hold the development service files *before* that build — see its `README.md`.
 
 ## Environment variables
