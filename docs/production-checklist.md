@@ -499,6 +499,14 @@ monde se casse le lendemain. Un jour sans question est le pire incident possible
 - [ ] Vérifier que la console est bien fermée aux comptes sans le claim `admin`
 - [ ] Vérifier que le premier jour est amorcé : `npm run seed-daily-questions` diffuse les cinq
       jours précédents, pour qu'un nouvel arrivant ne tombe pas sur un calendrier vide
+- [ ] Renseigner la clé d'envoi du digest **avant** le premier déploiement des functions :
+      `firebase functions:secrets:set RESEND_API_KEY` — sans elle, le déploiement s'arrête pour
+      la réclamer, et `questions-scheduleModerationDigest` échoue à 08:00
+- [ ] Vérifier le domaine d'envoi chez Resend et poser `RESEND_FROM` dans l'environnement des
+      functions : sans lui, l'expéditeur partagé de Resend ne délivre qu'à l'adresse du compte
+      Resend, donc à un seul modérateur
+- [ ] Vérifier qu'un matin avec des questions `pending` produit bien un e-mail, et qu'un matin
+      sans n'en produit aucun (`firebase functions:log --only questions-scheduleModerationDigest`)
 
 ### 5.3 🟡 Le premier matin
 

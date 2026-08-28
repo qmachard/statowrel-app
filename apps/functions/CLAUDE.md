@@ -66,6 +66,16 @@ There are none, deliberately. `initFirebase()` calls `initializeApp()` with no a
 
 Adding a `defineString()` param is not free: the Firebase CLI resolves params **at deploy time** and stops to ask for every one it cannot find in `.env` / `.env.<projectId>`, so an unset param turns every deploy into an interactive prompt. Add one only for a value the runtime genuinely cannot provide, and ship its value in `.env.<projectId>` at the same time. `.env*` is gitignored — a param holding a credential must never be committed.
 
+**Secrets are the exception, and there is one.** `RESEND_API_KEY` (`defineSecret`, declared in `src/domains/notifications/helpers/resendEmail.ts`) is what the moderation digest sends through. A `defineSecret()` is asked for **once**, stored in Secret Manager, and read from there by every later deploy — which is exactly what a credential needs, since the alternative is a `.env` file that must never be committed. Set it before the first deploy that includes a mail-sending function:
+
+```bash
+firebase functions:secrets:set RESEND_API_KEY
+```
+
+A secret is only readable by the functions that name it in their own `secrets: []`; a function that forgets to is handed an empty string, which `sendEmails` refuses out loud rather than silently not sending.
+
+Two plain `process.env` reads ride alongside it, because neither is a credential and neither is worth a deploy-time prompt: `RESEND_FROM` (the sender — unset, it falls back to Resend's shared `onboarding@resend.dev`, which only delivers to the address the Resend account was opened with) and `EXPO_ACCESS_TOKEN` (see below).
+
 ## Ops scripts (`scripts/`)
 
 Plain `.mjs`, run directly with node — outside `src/`, so they are neither type-checked nor reachable from the bundle's entry point, and never reach the deploy artifact.
