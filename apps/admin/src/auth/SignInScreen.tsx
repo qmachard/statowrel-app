@@ -16,8 +16,11 @@ import { type SignInValues, signInSchema } from './schemas';
  * offers minus Apple, whose web flow needs a Services ID the mobile build does
  * not. There is no sign-up: accounts pre-exist and are granted the `admin`
  * claim by hand, and the gate on that claim lives in `AuthContext`.
+ *
+ * A password can still be lost, though, which is what `onForgotPassword` opens
+ * — the one thing a moderator locked out can do without asking anybody.
  */
-export const SignInScreen = () => {
+export const SignInScreen = ({ onForgotPassword }: { onForgotPassword: () => void }) => {
   const [ error, setError ] = useState<string | null>(null);
   const [ googlePending, setGooglePending ] = useState(false);
 
@@ -90,6 +93,10 @@ export const SignInScreen = () => {
             {isSubmitting ? 'Un instant…' : 'Se connecter'}
           </Button>
         </form>
+
+        <Button variant="ghost" small block onClick={onForgotPassword} disabled={busy}>
+          Mot de passe oublié ?
+        </Button>
 
         <Button variant="secondary" block onClick={onGoogle} disabled={busy}>
           {googlePending ? 'Un instant…' : 'Continuer avec Google'}

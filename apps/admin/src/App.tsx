@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { AccessDeniedScreen } from './auth/AccessDeniedScreen';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { ForgotPasswordScreen } from './auth/ForgotPasswordScreen';
 import { SignInScreen } from './auth/SignInScreen';
 import { Button } from './components/Button';
 import { QuestionModal } from './questions/QuestionModal';
@@ -53,6 +54,20 @@ const ModerationScreen = ({ author }: { author: QuestionAuthor }) => {
   );
 };
 
+/**
+ * The two screens a signed-out visitor can reach. There is no router in this
+ * SPA — the console is one screen behind one gate — so the way to the reset
+ * form is a piece of state, and coming back from it lands on the sign-in form
+ * rather than wherever the browser's history happened to point.
+ */
+const SignedOutScreen = () => {
+  const [ forgotPassword, setForgotPassword ] = useState(false);
+
+  return forgotPassword
+    ? <ForgotPasswordScreen onBack={() => setForgotPassword(false)} />
+    : <SignInScreen onForgotPassword={() => setForgotPassword(true)} />;
+};
+
 const Router = () => {
   const { user, isAdmin, initializing, username } = useAuth();
 
@@ -65,7 +80,7 @@ const Router = () => {
   }
 
   if (user === null) {
-    return <SignInScreen />;
+    return <SignedOutScreen />;
   }
 
   // `null` is the claim still in flight, which `initializing` normally covers —
