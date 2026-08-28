@@ -147,7 +147,7 @@ NEVER access `getFirestore()` / `snap.data()` / `bucket().file().getSignedUrl()`
 
 ### Functions Domain Structure
 
-Every domain in `functions/src/domains/` follows this pattern (see `src/domains/health` for a minimal working example):
+Every domain in `functions/src/domains/` follows this pattern — a domain holds only the folders it needs (`api/` is the shape an HTTP route would take; no domain ships one today):
 
 ```
 domains/{domain-name}/
@@ -164,7 +164,7 @@ domains/{domain-name}/
 └── index.ts            # Exports Cloud Function registrations only
 ```
 
-Top-level `functions/src/index.ts` uses namespace re-exports (`export * as health from './domains/health'`) — this produces function names like `health-healthApi` in Firebase.
+Top-level `functions/src/index.ts` uses namespace re-exports (`export * as questions from './domains/questions'`) — this produces function names like `questions-proposeQuestion` in Firebase.
 
 ### App (`apps/app`) — React Native / Expo
 

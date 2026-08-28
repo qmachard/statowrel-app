@@ -1,1 +1,0 @@
-export { healthApi } from './api';

@@ -4,7 +4,7 @@ Firebase Cloud Functions v2 (gen2) + Express 5, TypeScript bundled with esbuild 
 
 ## Domain structure
 
-Every domain in `src/domains/` follows this pattern (see `src/domains/health` for a minimal working example):
+Every domain in `src/domains/` follows this pattern — a domain holds only the folders it needs (`api/` is the shape an HTTP route would take; no domain ships one today):
 
 ```
 domains/{domain-name}/
@@ -22,7 +22,7 @@ domains/{domain-name}/
 └── index.ts            # Exports Cloud Function registrations only
 ```
 
-Top-level `src/index.ts` uses namespace re-exports (`export * as health from './domains/health'`) — this produces function names like `health-healthApi` in Firebase.
+Top-level `src/index.ts` uses namespace re-exports (`export * as questions from './domains/questions'`) — this produces function names like `questions-proposeQuestion` in Firebase.
 
 **`api/` or `callables/`?** A caller that is not the app — a webhook, a browser, `curl` — takes an HTTP route. The app takes a **callable**: the ID token rides along and is verified by the runtime, so `request.auth` is already there and there is no token middleware to write. Validate `request.data` with a zod `.safeParse()` all the same — it is untrusted input like any body — and raise an `HttpsError` rather than throwing: its code is what the client reads. The payload and result types live in `@statowrel/models`'s `callables.ts`, alongside the constant naming the callable, so the app compiles against the same shape.
 
