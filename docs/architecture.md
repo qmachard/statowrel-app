@@ -322,6 +322,8 @@ An hour after the draw and not with it: the 07:00 run turns an `approved` questi
 
 Reading the pot is one query with **no `orderBy`** — an equality paired with an order on another field needs a composite index, and this runs once a morning over a human-moderated pot a few hundred documents deep. The sort happens in memory, the same bet `drawApprovedQuestion` makes next door. And nothing catches the send: `onSchedule` does not retry by default, so a refused send is one failed run, red in the logs, rather than a morning that quietly resembles an empty pot.
 
+`apps/functions/scripts/send-moderation-digest.mjs` (`npm run send-moderation-digest`) is what makes any of that checkable before 08:00 — the same role `send-test-notification.mjs` plays for the push, and with the same trade: it carries a **second copy** of the wording, since a `.mjs` cannot import the TypeScript in `src/`, so the two are changed together. `--dry-run` reads the real pot and prints the mail; `--to <email>` sends it to one address rather than to every moderator, which needs `--force`.
+
 ### `notifications`
 
 How anything in this backend reaches a phone (`docs/prd.md` §4.2) — or, since the moderation digest, an inbox. The domain registers **no Cloud Function of its own**, which is why it is absent from `src/index.ts`: nothing sends on its own schedule yet, and each caller owns its trigger — `dailyQuestions-notifyDailyQuestion` first, `friends-onFriendCreated` next, `dailyQuestions-notifyFriendsAnswers` third, `questions-scheduleModerationDigest` fourth. It is a service the other domains go through, not a boundary they call across a wire.

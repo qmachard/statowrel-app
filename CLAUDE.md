@@ -75,6 +75,9 @@ npm run seed-emulator -- --dry-run   # ... says what it would write (also --crow
 npm run send-test-notification -- --email <email>   # pushes the day's notification to that account's devices
 npm run send-test-notification -- --all --dry-run   # ... listing every registered device, sending nothing
 npm run send-test-notification -- --email <email> --nudge --friends 3   # ... the 18:00 nudge instead
+npm run send-moderation-digest -- --dry-run            # reads the pending pot, prints the 08:00 mail, sends nothing
+npm run send-moderation-digest -- --to <email>         # ... really sends it, to that address alone
+npm run send-moderation-digest -- --production --force # ... to every account holding the `admin` claim
 npm run backfill-question-authors             # stamps v1_questions.author_username from each author's profile
 npm run backfill-question-authors -- --dry-run  # ... says what it would write (also --production)
 npm run backfill-statcoins                    # rebuilds the streak counters from the answers, pays what the streaks owe

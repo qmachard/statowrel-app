@@ -199,6 +199,21 @@ It then does the one thing the backend does not: it polls `/push/getReceipts`. A
 
 Two failures it names rather than leaves to be guessed: no device at all (the app was never launched signed-in on a real phone — a simulator never gets a token), and a `--date` no question ran, whose tap would open a dead end.
 
+```bash
+npm run send-moderation-digest -- --dry-run              # reads the pot, sends nothing
+npm run send-moderation-digest -- --dry-run --html       # ... showing the HTML body instead
+npm run send-moderation-digest -- --to moi@exemple.fr    # really sends, to that address only
+npm run send-moderation-digest -- --production --force   # ... to every real moderator
+```
+
+The same thing for the 08:00 digest, and for the same reason: it leaves the backend and only comes back in an inbox tomorrow morning. It builds exactly what `questions-scheduleModerationDigest` builds — the same subject, the same pot oldest first, the same twenty-line cap, the same link — off a **second copy** of the wording, since a `.mjs` cannot import the TypeScript in `src/`. Change `helpers/moderationDigest.ts`, change this too.
+
+The behaviour worth checking by hand is the one that produces nothing: an empty pot ends the run with « the 08:00 run would send nothing at all », because a morning with no mail and a morning with a broken digest look identical from an inbox. It also reports the moderators it resolved, which doubles as a check that `npm run set-admin` did what it claimed.
+
+**A target is required rather than defaulted.** `--dry-run` or `--to <email>` say what a run is for; mailing every account holding the `admin` claim needs `--force`, the default of a script that reaches real inboxes not being "all of them". `--to` also overrides the claim walk entirely, which is how the mail gets read on one's own address before anybody else sees it.
+
+**There is no emulator for Resend**, exactly as there is none for Expo push: `FIRESTORE_EMULATOR_HOST` (plus `FIREBASE_AUTH_EMULATOR_HOST` for the moderator list) decides where the *questions* are read from and nothing else. And a real send reads `RESEND_API_KEY` from the environment — the deployed function reads the same value out of Secret Manager, which a script cannot.
+
 ## Deploy
 
 ```bash

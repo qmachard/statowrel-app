@@ -23,6 +23,7 @@
     "seed-questions": "npm run build:models && node apps/functions/scripts/seed-questions.mjs",
     "seed-daily-questions": "npm run build:models && node apps/functions/scripts/seed-daily-questions.mjs",
     "send-test-notification": "npm run build:models && node apps/functions/scripts/send-test-notification.mjs",
+    "send-moderation-digest": "npm run build:models && node apps/functions/scripts/send-moderation-digest.mjs",
     "seed-demo-question": "npm run build:models && node apps/functions/scripts/seed-demo-question.mjs",
     "seed-emulator": "npm run build:models && node apps/functions/scripts/seed-emulator.mjs",
     "backfill-question-authors": "npm run build:models && node apps/functions/scripts/backfill-question-authors.mjs",
