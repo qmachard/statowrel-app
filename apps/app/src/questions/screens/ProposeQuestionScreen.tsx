@@ -12,7 +12,7 @@ import {
 import { useState } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { SuccessCheck } from '@/components/animations';
@@ -25,17 +25,18 @@ import { proposalFailure } from '@/questions/errors';
 import { type ProposeQuestionValues, emptyOption, proposeQuestionSchema } from '@/questions/schemas';
 
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
     backgroundColor: colors.background,
   },
   keyboardAvoider: {
     flex: 1,
   },
+  // The vertical paddings are completed by the safe-area insets at render time
+  // — see the `contentContainerStyle` array.
   content: {
     gap: spacing(6),
     padding: spacing(6),
-    paddingTop: spacing(4),
   },
   close: {
     flexDirection: 'row',
@@ -133,6 +134,13 @@ const styles = StyleSheet.create({
  */
 export const ProposeQuestionScreen = () => {
   const navigation = useNavigation();
+  // **Both edges are this screen's own.** A `fullScreenModal` covers the whole
+  // screen on both platforms — under the status bar on iOS, edge to edge on
+  // Android — which is exactly where the daily question's page sheet differs:
+  // that one already hangs below the bar and takes no top inset. Spent as plain
+  // padding rather than through `SafeAreaView`, whose own padding is computed
+  // natively and lands after the first layout (see `useSheetBottomInset`).
+  const insets = useSafeAreaInsets();
   const [ failure, setFailure ] = useState<string | null>(null);
   const [ result, setResult ] = useState<ProposeQuestionResult | null>(null);
 
@@ -161,9 +169,15 @@ export const ProposeQuestionScreen = () => {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[ 'top', 'bottom' ]}>
+    <View style={styles.screen}>
       <KeyboardAvoidingView style={styles.keyboardAvoider} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: spacing(4) + insets.top, paddingBottom: spacing(6) + insets.bottom },
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.close}>
             <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
           </View>
@@ -292,6 +306,6 @@ export const ProposeQuestionScreen = () => {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
