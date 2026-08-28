@@ -68,18 +68,16 @@ export const RootNavigator = () => {
             }}
           />
           {/* The proposal form of docs/prd.md §4.7, opened from the card under
-              the calendar — the same kind of sheet as the invitation, for the
-              same reason: a short form posed over Stats that nothing is blocked
-              on. It grows with the options it is given, so it caps itself and
-              scrolls past the cap (see the screen). */}
+              the calendar. A **full-screen** modal and not a sheet, unlike the
+              invitation: this form grows — six answers are twelve inputs — and
+              it is typed into with the keyboard up, so it wants the whole
+              screen rather than a detent that re-measures under it. Its own
+              close button is the way out, `fullScreenModal` offering no
+              gesture. */}
           <Stack.Screen
             name="ProposeQuestion"
             component={ProposeQuestionScreen}
-            options={{
-              presentation: 'formSheet',
-              sheetAllowedDetents: 'fitToContents',
-              sheetGrabberVisible: true,
-            }}
+            options={{ presentation: 'fullScreenModal' }}
           />
           <Stack.Screen name="Menu" component={MenuScreen} />
         </>

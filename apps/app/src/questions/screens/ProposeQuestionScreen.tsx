@@ -11,41 +11,29 @@ import {
 } from '@statowrel/models';
 import { useState } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { SuccessCheck } from '@/components/animations';
-import { Plus, Trash2, X } from '@/components/icons';
+import { Plus, X } from '@/components/icons';
 import { TextField } from '@/components/TextField';
-import { colors, fontSize, fonts, spacing } from '@/design/tokens';
+import { borderWidth, colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { amountLabel, spokenAmountLabel } from '@/lib/statcoins';
-import { useSheetBottomInset } from '@/lib/useSheetBottomInset';
 import { proposeQuestion } from '@/questions/data/proposeQuestion';
 import { proposalFailure } from '@/questions/errors';
 import { type ProposeQuestionValues, emptyOption, proposeQuestionSchema } from '@/questions/schemas';
 
-/** What proposing does, said once above the form — the price and what follows it. */
-const HELP = `Ta question passe en modération avant d’être tirée. Elle coûte ${amountLabel(QUESTION_STATCOIN_COST)}, rendus si elle est refusée.`;
-
-/** What a StatOwrel is, and that one can be left out — said once, over the options. */
-const OPTIONS_HELP = 'La StatOwrel est ce qu’on gagne en choisissant : « tu es un.e méthodique ». Facultative — sans elle, c’est la réponse qui est reprise.';
-
-/**
- * The tallest this sheet gets before its content starts scrolling inside it.
- *
- * A `fitToContents` detent measures the child it is given, so the child has to
- * be bounded or a six-option form would ask for a sheet taller than the screen
- * and get clipped instead of scrolled. Two options fit well under this and the
- * sheet stays short; past that it stops growing and the fields scroll.
- */
-const MAX_SHEET_RATIO = 0.72;
-
 const styles = StyleSheet.create({
-  // No `flex: 1` anywhere on the way down — the sheet's detent is
-  // `fitToContents`, and a stretched child would make it measure the whole
-  // screen. Same constraint as the invitation sheet.
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  keyboardAvoider: {
+    flex: 1,
+  },
   content: {
-    gap: spacing(5),
+    gap: spacing(6),
     padding: spacing(6),
     paddingTop: spacing(4),
   },
@@ -53,51 +41,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
   },
-  header: {
-    gap: spacing(2),
-  },
   title: {
     fontFamily: fonts.head,
     fontSize: fontSize['2xl'],
     textTransform: 'uppercase',
     color: colors.foreground,
   },
-  help: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.sm,
-    color: colors['muted-foreground'],
-  },
-  form: {
-    gap: spacing(4),
-  },
-  options: {
+  section: {
     gap: spacing(3),
   },
-  optionsTitle: {
+  // One step up from the field labels under it — « TA QUESTION » and
+  // « RÉPONSES » name the parts of the form, « Réponse 1 » names a line inside
+  // one of them, and nothing else on the screen may read as their equal.
+  sectionTitle: {
     fontFamily: fonts.head,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.base,
     textTransform: 'uppercase',
     color: colors.foreground,
   },
-  optionsHelp: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.xs,
-    color: colors['muted-foreground'],
-  },
-  // The two halves of an option on one line — the answer and the StatOwrel it
-  // earns — because stacking them would make six options twice as tall as the
-  // screen. Aligned on their bottom edge so the remove button sits on the
-  // fields' own baseline rather than on their labels'.
   option: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
     gap: spacing(2),
   },
-  optionLabel: {
-    flex: 1.4,
+  // Every answer but the first is preceded by a rule, so the block reads as one
+  // list rather than as N stacked forms.
+  optionSeparated: {
+    borderTopWidth: borderWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing(4),
   },
-  optionStatLabel: {
-    flex: 1,
+  optionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing(2),
+  },
+  optionTitle: {
+    fontFamily: fonts.sansMedium,
+    fontSize: fontSize.sm,
+    color: colors.foreground,
   },
   error: {
     fontFamily: fonts.sans,
@@ -107,6 +88,7 @@ const styles = StyleSheet.create({
   outcome: {
     alignItems: 'center',
     gap: spacing(4),
+    paddingTop: spacing(10),
   },
   outcomeMessage: {
     textAlign: 'center',
@@ -123,31 +105,34 @@ const styles = StyleSheet.create({
 });
 
 /**
- * Writing a question and paying for it — docs/prd.md §4.7, and what the
- * `ProposeQuestionCard` under the calendar has been pointing at with an inert
- * button until now.
+ * Writing a question and paying for it — docs/prd.md §4.7, behind the
+ * `ProposeQuestionCard` under the calendar.
  *
- * A dismissable `formSheet` sized by its own content, like the invitation sheet
- * (§5.1): nothing is blocked on proposing a question, so navigation opens it
- * and a tap outside closes it. Unlike that one it can grow — two options are the
- * floor and six the ceiling (§4.2) — so it is capped and scrolls past the cap
- * rather than asking for a sheet taller than the phone.
+ * **A full-screen modal, not a sheet.** It was a `formSheet` sized by its own
+ * content, like the invitation, and that was the wrong shape: this form *grows*
+ * — six answers are twelve inputs — so the sheet either asked for more height
+ * than the phone had or capped itself and scrolled inside a detent that kept
+ * re-measuring. A form the keyboard shares the screen with wants the whole
+ * screen.
  *
- * The app writes nothing itself: `firestore.rules` closed `v1_questions` to
- * every client, and `questions-proposeQuestion` debits the wallet and writes the
- * question in one transaction. So everything that can go wrong comes back as a
- * `functions/*` code, translated by `src/questions/errors.ts` and shown above
- * the button — including the one refusal worth a sentence of its own, an empty
- * wallet.
+ * The keyboard is the other half of that: the fields sit inside a scroll view
+ * under a `KeyboardAvoidingView`, the pattern the sign-in screens already use,
+ * so the last answer is still reachable with the keyboard up.
  *
- * Once the question is in, the form is replaced by what happened rather than
- * left standing under a message: the sheet had one thing to do, and the balance
- * it hands back is what says the price was really paid.
+ * **The interface says what it is and stops.** There is no paragraph explaining
+ * the StatOwrel or what moderation will do with the question: the headings name
+ * the parts, the placeholders show the shape of an answer, and the price sits
+ * on the button that spends it. The app explains the currency once, on the card
+ * that opens this screen (docs/prd.md §5.2 point 6), and does not explain it
+ * again here.
+ *
+ * The app writes nothing itself: `questions-proposeQuestion` debits the wallet
+ * and writes the question in one transaction, so everything that can go wrong
+ * comes back as a `functions/*` code translated by `src/questions/errors.ts` —
+ * including the one refusal worth its own sentence, an empty wallet.
  */
 export const ProposeQuestionScreen = () => {
   const navigation = useNavigation();
-  const bottomInset = useSheetBottomInset();
-  const { height } = useWindowDimensions();
   const [ failure, setFailure ] = useState<string | null>(null);
   const [ result, setResult ] = useState<ProposeQuestionResult | null>(null);
 
@@ -176,58 +161,67 @@ export const ProposeQuestionScreen = () => {
   });
 
   return (
-    <ScrollView
-      style={{ maxHeight: height * MAX_SHEET_RATIO }}
-      contentContainerStyle={[ styles.content, { paddingBottom: spacing(6) + bottomInset } ]}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.close}>
-        <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
-      </View>
-
-      {result === null ? (
-        <>
-          <View style={styles.header}>
-            <Text style={styles.title}>Pose ta question</Text>
-            <Text style={styles.help}>{HELP}</Text>
+    <SafeAreaView style={styles.safeArea} edges={[ 'top', 'bottom' ]}>
+      <KeyboardAvoidingView style={styles.keyboardAvoider} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <View style={styles.close}>
+            <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
           </View>
 
-          <View style={styles.form}>
-            <Controller
-              control={control}
-              name="label"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextField
-                  label="Ta question"
-                  placeholder="Ton dentifrice, tu le presses…"
-                  maxLength={QUESTION_LABEL_MAX_LENGTH}
-                  value={value}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  error={errors.label?.message}
+          {result === null ? (
+            <>
+              <Text style={styles.title}>Pose ta question</Text>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Ta question</Text>
+
+                <Controller
+                  control={control}
+                  name="label"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextField
+                      accessibilityLabel="Ta question"
+                      placeholder="Ton dentifrice, tu le presses…"
+                      maxLength={QUESTION_LABEL_MAX_LENGTH}
+                      value={value}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      error={errors.label?.message}
+                    />
+                  )}
                 />
-              )}
-            />
+              </View>
 
-            <View style={styles.options}>
-              <Text style={styles.optionsTitle}>
-                Réponses ({QUESTION_MIN_OPTIONS} à {QUESTION_MAX_OPTIONS})
-              </Text>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Réponses ({QUESTION_MIN_OPTIONS} à {QUESTION_MAX_OPTIONS})
+                </Text>
 
-              {/* The StatOwrel is the one thing this form has to teach — it is
-                  the word the result screen says — and the one thing it must
-                  not demand: plenty of answers are already their own. */}
-              <Text style={styles.optionsHelp}>{OPTIONS_HELP}</Text>
+                {fields.map((field, index) => (
+                  <View key={field.id} style={[ styles.option, index > 0 ? styles.optionSeparated : null ]}>
+                    <View style={styles.optionHeader}>
+                      <Text style={styles.optionTitle}>Réponse {index + 1}</Text>
 
-              {fields.map((field, index) => (
-                <View key={field.id} style={styles.option}>
-                  <View style={styles.optionLabel}>
+                      {/* The floor is two, so the last two answers carry no way
+                          out: a form that lets itself be emptied only to refuse
+                          the result says no twice. */}
+                      {fields.length > QUESTION_MIN_OPTIONS ? (
+                        <Button
+                          label={`Retirer la réponse ${index + 1}`}
+                          variant="ghost"
+                          size="icon-sm"
+                          icon={X}
+                          onPress={() => remove(index)}
+                        />
+                      ) : null}
+                    </View>
+
                     <Controller
                       control={control}
                       name={`options.${index}.label`}
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextField
-                          label={`Réponse ${index + 1}`}
+                          accessibilityLabel={`Réponse ${index + 1}`}
                           placeholder="Par le bout"
                           maxLength={QUESTION_OPTION_LABEL_MAX_LENGTH}
                           value={value}
@@ -237,16 +231,14 @@ export const ProposeQuestionScreen = () => {
                         />
                       )}
                     />
-                  </View>
 
-                  <View style={styles.optionStatLabel}>
                     <Controller
                       control={control}
                       name={`options.${index}.stat_label`}
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextField
-                          label="StatOwrel (facultatif)"
-                          placeholder="méthodique"
+                          accessibilityLabel={`StatOwrel de la réponse ${index + 1}, facultative`}
+                          placeholder="Tu es…"
                           maxLength={QUESTION_OPTION_STAT_LABEL_MAX_LENGTH}
                           value={value}
                           onBlur={onBlur}
@@ -256,65 +248,50 @@ export const ProposeQuestionScreen = () => {
                       )}
                     />
                   </View>
+                ))}
 
-                  {/* The floor is two, so the last two options carry no way out
-                      — a form that lets itself be emptied only to refuse the
-                      result is a form that says no twice. */}
-                  {fields.length > QUESTION_MIN_OPTIONS ? (
-                    <Button
-                      label={`Retirer la réponse ${index + 1}`}
-                      variant="ghost"
-                      size="icon-sm"
-                      icon={Trash2}
-                      onPress={() => remove(index)}
-                    />
-                  ) : null}
-                </View>
-              ))}
+                {fields.length < QUESTION_MAX_OPTIONS ? (
+                  <Button
+                    label="Ajouter une réponse"
+                    variant="outline"
+                    icon={Plus}
+                    onPress={() => append(emptyOption())}
+                  />
+                ) : null}
+              </View>
 
-              {fields.length < QUESTION_MAX_OPTIONS ? (
-                <Button
-                  label="Ajouter une réponse"
-                  variant="outline"
-                  size="sm"
-                  icon={Plus}
-                  onPress={() => append(emptyOption())}
-                />
-              ) : null}
+              {failure === null ? null : <Text style={styles.error}>{failure}</Text>}
+
+              {/* The price stays in the trailing slot, as on the card that opens
+                  this screen: it is what the action costs, not what it is. */}
+              <Button
+                label="Poser ma question"
+                trailingLabel={amountLabel(QUESTION_STATCOIN_COST)}
+                accessibilityLabel={`Poser ma question, ${spokenAmountLabel(QUESTION_STATCOIN_COST)}`}
+                loading={isSubmitting}
+                onPress={onSubmit}
+              />
+            </>
+          ) : (
+            <View style={styles.outcome}>
+              <SuccessCheck size="2xl" />
+
+              <Text style={styles.outcomeMessage}>
+                Ta question part en modération. Tu sauras vite si elle est retenue.
+              </Text>
+
+              <Text
+                style={styles.outcomeBalance}
+                accessibilityLabel={`Il te reste ${spokenAmountLabel(result.statcoin_balance)}`}
+              >
+                Il te reste {amountLabel(result.statcoin_balance)}
+              </Text>
+
+              <Button label="Fermer" onPress={() => navigation.goBack()} />
             </View>
-
-            {failure === null ? null : <Text style={styles.error}>{failure}</Text>}
-
-            {/* The price stays on the button here as it is on the card that
-                opens this sheet: it is what the action costs, not what it is,
-                so it takes the trailing slot rather than the label. */}
-            <Button
-              label="Poser ma question"
-              trailingLabel={amountLabel(QUESTION_STATCOIN_COST)}
-              accessibilityLabel={`Poser ma question, ${spokenAmountLabel(QUESTION_STATCOIN_COST)}`}
-              loading={isSubmitting}
-              onPress={onSubmit}
-            />
-          </View>
-        </>
-      ) : (
-        <View style={styles.outcome}>
-          <SuccessCheck size="2xl" />
-
-          <Text style={styles.outcomeMessage}>
-            Ta question part en modération. Tu sauras vite si elle est retenue.
-          </Text>
-
-          <Text
-            style={styles.outcomeBalance}
-            accessibilityLabel={`Il te reste ${spokenAmountLabel(result.statcoin_balance)}`}
-          >
-            Il te reste {amountLabel(result.statcoin_balance)}
-          </Text>
-
-          <Button label="Fermer" onPress={() => navigation.goBack()} />
-        </View>
-      )}
-    </ScrollView>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
