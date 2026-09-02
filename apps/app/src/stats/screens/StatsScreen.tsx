@@ -18,7 +18,7 @@ import { resolveStreakCount } from '@/stats/helpers/streak';
 /**
  * The root of the app (docs/prd.md §5.1, §5.2), from top to bottom: the
  * invitations waiting on an answer, the day's banner — the question while it is
- * still open, « RDV demain » once it has been answered — the streak and its
+ * still open, the day's mood once it has been answered — the streak and its
  * counters on a scrolling strip, the calendar, and under it the StatCoin wallet
  * and what it buys: proposing a question (§4.7). The daily question sheet lands
  * on top of it (§5.4).
@@ -44,7 +44,7 @@ export const StatsScreen = () => {
     selectMonth,
     calendar,
     todayQuestion,
-    answeredToday,
+    todayAnswer,
     archiveStart,
     refreshing,
     refresh,
@@ -60,10 +60,13 @@ export const StatsScreen = () => {
   const statcoins = profile?.statcoin_balance ?? 0;
 
   // The banner is the day's status line, whichever side of the answer one is
-  // on: the question while it waits, « RDV demain » once it has been given. It
-  // only steps aside on a day no question ever dropped on.
-  const bannerLabel = answeredToday ? null : todayQuestion?.label ?? null;
-  const showBanner = answeredToday || todayQuestion !== null;
+  // on: the question while it waits, and the question *plus* the mood it earned
+  // once it has been given — « Aujourd’hui tu es REBELLE », which is what one
+  // otherwise had to go and find again in the calendar. It only steps aside on
+  // a day no question ever dropped on.
+  const bannerLabel = todayQuestion?.label ?? null;
+  const bannerStatLabel = todayAnswer?.stat_label ?? null;
+  const showBanner = bannerLabel !== null || bannerStatLabel !== null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[ 'top' ]}>
@@ -93,6 +96,7 @@ export const StatsScreen = () => {
         {showBanner ? (
           <DailyQuestionBanner
             label={bannerLabel}
+            statLabel={bannerStatLabel}
             onPress={() => navigation.navigate('DailyQuestion')}
           />
         ) : null}

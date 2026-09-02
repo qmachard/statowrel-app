@@ -1,5 +1,6 @@
 import {
   DAILY_QUESTION_MONTH_COLLECTION,
+  type UserCalendarMonthDayData,
   dailyQuestionMonthConverter,
   monthDayKeyOf,
   monthKeyOf,
@@ -9,7 +10,7 @@ import { getDocs, limit, orderBy, query } from '@react-native-firebase/firestore
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useAuth } from '@/auth/AuthContext';
-import { getAnswersVersion, readAnswer, readAnswerDays, subscribeToAnswers } from '@/daily-question/data/answerStore';
+import { getAnswersVersion, readAnswerDays, subscribeToAnswers } from '@/daily-question/data/answerStore';
 import { startOfMonth, toDateKey } from '@/lib/dates';
 import { getCollectionRef } from '@/lib/firestore';
 import { useToday } from '@/lib/useToday';
@@ -222,6 +223,23 @@ export const useStatsData = () => {
     ? read
     : { ...read, answered: { ...read.answered, ...answeredThisSession } };
 
+  /**
+   * Today's own answer — the option it picked and, above all, its `stat_label`:
+   * the mood the banner announces (docs/prd.md §5.2 point 3).
+   *
+   * Read off the *current* month rather than the displayed one, for the reason
+   * `todayQuestion` is: browsing back to March must not take the day's own line
+   * off the top of the screen. It carries the same session overlay `calendar`
+   * does — the answer trigger projects the day a beat after the app writes it,
+   * and until it has, this session's own answer is what today is.
+   */
+  const currentAnswers = monthKey === currentMonthKey
+    ? answeredThisSession
+    : readAnswerDays(userId, currentMonthKey);
+  const sessionToday: UserCalendarMonthDayData | undefined = currentAnswers[todayMonthDayKey];
+  const storedToday: UserCalendarMonthDayData | undefined = currentMonth?.answered[todayMonthDayKey];
+  const todayAnswer = sessionToday ?? storedToday ?? null;
+
   return {
     /** `v1_users/{uid}`, live — see `AuthContext`. Null while it loads, and until the onboarding sheet has created it. */
     profile,
@@ -247,11 +265,17 @@ export const useStatsData = () => {
      * the screen.
      */
     todayQuestion: currentMonth?.published[todayMonthDayKey] ?? null,
-    // The month index is written by the answer trigger, which has not
-    // necessarily run yet when the user comes back from the sheet — so an
-    // answer given during this session counts on its own.
-    answeredToday: currentMonth?.answered[todayMonthDayKey] !== undefined
-      || readAnswer(userId, todayKey) !== null,
+    /**
+     * Today's answer as the calendar projects it — `stat_label` included, which
+     * is what the banner says the day's mood from. `null` until the day is
+     * answered.
+     *
+     * It is also what « the day is played » is read from: the month index is
+     * written by the answer trigger, which has not necessarily run when the
+     * user comes back from the sheet, so an answer given during this session
+     * counts on its own.
+     */
+    todayAnswer,
     loading: userId !== null && stored === null,
     /** True while a pull to refresh is out — the `RefreshControl`'s own state. */
     refreshing,
