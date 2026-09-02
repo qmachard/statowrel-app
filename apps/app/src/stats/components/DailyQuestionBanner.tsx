@@ -7,7 +7,8 @@ import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/
 export interface DailyQuestionBannerProps {
   /**
    * `QuestionData.label` — the question the day is asking, copied into the
-   * month index at publication. `null` on a day no question ever dropped on.
+   * month index at publication. `null` on a day no question ever dropped on,
+   * and unread once the day is answered: the mood replaces it.
    */
   label: string | null;
   /**
@@ -57,28 +58,25 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     color: colors['accent-foreground'],
   },
-  // The same question once it is answered — demoted, but never dropped: it is
-  // what the mood under it is the answer to.
-  question: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.sm,
-    color: colors['accent-foreground'],
-  },
-  mood: {
-    paddingTop: spacing(1),
-  },
+  // The lead-in, with the check on it — the check is the whole of what used to
+  // be a caption line of its own.
   moodLead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(2),
+  },
+  moodLeadText: {
     fontFamily: fonts.sans,
     fontSize: fontSize.base,
     color: colors['accent-foreground'],
   },
-  // The one thing the banner is now for — the same treatment the result sheet
-  // gives it (`StatOwrelHeadline`), so the day says the same word twice at the
-  // same weight.
+  // The one thing the banner is now for — the result sheet's own treatment
+  // (`StatOwrelHeadline`), a step down its scale: the sheet is the word's
+  // stage, the banner is where one meets it again.
   moodLabel: {
     fontFamily: fonts.head,
-    fontSize: fontSize['2xl'],
-    lineHeight: fontSize['2xl'] * 1.1,
+    fontSize: fontSize.xl,
+    lineHeight: fontSize.xl * 1.1,
     textTransform: 'uppercase',
     color: colors['accent-foreground'],
   },
@@ -98,6 +96,9 @@ const SUNK: ViewStyle = { transform: [ { translateX: spacing(1) }, { translateY:
 
 const ICON_SIZE = 14;
 
+/** The check rides on the lead-in line rather than on a caption, so it is sized against it. */
+const CHECK_SIZE = 16;
+
 /** The 07:00 Paris draw the daily scheduler runs on — what « demain » actually means. */
 const NEXT_DRAW = 'Prochaine question à 7h';
 
@@ -106,10 +107,15 @@ const NEXT_DRAW = 'Prochaine question à 7h';
  * (docs/prd.md §5.2), and the day's status line on either side of the answer.
  *
  * While the day is open it announces the question and opens its sheet (§5.4).
- * Once it is answered it keeps the question, small, and says the day's
- * **mood** under it — « Aujourd'hui tu es REBELLE » — which is the whole point
- * of answering (§5.5) and, until now, something one had to go and find again in
- * the calendar. A tap then reopens that result rather than doing nothing.
+ * Once it is answered it says one thing and nothing else — « Aujourd'hui tu es
+ * un.e REBELLE », which is the whole point of answering (§5.5) and, until now,
+ * something one had to go and find again in the calendar. A tap then reopens
+ * that result rather than doing nothing.
+ *
+ * The question is **not** carried over into that state, and neither is a
+ * caption: the mood is worth reading at a glance, and it stops being worth it
+ * the moment three other lines want the same glance. The check on the lead-in
+ * is all that is left of « tu as répondu ».
  *
  * It keeps its `accent` surface throughout, for the reason the calendar's own
  * cell does (§5.2): today is the day the screen is about, answered or not, and
@@ -127,37 +133,34 @@ export const DailyQuestionBanner = ({ label, statLabel, onPress }: DailyQuestion
 
   const accessibilityLabel = mood === null
     ? `Question du jour : ${label ?? ''}`
-    : `Aujourd’hui tu es ${mood}. Voir ton résultat.`;
+    : `Aujourd’hui tu es un.e ${mood}. Voir ton résultat.`;
 
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress}>
       {({ pressed }) => (
         <View style={[ styles.surface, pressed ? SUNK : shadows.md ]}>
           <View style={styles.copy}>
-            <View style={styles.heading}>
-              {mood === null ? (
-                <MessageCircleQuestionMark size={ICON_SIZE} color={colors['accent-foreground']} />
-              ) : (
-                <Check size={ICON_SIZE} color={colors['accent-foreground']} />
-              )}
+            {mood === null ? (
+              <>
+                <View style={styles.heading}>
+                  <MessageCircleQuestionMark size={ICON_SIZE} color={colors['accent-foreground']} />
+                  <Text style={styles.caption}>Question du jour</Text>
+                </View>
 
-              <Text style={styles.caption}>{mood === null ? 'Question du jour' : 'Tu as répondu'}</Text>
-            </View>
+                <Text style={styles.label} numberOfLines={3}>{label}</Text>
+              </>
+            ) : (
+              <>
+                <View style={styles.moodLead}>
+                  <Check size={CHECK_SIZE} color={colors['accent-foreground']} />
+                  <Text style={styles.moodLeadText}>Aujourd’hui tu es un.e</Text>
+                </View>
 
-            {label === null ? null : (
-              <Text style={mood === null ? styles.label : styles.question} numberOfLines={mood === null ? 3 : 2}>
-                {label}
-              </Text>
-            )}
-
-            {mood === null ? null : (
-              <View style={styles.mood}>
-                <Text style={styles.moodLead}>Aujourd’hui tu es</Text>
                 <Text style={styles.moodLabel} numberOfLines={2}>{mood}</Text>
-              </View>
-            )}
 
-            {mood === null ? null : <Text style={styles.footnote}>{NEXT_DRAW}</Text>}
+                <Text style={styles.footnote}>{NEXT_DRAW}</Text>
+              </>
+            )}
           </View>
 
           <ChevronRight size={28} color={colors['accent-foreground']} />
