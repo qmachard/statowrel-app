@@ -30,7 +30,7 @@ export const isAuthProviderId = (value: string): value is AuthProviderId => (
  * written by the app itself, once the pseudo has been chosen on the onboarding
  * screen (`src/auth/profile.ts`).
  *
- * Profile, sign-in identities, answering stats and the StatCoin wallet. The PRD's
+ * Profile, sign-in identities, answering stats and the StatFlouzz wallet. The PRD's
  * `invite_code` is still to be modelled, and so is its `photo_url` the day a
  * real profile-photo system ships — today every face is generated from the handle
  * (`apps/app/src/lib/avatars.ts`), and the Menu screen's own avatar reads the
@@ -84,8 +84,8 @@ export interface UserFirebaseData {
   /**
    * The wallet — what the account can spend right now (docs/prd.md §4.7).
    *
-   * Credited `STREAK_STATCOIN_REWARD` every `STREAK_STATCOIN_MILESTONE` consecutive
-   * days answered on time, debited `QUESTION_STATCOIN_COST` by proposing a
+   * Credited `STREAK_STATFLOUZZ_REWARD` every `STREAK_STATFLOUZZ_MILESTONE` consecutive
+   * days answered on time, debited `QUESTION_STATFLOUZZ_COST` by proposing a
    * question. Both moves belong to the backend, like the streak above and for
    * the same reason: an update that changes this from a client is a forged
    * balance, and `firestore.rules` refuses it.
@@ -96,7 +96,7 @@ export interface UserFirebaseData {
    */
   statcoin_balance: number;
   /**
-   * Lifetime StatCoins credited to the account, and lifetime StatCoins debited
+   * Lifetime StatFlouzz credited to the account, and lifetime StatFlouzz debited
    * from it. Not derivable from each other and from the balance the day they
    * come from anywhere but a streak — a bought pack, a watched ad, a gift — so
    * both are stored rather than one inferred.

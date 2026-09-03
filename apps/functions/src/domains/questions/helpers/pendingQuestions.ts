@@ -18,7 +18,7 @@ import { getCollectionRef } from '@/libs/firebase-admin';
  * pot next to it. Revisit this if the pot ever grows past a few thousand.
  *
  * Oldest first because that is what a moderator should look at first: a
- * proposal nobody has answered is somebody waiting on their StatCoins.
+ * proposal nobody has answered is somebody waiting on their StatFlouzz.
  */
 export const listPendingQuestions = async (): Promise<Identifiable<QuestionData>[]> => {
   const snapshot = await getCollectionRef(QUESTION_COLLECTION, questionConverter)

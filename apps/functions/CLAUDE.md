@@ -142,9 +142,9 @@ not a moderator's edit, and stamping it would make every question look freshly e
 author's profile is gone is left alone rather than stamped — there is nothing to credit.
 
 ```bash
-npm run backfill-statcoins                               # rebuild the counters, credit what streaks owe
-npm run backfill-statcoins -- --dry-run                  # ... reporting every account, writing nothing
-npm run backfill-statcoins -- --production
+npm run backfill-statflouzz                               # rebuild the counters, credit what streaks owe
+npm run backfill-statflouzz -- --dry-run                  # ... reporting every account, writing nothing
+npm run backfill-statflouzz -- --production
 ```
 
 Rebuilds each account's streak counters from its answers and pays the milestone rewards of
@@ -158,7 +158,7 @@ and a current streak of 12 is describing 29 days it does not have.
 would not do even for the payout alone: a profile carries the streak running now and the best one ever
 reached, and neither says how many milestones the account has crossed across every streak it has run —
 somebody who kept a 40-day streak last spring and stopped carries `streak_count: 0` and is owed 400§.
-So each account's answers are read back and the streak is rebuilt day by day, `streakStatcoinReward`
+So each account's answers are read back and the streak is rebuilt day by day, `streakStatflouzzReward`
 deciding each crossing exactly as the trigger does. `answers_count`, `streak_count`, `streak_best` and
 `streak_last_answered_on` come out of the same pass.
 

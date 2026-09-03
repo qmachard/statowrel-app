@@ -112,11 +112,11 @@ Re-export every new model from `src/index.ts`.
 
 **The handle is denormalized, and the credit follows a rename.** `author_username` is copied onto the question for the same reason `friend_username` is copied onto a friendship edge: naming the author of docs/prd.md §5.4 would otherwise be one `v1_users` read per opening of a day in the app, and one per distinct author of a pot that never shrinks in the console. It is safe to copy because it is *checkable* — `firestore.rules` runs the same `get()` on `v1_usernames` that the friendship's own `friendUsernameIsTheirs()` runs, so nobody drops a question credited under a borrowed pseudo — and the `get()` sits behind a null check, a rules read being billed like any other.
 
-It is a display cache and not the truth: `v1_users/{author_id}.username` stays it. Renaming a handle does not exist yet (`docs/prd.md` §4.1) and cannot be a client write — `v1_usernames` is `allow update, delete: if false`, freeing a reservation being the backend's job — so **the day that job exists it owns propagating this copy onto its author's questions**, alongside the `v1_user_friends` copies it already has to backfill. The alternative, freezing the credit at publication, would show two different handles for one person in the same app; the fan-out it costs is over the handful of documents §4.7 lets anybody propose, each one paid for in StatCoins.
+It is a display cache and not the truth: `v1_users/{author_id}.username` stays it. Renaming a handle does not exist yet (`docs/prd.md` §4.1) and cannot be a client write — `v1_usernames` is `allow update, delete: if false`, freeing a reservation being the backend's job — so **the day that job exists it owns propagating this copy onto its author's questions**, alongside the `v1_user_friends` copies it already has to backfill. The alternative, freezing the credit at publication, would show two different handles for one person in the same app; the fan-out it costs is over the handful of documents §4.7 lets anybody propose, each one paid for in StatFlouzz.
 
 The field is younger than the collection, so a question written before it carries none, and both readers fall back to the profile read while it does — the same shape as `questionLastModifiedAt` falling back to `created_at`. `npm run backfill-question-authors` (`apps/functions/scripts/`) is what ends that: it walks the pot, resolves each distinct author once, and stamps the copy through the admin SDK, `update` on a question being denied to every client. The fallback and the `useQuestionAuthors` hook behind it come out once that pass has run in production.
 
-**No client creates a question any more.** `firestore.rules` used to let an author write their own `pending` proposal, which was fine while proposing was free; §4.7 prices it at `QUESTION_STATCOIN_COST`, and a price a direct write walks around is not a price. So the block is `allow create: if false` and `questions-proposeQuestion` is the door — it debits the profile and writes the question in one transaction, admin-side. It also retired the rules' `authorUsernameIsTheirs()` check: the callable reads the handle off the very profile it debits, so there is no client-supplied copy left to check against the reservation. The moderation console is unaffected — it writes through the `isAdmin()` wildcard, and rules are OR'ed.
+**No client creates a question any more.** `firestore.rules` used to let an author write their own `pending` proposal, which was fine while proposing was free; §4.7 prices it at `QUESTION_STATFLOUZZ_COST`, and a price a direct write walks around is not a price. So the block is `allow create: if false` and `questions-proposeQuestion` is the door — it debits the profile and writes the question in one transaction, admin-side. It also retired the rules' `authorUsernameIsTheirs()` check: the callable reads the handle off the very profile it debits, so there is no client-supplied copy left to check against the reservation. The moderation console is unaffected — it writes through the `isAdmin()` wildcard, and rules are OR'ed.
 
 `broadcast_on` duplicates what `broadcast_at` already says, and it earns its place: nothing that reads this document can turn a timestamp into a Paris day key without a clock and a timezone database, `firestore.rules` least of all — and the rules are what pin an answer's `date` to the day it was really given, so a forged one cannot land on the wrong calendar cell or restart the wrong streak. `closes_at` is stored for the same reason: it is what the rules check the `late` flag against.
 
@@ -165,7 +165,7 @@ Only the shared half is immutable: a month of `v1_daily_question_months` is froz
 
 ### `v1_users`
 
-`packages/models/src/v1_user.ts` — the app user's profile, answering stats and StatCoin wallet. The document id is the **Firebase Auth UID**, not a ULID: it is the key `author_id`, `user_id` and friendships point at, and the one `firestore.rules` compares against `request.auth.uid`.
+`packages/models/src/v1_user.ts` — the app user's profile, answering stats and StatFlouzz wallet. The document id is the **Firebase Auth UID**, not a ULID: it is the key `author_id`, `user_id` and friendships point at, and the one `firestore.rules` compares against `request.auth.uid`.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -178,13 +178,13 @@ Only the shared half is immutable: a month of `v1_daily_question_months` is froz
 | `streak_best` | `number` | longest `streak_count` ever reached |
 | `answers_count` | `number` | total days answered, catch-ups included — days predating the account among them, which is why the Stats tile is labelled « Total » over « jours » and not « depuis l'inscription ». The tile reads the field rather than counting, since the calendar only ever loads one month |
 | `streak_last_answered_on` | `string \| null` (`YYYY-MM-DD`) | day of the last on-time answer; `null` until the first one |
-| `statcoin_balance` | `number` | the wallet (`docs/prd.md` §4.7). Credited `STREAK_STATCOIN_REWARD` (100) every `STREAK_STATCOIN_MILESTONE` (10) consecutive days answered on time, in the answer trigger's own transaction; debited `QUESTION_STATCOIN_COST` (100) by `questions-proposeQuestion`, and credited back by the refund trigger when the question is rejected |
+| `statcoin_balance` | `number` | the wallet (`docs/prd.md` §4.7). Credited `STREAK_STATFLOUZZ_REWARD` (100) every `STREAK_STATFLOUZZ_MILESTONE` (10) consecutive days answered on time, in the answer trigger's own transaction; debited `QUESTION_STATFLOUZZ_COST` (100) by `questions-proposeQuestion`, and credited back by the refund trigger when the question is rejected |
 | `statcoins_earned` | `number` | lifetime credited |
-| `statcoins_spent` | `number` | lifetime debited, and brought back down by a refund — a rejected question was not *earned* back, it was a purchase undone. Stored rather than inferred from the two above: the day StatCoins also come from a bought pack, a watched ad or a gift, `earned − balance` stops being what was spent |
+| `statcoins_spent` | `number` | lifetime debited, and brought back down by a refund — a rejected question was not *earned* back, it was a purchase undone. Stored rather than inferred from the two above: the day StatFlouzz also come from a bought pack, a watched ad or a gift, `earned − balance` stops being what was spent |
 
 The profile half of the document is written by the app itself, at first sign-in — `apps/app/src/auth/profile.ts`, under the owner-only `create`/`update` rules. The counters and the wallet belong to the backend: the app seeds them at sign-up and `firestore.rules` rejects an update that moves one, so a forged score is not a thing a client can write. Only the PRD's `invite_code` is still to be modelled.
 
-**The wallet made the `create` worth closing too.** `keepsBackendCounters()` only ever guarded an *update* — nothing stopped a client from writing its own profile with counters already in it, which cost nothing while they were a score. They are money now: a profile opened with a balance is a free question, and one opened with a streak of 9 answered yesterday is worth 100 StatCoins tomorrow, since the payout is computed from `streak_count` and `streak_last_answered_on`. `startsEmpty()` pins all seven fields to their zero on `create`, which only ever fires on a document that does not exist — completing a profile that predates a username is a `set` over an existing one, an update, and goes through `keepsBackendCounters()` as before.
+**The wallet made the `create` worth closing too.** `keepsBackendCounters()` only ever guarded an *update* — nothing stopped a client from writing its own profile with counters already in it, which cost nothing while they were a score. They are money now: a profile opened with a balance is a free question, and one opened with a streak of 9 answered yesterday is worth 100 StatFlouzz tomorrow, since the payout is computed from `streak_count` and `streak_last_answered_on`. `startsEmpty()` pins all seven fields to their zero on `create`, which only ever fires on a document that does not exist — completing a profile that predates a username is a `set` over an existing one, an update, and goes through `keepsBackendCounters()` as before.
 
 ### `v1_usernames`
 
@@ -304,7 +304,7 @@ Proposing a question, paying for it, and getting it looked at — `docs/prd.md` 
 
 | Function | Kind | Role |
 |---|---|---|
-| `questions-proposeQuestion` | Callable (`onCall`) | Debits `QUESTION_STATCOIN_COST` and writes the question `pending`, in one transaction |
+| `questions-proposeQuestion` | Callable (`onCall`) | Debits `QUESTION_STATFLOUZZ_COST` and writes the question `pending`, in one transaction |
 | `questions-onQuestionUpdated` | Firestore trigger (`onDocumentUpdated`) | Refunds a question's cost to its author when a moderator rejects it |
 | `questions-scheduleModerationDigest` | Cloud Scheduler, `0 8 * * 3` Europe/Paris | Mails the moderators the questions waiting on them — nothing at all when none are |
 
@@ -582,7 +582,7 @@ It **wipes Firestore and Auth first, every time**, and there is no flag not to: 
 
 **The wallets are granted, not only earned.** The replay pays what each streak's milestones owe, exactly as the answer trigger does — but on a month of history holed twice that lands somewhere between nothing and one question, so whether the proposal form of docs/prd.md §4.7 opens at all would depend on `--seed`. A dev environment should not have to be lucky: every seeded account starts with `--statcoins` (500 by default, five questions' worth) on top of what it earned. The grant moves `statcoins_earned` with the balance, so `balance = earned − spent` holds and the fixture reads as a wallet that was paid rather than one that was tampered with. `--statcoins 0` is how the empty-wallet path is looked at — the sheet refusing a proposal it cannot pay for.
 
-`--seed <n>` picks the world; the same value gives the same one, tallies included. The knobs are `--days`, `--friends`, `--crowd`, `--statcoins`, `--email` and `--password`.
+`--seed <n>` picks the world; the same value gives the same one, tallies included. The knobs are `--days`, `--friends`, `--crowd`, `--statflouzz`, `--email` and `--password`.
 
 ### The beat between an answer and its tally
 

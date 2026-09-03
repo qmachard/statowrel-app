@@ -82,7 +82,7 @@ const TONE_LABEL = StyleSheet.create({
 /**
  * One line of « Mes questions »: the question as it was written, the badge its
  * state wears, and under it whatever that state still owes — the moderator's
- * reason, the StatCoins handed back.
+ * reason, the StatFlouzz handed back.
  *
  * It carries no surface of its own, like `FriendRow`: the card around the list
  * is the surface, and the rows are cut out of it by separators.

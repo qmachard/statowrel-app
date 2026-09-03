@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 //
 // Rebuilds each account's streak counters from its answers, and pays the
-// StatCoins of docs/prd.md §4.7 that those streaks earned before the currency
+// StatFlouzz of docs/prd.md §4.7 that those streaks earned before the currency
 // existed.
 //
-//   npm run backfill-statcoins                  # default project (.firebaserc)
-//   npm run backfill-statcoins -- --production
-//   npm run backfill-statcoins -- --dry-run     # writes nothing, reports every account
+//   npm run backfill-statflouzz                  # default project (.firebaserc)
+//   npm run backfill-statflouzz -- --production
+//   npm run backfill-statflouzz -- --dry-run     # writes nothing, reports every account
 //
 // Two jobs, one replay, because they are the same computation. The milestone
 // payout is made by the answer trigger in the transaction that moves the
@@ -21,7 +21,7 @@
 // **The answers are the record.** They are what the calendar months, the
 // counters and the wallet are all derived from, so they are what everything
 // here is settled against — the streak is rebuilt day by day, with
-// `streakStatcoinReward` deciding each milestone exactly as the trigger does.
+// `streakStatflouzzReward` deciding each milestone exactly as the trigger does.
 // The rule lives in `@statowrel/models` for that reason: a backfill computing a
 // payout its own way is a backfill that disagrees with production.
 //
@@ -56,7 +56,7 @@ import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 import { die, resolveProjectId } from './lib/firebase-project.mjs';
 
-const USAGE = 'Usage: npm run backfill-statcoins -- [--production | --project <id>] [--dry-run]';
+const USAGE = 'Usage: npm run backfill-statflouzz -- [--production | --project <id>] [--dry-run]';
 
 // A Firestore batch caps at 500 operations.
 const BATCH_SIZE = 400;
@@ -95,7 +95,7 @@ const {
   DAILY_QUESTION_ANSWER_COLLECTION,
   previousDateKey,
   QUESTION_COLLECTION,
-  streakStatcoinReward,
+  streakStatflouzzReward,
   USER_COLLECTION,
 } = models;
 
@@ -203,7 +203,7 @@ const readAnswer = async (document) => {
  * Everything one account's answers add up to, replayed in day order.
  *
  * Mirrors `nextStreakState` and the trigger's own call to
- * `streakStatcoinReward`: a day following the last one continues the streak,
+ * `streakStatflouzzReward`: a day following the last one continues the streak,
  * anything further back restarts it at 1, and each milestone crossed pays. A
  * catch-up answer completes the calendar and leaves the streak where it was
  * (docs/prd.md §4.6), so it counts towards `answers_count` and nothing else.
@@ -234,7 +234,7 @@ const replay = (entries) => {
     streak = lastAnsweredOn === previousDateKey(day, 1) ? streak + 1 : 1;
     best = Math.max(best, streak);
     lastAnsweredOn = day;
-    owed += streakStatcoinReward(previous, streak);
+    owed += streakStatflouzzReward(previous, streak);
   });
 
   return {

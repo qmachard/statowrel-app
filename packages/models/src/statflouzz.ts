@@ -24,15 +24,15 @@
  * (10, 20, 30…), and only on the day the milestone is crossed.
  *
  * A milestone rather than a per-day drip because the reward has to be an event:
- * ten StatCoins a day would fund a question just as fast and celebrate nothing.
+ * ten StatFlouzz a day would fund a question just as fast and celebrate nothing.
  */
-export const STREAK_STATCOIN_MILESTONE = 10;
+export const STREAK_STATFLOUZZ_MILESTONE = 10;
 
 /** What crossing a milestone pays. */
-export const STREAK_STATCOIN_REWARD = 100;
+export const STREAK_STATFLOUZZ_REWARD = 100;
 
 /** What proposing a question costs (docs/prd.md §4.7) — one milestone, exactly. */
-export const QUESTION_STATCOIN_COST = 100;
+export const QUESTION_STATFLOUZZ_COST = 100;
 
 /**
  * What a day's answer pays out, from the streak before it and the streak after.
@@ -44,15 +44,15 @@ export const QUESTION_STATCOIN_COST = 100;
  * streak ever advances by more than one — the reward follows the ground
  * covered, not the digit it landed on.
  */
-export const streakStatcoinReward = (previousStreak: number, nextStreak: number): number => {
+export const streakStatflouzzReward = (previousStreak: number, nextStreak: number): number => {
   if (nextStreak <= previousStreak) {
     return 0;
   }
 
   // Never negative past the guard above: a bigger streak can only sit in the
   // same milestone bracket or a later one.
-  const crossed = Math.floor(nextStreak / STREAK_STATCOIN_MILESTONE)
-    - Math.floor(previousStreak / STREAK_STATCOIN_MILESTONE);
+  const crossed = Math.floor(nextStreak / STREAK_STATFLOUZZ_MILESTONE)
+    - Math.floor(previousStreak / STREAK_STATFLOUZZ_MILESTONE);
 
-  return crossed * STREAK_STATCOIN_REWARD;
+  return crossed * STREAK_STATFLOUZZ_REWARD;
 };

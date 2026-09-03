@@ -12,7 +12,7 @@ import {
 import { getDocumentRef, runTransaction } from '@/libs/firebase-admin';
 
 /**
- * Hands a rejected question's StatCoins back to whoever paid for them —
+ * Hands a rejected question's StatFlouzz back to whoever paid for them —
  * docs/prd.md §4.7, the other end of `questions-proposeQuestion`.
  *
  * **Why a refund at all.** The price buys a question a place in the pot, not a
@@ -26,7 +26,7 @@ import { getDocumentRef, runTransaction } from '@/libs/firebase-admin';
  * callable and null everywhere else, so the seeded catalogue, the onboarding
  * demo and anything a moderator writes from the console refund nothing: they
  * cost nothing. That is why the amount is read off the question rather than
- * assumed to be `QUESTION_STATCOIN_COST` — the day the price moves, an old
+ * assumed to be `QUESTION_STATFLOUZZ_COST` — the day the price moves, an old
  * question still hands back what it took.
  *
  * **The marker is the whole design.** A Firestore trigger is delivered at least
@@ -104,7 +104,7 @@ export const onQuestionRejected = async (questionId: string, question: QuestionD
 
     logger.info('Rejected question refunded', {
       question_id: questionId,
-      statcoins: refund,
+      statflouzz: refund,
       user_id: question.author_id,
     });
   });

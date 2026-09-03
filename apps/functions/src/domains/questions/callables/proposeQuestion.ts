@@ -9,7 +9,7 @@ import {
   QUESTION_MIN_OPTIONS,
   QUESTION_OPTION_LABEL_MAX_LENGTH,
   QUESTION_OPTION_STAT_LABEL_MAX_LENGTH,
-  QUESTION_STATCOIN_COST,
+  QUESTION_STATFLOUZZ_COST,
   type QuestionData,
   USER_COLLECTION,
   questionConverter,
@@ -45,7 +45,7 @@ const payloadSchema = z.object({
 });
 
 /**
- * Proposing a question, paid for in StatCoins — docs/prd.md §4.7, the spending
+ * Proposing a question, paid for in StatFlouzz — docs/prd.md §4.7, the spending
  * half of the currency the answer trigger credits.
  *
  * **A callable, and now the only way a question can be written.** The rules let
@@ -65,7 +65,7 @@ const payloadSchema = z.object({
  * - `not-found` — a signed-in account with no profile document, which is an
  *   account that has not been through the username sheet yet: there is no
  *   handle to credit the question to and no wallet to debit.
- * - `failed-precondition` — the wallet is short of `QUESTION_STATCOIN_COST`.
+ * - `failed-precondition` — the wallet is short of `QUESTION_STATFLOUZZ_COST`.
  *   Its own code, because it is the one refusal the user can do something
  *   about: answer ten more days.
  *
@@ -109,8 +109,8 @@ export const proposeQuestion = onCall<unknown, Promise<ProposeQuestionResult>>(
         throw new HttpsError('not-found', 'No profile for this account.');
       }
 
-      if (user.statcoin_balance < QUESTION_STATCOIN_COST) {
-        throw new HttpsError('failed-precondition', 'Not enough StatCoins to propose a question.');
+      if (user.statcoin_balance < QUESTION_STATFLOUZZ_COST) {
+        throw new HttpsError('failed-precondition', 'Not enough StatFlouzz to propose a question.');
       }
 
       const question: QuestionData = {
@@ -126,7 +126,7 @@ export const proposeQuestion = onCall<unknown, Promise<ProposeQuestionResult>>(
         // docs/prd.md §5.4 costs no second read and cannot name anybody else.
         author_username: user.username,
         rejection_reason: null,
-        statcoin_cost: QUESTION_STATCOIN_COST,
+        statcoin_cost: QUESTION_STATFLOUZZ_COST,
         refunded_at: null,
         broadcast_at: null,
         broadcast_on: null,
@@ -146,17 +146,17 @@ export const proposeQuestion = onCall<unknown, Promise<ProposeQuestionResult>>(
       // not run the converter (see the repo's CLAUDE.md), so this is a
       // Timestamp and not an ISO string.
       transaction.update(userRef, {
-        statcoin_balance: FieldValue.increment(-QUESTION_STATCOIN_COST),
-        statcoins_spent: FieldValue.increment(QUESTION_STATCOIN_COST),
+        statcoin_balance: FieldValue.increment(-QUESTION_STATFLOUZZ_COST),
+        statcoins_spent: FieldValue.increment(QUESTION_STATFLOUZZ_COST),
         updated_at: Timestamp.now(),
       });
 
-      return user.statcoin_balance - QUESTION_STATCOIN_COST;
+      return user.statcoin_balance - QUESTION_STATFLOUZZ_COST;
     });
 
     logger.info('Question proposed', {
       question_id: questionRef.id,
-      statcoins: QUESTION_STATCOIN_COST,
+      statflouzz: QUESTION_STATFLOUZZ_COST,
       user_id: userId,
     });
 

@@ -6,7 +6,7 @@ export type RootStackParamList = {
   InviteFriend: undefined;
   /** Settings, friends, profile — everything that isn't the stats (docs/prd.md §5.1). */
   Menu: undefined;
-  /** Write a question and pay for it in StatCoins (docs/prd.md §4.7). */
+  /** Write a question and pay for it in StatFlouzz (docs/prd.md §4.7). */
   ProposeQuestion: undefined;
   SignIn: undefined;
   SignUp: undefined;

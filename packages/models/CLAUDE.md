@@ -25,9 +25,9 @@ The daily cycle's clock: `parisTimeToInstant`, the two instants a day key stands
 
 Day-key arithmetic stays in `v1_daily_question_month.ts`, next to `dailyQuestionDateKey` — `dateKeyParts`, `previousDateKey`, `monthKeyOf`, `monthDayKeyOf`, `dateKeyOf`.
 
-## `src/statcoins.ts`
+## `src/statflouzz.ts`
 
-The currency — **StatCoins** (docs/prd.md §4.7): what a streak milestone pays (`STREAK_STATCOIN_MILESTONE`, `STREAK_STATCOIN_REWARD`), what a question costs (`QUESTION_STATCOIN_COST`), and `streakStatcoinReward(previous, next)` — the payout read off the milestone *crossed* rather than off the new streak's last digit, so a streak that did not move pays nothing. No collection either: the wallet it moves is three fields on `v1_users`. It lives here because three sides have to agree on the same numbers — the answer trigger that credits, the callable that debits, and the screen that says what can be afforded — and a constant copied three times is a constant that drifts.
+The currency — **StatFlouzz** (docs/prd.md §4.7): what a streak milestone pays (`STREAK_STATFLOUZZ_MILESTONE`, `STREAK_STATFLOUZZ_REWARD`), what a question costs (`QUESTION_STATFLOUZZ_COST`), and `streakStatflouzzReward(previous, next)` — the payout read off the milestone *crossed* rather than off the new streak's last digit, so a streak that did not move pays nothing. No collection either: the wallet it moves is three fields on `v1_users`. It lives here because three sides have to agree on the same numbers — the answer trigger that credits, the callable that debits, and the screen that says what can be afforded — and a constant copied three times is a constant that drifts.
 
 Keep it dependency-free (constants and pure functions on primitives): `v1_user.ts` documents the wallet in its terms, and a module importing back would only close a loop for nothing.
 

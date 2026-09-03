@@ -62,7 +62,7 @@ service cloud.firestore {
 
       // **Nobody creates a question from a client any more.** An author used to
       // write their own `pending` proposal here, which was fine while proposing
-      // was free: docs/prd.md §4.7 now prices it at `QUESTION_STATCOIN_COST`,
+      // was free: docs/prd.md §4.7 now prices it at `QUESTION_STATFLOUZZ_COST`,
       // and a price a direct write walks around is not a price. The wallet it
       // debits is already closed to the client (`keepsWallet()` below), so
       // leaving this open would have been the one hole left — pay nothing,
@@ -250,7 +250,7 @@ service cloud.firestore {
       // The streak is pinned here too, and not for symmetry: the payout is
       // computed from `streak_count` and `streak_last_answered_on`, so a
       // profile created with a streak of 9 answered yesterday is worth 100
-      // StatCoins tomorrow. Forging a score was vanity; forging it is now
+      // StatFlouzz tomorrow. Forging a score was vanity; forging it is now
       // counterfeiting.
       //
       // `create` only ever fires on a document that does not exist, so nothing

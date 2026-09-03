@@ -16,7 +16,7 @@
 //   npm run seed-emulator                       # wipe, then build the world
 //   npm run seed-emulator -- --days 60 --friends 6
 //   npm run seed-emulator -- --answer-today     # today already answered, card and all
-//   npm run seed-emulator -- --statcoins 0      # wallets holding only what the streaks earned
+//   npm run seed-emulator -- --statflouzz 0     # wallets holding only what the streaks earned
 //   npm run seed-emulator -- --dry-run          # says what it would write
 //
 // Sign in with `dev@statowrel.test` / `statowrel` (`--email`, `--password`).
@@ -55,7 +55,7 @@ import {
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 const USAGE = 'Usage: npm run seed-emulator -- [--days <n>] [--friends <n>] [--crowd <n>] '
-  + '[--statcoins <n>] [--email <e>] [--password <p>] [--answer-today] [--seed <n>] [--dry-run]';
+  + '[--statflouzz <n>] [--email <e>] [--password <p>] [--answer-today] [--seed <n>] [--dry-run]';
 
 /** A month of history: enough for the calendar to have a shape, short enough to stay readable. */
 const DEFAULT_DAYS = 30;
@@ -71,7 +71,7 @@ const DEFAULT_FRIENDS = 4;
 const DEFAULT_CROWD = 80;
 
 /**
- * StatCoins handed to every seeded account on top of what its streaks earned,
+ * StatFlouzz handed to every seeded account on top of what its streaks earned,
  * so the proposal form of docs/prd.md §4.7 is reachable on the first run.
  *
  * The replay below already pays what the milestones owe, and on a month of
@@ -84,10 +84,10 @@ const DEFAULT_CROWD = 80;
  * Credited to `statcoins_earned` as well as to the balance, and deliberately:
  * the wallet's own arithmetic is `balance = earned − spent`, and a grant that
  * moved one without the other would seed a world the backend could never have
- * produced. `--statcoins 0` is what an empty wallet is tested with — the sheet
+ * produced. `--statflouzz 0` is what an empty wallet is tested with — the sheet
  * refusing a proposal it cannot pay for.
  */
-const DEFAULT_STATCOINS = 500;
+const DEFAULT_STATFLOUZZ = 500;
 
 const DEFAULT_EMAIL = 'dev@statowrel.test';
 const DEFAULT_PASSWORD = 'statowrel';
@@ -135,7 +135,7 @@ const parseArgs = (argv) => {
     days: DEFAULT_DAYS,
     friends: DEFAULT_FRIENDS,
     crowd: DEFAULT_CROWD,
-    statcoins: DEFAULT_STATCOINS,
+    statflouzz: DEFAULT_STATFLOUZZ,
     email: DEFAULT_EMAIL,
     password: DEFAULT_PASSWORD,
     answerToday: false,
@@ -166,8 +166,8 @@ const parseArgs = (argv) => {
       parsed.friends = readNumber(argv[i += 1], '--friends');
     } else if (arg === '--crowd') {
       parsed.crowd = readNumber(argv[i += 1], '--crowd');
-    } else if (arg === '--statcoins') {
-      parsed.statcoins = readNumber(argv[i += 1], '--statcoins');
+    } else if (arg === '--statflouzz') {
+      parsed.statflouzz = readNumber(argv[i += 1], '--statflouzz');
     } else if (arg === '--seed') {
       parsed.seed = readNumber(argv[i += 1], '--seed');
     } else if (arg === '--email') {
@@ -191,7 +191,7 @@ const parseArgs = (argv) => {
   return parsed;
 };
 
-const { days, friends: friendCount, crowd, statcoins, email, password, answerToday, seed, dryRun } = parseArgs(process.argv.slice(2));
+const { days, friends: friendCount, crowd, statflouzz, email, password, answerToday, seed, dryRun } = parseArgs(process.argv.slice(2));
 
 /**
  * Same run, same world.
@@ -308,7 +308,7 @@ const {
   QUESTION_MAX_OPTIONS,
   QUESTION_MIN_OPTIONS,
   questionConverter,
-  streakStatcoinReward,
+  streakStatflouzzReward,
   USER_CALENDAR_MONTH_COLLECTION,
   USER_COLLECTION,
   USER_FRIEND_COLLECTION,
@@ -546,7 +546,7 @@ const writer = createWriter();
 
 /**
  * Counters, streak and wallet, replayed below over the answers each account
- * gave — and the `--statcoins` grant on top, which is what makes the proposal
+ * gave — and the `--statflouzz` grant on top, which is what makes the proposal
  * form of docs/prd.md §4.7 reachable without waiting on a lucky streak.
  *
  * The grant opens both the balance and the lifetime `statcoins_earned`, so
@@ -558,8 +558,8 @@ const profiles = new Map(castUsernames.map((username) => [ username, {
   streak_count: 0,
   streak_best: 0,
   streak_last_answered_on: null,
-  statcoin_balance: statcoins,
-  statcoins_earned: statcoins,
+  statcoin_balance: statflouzz,
+  statcoins_earned: statflouzz,
   statcoins_spent: 0,
 } ]));
 
@@ -580,7 +580,7 @@ const advanceStreak = (state, dateKey) => {
   state.streak_best = Math.max(state.streak_best, state.streak_count);
   state.streak_last_answered_on = dateKey;
 
-  const reward = streakStatcoinReward(previousStreak, state.streak_count);
+  const reward = streakStatflouzzReward(previousStreak, state.streak_count);
 
   state.statcoin_balance += reward;
   state.statcoins_earned += reward;
@@ -859,8 +859,8 @@ console.log(`  Sign in     ${email} / ${password}${' '.repeat(2)}(also admin —
 console.log(`  Today       ${today} · « ${todaysDay?.label ?? '—'} »`);
 console.log(`  Answered    ${todayAnswered ? 'yes — the sheet opens on the result card' : 'no — the day is yours to answer'}`);
 console.log(`  Streak      ${main.streak_count} day(s), best ${main.streak_best}, ${main.answers_count} answered`);
-console.log(`  Wallet      ${main.statcoin_balance} StatCoin(s), ${main.statcoins_earned} earned`
-  + `${statcoins > 0 ? ` (${statcoins} granted, ${main.statcoins_earned - statcoins} from streaks)` : ''}`);
+console.log(`  Wallet      ${main.statcoin_balance} StatFlouzz, ${main.statcoins_earned} earned`
+  + `${statflouzz > 0 ? ` (${statflouzz} granted, ${main.statcoins_earned - statflouzz} from streaks)` : ''}`);
 console.log(`  Friends     ${friendUsernames.join(', ') || '—'} · 1 invitation from ${INVITER} · 1 sent to ${INVITEE}`);
 console.log(`  Moderation  ${POT_PENDING} pending, ${POT_APPROVED} approved, ${POT_REJECTED} rejected`);
 console.log(`  Onboarding  the demo question is in, with ${DEMO_ANSWERS} answers behind it`);

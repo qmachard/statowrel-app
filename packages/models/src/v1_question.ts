@@ -138,7 +138,7 @@ export interface QuestionFirebaseData {
   rejection_reason: string | null;
   /**
    * What its author paid to propose it (docs/prd.md §4.7) —
-   * `QUESTION_STATCOIN_COST` as it stood the moment the proposal callable
+   * `QUESTION_STATFLOUZZ_COST` as it stood the moment the proposal callable
    * debited them, stamped by that same transaction.
    *
    * Null on every question nobody paid for: the seeded catalogue, the

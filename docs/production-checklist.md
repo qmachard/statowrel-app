@@ -96,9 +96,9 @@ levier d'acquisition du produit, mais son absence n'empêche ni la soumission ni
 ### 1.4 ⚪ Proposition de questions depuis l'app
 
 `docs/prd.md` §4.7 est bouclé côté app : la carte sous le calendrier mène au formulaire, le callable
-`questions-proposeQuestion` débite les 100 StatCoins et écrit la question `pending`, un rejet les
+`questions-proposeQuestion` débite les 100 StatFlouzz et écrit la question `pending`, un rejet les
 rembourse, et « Mes questions » sur l'écran Menu (§5.3) relit le statut de chaque proposition, le
-motif d'un refus et les StatCoins rendus. Ce qui manque, c'est d'en **prévenir** l'auteur : rien ne
+motif d'un refus et les StatFlouzz rendus. Ce qui manque, c'est d'en **prévenir** l'auteur : rien ne
 le notifie quand sa question est validée, rejetée ou tirée.
 
 Conséquence pour l'examen : **l'app porte désormais du contenu utilisateur**. Il reste
