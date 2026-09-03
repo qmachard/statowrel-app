@@ -19,6 +19,12 @@ export interface DailyQuestionBannerProps {
    * reads for its calendar: the banner announces it for no read of its own.
    */
   statLabel: string | null;
+  /**
+   * Whether today was passed with a joker (docs/prd.md §4.8) — a done day
+   * without a mood. The banner falls back to a short « passée avec un joker »
+   * line instead of announcing the question or a StatOwrel.
+   */
+  jokered?: boolean;
   /** Opens today's question sheet (docs/prd.md §5.4) — its result (§5.5) once the day is answered. */
   onPress?: () => void;
 }
@@ -121,26 +127,37 @@ const NEXT_DRAW = 'Prochaine question à 7h';
  * cell does (§5.2): today is the day the screen is about, answered or not, and
  * letting it go flat dissolved it into the month.
  */
-export const DailyQuestionBanner = ({ label, statLabel, onPress }: DailyQuestionBannerProps) => {
+export const DailyQuestionBanner = ({ label, statLabel, jokered = false, onPress }: DailyQuestionBannerProps) => {
   // An empty label is a day whose projection predates the copy, or a question
   // rewritten under it — there is no mood to announce, so the banner falls back
   // to what it can say.
   const mood = statLabel === null || statLabel.length === 0 ? null : statLabel;
 
-  if (mood === null && label === null) {
+  if (mood === null && label === null && !jokered) {
     return null;
   }
 
-  const accessibilityLabel = mood === null
-    ? `Question du jour : ${label ?? ''}`
-    : `Aujourd’hui tu es un.e ${mood}. Voir ton résultat.`;
+  const accessibilityLabel = mood !== null
+    ? `Aujourd’hui tu es un.e ${mood}. Voir ton résultat.`
+    : jokered
+      ? 'Aujourd’hui passée avec un joker. Voir le résultat.'
+      : `Question du jour : ${label ?? ''}`;
 
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress}>
       {({ pressed }) => (
         <View style={[ styles.surface, pressed ? SUNK : shadows.md ]}>
           <View style={styles.copy}>
-            {mood === null ? (
+            {mood === null && jokered ? (
+              <>
+                <View style={styles.moodLead}>
+                  <Check size={CHECK_SIZE} color={colors['accent-foreground']} />
+                  <Text style={styles.moodLeadText}>Aujourd’hui tu as</Text>
+                </View>
+
+                <Text style={styles.moodLabel} numberOfLines={2}>PASSÉ AVEC UN JOKER</Text>
+              </>
+            ) : mood === null ? (
               <>
                 <View style={styles.heading}>
                   <MessageCircleQuestionMark size={ICON_SIZE} color={colors['accent-foreground']} />

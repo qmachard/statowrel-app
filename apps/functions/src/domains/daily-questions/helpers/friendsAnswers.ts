@@ -1,41 +1,66 @@
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
+  DAILY_QUESTION_JOKER_COLLECTION,
   dailyQuestionAnswerConverter,
+  dailyQuestionJokerConverter,
   QUESTION_COLLECTION,
   questionConverter,
+  USER_CALENDAR_MONTH_COLLECTION,
   USER_COLLECTION,
   USER_FRIEND_COLLECTION,
+  userCalendarMonthConverter,
   type UserData,
   type UserFriendData,
   userConverter,
   userFriendConverter,
 } from '@statowrel/models';
 
-import type { DocumentReference, Query } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type DocumentReference, type Query } from 'firebase-admin/firestore';
+import { logger } from 'firebase-functions/v2';
 
-import { getDocumentRef, getSubCollectionRef } from '@/libs/firebase-admin';
+import { createBulkWriter, getDocumentRef, getSubCollectionRef, getSubDocumentRef } from '@/libs/firebase-admin';
 
 /** How many friend lists are read at once — enough to stay fast, low enough not to open a query per user of the app at the same instant. */
 const READS_IN_FLIGHT = 20;
 
 export interface FriendsAnswersDigest {
-  /** Firebase Auth UIDs that have answered the day's question — the people the nudge is *not* for. */
+  /**
+   * Firebase Auth UIDs that have « done their day » — answered *or* spent a
+   * joker — on the day's question. These are the people the nudge is *not*
+   * for, and the ones whose friends earn a badge from them.
+   */
   answered: Set<string>;
-  /** How many accepted friends have answered, per user. A user absent from the map has none. */
+  /** How many accepted friends have done their day, per user. A user absent from the map has none. */
   friendsAnswered: Map<string, number>;
 }
 
-/** The UIDs that answered a question, read off the document ids — one answer per user, id = their UID. */
-const answererIdsOf = async (questionId: string): Promise<Set<string>> => {
+/**
+ * The UIDs that « did their day » on a question — those who answered *and*
+ * those who spent a joker on it — read off the document ids alone: one answer
+ * (or one joker) per user per question, in both cases the document id is the
+ * user's UID (docs/prd.md §4.5, §4.8).
+ *
+ * The two collections are read in parallel and unioned: a joker preserves the
+ * streak and unlocks the friends' answers, so the two sides « have done today »
+ * from the point of view of every reader here — the nudge that filters out the
+ * done, and the count of friends who have done it that every user's push is
+ * built from.
+ */
+const doneIdsOf = async (questionId: string): Promise<Set<string>> => {
   const questionRef = getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter);
 
-  const snapshot = await getSubCollectionRef(
-    questionRef,
-    DAILY_QUESTION_ANSWER_COLLECTION,
-    dailyQuestionAnswerConverter,
-  ).get();
+  const [ answers, jokers ] = await Promise.all([
+    getSubCollectionRef(questionRef, DAILY_QUESTION_ANSWER_COLLECTION, dailyQuestionAnswerConverter).get(),
+    getSubCollectionRef(questionRef, DAILY_QUESTION_JOKER_COLLECTION, dailyQuestionJokerConverter).get(),
+  ]);
 
-  return new Set(snapshot.docs.map((document) => document.id));
+  const done = new Set(answers.docs.map((document) => document.id));
+
+  for (const joker of jokers.docs) {
+    done.add(joker.id);
+  }
+
+  return done;
 };
 
 /**
@@ -62,6 +87,70 @@ const acceptedFriendIdsOf = async (userId: string): Promise<string[]> => {
 };
 
 /**
+ * Increment `friend_answer_counts.{DD}` on the same month document under every
+ * accepted friend of `userRef` — the badge of docs/prd.md §5.2. Called after
+ * an answer's or a joker's transaction has committed, on purpose: a
+ * friendship is reciprocal, so two friends acting at the same moment each
+ * write into the very document the other is reading, and holding that
+ * contention inside the caller's transaction would risk giving up on the
+ * calendar projection, the streak and the wallet debit rather than on one
+ * badge counter. Failures are logged rather than thrown — the deed itself is
+ * already durable, and re-throwing would only redeliver the trigger onto the
+ * marker it bails out on.
+ *
+ * Shared by the answer trigger and by `useJoker`: a joker « counts » in
+ * exactly the same way as an answer for the friends' side of docs/prd.md §4.5
+ * (« Joker complet »), and duplicating this fan-out would be one place a
+ * behavioural drift could open up between the two paths.
+ */
+export const fanOutFriendAnswerBadge = async (
+  userRef: DocumentReference<UserData>,
+  monthKey: string,
+  monthDayKey: string,
+  date: string,
+): Promise<void> => {
+  const friends = await acceptedFriendsQuery(userRef).get();
+
+  if (friends.empty) {
+    return;
+  }
+
+  const writer = createBulkWriter();
+
+  friends.docs.forEach((friendship) => {
+    const friendCalendarMonthRef = getSubDocumentRef(
+      getDocumentRef(USER_COLLECTION, friendship.id, userConverter),
+      USER_CALENDAR_MONTH_COLLECTION,
+      monthKey,
+      userCalendarMonthConverter,
+    ).withConverter(null);
+
+    // Same `merge` as the author's own projection — the friend may have no
+    // calendar month for this month at all — and an `increment`, since several
+    // friends acting the same day land on the same field. The converter is
+    // dropped for this one write: its `toFirestore` would rebuild the map value
+    // by value and throw the sentinel away, and there is nothing here for it
+    // to convert.
+    writer.set(friendCalendarMonthRef, {
+      month: monthKey,
+      friend_answer_counts: { [monthDayKey]: FieldValue.increment(1) },
+      updated_at: Timestamp.now(),
+    }, { merge: true }).catch((error: unknown) => {
+      logger.error('Could not count this deed onto a friend', {
+        date,
+        error,
+        friend_id: friendship.id,
+        user_id: userRef.id,
+      });
+    });
+  });
+
+  await writer.close();
+
+  logger.info('Deed counted onto the friends', { date, friends: friends.size, user_id: userRef.id });
+};
+
+/**
  * What the 18:00 nudge needs to know about a day: who has answered, and how
  * many friends each user can be told about — docs/prd.md §4.5.
  *
@@ -81,7 +170,7 @@ const acceptedFriendIdsOf = async (userId: string): Promise<string[]> => {
  * `listRegisteredDevices` makes.
  */
 export const friendsAnswersDigest = async (questionId: string): Promise<FriendsAnswersDigest> => {
-  const answered = await answererIdsOf(questionId);
+  const answered = await doneIdsOf(questionId);
   const answererIds = [ ...answered ];
 
   const friendsAnswered = new Map<string, number>();

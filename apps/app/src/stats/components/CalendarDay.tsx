@@ -74,6 +74,11 @@ const SURFACE = StyleSheet.create({
   today: { borderWidth, borderColor: colors.border, backgroundColor: colors.accent },
   missed: { borderWidth, borderColor: colors.border, backgroundColor: colors.background },
   idle: { backgroundColor: colors.muted },
+  // A jokered day of docs/prd.md §4.8 — done, but not answered. `muted` behind
+  // a full border so it reads as a completed cell (unlike `idle`, which has
+  // no border and cannot be pressed) but does not compete visually with the
+  // yellow of an answered one.
+  jokered: { borderWidth, borderColor: colors.border, backgroundColor: colors.muted },
 }) satisfies Record<CalendarDayState, ViewStyle>;
 
 // Every day with a question behind it is raised — a missed one included, since
@@ -83,6 +88,7 @@ const SHADOW: Record<CalendarDayState, ViewStyle | undefined> = {
   today: shadows.sm,
   missed: shadows.sm,
   idle: undefined,
+  jokered: shadows.sm,
 };
 
 // Pressed, a raised day drops its shadow and translates by the offset it just
@@ -94,6 +100,7 @@ const PRESSED = StyleSheet.create({
   today: SUNK,
   missed: SUNK,
   idle: {},
+  jokered: SUNK,
 }) satisfies Record<CalendarDayState, ViewStyle>;
 
 const LABEL = StyleSheet.create({
@@ -101,6 +108,7 @@ const LABEL = StyleSheet.create({
   today: { fontFamily: fonts.head, color: colors['accent-foreground'] },
   missed: { fontFamily: fonts.head, color: colors.foreground },
   idle: { fontFamily: fonts.sans, color: colors['muted-foreground'] },
+  jokered: { fontFamily: fonts.head, color: colors['muted-foreground'] },
 }) satisfies Record<CalendarDayState, TextStyle>;
 
 // The check takes its surface's own foreground, like the number it replaces —
@@ -110,6 +118,7 @@ const CHECK_COLOR: Record<CalendarDayState, string> = {
   today: colors['accent-foreground'],
   missed: colors['muted-foreground'],
   idle: colors['muted-foreground'],
+  jokered: colors['muted-foreground'],
 };
 
 export interface CalendarDayProps {

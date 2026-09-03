@@ -22,9 +22,23 @@ const styles = StyleSheet.create({
   },
 });
 
+export interface AnswerRecapShare {
+  optionId: string;
+  label: string;
+  share: number;
+  picked: boolean;
+}
+
 export interface AnswerRecapProps {
   questionLabel: string;
-  statOwrel: StatOwrel;
+  /**
+   * Either a full StatOwrel — an answered day, with one option in yellow behind
+   * a tick — or a pre-computed share list for a jokered day (docs/prd.md
+   * §4.8): same rows, no picked option, no tick.
+   */
+  statOwrel: StatOwrel | null;
+  /** Shares for the joker case, when `statOwrel` is `null`. Ignored otherwise. */
+  shares?: AnswerRecapShare[];
 }
 
 /**
@@ -35,22 +49,38 @@ export interface AnswerRecapProps {
  * It is the only framed surface of an answered day — the phrase above it sits
  * straight on the sheet. The shares are the `answer_counts` shape at display
  * time, so they keep moving while the day's answers come in.
+ *
+ * A jokered day (docs/prd.md §4.8) reuses the same block with no picked
+ * option: `statOwrel` is `null` and `shares` carries the same rows minus the
+ * yellow. « Joker complet » means the friends' unlock also unlocks reading
+ * the global distribution — that is the recap.
  */
-export const AnswerRecap = ({ questionLabel, statOwrel }: AnswerRecapProps) => (
-  <Card variant="card" shadow="md">
-    <CardContent style={styles.body}>
-      <Text style={styles.question}>{questionLabel}</Text>
+export const AnswerRecap = ({ questionLabel, statOwrel, shares }: AnswerRecapProps) => {
+  const rows = statOwrel !== null
+    ? statOwrel.shares.map((entry) => ({
+      optionId: entry.option.id,
+      label: entry.option.label,
+      share: entry.share,
+      picked: entry.picked,
+    }))
+    : shares ?? [];
 
-      <View style={styles.rows}>
-        {statOwrel.shares.map((entry) => (
-          <AnswerShareRow
-            key={entry.option.id}
-            label={entry.option.label}
-            share={entry.share}
-            picked={entry.picked}
-          />
-        ))}
-      </View>
-    </CardContent>
-  </Card>
-);
+  return (
+    <Card variant="card" shadow="md">
+      <CardContent style={styles.body}>
+        <Text style={styles.question}>{questionLabel}</Text>
+
+        <View style={styles.rows}>
+          {rows.map((entry) => (
+            <AnswerShareRow
+              key={entry.optionId}
+              label={entry.label}
+              share={entry.share}
+              picked={entry.picked}
+            />
+          ))}
+        </View>
+      </CardContent>
+    </Card>
+  );
+};

@@ -45,6 +45,7 @@ export const StatsScreen = () => {
     calendar,
     todayQuestion,
     todayAnswer,
+    todayJokered,
     archiveStart,
     refreshing,
     refresh,
@@ -66,7 +67,7 @@ export const StatsScreen = () => {
   // a day no question ever dropped on.
   const bannerLabel = todayQuestion?.label ?? null;
   const bannerStatLabel = todayAnswer?.stat_label ?? null;
-  const showBanner = bannerLabel !== null || bannerStatLabel !== null;
+  const showBanner = bannerLabel !== null || bannerStatLabel !== null || todayJokered;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[ 'top' ]}>
@@ -97,6 +98,7 @@ export const StatsScreen = () => {
           <DailyQuestionBanner
             label={bannerLabel}
             statLabel={bannerStatLabel}
+            jokered={todayJokered}
             onPress={() => navigation.navigate('DailyQuestion')}
           />
         ) : null}

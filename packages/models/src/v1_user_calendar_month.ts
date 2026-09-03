@@ -38,6 +38,25 @@ export interface UserCalendarMonthDayFirebaseData {
 }
 
 /**
+ * One day passed with a joker — docs/prd.md §4.8.
+ *
+ * Sits in its own map beside `days` rather than as a fifth field on it: a joker
+ * carries no option and no StatOwrel, so a joker day only ever needs the moment
+ * it was spent for auditability and idempotency. Keeping the two maps apart
+ * also means the parser can go on asserting an `option_id` on every entry of
+ * `days` — see `parseDays` — instead of turning it into a discriminated union
+ * every reader would then have to fork on.
+ *
+ * A day is `days` OR `jokers`, never both: the `useJoker` callable refuses to
+ * write when either half of the current day is already there, and the
+ * `submitAnswer` path is refused when a joker has landed the same day.
+ */
+export interface UserCalendarMonthJokerFirebaseData {
+  /** When the joker was spent, in the same wire timestamp shape as every other stamp. */
+  used_at: UniversalTimestamp;
+}
+
+/**
  * One document per user per calendar month: the days that user answered — the
  * read model behind the Stats calendar (docs/prd.md §5.2).
  *
@@ -59,6 +78,17 @@ export interface UserCalendarMonthFirebaseData {
   month: string;
   /** Answered days of the month, keyed by their zero-padded day of the month (`'01'`…`'31'`). An unanswered day is simply absent. */
   days: Record<string, UserCalendarMonthDayFirebaseData>;
+  /**
+   * Days passed with a joker, keyed the same way `days` is (`'01'`…`'31'`) —
+   * docs/prd.md §4.8. A day the user answered or that has no joker on it is
+   * simply absent, and a day never appears in both `days` and `jokers` — the
+   * callable that writes here refuses the second one.
+   *
+   * Read by the Stats calendar to render the fifth state alongside answered,
+   * missed, today and idle, and by the answer trigger's own nudge-count reader
+   * to treat a jokered user as having done their day.
+   */
+  jokers: Record<string, UserCalendarMonthJokerFirebaseData>;
   /**
    * How many accepted friends answered each day, keyed the same way `days` is
    * (`'01'`…`'31'`). A day no friend has answered is simply absent.
@@ -87,6 +117,8 @@ export interface UserCalendarMonthFirebaseData {
 
 export type UserCalendarMonthDayData = ModelData<UserCalendarMonthDayFirebaseData>;
 
+export type UserCalendarMonthJokerData = ModelData<UserCalendarMonthJokerFirebaseData>;
+
 export type UserCalendarMonthData = ModelData<UserCalendarMonthFirebaseData>;
 
 const parseDays = (
@@ -105,6 +137,34 @@ const parseDays = (
     return acc;
   }, {})
 );
+
+/**
+ * Same `undefined`-when-empty shape as `parseCounts` below, and for the same
+ * reason: three writers now touch this document — the answer trigger, the
+ * joker callable, and the friend fan-out — all with `merge`, and a merge
+ * carrying `jokers: {}` would replace the map instead of leaving it alone.
+ * The answer trigger and the friend fan-out never carry a joker.
+ *
+ * Called from `fromFirestore` alone: `toFirestore` builds its own map so it can
+ * hand each `used_at` back as a `TimestampClass` rather than as the string
+ * `UserCalendarMonthJokerData` carries.
+ */
+const parseJokersFromFirestore = (
+  jokers: Record<string, { used_at?: UniversalTimestamp | string | null }> | null | undefined,
+): Record<string, UserCalendarMonthJokerData> | undefined => {
+  // Built by reduce, not by indexing: `noUncheckedIndexedAccess` is on in this package.
+  const parsed = Object.entries(jokers ?? {}).reduce<Record<string, UserCalendarMonthJokerData>>((acc, [ monthDayKey, joker ]) => {
+    const usedAt = parseTimestamp(joker?.used_at ?? null);
+
+    if (usedAt !== null) {
+      acc[monthDayKey] = { used_at: usedAt };
+    }
+
+    return acc;
+  }, {});
+
+  return Object.keys(parsed).length === 0 ? undefined : parsed;
+};
 
 /**
  * Returns `undefined` rather than an empty map when there is nothing to say,
@@ -134,12 +194,25 @@ const parseCounts = (
 export const userCalendarMonthConverter: FirestoreConverter<UserCalendarMonthData, UserCalendarMonthFirebaseData> = (TimestampClass) => ({
   toFirestore: (data) => {
     // Spread rather than assigned, so an absent map leaves the field out of the
-    // written document entirely — see `parseCounts`.
+    // written document entirely — see `parseCounts` and `parseJokersFromFirestore`.
     const friendAnswerCounts = parseCounts(data.friend_answer_counts);
+    // The wire shape carries each joker's `used_at` as a `TimestampClass`, and
+    // the app data as an ISO string — so the map is rebuilt here instead of
+    // going through `parseJokersFromFirestore`, which is the read-side twin.
+    // Filtered to non-empty entries the same way `parseCounts` filters counts,
+    // so a merge write leaves the stored map alone when there is nothing new.
+    const jokers = Object.entries(data.jokers ?? {}).reduce<Record<string, UserCalendarMonthJokerFirebaseData>>((acc, [ key, joker ]) => {
+      if (joker && typeof joker.used_at === 'string' && joker.used_at.length > 0) {
+        acc[key] = { used_at: TimestampClass.fromDate(new Date(joker.used_at)) };
+      }
+
+      return acc;
+    }, {});
 
     return removeMissingFields({
       month: data.month,
       days: parseDays(data.days),
+      ...(Object.keys(jokers).length === 0 ? {} : { jokers }),
       ...(friendAnswerCounts === undefined ? {} : { friend_answer_counts: friendAnswerCounts }),
       updated_at: TimestampClass.fromDate(new Date(data.updated_at)),
     });
@@ -150,6 +223,7 @@ export const userCalendarMonthConverter: FirestoreConverter<UserCalendarMonthDat
     return {
       month: data.month ?? '',
       days: parseDays(data.days),
+      jokers: parseJokersFromFirestore(data.jokers) ?? {},
       friend_answer_counts: parseCounts(data.friend_answer_counts) ?? {},
       updated_at: parseTimestamp(data.updated_at ?? null, 'now'),
     };

@@ -62,13 +62,15 @@ export const StatsCalendar = ({ month, onMonthChange, calendar, archiveStart }: 
             const dayKey = toDateKey(date);
             const monthDayKey = monthDayKeyOf(dayKey);
             const answer = calendar.answered[monthDayKey];
+            const joker = calendar.jokered[monthDayKey];
+            const done = answer !== undefined || joker !== undefined;
 
             return (
               <CalendarDay
                 date={date}
-                answered={answer !== undefined}
+                answered={done}
                 hasNewFriendAnswers={
-                  answer !== undefined
+                  done
                   && seenFriendAnswers !== null
                   && (calendar.friendAnswers[monthDayKey] ?? 0) > (seenFriendAnswers[dayKey] ?? 0)
                 }
@@ -77,12 +79,13 @@ export const StatsCalendar = ({ month, onMonthChange, calendar, archiveStart }: 
                   today: todayKey,
                   published: calendar.published[monthDayKey] !== undefined,
                   answered: answer !== undefined,
+                  jokered: joker !== undefined,
                 })}
                 // Every live day opens its own day: the question when it is
                 // still open — today's, or a missed one in catch-up — and the
-                // StatOwrel card of §5.5 when it is answered, the sheet itself
-                // forking on that. A day that never had a question is `idle`,
-                // so it stays inert here.
+                // StatOwrel card of §5.5 when it is answered, or the joker
+                // result of §4.8 when it is passed. A day that never had a
+                // question is `idle`, so it stays inert here.
                 onPress={() => navigation.navigate('DailyQuestion', { date: dayKey })}
               />
             );

@@ -190,6 +190,24 @@ service cloud.firestore {
                       && isAnswerTo(get(/databases/$(database)/documents/v1_questions/$(question_id)).data);
         allow update, delete: if false;
       }
+
+      // Jokers spent on the question — mirror of the answers sub-collection
+      // above, and the source of truth the 18:00 nudge reads through to know a
+      // user has done their day (docs/prd.md §4.5, §4.8).
+      //
+      // The document id is the user's UID, so « one joker per person per
+      // question » is a property of the data, and any signed-in user reads
+      // them: the day screen lists the friends who spent a joker the same way
+      // it lists those who answered.
+      //
+      // **No client ever writes one.** `questions-useJoker` is the only door,
+      // admin-side past this rule, because the debit and the write must be one
+      // operation — the same reason `v1_questions` is `allow create: if false`
+      // for a proposal.
+      match /v1_daily_question_jokers/{user_id} {
+        allow read: if isAuthenticated();
+        allow create, update, delete: if false;
+      }
     }
 
     // A profile document is keyed by the account's Firebase Auth UID
@@ -242,10 +260,11 @@ service cloud.firestore {
                && request.resource.data.get('statcoins_spent', 0) == resource.data.get('statcoins_spent', 0);
       }
 
-      // A new profile opens empty, and that is checked rather than assumed:
-      // `keepsBackendCounters()` only guards an *update*, so without this a
-      // client could simply create its own profile with a balance already in
-      // it — a free question, and no write to undo it afterwards.
+      // A new profile opens with the fixed starting wallet, and that is
+      // checked rather than assumed: `keepsBackendCounters()` only guards an
+      // *update*, so without this a client could simply create its own profile
+      // with a bigger balance already in it — a free question and free jokers,
+      // no write to undo either afterwards.
       //
       // The streak is pinned here too, and not for symmetry: the payout is
       // computed from `streak_count` and `streak_last_answered_on`, so a
@@ -253,22 +272,28 @@ service cloud.firestore {
       // StatFlouzz tomorrow. Forging a score was vanity; forging it is now
       // counterfeiting.
       //
+      // The initial balance is `INITIAL_STATCOIN_BALANCE` (docs/prd.md §4.7),
+      // hardcoded here since rules cannot import JavaScript — the two change
+      // together. `statcoins_earned` stays 0 (the opening amount is a grant,
+      // not something the user earned) so a future backfill can tell a fresh
+      // account from one that never touched its wallet.
+      //
       // `create` only ever fires on a document that does not exist, so nothing
       // written before these fields can be caught by it — completing a profile
       // that predates a username is a `set` over an existing document, which
       // is an update and goes through `keepsBackendCounters()` instead.
-      function startsEmpty() {
+      function startsWithInitialBalance() {
         return request.resource.data.get('streak_count', 0) == 0
                && request.resource.data.get('streak_best', 0) == 0
                && request.resource.data.get('answers_count', 0) == 0
                && request.resource.data.get('streak_last_answered_on', null) == null
-               && request.resource.data.get('statcoin_balance', 0) == 0
+               && request.resource.data.get('statcoin_balance', 0) == 50
                && request.resource.data.get('statcoins_earned', 0) == 0
                && request.resource.data.get('statcoins_spent', 0) == 0;
       }
 
       allow read: if isAuthenticated();
-      allow create: if isOwner(user_id) && isValidProfile() && ownsUsername() && startsEmpty();
+      allow create: if isOwner(user_id) && isValidProfile() && ownsUsername() && startsWithInitialBalance();
       allow update: if isOwner(user_id)
                     && isValidProfile()
                     && ownsUsername()
@@ -448,6 +473,15 @@ service cloud.firestore {
     // nobody can group-query their way into a friend's history — reading a
     // friend's answer stays a per-question read.
     match /{path=**}/v1_daily_question_answers/{user_id} {
+      allow read: if isOwner(resource.data.user_id);
+    }
+
+    // The same collection-group opening for jokers — one's own jokers,
+    // scoped by `user_id` on the document. Mirrors the answer rule above and
+    // exists for the same reason: to keep the `firestore.rules` shape stable
+    // if a future replay or export walks jokers by user across every
+    // question, without letting anybody group-query a friend's history.
+    match /{path=**}/v1_daily_question_jokers/{user_id} {
       allow read: if isOwner(resource.data.user_id);
     }
 

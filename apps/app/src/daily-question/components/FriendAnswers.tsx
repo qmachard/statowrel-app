@@ -89,7 +89,7 @@ const rank = (row: Row) => {
   return row.same ? 0 : 1;
 };
 
-const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: string): Row[] => (
+const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: string | null): Row[] => (
   friends
     .map((friend) => {
       const option = friend.optionId === null ? null : findQuestionOption(question.options, friend.optionId);
@@ -99,7 +99,7 @@ const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: strin
         username: friend.username,
         statLabel: option === null ? null : statLabelOf(option),
         timeLabel: friend.answeredAt === null ? null : formatTimeLabel(new Date(friend.answeredAt)),
-        same: friend.optionId === pickedId,
+        same: pickedId !== null && friend.optionId === pickedId,
       };
     })
     .sort((a, b) => rank(a) - rank(b) || a.username.localeCompare(b.username))
@@ -109,8 +109,12 @@ export interface FriendAnswersProps {
   status: FriendAnswersStatus;
   friends: FriendAnswer[];
   question: QuestionData;
-  /** `QuestionOptionData.id` this user picked — what makes a friend's answer « comme toi ». */
-  pickedOptionId: string;
+  /**
+   * `QuestionOptionData.id` this user picked — what makes a friend's answer
+   * « comme toi ». `null` on a jokered day (docs/prd.md §4.8): no option was
+   * picked, so no friend is « comme toi ».
+   */
+  pickedOptionId: string | null;
   /** The sheet's own colour — the heading sits straight on it. */
   surface: Surface;
 }

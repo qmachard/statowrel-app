@@ -24,6 +24,13 @@ export interface CalendarMonth {
   /** Days this user answered, from `v1_users/{uid}/v1_user_calendar_months`. */
   answered: Record<string, UserCalendarMonthDayData>;
   /**
+   * Days this user passed with a joker, from the same document —
+   * `v1_user_calendar_months.jokers` (docs/prd.md §4.8). The calendar renders
+   * these as the fifth visual state (`jokered`) beside answered / missed /
+   * today / idle.
+   */
+  jokered: Record<string, { used_at: string }>;
+  /**
    * How many accepted friends answered each day, off the same document
    * `answered` comes from — so the badge of docs/prd.md §5.2 costs no read of
    * its own.
@@ -41,6 +48,7 @@ export const emptyCalendarMonth = (key: string): CalendarMonth => ({
   key,
   published: {},
   answered: {},
+  jokered: {},
   friendAnswers: {},
 });
 
@@ -155,6 +163,7 @@ const fetchCalendarMonth = async (userId: string, monthKey: string): Promise<Cal
     key: monthKey,
     published: published.data()?.days ?? {},
     answered: answered.data()?.days ?? {},
+    jokered: answered.data()?.jokers ?? {},
     friendAnswers: answered.data()?.friend_answer_counts ?? {},
   };
 };

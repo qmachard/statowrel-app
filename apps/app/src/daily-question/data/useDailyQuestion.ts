@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
+  DAILY_QUESTION_JOKER_COLLECTION,
   DAILY_QUESTION_MONTH_COLLECTION,
   type DailyQuestionAnswerData,
   QUESTION_COLLECTION,
   type QuestionData,
   USER_COLLECTION,
   dailyQuestionAnswerConverter,
+  dailyQuestionJokerConverter,
   dailyQuestionMonthConverter,
   monthDayKeyOf,
   monthKeyOf,
@@ -19,6 +21,7 @@ import {
 
 import { useAuth } from '@/auth/AuthContext';
 import { getAnswersVersion, readAnswer, subscribeToAnswers } from '@/daily-question/data/answerStore';
+import { getJokersVersion, hasJoker, subscribeToJokers } from '@/daily-question/data/jokerStore';
 import { isPastMonth } from '@/lib/dates';
 import { getDocumentRef, getFrozenDoc, getSubDocumentRef } from '@/lib/firestore';
 
@@ -83,6 +86,17 @@ export interface DailyQuestionView {
    * per opening of a day.
    */
   authorName: string | null;
+  /**
+   * Whether the current user has passed this day with a joker — either this
+   * session (`jokerStore`) or a prior one (`v1_daily_question_jokers/{uid}`
+   * under the question, read once). `false` for a day nobody has jokered, and
+   * for a day this hook does not know about yet.
+   *
+   * A joker preserves the streak and unlocks the friends' answers (docs/prd.md
+   * §4.8, « joker complet »), so the sheet flips to a joker-specific result
+   * — see `DailyQuestionScreen`.
+   */
+  jokered: boolean;
 }
 
 /**
@@ -231,6 +245,7 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
   const [ questionState, setQuestionState ] = useState<QuestionState | null>(null);
   const [ authorState, setAuthorState ] = useState<{ authorId: string; name: string | null } | null>(null);
   const [ answerState, setAnswerState ] = useState<AnswerState | null>(null);
+  const [ jokerState, setJokerState ] = useState<{ key: string; jokered: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -435,6 +450,50 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     };
   }, [ date, userId, questionId, answerKey, questionState, needsAnswerRead ]);
 
+  // The joker read — one shot, chained to the answer key. Same trick as the
+  // answer: session-store first, Firestore second. `getFrozenDoc` because
+  // nothing rewrites a joker once it exists, so the SDK's disk cache answers
+  // for free on a reopening.
+  useSyncExternalStore(subscribeToJokers, getJokersVersion);
+  const sessionJoker = hasJoker(userId, date);
+  const jokerKey = answerKey;
+  const jokerRead = jokerState?.key === jokerKey ? jokerState : null;
+  const needsJokerRead = userId !== null && questionId !== null && jokerRead === null && !sessionJoker;
+
+  useEffect(() => {
+    if (userId === null || questionId === null || !needsJokerRead) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    getFrozenDoc(
+      getSubDocumentRef(
+        QUESTION_COLLECTION,
+        questionId,
+        DAILY_QUESTION_JOKER_COLLECTION,
+        userId,
+        dailyQuestionJokerConverter,
+      ),
+    )
+      .then((snapshot) => {
+        if (!cancelled) {
+          setJokerState({ key: jokerKey, jokered: snapshot.exists() });
+        }
+      })
+      .catch((error: unknown) => {
+        console.warn('[daily-question] could not read the joker', date, error);
+
+        if (!cancelled) {
+          setJokerState({ key: jokerKey, jokered: false });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ date, userId, questionId, jokerKey, needsJokerRead ]);
+
   return {
     status: statusOf(day, question),
     question: question?.question ?? null,
@@ -446,5 +505,6 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     ownAnswerPending,
     resultSettled,
     authorName: authorUsername ?? (authorState?.authorId === authorIdToRead ? authorState.name : null),
+    jokered: sessionJoker || (jokerRead?.jokered ?? false),
   };
 };

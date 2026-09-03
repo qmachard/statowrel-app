@@ -35,6 +35,28 @@ export const STREAK_STATFLOUZZ_REWARD = 100;
 export const QUESTION_STATFLOUZZ_COST = 100;
 
 /**
+ * What skipping today's question with a joker costs (docs/prd.md §4.8).
+ *
+ * Two fifths of a streak reward on purpose: a joker has to be affordable often
+ * enough to keep a series through a bad week, and expensive enough that the
+ * currency does not devalue the streak it exists to protect. Priced under the
+ * proposal, since a joker preserves a series while a question is what starts
+ * one.
+ */
+export const JOKER_STATFLOUZZ_COST = 20;
+
+/**
+ * The wallet a fresh account opens with — docs/prd.md §4.7.
+ *
+ * A single joker's worth of coins over what a joker costs: enough to try one
+ * before the first streak milestone pays, without covering a proposal that has
+ * to be earned. `firestore.rules`' `startsWithInitialBalance()` pins this exact
+ * value on every profile creation, so changing this number is a rules change
+ * too — a create that seeds anything else is refused.
+ */
+export const INITIAL_STATFLOUZZ_BALANCE = 50;
+
+/**
  * What a day's answer pays out, from the streak before it and the streak after.
  *
  * Derived from the *crossing* rather than from the new value alone: a streak

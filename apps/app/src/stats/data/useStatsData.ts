@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 
 import { useAuth } from '@/auth/AuthContext';
 import { getAnswersVersion, readAnswerDays, subscribeToAnswers } from '@/daily-question/data/answerStore';
+import { getJokersVersion, readJokerDays, subscribeToJokers } from '@/daily-question/data/jokerStore';
 import { startOfMonth, toDateKey } from '@/lib/dates';
 import { getCollectionRef } from '@/lib/firestore';
 import { useToday } from '@/lib/useToday';
@@ -107,6 +108,7 @@ export const useStatsData = () => {
   );
 
   useSyncExternalStore(subscribeToAnswers, getAnswersVersion);
+  useSyncExternalStore(subscribeToJokers, getJokersVersion);
 
   /**
    * Reads the months the screen is showing: the displayed one, and the current
@@ -219,9 +221,16 @@ export const useStatsData = () => {
    */
   const read = stored ?? emptyCalendarMonth(monthKey);
   const answeredThisSession = readAnswerDays(userId, monthKey);
-  const calendar = Object.keys(answeredThisSession).length === 0
+  const jokeredThisSession = readJokerDays(userId, monthKey);
+  const hasSessionOverlay = Object.keys(answeredThisSession).length > 0
+    || Object.keys(jokeredThisSession).length > 0;
+  const calendar = !hasSessionOverlay
     ? read
-    : { ...read, answered: { ...read.answered, ...answeredThisSession } };
+    : {
+      ...read,
+      answered: { ...read.answered, ...answeredThisSession },
+      jokered: { ...read.jokered, ...jokeredThisSession },
+    };
 
   /**
    * Today's own answer — the option it picked and, above all, its `stat_label`:
@@ -239,6 +248,13 @@ export const useStatsData = () => {
   const sessionToday: UserCalendarMonthDayData | undefined = currentAnswers[todayMonthDayKey];
   const storedToday: UserCalendarMonthDayData | undefined = currentMonth?.answered[todayMonthDayKey];
   const todayAnswer = sessionToday ?? storedToday ?? null;
+
+  // Today's joker, same overlay pattern as today's answer.
+  const currentJokers = monthKey === currentMonthKey
+    ? jokeredThisSession
+    : readJokerDays(userId, currentMonthKey);
+  const todayJokered = currentJokers[todayMonthDayKey] !== undefined
+    || currentMonth?.jokered[todayMonthDayKey] !== undefined;
 
   return {
     /** `v1_users/{uid}`, live — see `AuthContext`. Null while it loads, and until the onboarding sheet has created it. */
@@ -276,6 +292,12 @@ export const useStatsData = () => {
      * counts on its own.
      */
     todayAnswer,
+    /**
+     * Whether today was passed with a joker (docs/prd.md §4.8). The banner
+     * falls back to a joker line when this is true and `todayAnswer` is
+     * `null`.
+     */
+    todayJokered,
     loading: userId !== null && stored === null,
     /** True while a pull to refresh is out — the `RefreshControl`'s own state. */
     refreshing,

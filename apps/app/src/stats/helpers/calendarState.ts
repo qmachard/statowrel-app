@@ -1,7 +1,7 @@
 import type { DateKey } from '@/lib/dates';
 
-/** The four calendar states of docs/prd.md §5.2. */
-export type CalendarDayState = 'answered' | 'today' | 'missed' | 'idle';
+/** The five calendar states of docs/prd.md §5.2, with `jokered` added in §4.8. */
+export type CalendarDayState = 'answered' | 'jokered' | 'today' | 'missed' | 'idle';
 
 export interface CalendarDayStateInput {
   day: DateKey;
@@ -10,6 +10,15 @@ export interface CalendarDayStateInput {
   published: boolean;
   /** The user answered it — read off `v1_users/{uid}/v1_user_calendar_months`. */
   answered: boolean;
+  /**
+   * The user passed the day with a joker — read off the same document
+   * (`v1_user_calendar_months.jokers`). A day never appears as both
+   * `answered` and `jokered` (the callable that writes a joker refuses to
+   * when a day has already been answered, and the answer path refuses when a
+   * joker has landed the same day), so `answered` wins here if the two ever
+   * disagreed.
+   */
+  jokered: boolean;
 }
 
 /**
@@ -32,9 +41,13 @@ export interface CalendarDayStateInput {
  * treatment of an answered cell — the check included, once it is played — and
  * only its colour differs (docs/prd.md §5.2).
  */
-export const getCalendarDayState = ({ day, today, published, answered }: CalendarDayStateInput): CalendarDayState => {
+export const getCalendarDayState = ({ day, today, published, answered, jokered }: CalendarDayStateInput): CalendarDayState => {
   if (answered) {
     return day === today ? 'today' : 'answered';
+  }
+
+  if (jokered) {
+    return day === today ? 'today' : 'jokered';
   }
 
   if (!published || day > today) {

@@ -28,6 +28,7 @@
     "seed-emulator": "npm run build:models && node apps/functions/scripts/seed-emulator.mjs",
     "backfill-question-authors": "npm run build:models && node apps/functions/scripts/backfill-question-authors.mjs",
     "backfill-statflouzz": "npm run build:models && node apps/functions/scripts/backfill-statflouzz.mjs",
+    "backfill-initial-balance": "npm run build:models && node apps/functions/scripts/backfill-initial-balance.mjs",
     "check-google-signin": "node apps/app/scripts/check-google-signin.mjs",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",

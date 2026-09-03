@@ -178,7 +178,7 @@ Intime sans être gênant, jamais moralisateur. Juste la vanne du matin, et la p
 
 TA SÉRIE
 
-Réponds avant minuit et ta série monte d'un jour. Rate une journée, elle repart à zéro — pas de joker. Ton meilleur score reste affiché, lui, pour toujours.
+Réponds avant minuit et ta série monte d'un jour. Rate une journée, elle repart à zéro — sauf à dépenser un joker (20§) pour la passer sans la casser. Ton meilleur score reste affiché, lui, pour toujours.
 
 TON CALENDRIER EST TON HISTORIQUE
 
@@ -493,7 +493,7 @@ deux descriptions (§1.4), où elle continue de ne jamais se reformuler (§6).
 > - **Publier la capture 4 en même temps que la fonctionnalité** (`docs/production-checklist.md` §1.4),
 >   et sortir à trois captures d'ici là — trois suffisent aux deux stores.
 > - **Ou la remplacer par sa variante de repli**, qui décrit la même capture d'écran sans rien
->   promettre : **TA SÉRIE NE TIENT QU'À TOI.** / *Un jour raté, elle repart à zéro. Pas de joker.*
+>   promettre : **TA SÉRIE NE TIENT QU'À TOI.** / *Un jour raté, elle repart à zéro — sauf joker.*
 
 #### Si l'on veut monter à six captures
 

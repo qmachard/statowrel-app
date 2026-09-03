@@ -16,6 +16,7 @@ export * from './statflouzz';
 // Firestore collection, following the pattern documented in this package's
 // CLAUDE.md and in docs/architecture.md at the repo root.
 export * from './v1_daily_question_answer';
+export * from './v1_daily_question_joker';
 export * from './v1_daily_question_month';
 export * from './v1_question';
 export * from './v1_user';
