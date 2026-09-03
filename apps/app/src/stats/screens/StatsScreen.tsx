@@ -19,7 +19,7 @@ import { resolveStreakCount } from '@/stats/helpers/streak';
  * The root of the app (docs/prd.md §5.1, §5.2), from top to bottom: the
  * invitations waiting on an answer, the day's banner — the question while it is
  * still open, the day's mood once it has been answered — the streak and its
- * counters on a scrolling strip, the calendar, and under it the StatCoin wallet
+ * counters on a scrolling strip, the calendar, and under it the StatFlouzz wallet
  * and what it buys: proposing a question (§4.7). The daily question sheet lands
  * on top of it (§5.4).
  */
@@ -55,9 +55,9 @@ export const StatsScreen = () => {
   const streakCount = profile === null ? 0 : resolveStreakCount(profile, today);
 
   // The wallet is read straight off the profile, which `AuthContext` subscribes
-  // to — so the StatCoins a milestone just paid land on the card below on their
+  // to — so the StatFlouzz a milestone just paid land on the card below on their
   // own, without this screen asking for them.
-  const statcoins = profile?.statcoin_balance ?? 0;
+  const statflouzz = profile?.statcoin_balance ?? 0;
 
   // The banner is the day's status line, whichever side of the answer one is
   // on: the question while it waits, and the question *plus* the mood it earned
@@ -120,12 +120,12 @@ export const StatsScreen = () => {
         />
 
         {/* Under the calendar, because it is what the calendar buys: the days
-            answered pay the StatCoins (§4.7), and this is what they are for.
+            answered pay the StatFlouzz (§4.7), and this is what they are for.
             The balance lives here rather than on the strip above — it belongs
             beside the price it is saved towards, and stating it twice on one
             screen, in two framings, reads as two different things. */}
         <ProposeQuestionCard
-          statcoins={statcoins}
+          statflouzz={statflouzz}
           onPress={() => navigation.navigate('ProposeQuestion')}
         />
       </ScrollView>

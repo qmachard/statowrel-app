@@ -6,7 +6,7 @@ import {
   QUESTION_MIN_OPTIONS,
   QUESTION_OPTION_LABEL_MAX_LENGTH,
   QUESTION_OPTION_STAT_LABEL_MAX_LENGTH,
-  QUESTION_STATCOIN_COST,
+  QUESTION_STATFLOUZZ_COST,
   type ProposeQuestionResult,
 } from '@statowrel/models';
 import { useState } from 'react';
@@ -19,7 +19,7 @@ import { SuccessCheck } from '@/components/animations';
 import { Plus, Trash2, X } from '@/components/icons';
 import { TextField } from '@/components/TextField';
 import { borderWidth, colors, fontSize, fonts, spacing } from '@/design/tokens';
-import { amountLabel, spokenAmountLabel } from '@/lib/statcoins';
+import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
 import { proposeQuestion } from '@/questions/data/proposeQuestion';
 import { proposalFailure } from '@/questions/errors';
 import { type ProposeQuestionValues, emptyOption, proposeQuestionSchema } from '@/questions/schemas';
@@ -312,8 +312,8 @@ export const ProposeQuestionScreen = () => {
                   this screen: it is what the action costs, not what it is. */}
               <Button
                 label="Poser ma question"
-                trailingLabel={amountLabel(QUESTION_STATCOIN_COST)}
-                accessibilityLabel={`Poser ma question, ${spokenAmountLabel(QUESTION_STATCOIN_COST)}`}
+                trailingLabel={amountLabel(QUESTION_STATFLOUZZ_COST)}
+                accessibilityLabel={`Poser ma question, ${spokenAmountLabel(QUESTION_STATFLOUZZ_COST)}`}
                 loading={isSubmitting}
                 onPress={onSubmit}
               />

@@ -66,7 +66,7 @@ export interface DeleteAccountResult {
 }
 
 /**
- * Proposing a question, paid for in StatCoins (docs/prd.md §4.7).
+ * Proposing a question, paid for in StatFlouzz (docs/prd.md §4.7).
  *
  * **A callable, and the only door left.** `firestore.rules` used to let an
  * author write their own `pending` question straight into `v1_questions`, which

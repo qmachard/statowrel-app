@@ -1,14 +1,14 @@
-import { QUESTION_STATCOIN_COST, STREAK_STATCOIN_MILESTONE, STREAK_STATCOIN_REWARD } from '@statowrel/models';
+import { QUESTION_STATFLOUZZ_COST, STREAK_STATFLOUZZ_MILESTONE, STREAK_STATFLOUZZ_REWARD } from '@statowrel/models';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/Card';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
-import { amountLabel, spokenAmountLabel } from '@/lib/statcoins';
+import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
 
 export interface ProposeQuestionCardProps {
   /** The wallet as the profile carries it — `statcoin_balance`, 0 while it loads. */
-  statcoins: number;
+  statflouzz: number;
   /**
    * Opens the proposal form of docs/prd.md §4.7 (`src/questions/`). Still
    * optional, and the button stays inert without it: the card is rendered by
@@ -23,13 +23,13 @@ export interface ProposeQuestionCardProps {
  * `§` is taught — everywhere else, on this card and past it, the symbol stands
  * alone.
  */
-const BALANCE_UNIT = 'StatCoins (§)';
+const BALANCE_UNIT = 'StatFlouzz (§)';
 
 /**
  * How the currency works, said in one sentence under the title — the whole of
  * docs/prd.md §4.7's earning rule, and the only place the app states it.
  */
-const RULE = `Gagne ${amountLabel(STREAK_STATCOIN_REWARD)} pour chaque série de ${STREAK_STATCOIN_MILESTONE} réussie`;
+const RULE = `Gagne ${amountLabel(STREAK_STATFLOUZZ_REWARD)} pour chaque série de ${STREAK_STATFLOUZZ_MILESTONE} réussie`;
 
 const styles = StyleSheet.create({
   // The wallet is the card's one number, so it sits in the middle of it rather
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   // The count over its unit, the anatomy `StreakCard` already uses — which is
-  // also what lets the name be spelled out: « 120 StatCoins (§) » set on one
+  // also what lets the name be spelled out: « 120 StatFlouzz (§) » set on one
   // line at the count's size would wrap on any narrow phone.
   balance: {
     alignItems: 'center',
@@ -75,15 +75,15 @@ const styles = StyleSheet.create({
  * when that condition was a single 30-day threshold — one sentence states a
  * door that opens once and stays open. A currency is not that: it has a rule,
  * a balance and a price, and a button that only ever says what is missing
- * leaves somebody to guess where StatCoins come from. So the card says the rule
+ * leaves somebody to guess where StatFlouzz come from. So the card says the rule
  * once, shows the balance, and carries the price on the button that spends it.
  *
  * The rule stays put once the price is covered. It is not a condition being
  * chased, it is how the economy works, and it is as true with 500§ in hand as
  * with none.
  */
-export const ProposeQuestionCard = ({ statcoins, onPress }: ProposeQuestionCardProps) => {
-  const affordable = statcoins >= QUESTION_STATCOIN_COST;
+export const ProposeQuestionCard = ({ statflouzz, onPress }: ProposeQuestionCardProps) => {
+  const affordable = statflouzz >= QUESTION_STATFLOUZZ_COST;
 
   return (
     <Card>
@@ -93,8 +93,8 @@ export const ProposeQuestionCard = ({ statcoins, onPress }: ProposeQuestionCardP
       </CardHeader>
 
       <CardContent style={styles.content}>
-        <View style={styles.balance} accessible accessibilityLabel={spokenAmountLabel(statcoins)}>
-          <Text style={styles.balanceCount}>{statcoins}</Text>
+        <View style={styles.balance} accessible accessibilityLabel={spokenAmountLabel(statflouzz)}>
+          <Text style={styles.balanceCount}>{statflouzz}</Text>
           <Text style={styles.balanceUnit}>{BALANCE_UNIT}</Text>
         </View>
       </CardContent>
@@ -110,8 +110,8 @@ export const ProposeQuestionCard = ({ statcoins, onPress }: ProposeQuestionCardP
         <View style={styles.action}>
           <Button
             label="Poser une question"
-            trailingLabel={amountLabel(QUESTION_STATCOIN_COST)}
-            accessibilityLabel={`Poser une question, ${spokenAmountLabel(QUESTION_STATCOIN_COST)}`}
+            trailingLabel={amountLabel(QUESTION_STATFLOUZZ_COST)}
+            accessibilityLabel={`Poser une question, ${spokenAmountLabel(QUESTION_STATFLOUZZ_COST)}`}
             variant={affordable ? 'default' : 'outline'}
             disabled={!affordable || onPress === undefined}
             onPress={onPress}

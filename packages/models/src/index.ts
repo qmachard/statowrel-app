@@ -10,7 +10,7 @@ export * from './daily_question_time';
 
 // The currency — what a streak milestone pays and what a question costs. Not a
 // collection either: the wallet it moves lives on `v1_users`.
-export * from './statcoins';
+export * from './statflouzz';
 
 // Domain models (v1_*) are added here as they are designed, one file per
 // Firestore collection, following the pattern documented in this package's

@@ -1,4 +1,4 @@
-import { amountLabel, spokenAmountLabel } from '@/lib/statcoins';
+import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
 
 /**
  * What a proposal's badge says, per state — docs/prd.md §5.3, which asks for

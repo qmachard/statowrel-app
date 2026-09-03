@@ -24,7 +24,7 @@ export interface ProposalStatus {
  *
  * The refund is announced off `refunded_at` and never off the status alone.
  * That stamp and the credit share a transaction (`onQuestionRejected`), so it
- * is the one field that cannot promise StatCoins which have not moved — and a
+ * is the one field that cannot promise StatFlouzz which have not moved — and a
  * proposal that cost nothing (the seeded catalogue, anything written from the
  * console) carries no `statcoin_cost` and is owed nothing.
  */

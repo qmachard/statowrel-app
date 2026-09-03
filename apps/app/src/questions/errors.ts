@@ -1,7 +1,7 @@
-import { QUESTION_STATCOIN_COST } from '@statowrel/models';
+import { QUESTION_STATFLOUZZ_COST } from '@statowrel/models';
 
 import { isFirebaseError } from '@/lib/firebaseError';
-import { amountLabel } from '@/lib/statcoins';
+import { amountLabel } from '@/lib/statflouzz';
 
 /**
  * `functions/*` codes `questions-proposeQuestion` raises on purpose — see
@@ -11,7 +11,7 @@ import { amountLabel } from '@/lib/statcoins';
  * **An empty wallet has its own sentence**, and it is the reason this table
  * exists at all: it is the one refusal the user can do something about, and
  * « réessaie » would be exactly the wrong advice. So it names the price and
- * where the StatCoins come from, which is the rule the card behind this sheet
+ * where the StatFlouzz come from, which is the rule the card behind this sheet
  * already states.
  *
  * `not-found` is a signed-in account with no profile document — somebody who
@@ -21,7 +21,7 @@ import { amountLabel } from '@/lib/statcoins';
  * would send them looking in the wrong place.
  */
 const FAILURES: Record<string, string> = {
-  'functions/failed-precondition': `Il te manque des StatCoins : une question coûte ${amountLabel(QUESTION_STATCOIN_COST)}. Réponds à la question du jour pour en gagner.`,
+  'functions/failed-precondition': `Il te manque des StatFlouzz : une question coûte ${amountLabel(QUESTION_STATFLOUZZ_COST)}. Réponds à la question du jour pour en gagner.`,
   'functions/invalid-argument': 'Ta question n\'est pas valide. Vérifie l\'intitulé et les réponses.',
   'functions/not-found': 'Ton profil est incomplet. Reconnecte-toi et réessaie.',
   'functions/unauthenticated': 'Reconnecte-toi pour poser une question.',
