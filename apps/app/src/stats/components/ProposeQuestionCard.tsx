@@ -1,9 +1,7 @@
 import { QUESTION_STATFLOUZZ_COST, STREAK_STATFLOUZZ_MILESTONE, STREAK_STATFLOUZZ_REWARD } from '@statowrel/models';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/Button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/Card';
-import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
 
 export interface ProposeQuestionCardProps {
@@ -17,107 +15,52 @@ export interface ProposeQuestionCardProps {
   onPress?: () => void;
 }
 
-/**
- * The currency named beside its symbol, the way a listing writes « Euro (€) ».
- * It is the one place the interface spells the name out, so it is also where
- * `§` is taught — everywhere else, on this card and past it, the symbol stands
- * alone.
- */
-const BALANCE_UNIT = 'StatFlouzz (§)';
-
-/**
- * How the currency works, said in one sentence under the title — the whole of
- * docs/prd.md §4.7's earning rule, and the only place the app states it.
- */
-const RULE = `Gagne ${amountLabel(STREAK_STATFLOUZZ_REWARD)} pour chaque série de ${STREAK_STATFLOUZZ_MILESTONE} réussie`;
-
 const styles = StyleSheet.create({
-  // The wallet is the card's one number, so it sits in the middle of it rather
-  // than against the left edge the header reads from.
-  content: {
-    alignItems: 'center',
-  },
-  // The count over its unit, the anatomy `StreakCard` already uses — which is
-  // also what lets the name be spelled out: « 120 StatFlouzz (§) » set on one
-  // line at the count's size would wrap on any narrow phone.
-  balance: {
-    alignItems: 'center',
-    gap: spacing(1),
-  },
-  // The scale of the streak's own count, and deliberately: they are the two
-  // numbers the screen is about, and one of them turns into the other.
-  balanceCount: {
-    fontFamily: fonts.head,
-    fontSize: fontSize['4xl'],
-    lineHeight: fontSize['4xl'],
-    color: colors.foreground,
-  },
-  // Small, but neither grey nor light: it is the currency's own name, the one
-  // place the app writes it, so it carries the page's ink rather than the
-  // dimmed treatment a caption would get.
-  balanceUnit: {
-    fontFamily: fonts.sansMedium,
-    fontSize: fontSize.xs,
-    color: colors.foreground,
-  },
-  // The footer is `muted` and edge to edge by default; the button is the only
-  // thing in it, so it takes the whole width.
-  action: {
-    flex: 1,
+  // Applied when the user cannot afford a proposal — the button below stays
+  // tappable, so the wrapper is what makes it read as unavailable at a glance.
+  greyed: {
+    opacity: 0.5,
   },
 });
 
+const missing = (statflouzz: number): number => Math.max(QUESTION_STATFLOUZZ_COST - statflouzz, 0);
+
 /**
- * The bottom of the Stats screen (docs/prd.md §5.2), under the calendar: what
- * the days answered are *for*, past the counter.
+ * The bottom of the Stats screen (docs/prd.md §5.2), under the calendar: the
+ * §4.7 door, priced rather than gated. The wallet is announced in the header,
+ * so the row is the bare CTA that spends it.
  *
- * It used to be a bare button carrying its condition on one small line, back
- * when that condition was a single 30-day threshold — one sentence states a
- * door that opens once and stays open. A currency is not that: it has a rule,
- * a balance and a price, and a button that only ever says what is missing
- * leaves somebody to guess where StatFlouzz come from. So the card says the rule
- * once, shows the balance, and carries the price on the button that spends it.
- *
- * The rule stays put once the price is covered. It is not a condition being
- * chased, it is how the economy works, and it is as true with 500§ in hand as
- * with none.
+ * Under price the button *looks* disabled (dimmed, `outline` variant) but stays
+ * tappable — tapping it explains why nothing happens, so the user is never
+ * left guessing whether the button is broken or their wallet is short.
  */
 export const ProposeQuestionCard = ({ statflouzz, onPress }: ProposeQuestionCardProps) => {
   const affordable = statflouzz >= QUESTION_STATFLOUZZ_COST;
 
+  const handlePress = () => {
+    if (!affordable) {
+      Alert.alert(
+        'Solde insuffisant',
+        `Poser une question coûte ${amountLabel(QUESTION_STATFLOUZZ_COST)}. `
+        + `Il te manque ${amountLabel(missing(statflouzz))}. `
+        + `Gagne ${amountLabel(STREAK_STATFLOUZZ_REWARD)} tous les ${STREAK_STATFLOUZZ_MILESTONE} jours de série.`,
+        [ { text: 'OK' } ],
+      );
+      return;
+    }
+    onPress?.();
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Deviens acteur de StatOwrel</CardTitle>
-        <CardDescription>{RULE}</CardDescription>
-      </CardHeader>
-
-      <CardContent style={styles.content}>
-        <View style={styles.balance} accessible accessibilityLabel={spokenAmountLabel(statflouzz)}>
-          <Text style={styles.balanceCount}>{statflouzz}</Text>
-          <Text style={styles.balanceUnit}>{BALANCE_UNIT}</Text>
-        </View>
-      </CardContent>
-
-      <CardFooter>
-        {/* `Button` owns its own surface and takes no `style`, so the width is
-            the wrapper's business — the footer is a row, and this is its only
-            child. The price sits in the button's trailing slot rather than in
-            its label: it is what the action costs, not what the action is, so
-            it gets the sans face a step down instead of the label's own. It
-            stays there once it can be paid — a purchase should say what it
-            costs. */}
-        <View style={styles.action}>
-          <Button
-            label="Poser une question"
-            trailingLabel={amountLabel(QUESTION_STATFLOUZZ_COST)}
-            accessibilityLabel={`Poser une question, ${spokenAmountLabel(QUESTION_STATFLOUZZ_COST)}`}
-            variant={affordable ? 'default' : 'outline'}
-            disabled={!affordable || onPress === undefined}
-            onPress={onPress}
-          />
-        </View>
-      </CardFooter>
-    </Card>
+    <View style={affordable ? undefined : styles.greyed}>
+      <Button
+        label="Poser une question"
+        trailingLabel={amountLabel(QUESTION_STATFLOUZZ_COST)}
+        accessibilityLabel={`Poser une question, ${spokenAmountLabel(QUESTION_STATFLOUZZ_COST)}`}
+        variant={affordable ? 'default' : 'outline'}
+        disabled={onPress === undefined}
+        onPress={handlePress}
+      />
+    </View>
   );
 };
