@@ -199,7 +199,13 @@ lui-même, son `predeploy` lançant `npm run build:admin`. **La console est serv
 les réécritures `/admin` et `/admin/**` → `/admin/index.html` sont ce qui fait tenir une SPA derrière
 un rechargement de page, et l'attrape-tout `**` → `/index.html` sert la **page de présentation** de
 la racine — `apps/admin/index.html`, une page statique sans bundle qui porte sa propre copie des
-tokens, comme celles de `public/legal/`. Vite bâtit les deux : `build.rollupOptions.input` déclare
+tokens, comme celles de `public/legal/`. C'est la **page marketing** de l'app : sa copie est celle
+des cinq slides du carrousel d'onboarding (`apps/app/src/onboarding/copy.ts`) et ses maquettes
+reprennent en HTML/CSS les visuels de `OnboardingVisual.tsx` — la carte StatOwrel inclinée, la
+rangée d'avatars, la cloche rouge —, donc les deux se changent ensemble ou la promesse de la page et
+celle du premier lancement divergent. Les **deux URL de store** (`apps.apple.com/fr/app/statowrel/id6803561031`
+et `play.google.com/store/apps/details?id=fr.quentinmachard.statowrel`) y sont écrites en dur, deux
+fois chacune — le CTA du haut et celui du bas. Vite bâtit les deux : `build.rollupOptions.input` déclare
 `index.html` (l'accueil) et `admin/index.html` (la console), d'où `dist/index.html` et
 `dist/admin/index.html` autour d'un même `dist/assets/`. Les assets portent leur hash dans leur nom,
 donc `/assets/**` part `immutable` pour un an, tandis que `**/*.html` reste `no-cache` — sans quoi
