@@ -44,9 +44,10 @@ C'est un changement **natif** : il prend un build, jamais une mise à jour OTA. 
 
 | # | Changement | Conséquence |
 |---|---|---|
-| 2 | **La page de présentation devient une vraie page marketing** (`481fc14`) — `apps/admin/index.html` reconstruite autour des cinq écrans du carrousel d'onboarding : leur texte, leurs visuels portés en HTML/CSS (carte StatOwrel inclinée, avatars superposés, cloche rouge), une bande « comment ça marche » en trois temps, et les boutons App Store / Google Play dans le héros et dans le CTA de fin | `npm run deploy:admin:production` — **ce qui contredit la rc1**, dont la checklist disait « rien à déployer côté console » |
-| 3 | **Métadonnées OpenGraph / Twitter et URL canonique** (`481fc14`) — un lien partagé ne s'affiche plus nu | Idem, même déploiement |
-| 4 | **Repli `prefers-reduced-motion`** sur les maquettes inclinées (`481fc14`) | Accessibilité, hors store |
+| 2 | **La page de présentation devient une vraie page marketing** (`481fc14`) — `apps/admin/index.html` reconstruite autour du carrousel d'onboarding : son texte, ses visuels portés en HTML/CSS (carte StatOwrel inclinée, avatars superposés), une bande « comment ça marche » en trois temps, et les boutons App Store / Google Play dans le héros et dans le CTA de fin | `npm run deploy:admin:production` — **ce qui contredit la rc1**, dont la checklist disait « rien à déployer côté console » |
+| 3 | **Section « On te prévient » retirée** (`2cc4243`) — demander la permission de notification est une étape du premier lancement, pas une raison de télécharger. Emporte sa maquette de cloche et le `--radius-2xl` devenu inutile, ce qui ramène la page aux **quatre sections** que son propre chapô annonce | Idem, même déploiement |
+| 4 | **Métadonnées OpenGraph / Twitter et URL canonique** (`481fc14`) — un lien partagé ne s'affiche plus nu | Idem, même déploiement |
+| 5 | **Repli `prefers-reduced-motion`** sur les maquettes inclinées (`481fc14`) | Accessibilité, hors store |
 
 Toujours **un seul fichier statique** avec sa propre copie des tokens : aucun bundle, servi par le
 catch-all de Hosting. La console de modération reste sous `/admin/` et n'a pas bougé.
@@ -162,8 +163,8 @@ les builds tirés de cette rc**, le changement `AD_ID` étant natif.
 **Page marketing** (`481fc14`)
 
 - [ ] `npm run deploy:admin:production` passé, puis la racine du site en navigation privée
-- [ ] Les cinq blocs du carrousel s'affichent, visuels compris (carte StatOwrel inclinée, avatars
-      superposés, cloche rouge)
+- [ ] Les **quatre** sections annoncées par le chapô s'affichent, visuels compris (carte StatOwrel
+      inclinée, avatars superposés) — et **plus** de section « On te prévient » ni de cloche
 - [ ] La bande « comment ça marche » en trois temps est lisible sur mobile étroit
 - [ ] Les boutons App Store et Google Play sont présents dans le héros **et** dans le CTA de fin —
       et **on a tranché ce qu'ils font tant que les fiches n'existent pas**
