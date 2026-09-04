@@ -133,14 +133,15 @@ export const track = <E extends AnalyticsEvent>(event: E): void => {
 
   // The RN Firebase modular `logEvent` is typed with a huge overload set of
   // GA4-reserved event names — none of which we send — plus a generic
-  // `CustomEventName<T>` branch. The cast preserves the union check on
-  // `AnalyticsEvent` at the boundary (the caller is still typed) without
-  // carrying that overload set into this file.
-  const logEvent = module.logEvent as (
+  // `CustomEventName<T>` branch. The two-step cast (`unknown` first) skirts
+  // the overload set entirely: the caller side is still typed against
+  // `AnalyticsEvent`, so nothing untyped reaches this line, but the SDK
+  // signature does not have to be mimicked here.
+  const logEvent = module.logEvent as unknown as (
     a: AnalyticsInstance,
     name: string,
     params?: Record<string, string | number | boolean | null | undefined>,
-  ) => Promise<void>;
+  ) => void;
 
   safely('track', () => logEvent(analytics, event.name, event.params));
 };
