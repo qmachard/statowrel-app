@@ -86,7 +86,7 @@ export const StatsScreen = () => {
         )}
       >
         <StatsHeader
-          displayName={profile?.username ?? ''}
+          statflouzz={statflouzz}
           onInvite={() => navigation.navigate('InviteFriend')}
           onOpenMenu={() => navigation.navigate('Menu')}
         />

@@ -19,6 +19,7 @@ export { default as CalendarCheck } from 'lucide-react-native/icons/calendar-che
 export { default as Check } from 'lucide-react-native/icons/check';
 export { default as ChevronLeft } from 'lucide-react-native/icons/chevron-left';
 export { default as ChevronRight } from 'lucide-react-native/icons/chevron-right';
+export { default as Coins } from 'lucide-react-native/icons/coins';
 export { default as EllipsisVertical } from 'lucide-react-native/icons/ellipsis-vertical';
 export { default as Lightbulb } from 'lucide-react-native/icons/lightbulb';
 export { default as Lock } from 'lucide-react-native/icons/lock';

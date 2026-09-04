@@ -1,13 +1,13 @@
-import { Menu, UserRoundPlus } from '@/components/icons';
+import { Coins, Menu, UserRoundPlus } from '@/components/icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
-import { colors, fontSize, fonts, spacing } from '@/design/tokens';
-import { formatDayLabel } from '@/lib/dates';
-import { useToday } from '@/lib/useToday';
+import { colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
+import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
 
 export interface StatsHeaderProps {
-  displayName: string;
+  /** Wallet as the profile carries it — `statcoin_balance`, 0 while it loads. */
+  statflouzz: number;
   /** Invite a friend by handle — docs/prd.md §4.1, the `InviteFriend` sheet. */
   onInvite?: () => void;
   /** Open the menu — profile today, settings and friends later. */
@@ -19,47 +19,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing(4),
-  },
-  greeting: {
-    flexShrink: 1,
-    gap: spacing(1.5),
-  },
-  day: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.xs,
-    textTransform: 'uppercase',
-    color: colors['muted-foreground'],
-  },
-  name: {
-    fontFamily: fonts.head,
-    fontSize: fontSize.xl,
-    textTransform: 'uppercase',
-    color: colors.foreground,
-  },
-  actions: {
-    flexDirection: 'row',
     gap: spacing(3),
+  },
+  right: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(3),
+  },
+  wallet: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(2),
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2),
+    borderRadius: radius.sm,
+    backgroundColor: colors.muted,
+  },
+  walletCount: {
+    fontFamily: fonts.head,
+    fontSize: fontSize.lg,
+    color: colors.foreground,
   },
 });
 
-/** Greeting on the left, the app's only two actions on the right (docs/prd.md §5.1). */
-export const StatsHeader = ({ displayName, onInvite, onOpenMenu }: StatsHeaderProps) => {
-  // The same clock the calendar below reads, so the date line and the accented
-  // cell can never name two different days (see `useToday`).
-  const today = useToday();
-
+/**
+ * The invite button on the left, the wallet and the menu on the right
+ * (docs/prd.md §5.1, §5.2 point 1) — the wallet is a flat `muted` chip (no
+ * border, no shadow — the same recessed surface an idle calendar day carries),
+ * so the header reads as one row of two actions with the balance sitting
+ * between them rather than three raised buttons competing for the eye.
+ */
+export const StatsHeader = ({ statflouzz, onInvite, onOpenMenu }: StatsHeaderProps) => {
   return (
     <View style={styles.root}>
-      <View style={styles.greeting}>
-        <Text style={styles.day}>{formatDayLabel(today)}</Text>
-        <Text style={styles.name} numberOfLines={1}>
-          Salut {displayName}
-        </Text>
-      </View>
+      <Button label="Inviter un pote" icon={UserRoundPlus} size="icon" onPress={onInvite} />
 
-      <View style={styles.actions}>
-        <Button label="Inviter un pote" icon={UserRoundPlus} size="icon" onPress={onInvite} />
+      <View style={styles.right}>
+        <View style={styles.wallet} accessible accessibilityLabel={spokenAmountLabel(statflouzz)}>
+          <Coins color={colors.foreground} size={18} />
+          <Text style={styles.walletCount}>{amountLabel(statflouzz)}</Text>
+        </View>
+
         <Button label="Ouvrir le menu" icon={Menu} variant="outline" size="icon" onPress={onOpenMenu} />
       </View>
     </View>
