@@ -44,15 +44,69 @@ const CONTENT_WIDTH = CARD_WIDTH - CARD_PADDING * 2;
 const JPEG_QUALITY = 92;
 
 /**
- * How far each card leans, in degrees.
+ * How far each card may lean, in degrees — a magnitude, the sign being decided
+ * per day below.
  *
- * Opposite ways and by different amounts on purpose: three rectangles at the
- * same angle read as a template, two leaning against each other read as a
- * collage. The third slide stays straight — it is the one asking for something,
- * and a tilted button reads as decoration.
+ * The two cards always lean **opposite ways and by different amounts**: three
+ * rectangles at the same angle read as a template, two leaning against each
+ * other read as a collage. The result card gets the wider range because it holds
+ * one sentence; the question card stays gentler because it holds a question and
+ * up to six bars, and every degree of tilt costs it vertical room and
+ * readability. Neither range reaches zero — a half-degree lean reads as a
+ * mistake rather than as a choice.
+ *
+ * The third slide stays straight whatever the day: it is the one asking for
+ * something, and a tilted button reads as decoration.
+ *
+ * The ceiling is not taste. The result card is 940 wide and can reach ~700 tall,
+ * which at 6° spans 1008px of the 1080 canvas — 36px of margin, 24 once the hard
+ * shadow is offset into it. Past that the card starts losing its corners.
  */
-const RESULT_TILT = -5;
-const QUESTION_TILT = 2.5;
+const RESULT_TILT_RANGE = [ 3, 6 ] as const;
+const QUESTION_TILT_RANGE = [ 1.5, 3.5 ] as const;
+
+/** FNV-1a, 32-bit — a hash, not a checksum: all it has to do is scatter consecutive dates. */
+const hashOf = (value: string): number => {
+  let hash = 0x811c9dc5;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+
+  return hash >>> 0;
+};
+
+const angleIn = (hash: number, [ min, max ]: readonly [ number, number ]): number => (
+  min + ((hash % 1_000) / 1_000) * (max - min)
+);
+
+/**
+ * The two tilts of one day — random-looking, and **derived from the date**
+ * rather than drawn per run.
+ *
+ * `Math.random()` would be the obvious way and it is the wrong one, for two
+ * reasons that have nothing to do with design. A carousel is published in four
+ * calls — one container per slide, then the carousel, then the publish — and a
+ * scheduler that retries after uploading slide 1 would re-render slide 2 at a
+ * different angle, posting a carousel that does not match itself. And
+ * `npm run render-instagram-card` exists to show what will go out: a preview
+ * drawn at angles the real run will not reproduce is a preview of nothing.
+ *
+ * Seeded on the day, both properties come free — the same date always draws the
+ * same card, and consecutive dates lean differently, which is all the
+ * randomness a feed reads.
+ */
+const tiltsFor = (date: string): { result: number; question: number } => {
+  const seed = hashOf(date);
+  // One coin flip for both cards, so they can never end up leaning the same way.
+  const lean = (seed & 1) === 0 ? 1 : -1;
+
+  return {
+    result: -lean * angleIn(seed, RESULT_TILT_RANGE),
+    question: lean * angleIn(hashOf(`${date}:question`), QUESTION_TILT_RANGE),
+  };
+};
 
 /** Air between the closing line and the StatOwrel it introduces — see `drawLines` below. */
 const STAT_GAP = 16;
@@ -135,7 +189,7 @@ const drawFrame = (
  * form. « (peut-être) » is the wink that keeps a statistic from reading as a
  * verdict.
  */
-const renderResultSlide = (recap: DailyRecap): Buffer => {
+const renderResultSlide = (recap: DailyRecap, tilt: number): Buffer => {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
   const ctx = canvas.getContext('2d');
 
@@ -183,7 +237,7 @@ const renderResultSlide = (recap: DailyRecap): Buffer => {
   // would print them over its own border.
   const cardHeight = contentHeight + inset * 2;
 
-  withRotation(ctx, { cx: CARD_WIDTH / 2, cy: 680, degrees: RESULT_TILT }, () => {
+  withRotation(ctx, { cx: CARD_WIDTH / 2, cy: 680, degrees: tilt }, () => {
     drawSurface(ctx, { x: -cardWidth / 2, y: -cardHeight / 2, width: cardWidth, height: cardHeight }, {
       fill: palette.accent,
       radius: radius.lg,
@@ -267,7 +321,7 @@ const drawOptionRow = (
  * comment: « 24 % » is a fact, the gap between the second and the third answer
  * is an argument.
  */
-const renderQuestionSlide = (recap: DailyRecap): Buffer => {
+const renderQuestionSlide = (recap: DailyRecap, tilt: number): Buffer => {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
   const ctx = canvas.getContext('2d');
 
@@ -310,7 +364,7 @@ const renderQuestionSlide = (recap: DailyRecap): Buffer => {
   const rowsHeight = recap.options.length * rowHeight + (recap.options.length - 1) * rowGap;
   const cardHeight = inset * 2 + textBlockHeight(question) + 44 + rowsHeight;
 
-  withRotation(ctx, { cx: CARD_WIDTH / 2, cy: CARD_HEIGHT / 2, degrees: QUESTION_TILT }, () => {
+  withRotation(ctx, { cx: CARD_WIDTH / 2, cy: CARD_HEIGHT / 2, degrees: tilt }, () => {
     const top = -cardHeight / 2;
 
     drawSurface(ctx, { x: -cardWidth / 2, y: top, width: cardWidth, height: cardHeight }, {
@@ -437,5 +491,13 @@ const renderCallToActionSlide = async (): Promise<Buffer> => {
 export const renderRecapCarousel = async (recap: DailyRecap): Promise<Buffer[]> => {
   registerBrandFonts();
 
-  return [ renderResultSlide(recap), renderQuestionSlide(recap), await renderCallToActionSlide() ];
+  // Drawn once and handed to both, rather than each slide seeding itself: the
+  // sign is shared, and two cards that decided it separately could agree.
+  const tilt = tiltsFor(recap.date);
+
+  return [
+    renderResultSlide(recap, tilt.result),
+    renderQuestionSlide(recap, tilt.question),
+    await renderCallToActionSlide(),
+  ];
 };
