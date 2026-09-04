@@ -1,4 +1,4 @@
-import { Check } from '@/components/icons';
+import { Check, Spade } from '@/components/icons';
 import { Pressable, StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
 
 import { shadows } from '@/design/shadows';
@@ -171,7 +171,13 @@ export const CalendarDay = ({
         return (
           <>
             <View style={[ styles.cell, SURFACE[state], sunk ? PRESSED[state] : SHADOW[state] ]}>
-              {answered ? (
+              {state === 'jokered' && answered ? (
+                // Un jour joker : le pique universel des cartes à jouer,
+                // rempli plutôt que tracé — le calendrier lit à petite taille et
+                // une silhouette pleine se reconnaît d'un coup d'œil là où un
+                // contour se perd.
+                <Spade size={CHECK_SIZE} color={CHECK_COLOR[state]} fill={CHECK_COLOR[state]} strokeWidth={0} />
+              ) : answered ? (
                 <Check size={CHECK_SIZE} strokeWidth={CHECK_STROKE_WIDTH} color={CHECK_COLOR[state]} />
               ) : (
                 <Text style={[ styles.label, LABEL[state] ]}>

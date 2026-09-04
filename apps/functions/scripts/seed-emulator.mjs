@@ -294,11 +294,14 @@ const models = await import('@statowrel/models').catch((error) => die(
 const {
   closingTimeOf,
   DAILY_QUESTION_ANSWER_COLLECTION,
+  DAILY_QUESTION_JOKER_COLLECTION,
   DAILY_QUESTION_MONTH_COLLECTION,
   dailyQuestionAnswerConverter,
   dailyQuestionDateKey,
+  dailyQuestionJokerConverter,
   dailyQuestionMonthConverter,
   DEMO_QUESTION_ID,
+  JOKER_STATFLOUZZ_COST,
   monthDayKeyOf,
   monthKeyOf,
   parisTimeToInstant,
@@ -442,6 +445,11 @@ const world = dates.map((date) => {
     // the same account.
     authorUsername: random() < 0.33 && friendUsernames.length > 0 ? pickOne(friendUsernames) : null,
     answers: [],
+    // Jokers of docs/prd.md §4.8 — the joker is a day passed rather than
+    // answered, so it lives in its own list beside `answers` (mirrors what
+    // the callable does: separate `v1_daily_question_jokers` sub-collection,
+    // separate `jokers.{DD}` map on the calendar month).
+    jokers: [],
   };
 });
 
@@ -485,14 +493,67 @@ for (const [ index, day ] of world.entries()) {
 }
 
 // ---------------------------------------------------------------------------
+// Jokers — docs/prd.md §4.8.
+//
+// One friend passes today's question with a joker so the friend list on the
+// day's sheet lists someone as « done via joker », and the friend fan-out
+// counts them onto the main account's badge — same shape the callable
+// produces in production.
+//
+// The main account jokers one of its own past holes, so the calendar shows
+// the fifth visual state on a day the user can see: a violet cell with the
+// playing-card spade, the streak now uninterrupted where it used to be
+// broken. That is what proves the seed exercises the whole joker path
+// end-to-end, calendar visual included.
+// ---------------------------------------------------------------------------
+
+/** Today, a friend who did not already answer takes a joker rather than an answer. */
+const todaysDayForJoker = world.find((day) => day.date === today);
+
+if (todaysDayForJoker !== undefined && friendUsernames.length > 0) {
+  const answered = new Set(todaysDayForJoker.answers.map((answer) => answer.username));
+  const candidate = friendUsernames.find((username) => !answered.has(username));
+
+  if (candidate !== undefined) {
+    const instant = answerInstantOf(today, { late: false });
+
+    if (instant !== null) {
+      todaysDayForJoker.jokers.push({ username: candidate, instant });
+    }
+  }
+}
+
+/**
+ * A past hole in the main account's calendar becomes a joker, so the Stats
+ * calendar renders the joker state on a day the main account owns. Picks the
+ * *first* hole `world` still has — the trailing streak stays intact, and
+ * `streak_best` benefits from the hole being covered.
+ */
+const holeIndexForMain = [ ...holes ].find((index) => {
+  const day = world[index];
+
+  return day !== undefined && day.date !== today && day.answers.every((answer) => answer.username !== MAIN_USERNAME);
+});
+
+if (holeIndexForMain !== undefined) {
+  const day = world[holeIndexForMain];
+  const instant = answerInstantOf(day.date, { late: false });
+
+  if (instant !== null) {
+    day.jokers.push({ username: MAIN_USERNAME, instant });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Writing it down.
 // ---------------------------------------------------------------------------
 
 const todaysDay = world.find((day) => day.date === today);
 const answersTotal = world.reduce((total, day) => total + day.answers.length, 0);
+const jokersTotal = world.reduce((total, day) => total + day.jokers.length, 0);
 
 console.log(`→ ${dryRun ? 'Dry run on' : 'Seeding'} the emulator (${projectId} · firestore ${firestoreHost} · auth ${authHost})`);
-console.log(`  ${dates[0]} → ${dates[dates.length - 1]} · ${friendUsernames.length} friend(s) · ${answersTotal} answers · crowd of ${crowd} a day`);
+console.log(`  ${dates[0]} → ${dates[dates.length - 1]} · ${friendUsernames.length} friend(s) · ${answersTotal} answers · ${jokersTotal} joker(s) · crowd of ${crowd} a day`);
 
 if (dryRun) {
   console.log(`  today (${today}): « ${todaysDay?.label ?? '—'} »`);
@@ -595,6 +656,18 @@ for (const day of world) {
     if (!answer.late) {
       advanceStreak(profile, day.date);
     }
+  }
+
+  // A joker on a day advances the streak like an on-time answer and debits
+  // `JOKER_STATFLOUZZ_COST` — same shape as the `questions-useJoker` callable
+  // in production (docs/prd.md §4.8). Does not touch `answers_count`, since
+  // a joker is a day passed rather than a day answered.
+  for (const joker of day.jokers) {
+    const profile = profiles.get(joker.username);
+
+    advanceStreak(profile, day.date);
+    profile.statcoin_balance -= JOKER_STATFLOUZZ_COST;
+    profile.statcoins_spent += JOKER_STATFLOUZZ_COST;
   }
 }
 
@@ -769,7 +842,7 @@ const calendarOf = (username, monthKey) => {
   const key = `${username}/${monthKey}`;
 
   if (!calendars.has(key)) {
-    calendars.set(key, { username, monthKey, days: {}, friendCounts: {} });
+    calendars.set(key, { username, monthKey, days: {}, jokers: {}, friendCounts: {} });
   }
 
   return calendars.get(key);
@@ -787,28 +860,44 @@ for (const day of world) {
     };
   }
 
-  // The badge of docs/prd.md §5.2: how many of one's accepted friends answered
-  // that day. The friendships seeded above are all main ↔ cast, so a friend's
-  // answer counts onto the main account and the main account's counts onto each
-  // friend — which is what the trigger's fan-out does.
-  const answeredBy = new Set(day.answers.map((answer) => answer.username));
-  const friendsAnswered = friendUsernames.filter((username) => answeredBy.has(username)).length;
-
-  if (friendsAnswered > 0) {
-    calendarOf(MAIN_USERNAME, monthKey).friendCounts[monthDayKey] = friendsAnswered;
+  // A joker projects into its own map on the user's calendar month — the fifth
+  // visual state the Stats calendar renders (docs/prd.md §4.8). Same shape as
+  // the `useJoker` callable writes in production.
+  for (const joker of day.jokers) {
+    calendarOf(joker.username, monthKey).jokers[monthDayKey] = { used_at: joker.instant.toISOString() };
   }
 
-  if (answeredBy.has(MAIN_USERNAME)) {
+  // The badge of docs/prd.md §5.2: how many of one's accepted friends did their
+  // day — answered or jokered. « Joker complet » means a joker counts here too
+  // (docs/prd.md §4.5, §4.8), which is what the answer trigger and the joker
+  // callable both fan out.
+  const doneBy = new Set([
+    ...day.answers.map((answer) => answer.username),
+    ...day.jokers.map((joker) => joker.username),
+  ]);
+  const friendsDone = friendUsernames.filter((username) => doneBy.has(username)).length;
+
+  if (friendsDone > 0) {
+    calendarOf(MAIN_USERNAME, monthKey).friendCounts[monthDayKey] = friendsDone;
+  }
+
+  if (doneBy.has(MAIN_USERNAME)) {
     for (const username of friendUsernames) {
       calendarOf(username, monthKey).friendCounts[monthDayKey] = 1;
     }
   }
 }
 
-for (const { username, monthKey, days: answeredDays, friendCounts } of calendars.values()) {
+for (const { username, monthKey, days: answeredDays, jokers: jokerDays, friendCounts } of calendars.values()) {
   writer.set(
     subCollection(usersRef.doc(uidOf(username)), USER_CALENDAR_MONTH_COLLECTION, userCalendarMonthConverter).doc(monthKey),
-    { month: monthKey, days: answeredDays, friend_answer_counts: friendCounts, updated_at: nowIso },
+    {
+      month: monthKey,
+      days: answeredDays,
+      jokers: jokerDays,
+      friend_answer_counts: friendCounts,
+      updated_at: nowIso,
+    },
   );
 }
 
@@ -822,6 +911,18 @@ const answersWriter = createWriter();
 
 for (const day of world) {
   const questionRef = questionsRef.doc(day.questionId);
+
+  for (const joker of day.jokers) {
+    answersWriter.set(
+      subCollection(questionRef, DAILY_QUESTION_JOKER_COLLECTION, dailyQuestionJokerConverter).doc(uidOf(joker.username)),
+      {
+        user_id: uidOf(joker.username),
+        question_id: day.questionId,
+        date: day.date,
+        used_at: joker.instant.toISOString(),
+      },
+    );
+  }
 
   for (const answer of day.answers) {
     answersWriter.set(
@@ -845,7 +946,7 @@ for (const day of world) {
 
 await answersWriter.commit();
 
-console.log(`  · ${answersTotal} answers`);
+console.log(`  · ${answersTotal} answers, ${jokersTotal} jokers`);
 
 // --- What is now there ------------------------------------------------------
 
