@@ -13,7 +13,7 @@ import {
 import { shadows } from '@/design/shadows';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
 
-export type ButtonVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
+export type ButtonVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link' | 'joker';
 
 export type ButtonSize = 'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg';
 
@@ -92,6 +92,7 @@ const SURFACE = StyleSheet.create({
   outline: { borderWidth, borderColor: colors.border, backgroundColor: colors.card },
   ghost: { backgroundColor: 'transparent' },
   link: { backgroundColor: 'transparent' },
+  joker: { borderWidth, borderColor: colors.border, backgroundColor: colors.joker },
 }) satisfies Record<ButtonVariant, ViewStyle>;
 
 const LABEL = StyleSheet.create({
@@ -101,6 +102,7 @@ const LABEL = StyleSheet.create({
   outline: { color: colors.foreground },
   ghost: { color: colors.foreground },
   link: { color: colors.foreground, textDecorationLine: 'underline' },
+  joker: { color: colors['joker-foreground'] },
 }) satisfies Record<ButtonVariant, TextStyle>;
 
 /** The color icons and the spinner take, mirroring `LABEL`. */
@@ -111,6 +113,7 @@ const FOREGROUND: Record<ButtonVariant, string> = {
   outline: colors.foreground,
   ghost: colors.foreground,
   link: colors.foreground,
+  joker: colors['joker-foreground'],
 };
 
 /**
@@ -124,6 +127,7 @@ const RESTING: Record<ButtonVariant, ViewStyle | undefined> = {
   outline: shadows.md,
   ghost: undefined,
   link: undefined,
+  joker: shadows.md,
 };
 
 /** A raised variant sinks by exactly its shadow offset — 4px, the offset of `shadows.md`. */
@@ -136,6 +140,7 @@ const PRESSED: Record<ButtonVariant, ViewStyle | undefined> = {
   outline: SUNK,
   ghost: undefined,
   link: undefined,
+  joker: SUNK,
 };
 
 /**
@@ -151,6 +156,7 @@ const PRESSED_TINT = StyleSheet.create({
   outline: {},
   ghost: { backgroundColor: colors.muted },
   link: { opacity: 0.7 },
+  joker: {},
 }) satisfies Record<ButtonVariant, ViewStyle>;
 
 const SIZE = StyleSheet.create({

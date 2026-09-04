@@ -124,3 +124,36 @@ export interface ProposeQuestionResult {
    */
   statcoin_balance: number;
 }
+
+/**
+ * Skipping today's question with a joker, paid for in StatFlouzz — docs/prd.md
+ * §4.8.
+ *
+ * A callable, and the only door — for the same reason `proposeQuestion` is:
+ * the debit and the projection into the user's calendar month must be one
+ * operation, otherwise a wallet could be emptied without the day being marked
+ * or a day could be marked without paying. The rules deny any client write on
+ * `v1_user_calendar_months`; the callable runs admin-side, past them.
+ *
+ * A joker counts as "answered" for everything but the mood: the streak advances
+ * as if the answer had been on time, the friend-answer badge on friends'
+ * calendars is incremented, and the 18:00 nudge skips the account — see
+ * `docs/prd.md §4.5, §4.6, §4.8`.
+ */
+export const USE_JOKER_CALLABLE = 'questions-useJoker';
+
+export interface UseJokerPayload {
+  /** The question the joker is being spent on — must be today's broadcast question. */
+  question_id: string;
+}
+
+/**
+ * What the joker left behind. Everything that is not — an empty wallet, a
+ * question that is not today's, a day already answered or already jokered —
+ * comes back as an `HttpsError`, since none of them wrote anything and none of
+ * them debited anything.
+ */
+export interface UseJokerResult {
+  /** The wallet as the debit left it — same shape as `ProposeQuestionResult`, for the same reason. */
+  statcoin_balance: number;
+}

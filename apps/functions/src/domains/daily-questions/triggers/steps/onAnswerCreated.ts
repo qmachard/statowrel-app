@@ -1,4 +1,4 @@
-import { type DocumentReference, FieldValue, Timestamp, type UpdateData } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type UpdateData } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
@@ -14,15 +14,14 @@ import {
   USER_CALENDAR_MONTH_COLLECTION,
   USER_COLLECTION,
   type QuestionData,
-  type UserData,
   type UserFirebaseData,
   userCalendarMonthConverter,
   userConverter,
 } from '@statowrel/models';
 
-import { createBulkWriter, getDocumentRef, getSubDocumentRef, parseData, runTransaction } from '@/libs/firebase-admin';
+import { getDocumentRef, getSubDocumentRef, parseData, runTransaction } from '@/libs/firebase-admin';
 
-import { acceptedFriendsQuery } from '../../helpers/friendsAnswers';
+import { fanOutFriendAnswerBadge } from '../../helpers/friendsAnswers';
 import { nextStreakState } from '../../helpers/streak';
 
 /**
@@ -94,89 +93,6 @@ const countDemoAnswer = async (answer: DailyQuestionAnswerData): Promise<void> =
     // is a Timestamp and not an ISO string.
     transaction.update(answerRef, { counted_at: Timestamp.now() });
   });
-};
-
-/**
- * The friends' badge: `friend_answer_counts.{DD}` in **every accepted friend's**
- * calendar month for that day — docs/prd.md §5.2.
- *
- * It goes onto the friends' own read model rather than being counted when the
- * calendar is displayed, because a friend's answers are only ever readable one
- * question at a time (`firestore.rules`): counting them client-side would be
- * one read per friend per day of the month, against the single read the month
- * costs now.
- *
- * **Outside the answer's transaction, on purpose.** A friendship is reciprocal,
- * so two friends answering at the same moment each write into the very document
- * the other is reading — inside the transaction that contention is retried and
- * then given up on, and giving up there does not cost a badge but the calendar
- * projection, the streak and `answer_counts` with it. It also held the question
- * document — one increment per answer in the whole database, the hottest
- * document there is — locked for the length of the fan-out. And the 500 writes
- * a transaction takes were a cap on how many friends an answer could reach, a
- * limit that came from where the code sat rather than from the product.
- *
- * The price of moving it out, and it is a real one: a crash between the
- * transaction's commit and the end of this fan-out loses this answer's badge
- * for good, because the redelivered trigger bails out on the calendar entry it
- * now finds. That trades a display counter, on one day of one month, against
- * what used to be at risk — somebody's streak. Worth it, but worth knowing.
- *
- * The friend list is read here rather than before the transaction: a
- * redelivery bails out without ever reaching this, and a read taken « just in
- * case » upstream would be paid on every one of them.
- */
-const countAnswerOntoFriends = async (
-  userRef: DocumentReference<UserData>,
-  monthKey: string,
-  monthDayKey: string,
-  date: string,
-): Promise<void> => {
-  const friends = await acceptedFriendsQuery(userRef).get();
-
-  if (friends.empty) {
-    return;
-  }
-
-  const writer = createBulkWriter();
-
-  friends.docs.forEach((friendship) => {
-    const friendCalendarMonthRef = getSubDocumentRef(
-      getDocumentRef(USER_COLLECTION, friendship.id, userConverter),
-      USER_CALENDAR_MONTH_COLLECTION,
-      monthKey,
-      userCalendarMonthConverter,
-    ).withConverter(null);
-
-    // Same `merge` as the author's own projection — the friend may have no
-    // calendar month for this month at all, having answered nothing in it — and
-    // an `increment`, since several friends answering the same day land on the
-    // same field. The converter is dropped for this one write: its
-    // `toFirestore` would rebuild the map value by value and throw the sentinel
-    // away, and there is nothing here for it to convert.
-    writer.set(friendCalendarMonthRef, {
-      month: monthKey,
-      friend_answer_counts: { [monthDayKey]: FieldValue.increment(1) },
-      updated_at: Timestamp.now(),
-    }, { merge: true }).catch((error: unknown) => {
-      // One friend's badge, given up on after the writer's own retries. Logged
-      // rather than thrown: the answer itself is already committed, and taking
-      // the whole trigger down here would only get it redelivered onto the
-      // marker it bails out on.
-      logger.error('Could not count this answer onto a friend', {
-        date,
-        error,
-        friend_id: friendship.id,
-        user_id: userRef.id,
-      });
-    });
-  });
-
-  // `close()` is what waits for the writes — and for the retries the writer
-  // makes on its own when a friend's month is contended.
-  await writer.close();
-
-  logger.info('Answer counted onto the friends', { date, friends: friends.size, user_id: userRef.id });
 };
 
 /**
@@ -257,7 +173,8 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
     return;
   }
 
-  const statLabel = resolveStatLabel(question, date, optionId);
+  const isJoker = answer.is_joker;
+  const statLabel = isJoker ? '' : resolveStatLabel(question, date, optionId);
 
   const userRef = getDocumentRef(USER_COLLECTION, userId, userConverter);
   const calendarMonthRef = getSubDocumentRef(userRef, USER_CALENDAR_MONTH_COLLECTION, monthKey, userCalendarMonthConverter);
@@ -269,35 +186,42 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
     const calendarMonth = (await transaction.get(calendarMonthRef)).data();
     const user = (await transaction.get(userRef)).data();
 
-    if (calendarMonth?.days[monthDayKey] !== undefined) {
-      logger.info('Answer already applied, nothing to do', { date, user_id: userId });
+    // Idempotency: whichever half of the calendar carries this day, we bail
+    // out. A joker projects into `jokers.{DD}`, an answer into `days.{DD}`,
+    // and the two halves cannot both hold the same day — the callable and
+    // the client answer path share the same document id, so « one action per
+    // person per day » is a property of the data.
+    if (calendarMonth?.days[monthDayKey] !== undefined || calendarMonth?.jokers[monthDayKey] !== undefined) {
+      logger.info('Answer already applied, nothing to do', { date, is_joker: isJoker, user_id: userId });
 
       return false;
     }
 
-    // A `set` with `merge` deep-merges maps, so writing one `days` entry leaves
-    // the rest of the month alone — and re-creates the document on the first
-    // answer of the month without a separate check.
+    // A `set` with `merge` deep-merges maps, so writing one entry leaves the
+    // rest of the month alone. Jokers land in their own map — the calendar
+    // renders them as a fifth state (docs/prd.md §4.8) — and answers in
+    // `days` as before.
     transaction.set(calendarMonthRef, {
       month: monthKey,
-      days: {
-        [monthDayKey]: {
-          option_id: optionId,
-          stat_label: statLabel,
-          late: answer.late,
-        },
-      },
+      ...(isJoker
+        ? { jokers: { [monthDayKey]: { used_at: answer.answered_at } } }
+        : { days: { [monthDayKey]: { option_id: optionId, stat_label: statLabel, late: answer.late } } }
+      ),
       updated_at: answer.answered_at,
     }, { merge: true });
 
-    // A fixed field path plus `increment`, so two answers landing at the same
-    // moment add up instead of overwriting each other.
-    transaction.update(questionRef, `answer_counts.${optionId}`, FieldValue.increment(1));
+    // A joker has no option to count against — the question's tally is left
+    // alone. Regular answers still fold into `answer_counts` here.
+    if (!isJoker) {
+      // A fixed field path plus `increment`, so two answers landing at the
+      // same moment add up instead of overwriting each other.
+      transaction.update(questionRef, `answer_counts.${optionId}`, FieldValue.increment(1));
+    }
 
-    // Same transaction as that increment, and it has to stay that way: the
-    // marker is only worth anything because it cannot exist without the count
-    // it announces. update() does not run the converter (see the repo's
-    // CLAUDE.md), so this is a Timestamp and not an ISO string.
+    // Same transaction as the increment (or as the projection alone, for a
+    // joker), so the marker cannot exist without whatever it announces.
+    // update() does not run the converter (see the repo's CLAUDE.md), so
+    // this is a Timestamp and not an ISO string.
     transaction.update(answerRef, { counted_at: Timestamp.now() });
 
     if (user === undefined) {
@@ -309,14 +233,17 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
       return true;
     }
 
-    // A catch-up answer completes the calendar and leaves the streak where it
-    // was (docs/prd.md §4.6) — so it earns nothing either: the StatFlouzz follow
-    // the streak, and there is no streak to follow here.
+    // A joker preserves the streak (docs/prd.md §4.8): it advances exactly
+    // like an on-time answer, and it earns the milestone reward the streak
+    // it crossed is owed. A catch-up answer stays where the streak was — no
+    // reward, no move — since it neither on-time answers nor jokers.
     const streak = answer.late ? null : nextStreakState(user, date);
     const reward = streak === null ? 0 : streakStatflouzzReward(user.streak_count, streak.streak_count);
 
     const counters: UpdateData<UserFirebaseData> = {
-      answers_count: FieldValue.increment(1),
+      // A joker is a day passed, not a day answered — `answers_count` only
+      // counts real answers.
+      ...(isJoker ? {} : { answers_count: FieldValue.increment(1) }),
       // update() does not run the converter (see the repo's CLAUDE.md), so this
       // is a Timestamp and not an ISO string.
       updated_at: Timestamp.now(),
@@ -351,5 +278,5 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
     return;
   }
 
-  await countAnswerOntoFriends(userRef, monthKey, monthDayKey, date);
+  await fanOutFriendAnswerBadge(userRef, monthKey, monthDayKey, date);
 };

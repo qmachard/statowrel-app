@@ -17,7 +17,7 @@ Shared infrastructure — do not duplicate it in a model file:
 
 ## `src/callables.ts`
 
-The wire contracts of the callable Cloud Functions — one of the three modules here describing no Firestore collection. It carries each callable's deployed name (`INVITE_FRIEND_CALLABLE`, `DELETE_ACCOUNT_CALLABLE`, `PROPOSE_QUESTION_CALLABLE`), its payload and its result, because this package is the only one both `apps/app` and `apps/functions` depend on: a callable's payload has a converter's problem — two sides serialising the same shape with no compiler between them unless it is written down once. Fields stay `snake_case` like everywhere else, even though nothing here is stored.
+The wire contracts of the callable Cloud Functions — one of the three modules here describing no Firestore collection. It carries each callable's deployed name (`INVITE_FRIEND_CALLABLE`, `DELETE_ACCOUNT_CALLABLE`, `PROPOSE_QUESTION_CALLABLE`, `USE_JOKER_CALLABLE`), its payload and its result, because this package is the only one both `apps/app` and `apps/functions` depend on: a callable's payload has a converter's problem — two sides serialising the same shape with no compiler between them unless it is written down once. Fields stay `snake_case` like everywhere else, even though nothing here is stored.
 
 ## `src/daily_question_time.ts`
 
@@ -27,7 +27,7 @@ Day-key arithmetic stays in `v1_daily_question_month.ts`, next to `dailyQuestion
 
 ## `src/statflouzz.ts`
 
-The currency — **StatFlouzz** (docs/prd.md §4.7): what a streak milestone pays (`STREAK_STATFLOUZZ_MILESTONE`, `STREAK_STATFLOUZZ_REWARD`), what a question costs (`QUESTION_STATFLOUZZ_COST`), and `streakStatflouzzReward(previous, next)` — the payout read off the milestone *crossed* rather than off the new streak's last digit, so a streak that did not move pays nothing. No collection either: the wallet it moves is three fields on `v1_users`. It lives here because three sides have to agree on the same numbers — the answer trigger that credits, the callable that debits, and the screen that says what can be afforded — and a constant copied three times is a constant that drifts.
+The currency — **StatFlouzz** (docs/prd.md §4.7 and §4.8): what a streak milestone pays (`STREAK_STATFLOUZZ_MILESTONE`, `STREAK_STATFLOUZZ_REWARD`), what a question costs (`QUESTION_STATFLOUZZ_COST`), what a joker costs (`JOKER_STATFLOUZZ_COST`), what a fresh account opens with (`INITIAL_STATFLOUZZ_BALANCE` — the rules pin this value on every profile creation), and `streakStatflouzzReward(previous, next)` — the payout read off the milestone *crossed* rather than off the new streak's last digit, so a streak that did not move pays nothing. No collection either: the wallet it moves is three fields on `v1_users`. It lives here because four sides have to agree on the same numbers — the answer trigger that credits, the two callables that debit (proposal, joker), and the screen that says what can be afforded — and a constant copied four times is a constant that drifts.
 
 Keep it dependency-free (constants and pure functions on primitives): `v1_user.ts` documents the wallet in its terms, and a module importing back would only close a loop for nothing.
 

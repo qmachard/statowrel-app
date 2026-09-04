@@ -90,9 +90,11 @@ export interface UserFirebaseData {
    * the same reason: an update that changes this from a client is a forged
    * balance, and `firestore.rules` refuses it.
    *
-   * The app seeds it at 0 on a genuinely new profile and never touches it
-   * again — a create that seeds anything else is refused too, because a forged
-   * opening balance is a free question.
+   * The app seeds it at `INITIAL_STATFLOUZZ_BALANCE` on a genuinely new profile
+   * and never touches it again — a create that seeds anything else is refused
+   * too, because a forged opening balance is a free question. The opening
+   * amount lets a fresh account try a joker (`JOKER_STATFLOUZZ_COST`) before its
+   * first streak milestone pays; every later move belongs to the backend.
    */
   statcoin_balance: number;
   /**

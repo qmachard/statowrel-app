@@ -136,7 +136,14 @@ service cloud.firestore {
                  && request.resource.data.option_id is string
                  && request.resource.data.option_id.size() > 0
                  && request.resource.data.answered_at is timestamp
-                 && request.resource.data.get('counted_at', null) == null;
+                 && request.resource.data.get('counted_at', null) == null
+                 // Jokers (docs/prd.md §4.8) live in this same collection with
+                 // `is_joker: true` and an empty `option_id`. Only the
+                 // `questions-useJoker` callable, admin-side, may create one —
+                 // a client answer must never carry the flag. Read through
+                 // `get()` with a default so a build that predates the field
+                 // is not locked out of answering.
+                 && request.resource.data.get('is_joker', false) == false;
         }
 
         // An answer to the question as the day it ran.
@@ -190,6 +197,7 @@ service cloud.firestore {
                       && isAnswerTo(get(/databases/$(database)/documents/v1_questions/$(question_id)).data);
         allow update, delete: if false;
       }
+
     }
 
     // A profile document is keyed by the account's Firebase Auth UID
@@ -242,10 +250,11 @@ service cloud.firestore {
                && request.resource.data.get('statcoins_spent', 0) == resource.data.get('statcoins_spent', 0);
       }
 
-      // A new profile opens empty, and that is checked rather than assumed:
-      // `keepsBackendCounters()` only guards an *update*, so without this a
-      // client could simply create its own profile with a balance already in
-      // it — a free question, and no write to undo it afterwards.
+      // A new profile opens with the fixed starting wallet, and that is
+      // checked rather than assumed: `keepsBackendCounters()` only guards an
+      // *update*, so without this a client could simply create its own profile
+      // with a bigger balance already in it — a free question and free jokers,
+      // no write to undo either afterwards.
       //
       // The streak is pinned here too, and not for symmetry: the payout is
       // computed from `streak_count` and `streak_last_answered_on`, so a
@@ -253,22 +262,28 @@ service cloud.firestore {
       // StatFlouzz tomorrow. Forging a score was vanity; forging it is now
       // counterfeiting.
       //
+      // The initial balance is `INITIAL_STATCOIN_BALANCE` (docs/prd.md §4.7),
+      // hardcoded here since rules cannot import JavaScript — the two change
+      // together. `statcoins_earned` stays 0 (the opening amount is a grant,
+      // not something the user earned) so a future backfill can tell a fresh
+      // account from one that never touched its wallet.
+      //
       // `create` only ever fires on a document that does not exist, so nothing
       // written before these fields can be caught by it — completing a profile
       // that predates a username is a `set` over an existing document, which
       // is an update and goes through `keepsBackendCounters()` instead.
-      function startsEmpty() {
+      function startsWithInitialBalance() {
         return request.resource.data.get('streak_count', 0) == 0
                && request.resource.data.get('streak_best', 0) == 0
                && request.resource.data.get('answers_count', 0) == 0
                && request.resource.data.get('streak_last_answered_on', null) == null
-               && request.resource.data.get('statcoin_balance', 0) == 0
+               && request.resource.data.get('statcoin_balance', 0) == 50
                && request.resource.data.get('statcoins_earned', 0) == 0
                && request.resource.data.get('statcoins_spent', 0) == 0;
       }
 
       allow read: if isAuthenticated();
-      allow create: if isOwner(user_id) && isValidProfile() && ownsUsername() && startsEmpty();
+      allow create: if isOwner(user_id) && isValidProfile() && ownsUsername() && startsWithInitialBalance();
       allow update: if isOwner(user_id)
                     && isValidProfile()
                     && ownsUsername()

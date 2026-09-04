@@ -76,6 +76,10 @@ export const submitAnswer = async ({
     question_id: questionId,
     date: isDemo ? '' : question.broadcast_on ?? '',
     option_id: optionId,
+    // The client answer path never writes a joker — `firestore.rules`
+    // refuses a create with `is_joker: true`. Jokers go through the
+    // `questions-useJoker` callable, admin-side.
+    is_joker: false,
     answered_at: answeredAt ?? now.toISOString(),
     late: isDemo ? false : closesAt !== null && now > new Date(closesAt),
     // The answer trigger's marker, and its alone.

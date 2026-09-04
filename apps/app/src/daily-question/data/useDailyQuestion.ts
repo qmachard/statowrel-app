@@ -19,6 +19,7 @@ import {
 
 import { useAuth } from '@/auth/AuthContext';
 import { getAnswersVersion, readAnswer, subscribeToAnswers } from '@/daily-question/data/answerStore';
+import { getJokersVersion, hasJoker, subscribeToJokers } from '@/daily-question/data/jokerStore';
 import { isPastMonth } from '@/lib/dates';
 import { getDocumentRef, getFrozenDoc, getSubDocumentRef } from '@/lib/firestore';
 
@@ -83,6 +84,17 @@ export interface DailyQuestionView {
    * per opening of a day.
    */
   authorName: string | null;
+  /**
+   * Whether the current user has passed this day with a joker — either this
+   * session (`jokerStore`) or a prior one (`v1_daily_question_jokers/{uid}`
+   * under the question, read once). `false` for a day nobody has jokered, and
+   * for a day this hook does not know about yet.
+   *
+   * A joker preserves the streak and unlocks the friends' answers (docs/prd.md
+   * §4.8, « joker complet »), so the sheet flips to a joker-specific result
+   * — see `DailyQuestionScreen`.
+   */
+  jokered: boolean;
 }
 
 /**
@@ -435,6 +447,15 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     };
   }, [ date, userId, questionId, answerKey, questionState, needsAnswerRead ]);
 
+  // The joker is stored on the same answer document (`is_joker: true`), so
+  // it lands with the answer read above — no second round trip. `jokerStore`
+  // still stands in for a joker this session just spent, since the answer
+  // trigger writes `counted_at` a beat later and the answer read may not
+  // have landed yet.
+  useSyncExternalStore(subscribeToJokers, getJokersVersion);
+  const sessionJoker = hasJoker(userId, date);
+  const answerToday = answerRead?.answer ?? sessionAnswer;
+
   return {
     status: statusOf(day, question),
     question: question?.question ?? null,
@@ -442,9 +463,12 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     // The document wins once it has been read: it is the one carrying the
     // trigger's marker. The session's own answer is what stands in until then,
     // so the sheet flips on the tap rather than on a round trip.
-    answer: answerRead?.answer ?? sessionAnswer,
+    answer: answerToday,
     ownAnswerPending,
     resultSettled,
     authorName: authorUsername ?? (authorState?.authorId === authorIdToRead ? authorState.name : null),
+    // A joker is an answer with `is_joker: true` — one field on the same
+    // document, so nothing extra to read.
+    jokered: sessionJoker || (answerToday?.is_joker ?? false),
   };
 };

@@ -9,12 +9,17 @@ import { Button } from '@/components/Button';
 import { SuccessCircle } from '@/components/animations';
 import { AnswerRecap } from '@/daily-question/components/AnswerRecap';
 import { FriendAnswers } from '@/daily-question/components/FriendAnswers';
+import { JokerButton } from '@/daily-question/components/JokerButton';
+import { JokerHeadline } from '@/daily-question/components/JokerHeadline';
 import { QuestionOption, letterOf } from '@/daily-question/components/QuestionOption';
 import { StatOwrelHeadline } from '@/daily-question/components/StatOwrelHeadline';
 import { rememberAnswer } from '@/daily-question/data/answerStore';
+import { rememberJoker } from '@/daily-question/data/jokerStore';
+import { jokerFailure } from '@/daily-question/data/jokerErrors';
 import { submitAnswer } from '@/daily-question/data/submitAnswer';
 import { type DailyQuestionStatus, useDailyQuestion } from '@/daily-question/data/useDailyQuestion';
 import { useFriendAnswers } from '@/daily-question/data/useFriendAnswers';
+import { spendJokerCallable } from '@/daily-question/data/spendJoker';
 import { buildStatOwrel } from '@/daily-question/helpers/statowrel';
 import { useDoubleTapAnswer } from '@/daily-question/helpers/useDoubleTapAnswer';
 import { FOREGROUND, SURFACE, type Surface } from '@/daily-question/helpers/surface';
@@ -48,6 +53,9 @@ const styles = StyleSheet.create({
   // The way out and the question read as one block, set apart from the options
   // below.
   prompt: {
+    gap: spacing(3),
+  },
+  jokerBlock: {
     gap: spacing(3),
   },
   // The close button sits on its own line, pushed right — a row of its own
@@ -124,7 +132,7 @@ const Message = ({ children, surface }: { children: ReactNode; surface: Surface 
 export const DailyQuestionScreen = () => {
   const navigation = useNavigation();
   const { params } = useRoute<RouteProp<RootStackParamList, 'DailyQuestion'>>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // Neither edge is inset by the platform: Android draws the modal
   // edge-to-edge, and iOS's page sheet reaches the bottom of the screen. The
@@ -137,17 +145,21 @@ export const DailyQuestionScreen = () => {
   // key *is* the document id (docs/architecture.md).
   const date = params?.date ?? dailyQuestionDateKey(new Date());
   const {
-    status, question, questionId, answer, ownAnswerPending, resultSettled, authorName,
+    status, question, questionId, answer, ownAnswerPending, resultSettled, authorName, jokered,
   } = useDailyQuestion(date);
 
   const [ submitting, setSubmitting ] = useState(false);
   const [ celebrating, setCelebrating ] = useState(false);
   const [ failure, setFailure ] = useState<string | null>(null);
+  const [ jokerLoading, setJokerLoading ] = useState(false);
 
   const isToday = date === toDateKey(new Date());
   const deadEnd = DEAD_END[status];
 
-  const surface: Surface = isToday ? 'accent' : 'primary';
+  // A jokered day owns the joker's violet — same colour as its calendar cell,
+  // so the sheet and the cell tell the same story. `isToday` gives the accent
+  // red while the day is still open, `primary` closes a past answered day.
+  const surface: Surface = jokered ? 'joker' : isToday ? 'accent' : 'primary';
 
   // The sheet's own background, behind the content this screen lays out. Set
   // here rather than in `RootNavigator` because the navigator has no way of
@@ -191,11 +203,48 @@ export const DailyQuestionScreen = () => {
     void validate(optionId);
   });
 
+  // Spending a joker on today's still-open question, docs/prd.md §4.8. The
+  // callable checks every precondition again server-side — this button is a
+  // shortcut, not the check.
+  const spendJoker = async () => {
+    if (user === null || questionId === null) {
+      return;
+    }
+
+    setJokerLoading(true);
+    setFailure(null);
+    hapticValidation();
+
+    try {
+      await spendJokerCallable({ question_id: questionId });
+      // The joker session store flips the sheet on the tap and drops the
+      // month from the calendar cache — same mechanic as `rememberAnswer`.
+      rememberJoker(user.uid, date, new Date().toISOString());
+      setCelebrating(true);
+    } catch (error) {
+      setFailure(jokerFailure(error));
+    } finally {
+      setJokerLoading(false);
+    }
+  };
+
   // The choice is final (docs/prd.md §4.2), so an answered day stops taking
-  // taps — and so does a day still writing one. Decided on the answer itself
-  // and never on `showingResult` below: a second tap has to be refused from the
-  // instant the first one is written, whatever the sheet is still showing.
-  const answerable = status === 'ready' && user !== null && answer === null && !submitting;
+  // taps — and so does a day still writing one, or a day passed with a joker.
+  // Decided on the answer and the joker flag, never on `showingResult` below:
+  // a second tap has to be refused from the instant the first one is written,
+  // whatever the sheet is still showing.
+  const answerable = status === 'ready' && user !== null && answer === null && !jokered && !submitting && !jokerLoading;
+
+  // The joker button shows for today's still-open question only, and only
+  // when nothing has been done on the day yet — an answered or jokered day
+  // shows its result instead. `isToday` gates past days; the ready/user
+  // checks mirror `answerable`.
+  const jokerAvailable = isToday && status === 'ready' && user !== null && answer === null && !jokered;
+
+  // A day that carries an answer with a real option — the answer result of
+  // §5.5 — as opposed to a joker (which lives on the same document with
+  // `is_joker: true`, docs/prd.md §4.8).
+  const answered = answer !== null && !answer.is_joker;
 
   // **The sheet flips once the result is whole, not the instant the answer is
   // written.** The two are a beat apart on purpose: answering reads the answer
@@ -209,7 +258,16 @@ export const DailyQuestionScreen = () => {
   // as the deadline: a read that has not landed by then is not worth holding a
   // result for, and reopening an answered day — where nothing celebrates —
   // shows it straight away rather than waiting on a read it has no reason to.
-  const showingResult = answer !== null && (resultSettled || !celebrating);
+  const showingResult = answered && (resultSettled || !celebrating);
+
+  // A jokered day flips as soon as the joker is spent — instantly, with the
+  // celebration playing over the tap. Nothing to settle since a joker has no
+  // tally to fold into and no `counted_at` to wait for.
+  const showingJokerResult = jokered;
+
+  // Any of the two results means the sheet is showing what happened rather
+  // than what to do — hide question, options, and the joker button together.
+  const showingAnyResult = showingResult || showingJokerResult;
 
   // The reward of docs/prd.md §5.5: the rarity is `answer_counts`' shape at
   // display time, computed from the tally as it stood when the day was opened —
@@ -221,16 +279,19 @@ export const DailyQuestionScreen = () => {
     ? null
     : buildStatOwrel(question, question.answer_counts, answer.option_id, ownAnswerPending);
 
-  // The friends of docs/prd.md §4.5, unlocked by one's own answer — which is
-  // what the flag says, and why nothing is read before it flips.
-  const friends = useFriendAnswers(questionId, answer !== null);
+  // The friends of docs/prd.md §4.5, unlocked by one's own answer OR by a
+  // joker (docs/prd.md §4.8, « joker complet »). Nothing is read before the
+  // day is done, one way or the other. `jokered` beats `answer` here on the
+  // beat that follows a joker — the session store flips first, the Firestore
+  // read lands after.
+  const friends = useFriendAnswers(questionId, answer !== null || jokered);
 
   // Seeing them is what clears the day's badge on the calendar (docs/prd.md
   // §5.2) — the bead was pointing at this list, so listing it is the moment it
   // has been answered. `null` until the reads land: a badge must not fall on a
   // list that failed to load.
   const listedFriendAnswers = friends.status === 'ready'
-    ? friends.friends.filter((friend) => friend.optionId !== null).length
+    ? friends.friends.filter((friend) => friend.optionId !== null || friend.jokered).length
     : null;
   const userId = user?.uid ?? null;
 
@@ -253,7 +314,7 @@ export const DailyQuestionScreen = () => {
             <Button label="Fermer" variant="outline" size="icon-sm" icon={X} onPress={() => navigation.goBack()} />
           </View>
 
-          {question === null || showingResult ? null : (
+          {question === null || showingAnyResult ? null : (
             <Text style={[ styles.question, FOREGROUND[surface] ]}>{question.label}</Text>
           )}
         </View>
@@ -282,7 +343,46 @@ export const DailyQuestionScreen = () => {
           </>
         )}
 
-        {question === null || showingResult ? null : (
+        {/*
+          The joker result of docs/prd.md §4.8 — « joker complet ». No mood
+          (nothing was answered) and no picked row, but the shares and the
+          friends' answers do unlock, since a joker « does » the day for the
+          reader side of §4.5. Structurally the same block as an answered
+          day, minus the yellow.
+        */}
+        {question === null || !showingJokerResult ? null : (
+          <>
+            <JokerHeadline surface={surface} dateLabel={formatDayLabel(fromDateKey(date))} />
+
+            <AnswerRecap
+              questionLabel={question.label}
+              statOwrel={null}
+              shares={question.options.map((option) => {
+                const total = Math.max(
+                  question.options.reduce((sum, o) => sum + (question.answer_counts[o.id] ?? 0), 0),
+                  1,
+                );
+
+                return {
+                  optionId: option.id,
+                  label: option.label,
+                  share: (question.answer_counts[option.id] ?? 0) / total,
+                  picked: false,
+                };
+              })}
+            />
+
+            <FriendAnswers
+              status={friends.status}
+              friends={friends.friends}
+              question={question}
+              pickedOptionId={null}
+              surface={surface}
+            />
+          </>
+        )}
+
+        {question === null || showingAnyResult ? null : (
           <View style={styles.options}>
             {question.options.map((option, index) => (
               <QuestionOption
@@ -295,6 +395,16 @@ export const DailyQuestionScreen = () => {
             ))}
           </View>
         )}
+
+        {jokerAvailable ? (
+          <View style={styles.jokerBlock}>
+            <JokerButton
+              balance={profile?.statcoin_balance ?? 0}
+              loading={jokerLoading}
+              onConfirm={() => void spendJoker()}
+            />
+          </View>
+        ) : null}
 
         {failure === null ? null : <Message surface={surface}>{failure}</Message>}
 

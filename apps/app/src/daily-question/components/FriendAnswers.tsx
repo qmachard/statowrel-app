@@ -52,6 +52,13 @@ const styles = StyleSheet.create({
   chipSame: {
     backgroundColor: colors.primary,
   },
+  // A friend who spent a joker (docs/prd.md §4.8) — same violet as the
+  // calendar cell and the joker button, with the white foreground the joker
+  // surface takes.
+  chipJoker: {
+    backgroundColor: colors.joker,
+    color: colors['joker-foreground'],
+  },
   pending: {
     fontFamily: fonts.sans,
     fontSize: fontSize.xs,
@@ -74,6 +81,8 @@ interface Row {
   timeLabel: string | null;
   /** They picked the same option as this user. */
   same: boolean;
+  /** Passed the day with a joker (docs/prd.md §4.8) — a joker chip stands in for the stat label. */
+  jokered: boolean;
 }
 
 /**
@@ -82,14 +91,16 @@ interface Row {
  * the friends still to answer close the list.
  */
 const rank = (row: Row) => {
-  if (row.statLabel === null) {
-    return 2;
-  }
+  if (row.same) return 0;
+  if (row.statLabel !== null) return 1;
+  if (row.jokered) return 2;
 
-  return row.same ? 0 : 1;
+  // Not yet done — falls to the end, behind everyone who has answered or
+  // jokered.
+  return 3;
 };
 
-const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: string): Row[] => (
+const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: string | null): Row[] => (
   friends
     .map((friend) => {
       const option = friend.optionId === null ? null : findQuestionOption(question.options, friend.optionId);
@@ -99,7 +110,8 @@ const toRows = (friends: FriendAnswer[], question: QuestionData, pickedId: strin
         username: friend.username,
         statLabel: option === null ? null : statLabelOf(option),
         timeLabel: friend.answeredAt === null ? null : formatTimeLabel(new Date(friend.answeredAt)),
-        same: friend.optionId === pickedId,
+        same: pickedId !== null && friend.optionId === pickedId,
+        jokered: friend.jokered,
       };
     })
     .sort((a, b) => rank(a) - rank(b) || a.username.localeCompare(b.username))
@@ -109,8 +121,12 @@ export interface FriendAnswersProps {
   status: FriendAnswersStatus;
   friends: FriendAnswer[];
   question: QuestionData;
-  /** `QuestionOptionData.id` this user picked — what makes a friend's answer « comme toi ». */
-  pickedOptionId: string;
+  /**
+   * `QuestionOptionData.id` this user picked — what makes a friend's answer
+   * « comme toi ». `null` on a jokered day (docs/prd.md §4.8): no option was
+   * picked, so no friend is « comme toi ».
+   */
+  pickedOptionId: string | null;
   /** The sheet's own colour — the heading sits straight on it. */
   surface: Surface;
 }
@@ -167,7 +183,9 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
               username={row.username}
               note={row.timeLabel ?? undefined}
             >
-              {row.statLabel === null ? (
+              {row.jokered ? (
+                <Text style={[ styles.chip, styles.chipJoker ]} numberOfLines={1}>Joker</Text>
+              ) : row.statLabel === null ? (
                 <Text style={styles.pending}>n’a pas encore répondu</Text>
               ) : (
                 <Text style={[ styles.chip, row.same ? styles.chipSame : null ]} numberOfLines={1}>

@@ -1,4 +1,4 @@
-import { Check } from '@/components/icons';
+import { Check, Spade } from '@/components/icons';
 import { Pressable, StyleSheet, Text, type TextStyle, View, type ViewStyle } from 'react-native';
 
 import { shadows } from '@/design/shadows';
@@ -74,6 +74,11 @@ const SURFACE = StyleSheet.create({
   today: { borderWidth, borderColor: colors.border, backgroundColor: colors.accent },
   missed: { borderWidth, borderColor: colors.border, backgroundColor: colors.background },
   idle: { backgroundColor: colors.muted },
+  // A jokered day of docs/prd.md §4.8 — done, but not answered. The joker's
+  // own violet, distinct from `primary` (answered) and `accent` (today) and
+  // from the muted grey of an idle day; the check on top takes the joker
+  // foreground.
+  jokered: { borderWidth, borderColor: colors.border, backgroundColor: colors.joker },
 }) satisfies Record<CalendarDayState, ViewStyle>;
 
 // Every day with a question behind it is raised — a missed one included, since
@@ -83,6 +88,7 @@ const SHADOW: Record<CalendarDayState, ViewStyle | undefined> = {
   today: shadows.sm,
   missed: shadows.sm,
   idle: undefined,
+  jokered: shadows.sm,
 };
 
 // Pressed, a raised day drops its shadow and translates by the offset it just
@@ -94,6 +100,7 @@ const PRESSED = StyleSheet.create({
   today: SUNK,
   missed: SUNK,
   idle: {},
+  jokered: SUNK,
 }) satisfies Record<CalendarDayState, ViewStyle>;
 
 const LABEL = StyleSheet.create({
@@ -101,6 +108,7 @@ const LABEL = StyleSheet.create({
   today: { fontFamily: fonts.head, color: colors['accent-foreground'] },
   missed: { fontFamily: fonts.head, color: colors.foreground },
   idle: { fontFamily: fonts.sans, color: colors['muted-foreground'] },
+  jokered: { fontFamily: fonts.head, color: colors['joker-foreground'] },
 }) satisfies Record<CalendarDayState, TextStyle>;
 
 // The check takes its surface's own foreground, like the number it replaces —
@@ -110,6 +118,7 @@ const CHECK_COLOR: Record<CalendarDayState, string> = {
   today: colors['accent-foreground'],
   missed: colors['muted-foreground'],
   idle: colors['muted-foreground'],
+  jokered: colors['joker-foreground'],
 };
 
 export interface CalendarDayProps {
@@ -162,7 +171,12 @@ export const CalendarDay = ({
         return (
           <>
             <View style={[ styles.cell, SURFACE[state], sunk ? PRESSED[state] : SHADOW[state] ]}>
-              {answered ? (
+              {state === 'jokered' && answered ? (
+                // Un jour joker : le pique universel des cartes à jouer, en
+                // contour seul — même graphie brute que le check qu'il
+                // remplace, épais comme lui, sur la même échelle.
+                <Spade size={CHECK_SIZE} color={CHECK_COLOR[state]} strokeWidth={CHECK_STROKE_WIDTH} />
+              ) : answered ? (
                 <Check size={CHECK_SIZE} strokeWidth={CHECK_STROKE_WIDTH} color={CHECK_COLOR[state]} />
               ) : (
                 <Text style={[ styles.label, LABEL[state] ]}>
