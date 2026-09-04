@@ -4,14 +4,12 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
-  DAILY_QUESTION_JOKER_COLLECTION,
   DAILY_QUESTION_MONTH_COLLECTION,
   type DailyQuestionAnswerData,
   QUESTION_COLLECTION,
   type QuestionData,
   USER_COLLECTION,
   dailyQuestionAnswerConverter,
-  dailyQuestionJokerConverter,
   dailyQuestionMonthConverter,
   monthDayKeyOf,
   monthKeyOf,
@@ -245,7 +243,6 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
   const [ questionState, setQuestionState ] = useState<QuestionState | null>(null);
   const [ authorState, setAuthorState ] = useState<{ authorId: string; name: string | null } | null>(null);
   const [ answerState, setAnswerState ] = useState<AnswerState | null>(null);
-  const [ jokerState, setJokerState ] = useState<{ key: string; jokered: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -450,49 +447,14 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     };
   }, [ date, userId, questionId, answerKey, questionState, needsAnswerRead ]);
 
-  // The joker read — one shot, chained to the answer key. Same trick as the
-  // answer: session-store first, Firestore second. `getFrozenDoc` because
-  // nothing rewrites a joker once it exists, so the SDK's disk cache answers
-  // for free on a reopening.
+  // The joker is stored on the same answer document (`is_joker: true`), so
+  // it lands with the answer read above — no second round trip. `jokerStore`
+  // still stands in for a joker this session just spent, since the answer
+  // trigger writes `counted_at` a beat later and the answer read may not
+  // have landed yet.
   useSyncExternalStore(subscribeToJokers, getJokersVersion);
   const sessionJoker = hasJoker(userId, date);
-  const jokerKey = answerKey;
-  const jokerRead = jokerState?.key === jokerKey ? jokerState : null;
-  const needsJokerRead = userId !== null && questionId !== null && jokerRead === null && !sessionJoker;
-
-  useEffect(() => {
-    if (userId === null || questionId === null || !needsJokerRead) {
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    getFrozenDoc(
-      getSubDocumentRef(
-        QUESTION_COLLECTION,
-        questionId,
-        DAILY_QUESTION_JOKER_COLLECTION,
-        userId,
-        dailyQuestionJokerConverter,
-      ),
-    )
-      .then((snapshot) => {
-        if (!cancelled) {
-          setJokerState({ key: jokerKey, jokered: snapshot.exists() });
-        }
-      })
-      .catch((error: unknown) => {
-        console.warn('[daily-question] could not read the joker', date, error);
-
-        if (!cancelled) {
-          setJokerState({ key: jokerKey, jokered: false });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ date, userId, questionId, jokerKey, needsJokerRead ]);
+  const answerToday = answerRead?.answer ?? sessionAnswer;
 
   return {
     status: statusOf(day, question),
@@ -501,10 +463,12 @@ export const useDailyQuestion = (date: string): DailyQuestionView => {
     // The document wins once it has been read: it is the one carrying the
     // trigger's marker. The session's own answer is what stands in until then,
     // so the sheet flips on the tap rather than on a round trip.
-    answer: answerRead?.answer ?? sessionAnswer,
+    answer: answerToday,
     ownAnswerPending,
     resultSettled,
     authorName: authorUsername ?? (authorState?.authorId === authorIdToRead ? authorState.name : null),
-    jokered: sessionJoker || (jokerRead?.jokered ?? false),
+    // A joker is an answer with `is_joker: true` — one field on the same
+    // document, so nothing extra to read.
+    jokered: sessionJoker || (answerToday?.is_joker ?? false),
   };
 };

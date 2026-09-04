@@ -37,19 +37,20 @@ export const colors = {
   destructive: '#e63946',
   'destructive-foreground': '#ffffff',
   /**
-   * The joker's own colour (docs/prd.md §4.8) — a saturated violet, distinct
-   * from `primary` (answered), `accent` (today) and `muted` (idle). A joker
-   * day is complete but not answered, so it needs a surface of its own the
-   * calendar can render as a fifth state, the banner can flip to on a jokered
-   * today, and the joker button can wear.
+   * The joker's own colour (docs/prd.md §4.8) — a light cyan, distinct from
+   * `primary` (answered), `accent` (today) and `muted` (idle) without the
+   * loudness a saturated tone would have on the calendar. A joker day is
+   * complete but not answered, so it needs a surface of its own the calendar
+   * can render as a fifth state, the banner can flip to on a jokered today,
+   * and the joker button can wear.
    *
    * Unlike `rare`/`ultra`/`notification` above, this **is** a surface: it
-   * takes text over it. `joker-foreground` is white, at a contrast ratio well
-   * above 4.5.
+   * takes text over it. `joker-foreground` is black, since the surface is
+   * light — a white foreground on this cyan reads at under 2:1.
    */
-  joker: '#9723C9',
-  'joker-hover': '#7f1ba9',
-  'joker-foreground': '#ffffff',
+  joker: '#69D3E8',
+  'joker-hover': '#4ec0d6',
+  'joker-foreground': '#000000',
   border: '#000000',
   input: '#ffffff',
   ring: '#000000',

@@ -173,7 +173,8 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
     return;
   }
 
-  const statLabel = resolveStatLabel(question, date, optionId);
+  const isJoker = answer.is_joker;
+  const statLabel = isJoker ? '' : resolveStatLabel(question, date, optionId);
 
   const userRef = getDocumentRef(USER_COLLECTION, userId, userConverter);
   const calendarMonthRef = getSubDocumentRef(userRef, USER_CALENDAR_MONTH_COLLECTION, monthKey, userCalendarMonthConverter);
@@ -185,35 +186,42 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
     const calendarMonth = (await transaction.get(calendarMonthRef)).data();
     const user = (await transaction.get(userRef)).data();
 
-    if (calendarMonth?.days[monthDayKey] !== undefined) {
-      logger.info('Answer already applied, nothing to do', { date, user_id: userId });
+    // Idempotency: whichever half of the calendar carries this day, we bail
+    // out. A joker projects into `jokers.{DD}`, an answer into `days.{DD}`,
+    // and the two halves cannot both hold the same day — the callable and
+    // the client answer path share the same document id, so « one action per
+    // person per day » is a property of the data.
+    if (calendarMonth?.days[monthDayKey] !== undefined || calendarMonth?.jokers[monthDayKey] !== undefined) {
+      logger.info('Answer already applied, nothing to do', { date, is_joker: isJoker, user_id: userId });
 
       return false;
     }
 
-    // A `set` with `merge` deep-merges maps, so writing one `days` entry leaves
-    // the rest of the month alone — and re-creates the document on the first
-    // answer of the month without a separate check.
+    // A `set` with `merge` deep-merges maps, so writing one entry leaves the
+    // rest of the month alone. Jokers land in their own map — the calendar
+    // renders them as a fifth state (docs/prd.md §4.8) — and answers in
+    // `days` as before.
     transaction.set(calendarMonthRef, {
       month: monthKey,
-      days: {
-        [monthDayKey]: {
-          option_id: optionId,
-          stat_label: statLabel,
-          late: answer.late,
-        },
-      },
+      ...(isJoker
+        ? { jokers: { [monthDayKey]: { used_at: answer.answered_at } } }
+        : { days: { [monthDayKey]: { option_id: optionId, stat_label: statLabel, late: answer.late } } }
+      ),
       updated_at: answer.answered_at,
     }, { merge: true });
 
-    // A fixed field path plus `increment`, so two answers landing at the same
-    // moment add up instead of overwriting each other.
-    transaction.update(questionRef, `answer_counts.${optionId}`, FieldValue.increment(1));
+    // A joker has no option to count against — the question's tally is left
+    // alone. Regular answers still fold into `answer_counts` here.
+    if (!isJoker) {
+      // A fixed field path plus `increment`, so two answers landing at the
+      // same moment add up instead of overwriting each other.
+      transaction.update(questionRef, `answer_counts.${optionId}`, FieldValue.increment(1));
+    }
 
-    // Same transaction as that increment, and it has to stay that way: the
-    // marker is only worth anything because it cannot exist without the count
-    // it announces. update() does not run the converter (see the repo's
-    // CLAUDE.md), so this is a Timestamp and not an ISO string.
+    // Same transaction as the increment (or as the projection alone, for a
+    // joker), so the marker cannot exist without whatever it announces.
+    // update() does not run the converter (see the repo's CLAUDE.md), so
+    // this is a Timestamp and not an ISO string.
     transaction.update(answerRef, { counted_at: Timestamp.now() });
 
     if (user === undefined) {
@@ -225,14 +233,17 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
       return true;
     }
 
-    // A catch-up answer completes the calendar and leaves the streak where it
-    // was (docs/prd.md §4.6) — so it earns nothing either: the StatFlouzz follow
-    // the streak, and there is no streak to follow here.
+    // A joker preserves the streak (docs/prd.md §4.8): it advances exactly
+    // like an on-time answer, and it earns the milestone reward the streak
+    // it crossed is owed. A catch-up answer stays where the streak was — no
+    // reward, no move — since it neither on-time answers nor jokers.
     const streak = answer.late ? null : nextStreakState(user, date);
     const reward = streak === null ? 0 : streakStatflouzzReward(user.streak_count, streak.streak_count);
 
     const counters: UpdateData<UserFirebaseData> = {
-      answers_count: FieldValue.increment(1),
+      // A joker is a day passed, not a day answered — `answers_count` only
+      // counts real answers.
+      ...(isJoker ? {} : { answers_count: FieldValue.increment(1) }),
       // update() does not run the converter (see the repo's CLAUDE.md), so this
       // is a Timestamp and not an ISO string.
       updated_at: Timestamp.now(),

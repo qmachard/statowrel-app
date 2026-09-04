@@ -136,7 +136,14 @@ service cloud.firestore {
                  && request.resource.data.option_id is string
                  && request.resource.data.option_id.size() > 0
                  && request.resource.data.answered_at is timestamp
-                 && request.resource.data.get('counted_at', null) == null;
+                 && request.resource.data.get('counted_at', null) == null
+                 // Jokers (docs/prd.md §4.8) live in this same collection with
+                 // `is_joker: true` and an empty `option_id`. Only the
+                 // `questions-useJoker` callable, admin-side, may create one —
+                 // a client answer must never carry the flag. Read through
+                 // `get()` with a default so a build that predates the field
+                 // is not locked out of answering.
+                 && request.resource.data.get('is_joker', false) == false;
         }
 
         // An answer to the question as the day it ran.
@@ -191,23 +198,6 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // Jokers spent on the question — mirror of the answers sub-collection
-      // above, and the source of truth the 18:00 nudge reads through to know a
-      // user has done their day (docs/prd.md §4.5, §4.8).
-      //
-      // The document id is the user's UID, so « one joker per person per
-      // question » is a property of the data, and any signed-in user reads
-      // them: the day screen lists the friends who spent a joker the same way
-      // it lists those who answered.
-      //
-      // **No client ever writes one.** `questions-useJoker` is the only door,
-      // admin-side past this rule, because the debit and the write must be one
-      // operation — the same reason `v1_questions` is `allow create: if false`
-      // for a proposal.
-      match /v1_daily_question_jokers/{user_id} {
-        allow read: if isAuthenticated();
-        allow create, update, delete: if false;
-      }
     }
 
     // A profile document is keyed by the account's Firebase Auth UID
@@ -473,15 +463,6 @@ service cloud.firestore {
     // nobody can group-query their way into a friend's history — reading a
     // friend's answer stays a per-question read.
     match /{path=**}/v1_daily_question_answers/{user_id} {
-      allow read: if isOwner(resource.data.user_id);
-    }
-
-    // The same collection-group opening for jokers — one's own jokers,
-    // scoped by `user_id` on the document. Mirrors the answer rule above and
-    // exists for the same reason: to keep the `firestore.rules` shape stable
-    // if a future replay or export walks jokers by user across every
-    // question, without letting anybody group-query a friend's history.
-    match /{path=**}/v1_daily_question_jokers/{user_id} {
       allow read: if isOwner(resource.data.user_id);
     }
 

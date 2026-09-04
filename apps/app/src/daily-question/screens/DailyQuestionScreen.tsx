@@ -247,6 +247,11 @@ export const DailyQuestionScreen = () => {
   // checks mirror `answerable`.
   const jokerAvailable = isToday && status === 'ready' && user !== null && answer === null && !jokered;
 
+  // A day that carries an answer with a real option — the answer result of
+  // §5.5 — as opposed to a joker (which lives on the same document with
+  // `is_joker: true`, docs/prd.md §4.8).
+  const answered = answer !== null && !answer.is_joker;
+
   // **The sheet flips once the result is whole, not the instant the answer is
   // written.** The two are a beat apart on purpose: answering reads the answer
   // back to learn whether the tally on hand already carries it, so a result
@@ -259,12 +264,12 @@ export const DailyQuestionScreen = () => {
   // as the deadline: a read that has not landed by then is not worth holding a
   // result for, and reopening an answered day — where nothing celebrates —
   // shows it straight away rather than waiting on a read it has no reason to.
-  const showingResult = answer !== null && (resultSettled || !celebrating);
+  const showingResult = answered && (resultSettled || !celebrating);
 
   // A jokered day flips as soon as the joker is spent — instantly, with the
   // celebration playing over the tap. Nothing to settle since a joker has no
   // tally to fold into and no `counted_at` to wait for.
-  const showingJokerResult = answer === null && jokered;
+  const showingJokerResult = jokered;
 
   // Any of the two results means the sheet is showing what happened rather
   // than what to do — hide question, options, and the joker button together.
@@ -282,7 +287,9 @@ export const DailyQuestionScreen = () => {
 
   // The friends of docs/prd.md §4.5, unlocked by one's own answer OR by a
   // joker (docs/prd.md §4.8, « joker complet »). Nothing is read before the
-  // day is done, one way or the other.
+  // day is done, one way or the other. `jokered` beats `answer` here on the
+  // beat that follows a joker — the session store flips first, the Firestore
+  // read lands after.
   const friends = useFriendAnswers(questionId, answer !== null || jokered);
 
   // Seeing them is what clears the day's badge on the calendar (docs/prd.md
@@ -290,7 +297,7 @@ export const DailyQuestionScreen = () => {
   // has been answered. `null` until the reads land: a badge must not fall on a
   // list that failed to load.
   const listedFriendAnswers = friends.status === 'ready'
-    ? friends.friends.filter((friend) => friend.optionId !== null).length
+    ? friends.friends.filter((friend) => friend.optionId !== null || friend.jokered).length
     : null;
   const userId = user?.uid ?? null;
 

@@ -31,7 +31,7 @@ import {
 export const DAILY_QUESTION_ANSWER_COLLECTION = 'v1_daily_question_answers';
 
 /**
- * One user's answer to one question — see docs/prd.md §6.
+ * One user's answer to one question — see docs/prd.md §6, §4.8.
  *
  * The document id is the author's Firebase Auth UID. That is what makes "one
  * answer per person per day" a property of the data rather than a check
@@ -40,6 +40,15 @@ export const DAILY_QUESTION_ANSWER_COLLECTION = 'v1_daily_question_answers';
  * for someone else. **No client ever updates or deletes one** — the choice is
  * final (docs/prd.md §4.2). The answer trigger writes to it exactly once, to
  * stamp `counted_at`; nothing else ever rewrites an answer.
+ *
+ * **A joker (docs/prd.md §4.8) is stored here too**, with `is_joker: true`
+ * and an empty `option_id`. Two collections were considered and rejected:
+ * every consumer of a friend's day (`useFriendAnswers`, the 18:00 nudge)
+ * would double its reads for a signal that fits in one bit. The two paths
+ * share the same document id (« one action per person per day »), the same
+ * calendar projection through the answer trigger, and the same rules
+ * around finality — a client can create an answer but never a joker
+ * (`firestore.rules`' `hasAnswerShape()` refuses `is_joker: true`).
  */
 export interface DailyQuestionAnswerFirebaseData {
   /** Firebase Auth UID of the author, same value as the document id. Carried as a field so the collection-group query can filter on it. */
@@ -57,8 +66,26 @@ export interface DailyQuestionAnswerFirebaseData {
    * never rebroadcast, so the copy never goes stale.
    */
   date: string;
-  /** `QuestionOptionFirebaseData.id` of the picked option — never its position in the array. */
+  /**
+   * `QuestionOptionFirebaseData.id` of the picked option — never its position
+   * in the array. Empty string for a joker (`is_joker: true`), since no
+   * option was picked; the answer trigger branches on `is_joker` before
+   * reading this, so the empty value is never indexed into.
+   */
   option_id: string;
+  /**
+   * True for a joker (docs/prd.md §4.8): the day was passed rather than
+   * answered. The answer trigger skips the `answer_counts` increment for a
+   * joker (nothing to count) and projects the day into `jokers.{DD}` on the
+   * user's calendar month instead of `days.{DD}`, but still advances the
+   * streak and fans the friend badge out — a joker is « done » for every
+   * consumer except the tally itself.
+   *
+   * Written only by the `questions-useJoker` callable, admin-side.
+   * `firestore.rules`' `hasAnswerShape()` refuses a client create that sets
+   * this to `true`, so a client can never forge a joker.
+   */
+  is_joker: boolean;
   answered_at: UniversalTimestamp;
   /**
    * True for a catch-up answer, given after the day closed (docs/prd.md §4.2).
@@ -102,6 +129,7 @@ export const dailyQuestionAnswerConverter: FirestoreConverter<DailyQuestionAnswe
     question_id: data.question_id,
     date: data.date,
     option_id: data.option_id,
+    is_joker: data.is_joker,
     answered_at: TimestampClass.fromDate(new Date(data.answered_at)),
     late: data.late,
     counted_at: data.counted_at ? TimestampClass.fromDate(new Date(data.counted_at)) : null,
@@ -114,6 +142,9 @@ export const dailyQuestionAnswerConverter: FirestoreConverter<DailyQuestionAnswe
       question_id: data.question_id ?? '',
       date: data.date ?? '',
       option_id: data.option_id ?? '',
+      // Younger than the collection — an answer written before jokers shipped
+      // reads as `false`, which is what an answer that predates the flag is.
+      is_joker: data.is_joker ?? false,
       answered_at: parseTimestamp(data.answered_at ?? null, 'now'),
       late: data.late ?? false,
       counted_at: parseTimestamp(data.counted_at ?? null),

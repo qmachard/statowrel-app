@@ -1,8 +1,6 @@
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
-  DAILY_QUESTION_JOKER_COLLECTION,
   dailyQuestionAnswerConverter,
-  dailyQuestionJokerConverter,
   QUESTION_COLLECTION,
   questionConverter,
   USER_CALENDAR_MONTH_COLLECTION,
@@ -35,32 +33,24 @@ export interface FriendsAnswersDigest {
 }
 
 /**
- * The UIDs that « did their day » on a question — those who answered *and*
- * those who spent a joker on it — read off the document ids alone: one answer
- * (or one joker) per user per question, in both cases the document id is the
- * user's UID (docs/prd.md §4.5, §4.8).
+ * The UIDs that « did their day » on a question — one answer per user per
+ * question, the document id being the user's UID (docs/prd.md §4.5, §4.8).
  *
- * The two collections are read in parallel and unioned: a joker preserves the
- * streak and unlocks the friends' answers, so the two sides « have done today »
- * from the point of view of every reader here — the nudge that filters out the
- * done, and the count of friends who have done it that every user's push is
- * built from.
+ * Jokers live in the same sub-collection as answers with `is_joker: true`,
+ * so this single collection read covers both — the nudge that filters out
+ * the done, and the count of friends who have done it, whether they
+ * answered or jokered.
  */
 const doneIdsOf = async (questionId: string): Promise<Set<string>> => {
   const questionRef = getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter);
 
-  const [ answers, jokers ] = await Promise.all([
-    getSubCollectionRef(questionRef, DAILY_QUESTION_ANSWER_COLLECTION, dailyQuestionAnswerConverter).get(),
-    getSubCollectionRef(questionRef, DAILY_QUESTION_JOKER_COLLECTION, dailyQuestionJokerConverter).get(),
-  ]);
+  const snapshot = await getSubCollectionRef(
+    questionRef,
+    DAILY_QUESTION_ANSWER_COLLECTION,
+    dailyQuestionAnswerConverter,
+  ).get();
 
-  const done = new Set(answers.docs.map((document) => document.id));
-
-  for (const joker of jokers.docs) {
-    done.add(joker.id);
-  }
-
-  return done;
+  return new Set(snapshot.docs.map((document) => document.id));
 };
 
 /**

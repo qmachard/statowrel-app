@@ -294,11 +294,9 @@ const models = await import('@statowrel/models').catch((error) => die(
 const {
   closingTimeOf,
   DAILY_QUESTION_ANSWER_COLLECTION,
-  DAILY_QUESTION_JOKER_COLLECTION,
   DAILY_QUESTION_MONTH_COLLECTION,
   dailyQuestionAnswerConverter,
   dailyQuestionDateKey,
-  dailyQuestionJokerConverter,
   dailyQuestionMonthConverter,
   DEMO_QUESTION_ID,
   JOKER_STATFLOUZZ_COST,
@@ -913,13 +911,20 @@ for (const day of world) {
   const questionRef = questionsRef.doc(day.questionId);
 
   for (const joker of day.jokers) {
+    // Jokers ride on the same sub-collection as answers, with `is_joker:
+    // true` and an empty `option_id` (docs/prd.md §4.8). One collection,
+    // one read per friend on the day sheet — the whole point of the merge.
     answersWriter.set(
-      subCollection(questionRef, DAILY_QUESTION_JOKER_COLLECTION, dailyQuestionJokerConverter).doc(uidOf(joker.username)),
+      subCollection(questionRef, DAILY_QUESTION_ANSWER_COLLECTION, dailyQuestionAnswerConverter).doc(uidOf(joker.username)),
       {
         user_id: uidOf(joker.username),
         question_id: day.questionId,
         date: day.date,
-        used_at: joker.instant.toISOString(),
+        option_id: '',
+        is_joker: true,
+        answered_at: joker.instant.toISOString(),
+        late: false,
+        counted_at: joker.instant.toISOString(),
       },
     );
   }
@@ -932,6 +937,7 @@ for (const day of world) {
         question_id: day.questionId,
         date: day.date,
         option_id: answer.option.id,
+        is_joker: false,
         answered_at: answer.instant.toISOString(),
         late: answer.late,
         // Stamped, like every answer the trigger has been through: the tally

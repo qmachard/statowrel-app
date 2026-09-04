@@ -178,10 +178,10 @@ Immédiatement après avoir répondu :
   - la relance de 18h (§4.5) saute le compte ;
   - les amis du joueur voient son jour compté dans leur badge d'amis (§5.2) ;
   - le joueur débloque les réponses de ses potes du §4.5, sans avoir de « mood » propre à afficher — l'écran résultat le lui dit d'une phrase (« Tu as passé cette journée avec un joker. Ta série est préservée. »).
-- Le joker ne s'inscrit **pas** dans `answer_counts` — passer un jour n'a pas d'option à compter. Il vit sur son propre document, `v1_questions/{qid}/v1_daily_question_jokers/{uid}`, écrit par le callable `questions-useJoker`, et se projette dans `v1_user_calendar_months.jokers.{DD}` pour la cellule du calendrier.
+- Le joker ne s'inscrit **pas** dans `answer_counts` — passer un jour n'a pas d'option à compter. Il vit sur le **même document qu'une réponse** (`v1_questions/{qid}/v1_daily_question_answers/{uid}`), avec `is_joker: true` et un `option_id` vide — une seule collection, une seule lecture par ami sur la sheet du jour. Il se projette dans `v1_user_calendar_months.jokers.{DD}` pour la cellule du calendrier, par le trigger de réponse qui branche sur `is_joker`.
 - **Sur le calendrier**, un jour passé avec un joker prend un **cinquième état visuel** : `muted` bordé, à distinguer d'un jour manqué (sans réponse) et d'un jour répondu (fond `primary` jaune).
 - Un jour est `days` OU `jokers`, jamais les deux : la callable refuse le joker sur un jour déjà répondu, et l'écriture de réponse refuse un jour déjà passé au joker.
-- Le débit et les deux projections doivent être une seule opération : `firestore.rules` refuse toute écriture cliente sur `v1_daily_question_jokers` et sur `v1_user_calendar_months`. `questions-useJoker` est la seule porte, admin-side, en transaction — même modèle que `questions-proposeQuestion`.
+- Le débit et l'écriture de la réponse doivent être une seule opération : `questions-useJoker` est la seule porte, admin-side, en transaction — `firestore.rules` refuse toute création de réponse cliente avec `is_joker: true` (`hasAnswerShape()` vérifie le champ) et refuse toute écriture cliente sur `v1_user_calendar_months`. Même modèle que `questions-proposeQuestion`.
 
 ## 5. Navigation & écrans
 

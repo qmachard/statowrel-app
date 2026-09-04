@@ -1,9 +1,7 @@
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
-  DAILY_QUESTION_JOKER_COLLECTION,
   QUESTION_COLLECTION,
   dailyQuestionAnswerConverter,
-  dailyQuestionJokerConverter,
 } from '@statowrel/models';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -97,41 +95,27 @@ export const useFriendAnswers = (questionId: string | null, enabled: boolean): F
     let cancelled = false;
 
     // `getFrozenDoc` rather than `getDoc`, and the distinction it draws is
-    // exactly the one this list needs: an answer or a joker that exists is
-    // immutable — the rules deny every update to either — so a friend already
-    // found to have done the day is served from the SDK's disk cache, for
-    // good, across relaunches. A friend who has *not* done anything reads as
-    // an absence, which `getFrozenDoc` never trusts, so they are re-read from
-    // the server every time. Reopening a spent day therefore converges on
-    // costing nothing, while today's sheet still picks up whoever acted since
-    // it was last opened.
+    // exactly the one this list needs: an answer that exists is immutable —
+    // the rules deny every update to one — so a friend already found to have
+    // done the day is served from the SDK's disk cache, for good, across
+    // relaunches. A friend who has *not* done anything reads as an absence,
+    // which `getFrozenDoc` never trusts, so they are re-read from the server
+    // every time. Reopening a spent day therefore converges on costing
+    // nothing, while today's sheet still picks up whoever acted since it was
+    // last opened.
     //
-    // Two reads per friend now — the answer *and* the joker — because « done »
-    // is either one (docs/prd.md §4.8, « joker complet »). Fired in parallel,
-    // so the friend list still lands in one round trip. A friend cannot hold
-    // both at once by construction: the callable that writes a joker refuses
-    // when an answer exists, and vice versa.
-    Promise.all(friendIds.map(async (friendId) => {
-      const [ answerSnap, jokerSnap ] = await Promise.all([
-        getFrozenDoc(getSubDocumentRef(
-          QUESTION_COLLECTION,
-          questionId,
-          DAILY_QUESTION_ANSWER_COLLECTION,
-          friendId,
-          dailyQuestionAnswerConverter,
-        )),
-        getFrozenDoc(getSubDocumentRef(
-          QUESTION_COLLECTION,
-          questionId,
-          DAILY_QUESTION_JOKER_COLLECTION,
-          friendId,
-          dailyQuestionJokerConverter,
-        )),
-      ]);
-
-      return { answer: answerSnap.data() ?? null, joker: jokerSnap.data() ?? null };
-    }))
-      .then((results) => {
+    // One read per friend covers both cases (answered *and* jokered), since a
+    // joker is stored on the same answer document with `is_joker: true`
+    // (docs/prd.md §4.8). Halves the reads compared to two separate
+    // collections.
+    Promise.all(friendIds.map((friendId) => getFrozenDoc(getSubDocumentRef(
+      QUESTION_COLLECTION,
+      questionId,
+      DAILY_QUESTION_ANSWER_COLLECTION,
+      friendId,
+      dailyQuestionAnswerConverter,
+    ))))
+      .then((snapshots) => {
         if (cancelled) {
           return;
         }
@@ -139,14 +123,14 @@ export const useFriendAnswers = (questionId: string | null, enabled: boolean): F
         const picked: Picked = {};
 
         friendIds.forEach((friendId, index) => {
-          const { answer, joker } = results[index];
+          const answer = snapshots[index].data() ?? null;
 
-          if (answer !== null) {
-            picked[friendId] = { optionId: answer.option_id, answeredAt: answer.answered_at };
-          } else if (joker !== null) {
+          if (answer === null) {
+            picked[friendId] = null;
+          } else if (answer.is_joker) {
             picked[friendId] = { jokered: true };
           } else {
-            picked[friendId] = null;
+            picked[friendId] = { optionId: answer.option_id, answeredAt: answer.answered_at };
           }
         });
 
