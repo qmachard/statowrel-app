@@ -47,8 +47,6 @@ export interface AnalyticsUserProperties {
    * cardinality (GA4 caps at 25 unique values per user property).
    */
   streak_bucket?: '0' | '1-6' | '7-29' | '30+';
-  /** Whether analytics collection is currently allowed on this device (`opt_in` vs `opt_out`). */
-  analytics_consent?: 'opt_in' | 'opt_out';
 }
 
 /** Coarse bucket for `streak_bucket` — see `AnalyticsUserProperties`. */

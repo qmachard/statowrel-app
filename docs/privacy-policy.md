@@ -125,11 +125,10 @@ donnée qui permette une personnalisation publicitaire (Google Signals désactiv
 Ils ne sont partagés avec **aucun** annonceur, aucun courtier en données, aucun réseau publicitaire.
 Ils ne sont pas recoupés avec des données extérieures à StatOwrel.
 
-**Comment vous en sortir :** un interrupteur « Statistiques d'usage » est disponible dans le Menu
-de l'application. Une fois éteint, plus aucun événement n'est envoyé depuis ce téléphone, y
-compris ceux que Firebase enverrait de lui-même (`app_open`, `first_open`). Le réglage vit sur
-votre téléphone : il faut donc le refaire sur chaque appareil sur lequel vous voulez couper la
-collecte.
+**Comment vous en sortir :** un mécanisme de recueil de votre consentement sera mis en place
+dans une version ultérieure de l'application. Il permettra d'accepter ou de refuser la collecte
+directement depuis l'application. En attendant la mise en place de ce mécanisme, cette
+politique de confidentialité sera mise à jour dès qu'il sera en ligne.
 
 ## 4. Ce que nous ne collectons pas
 

@@ -16,7 +16,6 @@ export { default as Bell } from 'lucide-react-native/icons/bell';
 export { default as BellOff } from 'lucide-react-native/icons/bell-off';
 export { default as BellRing } from 'lucide-react-native/icons/bell-ring';
 export { default as CalendarCheck } from 'lucide-react-native/icons/calendar-check';
-export { default as ChartBar } from 'lucide-react-native/icons/chart-bar';
 export { default as Check } from 'lucide-react-native/icons/check';
 export { default as ChevronLeft } from 'lucide-react-native/icons/chevron-left';
 export { default as ChevronRight } from 'lucide-react-native/icons/chevron-right';

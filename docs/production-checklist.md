@@ -524,17 +524,22 @@ monde se casse le lendemain. Un jour sans question est le pire incident possible
 ## 6. Observabilité
 
 **Firebase Analytics est intégré** (GA4, via `@react-native-firebase/analytics`) — plan de
-taggage complet dans `docs/analytics.md`, wrapper dans `apps/app/src/analytics/`. Opt-out
-silencieux, activé par défaut, toggle Menu pour couper la collecte sur un appareil. Aucune donnée
+taggage complet dans `docs/analytics.md`, wrapper dans `apps/app/src/analytics/`. Aucune donnée
 personnelle envoyée : ni pseudo, ni e-mail, ni contenu de réponses. IDFA / AdID désactivés, Google
 Signals désactivés, aucun tracker tiers.
+
+**Le mécanisme de consentement RGPD / CNIL est à traiter séparément** — bandeau in-app + flag
+persisté + gate autour du wrapper. Le wrapper expose déjà `setEnabled(bool)` pour être branché
+dessus sans toucher au reste du code. **Bloquant store en France tant qu'il n'est pas en place**
+(la CNIL demande un consentement explicite pour tout traceur non « strictement nécessaire »,
+Firebase Analytics tombant dans cette catégorie).
 
 Reste à décider pour le crash reporting : aucun SDK n'est intégré, donc un plantage au démarrage
 sur un modèle d'appareil donné ne se saura que par un avis 1 étoile.
 
-- [ ] ⚪ Vérifier que les 8 événements custom + `screen_view` remontent dans **DebugView** avant
+- [ ] 🔴 **Livrer le mécanisme de consentement in-app** avant soumission en France
+- [ ] ⚪ Vérifier que les 7 événements custom + `screen_view` remontent dans **DebugView** avant
       soumission — protocole d'activation détaillé dans `docs/analytics.md` §8
-- [ ] ⚪ Vérifier que le toggle Menu coupe bien la collecte (DebugView vide après OFF)
 - [ ] ⚪ Vérifier que la déclaration de confidentialité (`docs/store-listing.md` §1.11 et
       `docs/privacy-policy.md` §3.8) est à jour et cohérente avec ce que le code envoie vraiment —
       un audit rapide à chaque nouvel événement ajouté au taggage

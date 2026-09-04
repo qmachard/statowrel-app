@@ -334,7 +334,7 @@ Renseigné à partir de ce que le code collecte réellement — inventaire compl
 | Contacts | **Non** | — | — | L'app ne lit jamais le carnet d'adresses |
 | Localisation | **Non** | — | — | — |
 | Identifiants publicitaires | **Non** | — | — | Aucune régie, aucun SDK publicitaire. `google_analytics_adid_collection_enabled: false` dans `apps/app/firebase.json` empêche Firebase Analytics de lire l'IDFA / AdID |
-| Diagnostics / analyse d'usage | **Oui** | **Non** | Non | Firebase Analytics (GA4) — mesure du parcours produit, aucune donnée personnelle envoyée. Détail dans `docs/analytics.md` et `docs/privacy-policy.md` § Statistiques d'usage. Opt-out disponible dans le Menu de l'app. |
+| Diagnostics / analyse d'usage | **Oui** | **Non** | Non | Firebase Analytics (GA4) — mesure du parcours produit, aucune donnée personnelle envoyée. Détail dans `docs/analytics.md` et `docs/privacy-policy.md` § Statistiques d'usage. Un mécanisme de consentement in-app est prévu dans une version ultérieure. |
 | Crash reporting | **Non** | — | — | Aucun SDK de crash reporting n'est intégré aujourd'hui |
 
 - **Suivi (App Tracking Transparency) : non.** Aucune donnée n'est partagée avec un courtier ni

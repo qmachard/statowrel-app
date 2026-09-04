@@ -21,23 +21,27 @@ l'autre est un diff incomplet.
 
 ## 2. Modèle de consentement
 
-**Opt-out silencieux, activé par défaut.**
+**À traiter séparément.** La couche de consentement (RGPD / CNIL) est
+volontairement hors de cette PR — elle sera implémentée dans un ticket
+dédié : bandeau au 1er lancement, flag persisté, gate autour du wrapper.
 
-- Aucune donnée personnelle (pseudo, e-mail, texte libre) n'est envoyée.
-- Aucun identifiant publicitaire n'est collecté (`google_analytics_adid_collection_enabled: false`).
-- Aucun partage avec un courtier ni recoupement avec des données tierces à des
-  fins publicitaires.
-- Finalité produit stricte : mesurer l'usage réel du parcours, orienter les
+En l'état, ce que l'app envoie reste :
+
+- aucune donnée personnelle (pseudo, e-mail, texte libre) ;
+- aucun identifiant publicitaire (`google_analytics_adid_collection_enabled: false`) ;
+- aucun partage avec un courtier ni recoupement avec des données tierces à des
+  fins publicitaires ;
+- finalité produit stricte : mesurer l'usage réel du parcours, orienter les
   itérations, détecter les régressions de conversion.
 
-Le toggle « Statistiques d'usage » du Menu (`AnalyticsOptOutRow`) permet à
-n'importe qui de couper la collecte sur son téléphone. La bascule appelle
-`setAnalyticsCollectionEnabled(false)` — plus rien n'est envoyé, y compris ce
-que le SDK collecterait de lui-même (`app_open`, `first_open`).
-
-Ce modèle est adapté à la portée fonctionnelle actuelle. Le jour où l'app
-intègre un SDK publicitaire, un SDK de recoupement, ou partage avec un tiers,
-il faut passer à **opt-in explicite** — voir `docs/production-checklist.md` §6.
+Le wrapper expose déjà `setEnabled(bool)` (→ `setAnalyticsCollectionEnabled`)
+pour que la couche de consentement à venir puisse couper la collecte sans
+toucher au reste du code. **La donnée ne doit pas partir en production tant
+que le mécanisme de consentement n'est pas en place** — soit en attendant que
+la couche soit livrée, soit en laissant le drapeau
+`EXPO_PUBLIC_ANALYTICS_FORCE_ENABLED` faux et en shippant sans envoi (la
+release production ignore aujourd'hui ce drapeau, donc la donnée part par
+défaut ; à contraindre côté release si le consentement n'est pas prêt).
 
 ---
 
@@ -72,7 +76,6 @@ et un build reste tributaire du fichier bundlé.
 |---------------------|--------------------------------------------|-----------------------------------------------------------------------|
 | `session_state`     | `anonymous` \| `authenticated`             | À chaque changement du user Firebase Auth                             |
 | `streak_bucket`     | `0` \| `1-6` \| `7-29` \| `30+`             | À chaque changement du profil `v1_users/{uid}.streak_count`           |
-| `analytics_consent` | `opt_in` \| `opt_out`                      | À la résolution du flag opt-out et à chaque bascule du toggle Menu   |
 
 `streak_bucket` est intentionnellement une bucket : GA4 plafonne à 25 valeurs
 uniques par user property et une série peut dépasser 100 jours.
@@ -209,8 +212,6 @@ Checklist de recette :
 - [ ] `question_proposed` porte `options_count` cohérent avec le formulaire.
 - [ ] `friend_invited` fire avec `outcome: not_found` sur un handle inexistant.
 - [ ] `friend_invitation_accepted` fire chez les deux users après acceptation.
-- [ ] Toggle Menu OFF : plus aucun événement ne remonte.
-- [ ] Toggle Menu ON : la collecte reprend au prochain événement.
 - [ ] `setUserId` est bien l'UID Firebase Auth, jamais un handle ni un e-mail.
 
 ---
@@ -233,7 +234,6 @@ Checklist de recette :
 
 - `apps/app/src/analytics/analytics.ts` — le wrapper unique.
 - `apps/app/src/analytics/events.ts` — types + naming.
-- `apps/app/src/analytics/preferences.ts` — opt-out.
 - `apps/app/src/analytics/useAnalyticsIdentity.ts` — identité + user properties.
 - `apps/app/src/analytics/useScreenTracking.ts` — screen tracking.
 - `apps/app/firebase.json` — configuration native Firebase.

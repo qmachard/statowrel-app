@@ -1,7 +1,6 @@
 import { app } from '@/lib/firebase';
 
 import type { AnalyticsEvent, AnalyticsUserProperties } from './events';
-import { isAnalyticsOptedOut } from './preferences';
 import { type AnalyticsInstance, loadAnalytics } from './nativeModule';
 
 /**
@@ -12,20 +11,19 @@ import { type AnalyticsInstance, loadAnalytics } from './nativeModule';
  * that a switch to another provider (or to no provider at all) is one file to
  * change, not thirty.
  *
- * **Two gates decide whether a call reaches the SDK**:
- * 1. This device's opt-out flag (`preferences.ts`). Opt-out is silent: a call
- *    made while opted out returns without reaching Firebase.
- * 2. `__DEV__`. Development builds never send unless
- *    `EXPO_PUBLIC_ANALYTICS_FORCE_ENABLED === 'true'`. This is what keeps
- *    Metro sessions from polluting DebugView with mock data.
+ * **Sending gate**: development builds never send unless
+ * `EXPO_PUBLIC_ANALYTICS_FORCE_ENABLED === 'true'` — that is what keeps Metro
+ * sessions from polluting DebugView with mock data. Consent (the CNIL question)
+ * is not handled here yet: it will land later as its own layer around this
+ * wrapper (a banner + a persisted flag), and the shape of that layer is what
+ * decides whether it lives inside this file or beside it.
  *
- * The wrapper is a **noop** on the emulator (there is no separate DebugView
- * for it), on a checkout without the native module, and on any error — nothing
- * here may fail a screen.
+ * The wrapper is a **noop** on a checkout without the native module and on any
+ * error — nothing here may fail a screen.
  */
 
 const FORCE_ENABLED = process.env.EXPO_PUBLIC_ANALYTICS_FORCE_ENABLED === 'true';
-const isSendingAllowed = (): boolean => (!__DEV__ || FORCE_ENABLED) && !isAnalyticsOptedOut();
+const isSendingAllowed = (): boolean => !__DEV__ || FORCE_ENABLED;
 
 let cachedInstance: AnalyticsInstance | null = null;
 let cacheLoaded = false;
@@ -99,10 +97,9 @@ export const setUserProperty = <K extends keyof AnalyticsUserProperties>(
 };
 
 /**
- * Turns the SDK's own collection on or off. Called by the Menu switch **and**
- * by `useAnalyticsIdentity` on every change of the opt-out flag, so that
- * anything the SDK collects itself (screen views its native side may still
- * schedule, app_open) stops at the source and not just at this wrapper.
+ * Turns the SDK's own collection on or off. Kept in the wrapper's surface for
+ * when the consent layer lands: whichever hook decides to flip it will call
+ * this rather than reach into the SDK.
  */
 export const setEnabled = (enabled: boolean): void => {
   const analytics = analyticsInstance();
