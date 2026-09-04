@@ -21,10 +21,19 @@
 //
 // A real run authenticates with Application Default Credentials
 // (`gcloud auth application-default login`), or reads the emulator when
-// `FIRESTORE_EMULATOR_HOST` is set. It only ever reads.
+// `FIRESTORE_EMULATOR_HOST` is set — which is the way to see the card on real
+// data without touching the project:
+//
+//   npm run dev:functions                     # or: firebase emulators:start --only firestore,auth
+//   npm run seed-emulator -- --days 8 --crowd 400
+//   FIRESTORE_EMULATOR_HOST=127.0.0.1:8082 npm run render-instagram-card -- --date <a seeded day>
+//
+// It only ever reads.
 //
 import { basename, resolve } from 'node:path';
 import fs from 'node:fs/promises';
+
+import { applicationDefault } from 'firebase-admin/app';
 
 import { die, resolveProjectId } from './lib/firebase-project.mjs';
 import { loadFromSrc } from './lib/load-src.mjs';
@@ -165,11 +174,38 @@ const writeCarousel = async (outDir, recap, buffers) => {
   }
 };
 
+/**
+ * Fails now, with a sentence, rather than later with the SDK's own crash.
+ *
+ * Without credentials the Firestore client dies inside `google-gax` — six
+ * frames deep, naming a documentation page rather than a command — and it does
+ * so **outside** the promise this script awaits, so a `try` around the run
+ * never sees it. Asking for a token up front is the only place the failure can
+ * be caught at all, and it costs one fetch the SDK was going to make anyway.
+ *
+ * Skipped against the emulator, which authenticates nobody.
+ */
+const requireCredentials = async () => {
+  if (process.env.FIRESTORE_EMULATOR_HOST) {
+    return;
+  }
+
+  try {
+    await applicationDefault().getAccessToken();
+  } catch {
+    die('No Application Default Credentials.\n'
+      + '  Run `gcloud auth application-default login`, or read the emulator instead:\n'
+      + '  FIRESTORE_EMULATOR_HOST=127.0.0.1:8082 npm run render-instagram-card');
+  }
+};
+
 const main = async () => {
   const args = parseArgs(process.argv.slice(2));
 
   if (!args.sample) {
     const projectId = resolveProjectId(args);
+
+    await requireCredentials();
 
     // `initFirebase()` inside the bundle calls `initializeApp()` with no
     // arguments — the same code the deployed function runs — so the project is
@@ -204,4 +240,8 @@ const main = async () => {
   console.log(`\nWritten to ${args.out}`);
 };
 
-await main();
+try {
+  await main();
+} catch (error) {
+  die(error?.stack ?? error?.message ?? String(error));
+}

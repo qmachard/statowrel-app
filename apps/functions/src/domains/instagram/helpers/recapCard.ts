@@ -54,6 +54,9 @@ const JPEG_QUALITY = 92;
 const RESULT_TILT = -5;
 const QUESTION_TILT = 2.5;
 
+/** Air between the closing line and the StatOwrel it introduces — see `drawLines` below. */
+const STAT_GAP = 16;
+
 /** « Vendredi 21 août » — the day the recap is about, capitalised as a line of its own. */
 const dayLabel = (date: string): string => {
   const label = new Intl.DateTimeFormat('fr-FR', {
@@ -112,13 +115,25 @@ const drawFrame = (
 };
 
 /**
- * Slide 1 — the number, and nothing else.
+ * Slide 1 — the number, and the sentence the app already says around it.
  *
- * No question, no bars, no breakdown: the whole slide is « 24 % des gens sont
- * PERFECTIONNISTE », which is the only thing that can be read from a feed at
- * thumb speed. What people were answering is slide 2's job, and holding it back
- * is what makes the carousel worth swiping — a post that says everything on its
- * first image is a post nobody swipes, and Instagram counts the swipe.
+ * No question, no bars, no breakdown: the whole slide is « Comme 24 % des gens,
+ * tu es (peut-être) un.e PERFECTIONNISTE », which is the only thing that can be
+ * read from a feed at thumb speed. What people were answering is slide 2's job,
+ * and holding it back is what makes the carousel worth swiping — a post that
+ * says everything on its first image is a post nobody swipes, and Instagram
+ * counts the swipe.
+ *
+ * **The subject is « tu », and that is not a stylistic choice.** A
+ * `stat_label` is authored to finish « tu es un.e … » (docs/prd.md §5.5), so it
+ * is always singular: « PERFECTIONNISTE », « STRATÈGE », « AJUSTÉ·E ». Hung off
+ * a plural subject — « des gens sont PERFECTIONNISTE » — every one of them is
+ * ungrammatical, and the alternative is pluralising them here, which means
+ * guessing French from a suffix (« banal » would come out « banaux ») on words
+ * half of which are inclusive forms. Borrowing the result screen's own sentence
+ * costs nothing and cannot be wrong, whatever anybody types into the proposal
+ * form. « (peut-être) » is the wink that keeps a statistic from reading as a
+ * verdict.
  */
 const renderResultSlide = (recap: DailyRecap): Buffer => {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
@@ -133,8 +148,40 @@ const renderResultSlide = (recap: DailyRecap): Buffer => {
   });
 
   const cardWidth = 940;
-  const cardHeight = 540;
-  const innerWidth = cardWidth - 80;
+  const inset = 84;
+  const innerWidth = cardWidth - inset * 2;
+
+  const opening = { lines: [ 'Comme' ], fontSize: 44, lineHeight: 54 };
+  const percent = { lines: [ percentLabel(recap.top.percent) ], fontSize: 180, lineHeight: 186 };
+
+  ctx.font = font(fonts.sans, 44);
+  const closing = fitText(ctx, 'des gens, tu es (peut-être) un.e', {
+    family: fonts.sans,
+    maxWidth: innerWidth,
+    maxLines: 2,
+    max: 44,
+    min: 32,
+    lineHeightRatio: 1.3,
+  });
+
+  // The StatOwrel is what the slide is *about*, so it takes every pixel the
+  // card can give it — a one-word « SAGE » lands at the ceiling, a
+  // 30-character one (`QUESTION_OPTION_STAT_LABEL_MAX_LENGTH`) walks down to
+  // two lines rather than being cut.
+  const stat = fitText(ctx, recap.top.statLabel.toUpperCase(), {
+    family: fonts.head,
+    maxWidth: innerWidth,
+    maxLines: 2,
+    max: 108,
+    min: 40,
+  });
+
+  const blocks = [ opening, percent, closing, stat ];
+  const contentHeight = blocks.reduce((total, block) => total + textBlockHeight(block), 0) + STAT_GAP;
+  // The card is sized by its sentence rather than fixed: a two-line StatOwrel
+  // and a two-line closing add 150px between them, and a card that did not grow
+  // would print them over its own border.
+  const cardHeight = contentHeight + inset * 2;
 
   withRotation(ctx, { cx: CARD_WIDTH / 2, cy: 680, degrees: RESULT_TILT }, () => {
     drawSurface(ctx, { x: -cardWidth / 2, y: -cardHeight / 2, width: cardWidth, height: cardHeight }, {
@@ -142,27 +189,15 @@ const renderResultSlide = (recap: DailyRecap): Buffer => {
       radius: radius.lg,
     });
 
-    const percentSize = 190;
-    const percent = { lines: [ percentLabel(recap.top.percent) ], fontSize: percentSize, lineHeight: percentSize };
-    const lead = { lines: [ 'des gens sont' ], fontSize: 44, lineHeight: 58 };
+    let y = -contentHeight / 2;
 
-    // The StatOwrel is what the slide is *about*, so it takes every pixel the
-    // card can give it — a one-word « SAGE » lands at the ceiling, a
-    // 30-character one (`QUESTION_OPTION_STAT_LABEL_MAX_LENGTH`) walks down to
-    // two lines rather than being cut.
-    const stat = fitText(ctx, recap.top.statLabel.toUpperCase(), {
-      family: fonts.head,
-      maxWidth: innerWidth,
-      maxLines: 2,
-      max: 116,
-      min: 44,
-    });
-
-    let y = -(textBlockHeight(percent) + textBlockHeight(lead) + textBlockHeight(stat)) / 2;
-
+    y = drawLines(ctx, opening, { x: 0, y, family: fonts.sans, color: palette.card, align: 'center' });
     y = drawLines(ctx, percent, { x: 0, y, family: fonts.head, color: palette.card, align: 'center' });
-    y = drawLines(ctx, lead, { x: 0, y, family: fonts.sans, color: palette.card, align: 'center' });
-    drawLines(ctx, stat, { x: 0, y, family: fonts.head, color: palette.card, align: 'center' });
+    y = drawLines(ctx, closing, { x: 0, y, family: fonts.sans, color: palette.card, align: 'center' });
+    // The closing line runs into the StatOwrel without this: one is set at
+    // 44px and the other at up to 108, so their line boxes touch long before
+    // the words look separated.
+    drawLines(ctx, stat, { x: 0, y: y + STAT_GAP, family: fonts.head, color: palette.card, align: 'center' });
   });
 
   return canvas.toBuffer('image/jpeg', JPEG_QUALITY);

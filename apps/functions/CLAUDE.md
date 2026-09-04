@@ -196,6 +196,16 @@ Draws the three slides of the morning Instagram post to disk — the stat, the q
 
 `--sample` is the flag to reach for while iterating on the design: canned days at 2, 4 and 6 options — the bounds `QUESTION_MIN_OPTIONS` and `QUESTION_MAX_OPTIONS` set — with a long question and a long StatOwrel, which is the layout's worst case and the one a real database rarely offers on the day you need it. It touches no project and needs no credentials.
 
+**A real day without a real project**: `FIRESTORE_EMULATOR_HOST` decides where the question is read from, so the whole loop is the emulator and one render.
+
+```bash
+npm run dev:functions                                    # or: firebase emulators:start --only firestore,auth
+npm run seed-emulator -- --days 8 --crowd 400
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8082 npm run render-instagram-card -- --date 2026-09-03
+```
+
+Against a real project it asks for an access token **before** touching Firestore. Missing Application Default Credentials otherwise fail inside `google-gax`, outside the promise the script awaits — so a `try` around the run never sees them, and the failure arrives as a six-frame stack naming a documentation page instead of the command to run.
+
 Without it, the day defaults to **yesterday** in Paris: the question stops taking answers at Paris midnight, so yesterday is the most recent day whose percentages are final. Two ways to end with nothing, and the script names which one — no question ran that day, or it ran and nobody answered. Neither is a bug; both are mornings the scheduler will skip.
 
 ```bash
