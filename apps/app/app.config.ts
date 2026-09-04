@@ -243,7 +243,7 @@ const plugins: NonNullable<ExpoConfig['plugins']> = [
          * its pod here.
          */
         useFrameworks: 'static',
-        forceStaticLinking: [ 'RNFBApp', 'RNFBAuth', 'RNFBFirestore', 'RNFBFunctions' ],
+        forceStaticLinking: [ 'RNFBApp', 'RNFBAuth', 'RNFBFirestore', 'RNFBFunctions', 'RNFBAnalytics' ],
       },
       android: {
         // Android's half of the same exception — see `isDevelopment`. Cleartext

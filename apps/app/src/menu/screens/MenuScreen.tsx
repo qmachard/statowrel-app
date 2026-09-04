@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AnalyticsOptOutRow } from '@/analytics/components/AnalyticsOptOutRow';
 import { deleteAccount } from '@/auth/account';
 import { useAuth } from '@/auth/AuthContext';
 import { deleteAccountErrorMessage } from '@/auth/errors';
@@ -158,6 +159,7 @@ export const MenuScreen = () => {
               « Passer » through it — has never been asked, and this is the only
               place in the app that asks again. */}
           <NotificationsButton />
+          <AnalyticsOptOutRow />
           <Button label="Se déconnecter" variant="secondary" disabled={deleting} onPress={() => signOut()} />
           <Button
             label="Supprimer mon compte"

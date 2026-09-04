@@ -188,3 +188,4 @@ There are no tests in this codebase. Do not add test infrastructure without expl
 - **Store listings**: `docs/store-listing.md` — the App Store and Play Store copy, ready to paste, with the character counts each field is bounded by. Written against what 1.0 actually ships: its §7 holds the sentences to add back as the missing features land.
 - **Production checklist**: `docs/production-checklist.md` — what stands between the repo and a published app, graded by whether it blocks the store, the product, or neither.
 - **Privacy policy**: `docs/privacy-policy.md` — draft, to be reviewed and hosted; the store listings both require its URL.
+- **Analytics tagging plan**: `docs/analytics.md` — the app's Firebase Analytics (GA4) plan. Every event the app sends is one row here; adding an event without adding it here is an incomplete diff. Wrapper in `apps/app/src/analytics/`, native config in `apps/app/firebase.json`.

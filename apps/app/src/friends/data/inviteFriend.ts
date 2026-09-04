@@ -7,7 +7,10 @@ import {
 } from '@statowrel/models';
 import { getDoc } from '@react-native-firebase/firestore';
 
+import { track } from '@/analytics/analytics';
+import type { FriendInviteOutcome } from '@/analytics/events';
 import { FriendNotFoundError } from '@/friends/errors';
+import { firebaseErrorCode } from '@/lib/firebaseError';
 import { getDocumentRef } from '@/lib/firestore';
 import { callFunction } from '@/lib/functions';
 
@@ -32,12 +35,40 @@ import { callFunction } from '@/lib/functions';
  * `FirebaseError` carrying a `functions/*` code; translate both with
  * `inviteFailure` rather than surfacing them.
  */
+/**
+ * Maps every failure the callable is known to raise onto one of the six
+ * `friend_invited` outcomes, so the analytics funnel splits by cause rather
+ * than reading « an invitation failed » — enough to see whether the friend
+ * feature converts, and where it does not.
+ */
+const outcomeOfError = (error: unknown): FriendInviteOutcome => {
+  const code = firebaseErrorCode(error);
+
+  if (error instanceof FriendNotFoundError) return 'not_found';
+  if (code === 'functions/not-found') return 'not_found';
+  if (code === 'functions/already-exists') return 'already_friends';
+  if (code === 'functions/failed-precondition') return 'pending';
+  if (code === 'functions/permission-denied') return 'blocked';
+
+  return 'error';
+};
+
 export const inviteFriend = async (username: string): Promise<InviteFriendResult> => {
-  const reservation = await getDoc(getDocumentRef(USERNAME_COLLECTION, username, usernameConverter));
+  try {
+    const reservation = await getDoc(getDocumentRef(USERNAME_COLLECTION, username, usernameConverter));
 
-  if (!reservation.exists()) {
-    throw new FriendNotFoundError(username);
+    if (!reservation.exists()) {
+      throw new FriendNotFoundError(username);
+    }
+
+    const result = await callFunction<InviteFriendPayload, InviteFriendResult>(INVITE_FRIEND_CALLABLE, { username });
+
+    track({ name: 'friend_invited', params: { outcome: 'sent' } });
+
+    return result;
+  } catch (error) {
+    track({ name: 'friend_invited', params: { outcome: outcomeOfError(error) } });
+
+    throw error;
   }
-
-  return callFunction<InviteFriendPayload, InviteFriendResult>(INVITE_FRIEND_CALLABLE, { username });
 };

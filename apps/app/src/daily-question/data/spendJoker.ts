@@ -4,6 +4,7 @@ import {
   type UseJokerResult,
 } from '@statowrel/models';
 
+import { track } from '@/analytics/analytics';
 import { callFunction } from '@/lib/functions';
 
 /**
@@ -20,6 +21,10 @@ import { callFunction } from '@/lib/functions';
  * Throws a `FirebaseError` carrying a `functions/*` code; translate it with
  * `jokerFailure` rather than surfacing it.
  */
-export const spendJokerCallable = (payload: UseJokerPayload): Promise<UseJokerResult> => (
-  callFunction<UseJokerPayload, UseJokerResult>(USE_JOKER_CALLABLE, payload)
-);
+export const spendJokerCallable = async (payload: UseJokerPayload): Promise<UseJokerResult> => {
+  const result = await callFunction<UseJokerPayload, UseJokerResult>(USE_JOKER_CALLABLE, payload);
+
+  track({ name: 'joker_used', params: { question_id: payload.question_id } });
+
+  return result;
+};

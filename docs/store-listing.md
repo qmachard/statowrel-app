@@ -333,15 +333,21 @@ Renseigné à partir de ce que le code collecte réellement — inventaire compl
 | Contenu utilisateur (réponses aux questions) | Oui | Oui | Non | Fonctionnalité de l'app |
 | Contacts | **Non** | — | — | L'app ne lit jamais le carnet d'adresses |
 | Localisation | **Non** | — | — | — |
-| Identifiants publicitaires | **Non** | — | — | Aucune régie, aucun SDK publicitaire |
-| Diagnostics / analyse d'usage | **Non** | — | — | Aucun SDK d'analytics ni de crash reporting n'est intégré aujourd'hui |
+| Identifiants publicitaires | **Non** | — | — | Aucune régie, aucun SDK publicitaire. `google_analytics_adid_collection_enabled: false` dans `apps/app/firebase.json` empêche Firebase Analytics de lire l'IDFA / AdID |
+| Diagnostics / analyse d'usage | **Oui** | **Non** | Non | Firebase Analytics (GA4) — mesure du parcours produit, aucune donnée personnelle envoyée. Détail dans `docs/analytics.md` et `docs/privacy-policy.md` § Statistiques d'usage. Opt-out disponible dans le Menu de l'app. |
+| Crash reporting | **Non** | — | — | Aucun SDK de crash reporting n'est intégré aujourd'hui |
 
 - **Suivi (App Tracking Transparency) : non.** Aucune donnée n'est partagée avec un courtier ni
-  recoupée avec des données tierces à des fins publicitaires. Aucun appel à `AppTrackingTransparency`
-  n'est donc nécessaire, et il ne faut surtout pas en ajouter un « au cas où » : demander la
-  permission sans en avoir l'usage est un motif de rejet à part entière.
-- **À re-répondre le jour où un SDK d'analytics ou de crash reporting est ajouté.** La déclaration
-  n'est pas figée à la première soumission, mais elle doit être exacte à chaque version.
+  recoupée avec des données tierces à des fins publicitaires. Firebase Analytics n'utilise ni
+  l'IDFA (`adid_collection_enabled: false`) ni les Google Signals
+  (`allow_ad_personalization_signals: false`), et aucun tracker tiers n'est intégré. Aucun appel à
+  `AppTrackingTransparency` n'est donc nécessaire — et il ne faut surtout pas en ajouter un « au
+  cas où » : demander la permission sans en avoir l'usage est un motif de rejet à part entière.
+- **Le user ID Firebase Auth est poussé à GA4 comme User-ID** — c'est la même valeur que l'UID
+  déjà déclaré ci-dessus. Firebase Analytics ne reçoit ni l'e-mail ni le pseudo.
+- **À re-répondre le jour où un SDK de crash reporting est ajouté ou qu'un SDK publicitaire /
+  de recoupement entre.** La déclaration n'est pas figée à la première soumission, mais elle doit
+  être exacte à chaque version.
 
 ---
 
