@@ -49,7 +49,7 @@ export const JokerButton = ({ balance, loading, onConfirm }: JokerButtonProps) =
   const affordable = balance >= JOKER_STATFLOUZZ_COST;
   const description = affordable
     ? undefined
-    : `Solde : ${amountLabel(balance)}. Il t’en manque pour un joker.`;
+    : `Solde : ${amountLabel(balance)}. Il t’en manque pour un Joker.`;
 
   const onPress = () => {
     Alert.alert(CONFIRM_TITLE, CONFIRM_MESSAGE, [
@@ -61,14 +61,14 @@ export const JokerButton = ({ balance, loading, onConfirm }: JokerButtonProps) =
   return (
     <View style={styles.wrapper}>
       <Button
-        label="Passer avec un joker"
+        label="Passer avec un Joker"
         description={description}
         trailingLabel={amountLabel(JOKER_STATFLOUZZ_COST)}
         variant="joker"
         loading={loading}
         disabled={!affordable || loading}
         onPress={onPress}
-        accessibilityLabel={`Passer avec un joker, ${spokenAmountLabel(JOKER_STATFLOUZZ_COST)}`}
+        accessibilityLabel={`Passer avec un Joker, ${spokenAmountLabel(JOKER_STATFLOUZZ_COST)}`}
       />
     </View>
   );

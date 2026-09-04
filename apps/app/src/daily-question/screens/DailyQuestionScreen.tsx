@@ -10,6 +10,7 @@ import { SuccessCircle } from '@/components/animations';
 import { AnswerRecap } from '@/daily-question/components/AnswerRecap';
 import { FriendAnswers } from '@/daily-question/components/FriendAnswers';
 import { JokerButton } from '@/daily-question/components/JokerButton';
+import { JokerHeadline } from '@/daily-question/components/JokerHeadline';
 import { QuestionOption, letterOf } from '@/daily-question/components/QuestionOption';
 import { StatOwrelHeadline } from '@/daily-question/components/StatOwrelHeadline';
 import { rememberAnswer } from '@/daily-question/data/answerStore';
@@ -53,13 +54,6 @@ const styles = StyleSheet.create({
   // below.
   prompt: {
     gap: spacing(3),
-  },
-  // The joker headline sits over the button, in the sheet's own head font at a
-  // step below the question. A small subtitle for a small door.
-  jokerHeadline: {
-    fontFamily: fonts.head,
-    fontSize: fontSize.xl,
-    textAlign: 'center',
   },
   jokerBlock: {
     gap: spacing(3),
@@ -358,13 +352,7 @@ export const DailyQuestionScreen = () => {
         */}
         {question === null || !showingJokerResult ? null : (
           <>
-            <Text style={[ styles.jokerHeadline, FOREGROUND[surface] ]}>
-              Tu as passé cette journée avec un joker.
-            </Text>
-
-            <Message surface={surface}>
-              Ta série est préservée. Voici comment les autres ont répondu.
-            </Message>
+            <JokerHeadline surface={surface} dateLabel={formatDayLabel(fromDateKey(date))} />
 
             <AnswerRecap
               questionLabel={question.label}

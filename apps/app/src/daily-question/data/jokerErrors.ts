@@ -16,13 +16,13 @@ import { amountLabel } from '@/lib/statflouzz';
  * defend against.
  */
 const FAILURES: Record<string, string> = {
-  'functions/failed-precondition': `Il te manque des StatFlouzz : un joker coûte ${amountLabel(JOKER_STATFLOUZZ_COST)}. Réponds à la question du jour pour en gagner.`,
+  'functions/failed-precondition': `Il te manque des StatFlouzz : un Joker coûte ${amountLabel(JOKER_STATFLOUZZ_COST)}. Réponds à la question du jour pour en gagner.`,
   'functions/invalid-argument': 'Ta demande n\'est pas valide. Réessaie dans un instant.',
   'functions/not-found': 'Ton profil est incomplet. Reconnecte-toi et réessaie.',
-  'functions/unauthenticated': 'Reconnecte-toi pour utiliser un joker.',
+  'functions/unauthenticated': 'Reconnecte-toi pour utiliser un Joker.',
 };
 
-const FALLBACK = 'Ton joker n\'est pas parti. Vérifie ta connexion et réessaie.';
+const FALLBACK = 'Ton Joker n\'est pas parti. Vérifie ta connexion et réessaie.';
 
 /** Never returns a raw `functions/*` code — same discipline as the other translators. */
 export const jokerFailure = (error: unknown): string => {

@@ -184,7 +184,7 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
               note={row.timeLabel ?? undefined}
             >
               {row.jokered ? (
-                <Text style={[ styles.chip, styles.chipJoker ]} numberOfLines={1}>joker</Text>
+                <Text style={[ styles.chip, styles.chipJoker ]} numberOfLines={1}>Joker</Text>
               ) : row.statLabel === null ? (
                 <Text style={styles.pending}>n’a pas encore répondu</Text>
               ) : (
