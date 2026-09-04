@@ -359,6 +359,32 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...config.android,
     package: variant.androidPackage,
     googleServicesFile: androidGoogleServicesFile,
+    /*
+     * `AD_ID` is stripped out of the merged manifest, and it is a submission
+     * blocker rather than a preference.
+     *
+     * `play-services-measurement-api` — pulled in by
+     * `@react-native-firebase/analytics` — declares
+     * `com.google.android.gms.permission.AD_ID` in its own manifest, so the
+     * manifest merger writes it into the AAB even though nothing in this app
+     * ever reads an advertising id. The Play Console declaration says the app
+     * does not use one, and Google rejects the upload on the contradiction:
+     * « This release includes the com.google.android.gms.permission.AD_ID
+     * permission but your declaration on Play Console says your app doesn't use
+     * advertising ID ».
+     *
+     * The declaration is the half that is true. `apps/app/firebase.json`
+     * already carries `google_analytics_adid_collection_enabled: false`, so the
+     * SDK never reads the AdID at runtime — which is exactly what
+     * docs/store-listing.md §1.11 rests on when it answers « App Tracking
+     * Transparency : non », and what docs/analytics.md §7 documents. Blocking
+     * the permission costs no behaviour at all: it makes the binary say what
+     * the store listing and the privacy policy already say.
+     *
+     * Expo turns this into `tools:node="remove"` on the permission element. It
+     * is a native change, so it takes a build — never an OTA update.
+     */
+    blockedPermissions: [ 'com.google.android.gms.permission.AD_ID' ],
     adaptiveIcon: {
       // The star alone, on its own layer, over the yellow `icon.png` is drawn
       // on: a launcher masks the two together and moves them apart on a press,

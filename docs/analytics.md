@@ -185,6 +185,35 @@ d'ajouter la variante au type union et une ligne au tableau ci-dessus.
 Changer ces valeurs demande un **rebuild du dev client** — elles sont lues
 natif, pas par le JS bundle.
 
+### `AD_ID` retirée du manifeste Android
+
+`google_analytics_adid_collection_enabled: false` coupe la **lecture** de
+l'AdID, pas la **permission**. `play-services-measurement-api`, tiré par
+`@react-native-firebase/analytics`, déclare
+`com.google.android.gms.permission.AD_ID` dans son propre manifeste, et le
+manifest merger l'écrit dans l'AAB. La Play Console refuse alors l'upload :
+
+```
+Google Api Error: Invalid request - This release includes the
+com.google.android.gms.permission.AD_ID permission but your declaration on
+Play Console says your app doesn't use advertising ID.
+```
+
+`app.config.ts` la bloque — `android.blockedPermissions`, qu'Expo traduit en
+`tools:node="remove"` sur l'élément `uses-permission` :
+
+```ts
+android: {
+  blockedPermissions: [ 'com.google.android.gms.permission.AD_ID' ],
+}
+```
+
+Aucune perte fonctionnelle : l'AdID n'était déjà jamais lu. La déclaration
+Play Console reste « n'utilise pas l'identifiant publicitaire », cohérente avec
+`docs/store-listing.md` §1.11 et `docs/privacy-policy.md`. **Ne pas la
+retourner dans la console** pour faire passer un build : c'est la permission
+qui était fausse, pas la déclaration.
+
 `app.config.ts` liste `RNFBAnalytics` dans `forceStaticLinking` iOS, pour
 rester cohérent avec `RNFBApp` / `RNFBAuth` / `RNFBFirestore` / `RNFBFunctions`
 (voir le commentaire de `expo-build-properties` dans ce fichier).
