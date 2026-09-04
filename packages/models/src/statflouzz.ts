@@ -78,3 +78,52 @@ export const streakStatflouzzReward = (previousStreak: number, nextStreak: numbe
 
   return crossed * STREAK_STATFLOUZZ_REWARD;
 };
+
+/**
+ * What bringing somebody new pays — docs/prd.md §4.9.
+ *
+ * **Paid to both sides, and paid late.** The sponsor gets
+ * `REFERRAL_STATFLOUZZ_REWARD`, the newcomer `REFERRAL_WELCOME_STATFLOUZZ_BONUS`
+ * on top of their opening balance, and neither is credited at sign-up: the
+ * payout waits for the newcomer's **first answer**. An address costs nothing to
+ * invent, so paying on a created account is paying for a created account; a day
+ * answered is the smallest thing a real user does and a fake one will not.
+ *
+ * Two-sided because a one-sided referral asks the newcomer to finish an
+ * onboarding for somebody else's benefit. **Not split evenly**, though: the
+ * sponsor gets three times the newcomer's bonus, because the two sides are not
+ * doing the same thing. Bringing somebody in is work — a message sent, a
+ * handle transmitted, somebody talked through an onboarding — while naming a
+ * sponsor is a field typed once. The reward has to sit on the side of the
+ * effort or nobody does it: at ten each it paid a fifth of a question for a
+ * whole human, against a hundred for ten days answered, so answering was ten
+ * times more profitable than recruiting and the mechanic would simply not have
+ * fired.
+ *
+ * The newcomer's ten stays small on purpose: it is a welcome, not a bounty, and
+ * anything larger prices a throwaway account.
+ */
+export const REFERRAL_STATFLOUZZ_REWARD = 30;
+
+/** What the newcomer gets, on top of `INITIAL_STATFLOUZZ_BALANCE`, once they have answered once. */
+export const REFERRAL_WELCOME_STATFLOUZZ_BONUS = 10;
+
+/**
+ * How many referrals one account is ever paid for.
+ *
+ * Not a fraud model, a ceiling. What makes farming unattractive is the price of
+ * one fake referral — an address, a whole onboarding and a real day answered —
+ * set against what it yields, forty StatFlouzz across two accounts, which is
+ * under half a question. This is what keeps the total *bounded* anyway: an
+ * unbounded faucet is a currency design bug even while nobody is exploiting it.
+ *
+ * Twenty, so a sponsor's lifetime referral income tops out at six questions'
+ * worth — twenty real people who each answered a day being worth six questions
+ * is a trade the product should want to make. Raising it is one constant; it is
+ * set deliberately, since a ceiling that has never been reached costs nothing
+ * and one that has been reached by a farm cannot be lowered retroactively.
+ *
+ * Past the cap the newcomer still collects their welcome bonus: they did
+ * nothing wrong, and the cap is the sponsor's.
+ */
+export const REFERRAL_MAX_REWARDED = 20;

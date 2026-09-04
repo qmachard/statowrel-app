@@ -5,6 +5,7 @@ import { USER_COLLECTION, userConverter } from '@statowrel/models';
 import { REGION_CLOUD, parseSnapshotData } from '@/libs/firebase-admin';
 
 import { grantInitialBalance } from './steps/grantInitialBalance';
+import { recordReferral } from './steps/recordReferral';
 
 /**
  * Fires on every profile creation — the server-side half of docs/prd.md §4.7.
@@ -18,7 +19,15 @@ import { grantInitialBalance } from './steps/grantInitialBalance';
  * itself) and every deployed client (which writes 0) end up with the same
  * wallet a moment after sign-up.
  *
- * The one write it does is idempotent by design — see the step.
+ * It is also where a referral opens (docs/prd.md §4.9): a profile created
+ * carrying `referred_by` puts its author on the sponsor's list and sends that
+ * sponsor a friend invitation. Nothing is paid here — the payout waits for the
+ * newcomer's first answer, in the `referrals` domain.
+ *
+ * Both steps are idempotent by design — see each one. They run in order rather
+ * than in parallel, and the wallet goes first: a referral that throws replays
+ * the whole trigger, and a grant that has already landed must not be able to
+ * land twice on the retry.
  */
 export const onUserCreated = onDocumentCreated({
   region: REGION_CLOUD,
@@ -30,5 +39,8 @@ export const onUserCreated = onDocumentCreated({
     return;
   }
 
-  await grantInitialBalance(event.data.id, parseSnapshotData(event.data, userConverter));
+  const user = parseSnapshotData(event.data, userConverter);
+
+  await grantInitialBalance(event.data.id, user);
+  await recordReferral(event.data.id, user);
 });

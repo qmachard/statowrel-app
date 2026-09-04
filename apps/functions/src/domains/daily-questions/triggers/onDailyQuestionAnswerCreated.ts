@@ -2,10 +2,12 @@ import { logger } from 'firebase-functions/v2';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
+  DEMO_QUESTION_ID,
   QUESTION_COLLECTION,
   dailyQuestionAnswerConverter,
 } from '@statowrel/models';
 
+import { payReferralReward } from '@/domains/referrals';
 import { parseSnapshotData, REGION_CLOUD } from '@/libs/firebase-admin';
 
 import { onAnswerCreated } from './steps/onAnswerCreated';
@@ -54,9 +56,18 @@ const holdBack = async (): Promise<void> => {
  * `onDocumentCreated` covers the whole lifecycle: there is no later edit to
  * mirror, and nothing to undo.
  *
- * The trigger itself only decodes the event and hands it to its step; the work
+ * The trigger itself only decodes the event and hands it to its steps; the work
  * lives there, so it stays callable from anywhere the projection has to be
  * replayed.
+ *
+ * **Two steps, and the second one belongs to another domain.** An answer is
+ * also what settles a referral (docs/prd.md §4.9), and giving that its own
+ * `onDocumentCreated` on this same path would have meant a second Eventarc
+ * trigger, a second function and a second invocation on *every* answer given in
+ * the app — to settle something that happens once per account, ever. So
+ * `referrals` registers nothing and exports its step, which this trigger calls.
+ * The steps keep their own transactions: the referral does not widen the one
+ * that moves the streak.
  */
 export const onDailyQuestionAnswerCreated = onDocumentCreated({
   region: REGION_CLOUD,
@@ -71,4 +82,29 @@ export const onDailyQuestionAnswerCreated = onDocumentCreated({
   await holdBack();
 
   await onAnswerCreated(parseSnapshotData(event.data, dailyQuestionAnswerConverter));
+
+  // The onboarding carousel's pick lands on this very path the first moment a
+  // session exists (`useDemoAnswerFlush`), so for a referred account it is
+  // usually the first answer document there is — settling on it would pay at
+  // sign-up while believing it paid at engagement, which is the one thing
+  // §4.9's design exists to avoid. `onAnswerCreated` above still runs on it:
+  // a demo counts in the question's tally, just in nothing else.
+  if (event.params.question_id === DEMO_QUESTION_ID) {
+    return;
+  }
+
+  try {
+    // The document id is the author's UID, so whose answer it is, is the whole
+    // payload the referral needs.
+    await payReferralReward(event.params.user_id);
+  } catch (error) {
+    // Swallowed rather than thrown, and that is not resignation: this trigger
+    // is not configured to retry, so a throw would only lose the answer
+    // projection's own success from the log. The retry is the *next* answer —
+    // `referral_rewarded_at` is still null, so the payout settles then.
+    logger.error('Referral payout failed, will settle on a later answer', {
+      user_id: event.params.user_id,
+      error,
+    });
+  }
 });

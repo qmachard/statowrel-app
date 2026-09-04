@@ -1,24 +1,19 @@
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import {
-  type InviteFriendOutcome,
   type InviteFriendResult,
   USER_COLLECTION,
   USERNAME_COLLECTION,
-  USER_FRIEND_COLLECTION,
-  type UserFriendData,
   isValidUsername,
   normalizeUsername,
   userConverter,
-  userFriendConverter,
   usernameConverter,
 } from '@statowrel/models';
 import { z } from 'zod';
 
+import { createFriendshipPair } from '@/domains/friends/helpers/createFriendshipPair';
 import {
   REGION_CLOUD,
-  createWriteBatch,
   getDocumentRef,
-  getSubDocumentRef,
   parseData,
 } from '@/libs/firebase-admin';
 
@@ -97,56 +92,17 @@ export const inviteFriend = onCall<unknown, Promise<InviteFriendResult>>(
       throw new HttpsError('not-found', 'No account holds that username.');
     }
 
-    const ownRef = getSubDocumentRef(
-      getDocumentRef(USER_COLLECTION, userId, userConverter),
-      USER_FRIEND_COLLECTION,
+    // Deliberately the same outcome whichever side sent a pending invitation:
+    // re-sending one that is already waiting is a no-op, and an invitation
+    // *received* is answered from the friend list, not from here. The helper is
+    // what both this callable and the referral rail write pairs through.
+    const outcome = await createFriendshipPair({
+      requesterId: userId,
+      requesterUsername: inviter.username,
       friendId,
-      userFriendConverter,
-    );
-
-    // At most one friendship per pair is a property of the path — the document
-    // id is the other user's UID — so this read is the whole duplicate check,
-    // with no query to run.
-    const existing = await ownRef.get().then(parseData);
-
-    if (existing !== null) {
-      const outcome: InviteFriendOutcome = existing.status === 'accepted' ? 'already_friends' : 'already_invited';
-
-      // Deliberately the same outcome whichever side sent the pending
-      // invitation: re-sending one that is already waiting is a no-op, and an
-      // invitation *received* is answered from the friend list, not from here.
-      return { outcome, username };
-    }
-
-    const friendRef = getSubDocumentRef(
-      getDocumentRef(USER_COLLECTION, friendId, userConverter),
-      USER_FRIEND_COLLECTION,
-      userId,
-      userFriendConverter,
-    );
-
-    const createdAt = new Date().toISOString();
-
-    const half = (ownerId: string, otherId: string, otherUsername: string): UserFriendData => ({
-      user_id: ownerId,
-      friend_id: otherId,
-      friend_username: otherUsername,
-      status: 'pending',
-      // The same value on both halves — the direction is read from it rather
-      // than stored per side, so the two mirrors cannot disagree on who
-      // invited whom.
-      requested_by: userId,
-      created_at: createdAt,
-      accepted_at: null,
+      friendUsername: friend.username,
     });
 
-    const batch = createWriteBatch();
-
-    batch.set(ownRef, half(userId, friendId, friend.username));
-    batch.set(friendRef, half(friendId, userId, inviter.username));
-
-    await batch.commit();
-
-    return { outcome: 'invited', username };
+    return { outcome, username };
   },
 );

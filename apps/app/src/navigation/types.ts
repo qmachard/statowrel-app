@@ -11,8 +11,13 @@ export type RootStackParamList = {
    * gives the screen its title and its face before anything is fetched.
    */
   Friend: { friendId: string; friendUsername: string };
-  /** Invite a friend by their exact handle (docs/prd.md §4.1). */
-  InviteFriend: undefined;
+  /**
+   * Invite a friend by their exact handle (docs/prd.md §4.1).
+   *
+   * `username` pre-fills the field — what a `statowrel://invite/lou` link
+   * carries when the app is already installed (docs/prd.md §4.9).
+   */
+  InviteFriend: { username?: string } | undefined;
   /** Settings, friends, profile — everything that isn't the stats (docs/prd.md §5.1). */
   Menu: undefined;
   /** Write a question and pay for it in StatFlouzz (docs/prd.md §4.7). */
