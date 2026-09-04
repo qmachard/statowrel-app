@@ -30,8 +30,11 @@ export const isAuthProviderId = (value: string): value is AuthProviderId => (
  * written by the app itself, once the pseudo has been chosen on the onboarding
  * screen (`src/auth/profile.ts`).
  *
- * Profile, sign-in identities, answering stats and the StatFlouzz wallet. The PRD's
- * `invite_code` is still to be modelled, and so is its `photo_url` the day a
+ * Profile, sign-in identities, answering stats, the StatFlouzz wallet and the
+ * referral rail. The PRD's `invite_code` never will be modelled — docs/prd.md
+ * §4.9 makes the username itself the referral code, `v1_usernames` already
+ * carrying a handle's uniqueness and its resolution back to an account. Its
+ * `photo_url` still is, the day a
  * real profile-photo system ships — today every face is generated from the handle
  * (`apps/app/src/lib/avatars.ts`), and the Menu screen's own avatar reads the
  * provider picture straight off Firebase Auth, so Firestore carries no photo.
@@ -109,6 +112,47 @@ export interface UserFirebaseData {
    */
   statcoins_earned: number;
   statcoins_spent: number;
+  /**
+   * Who brought this account in — the sponsor's Firebase Auth UID, or `null`
+   * for everybody who arrived on their own (docs/prd.md §4.9).
+   *
+   * A UID and not a handle, even though a handle is what the newcomer typed:
+   * the app resolves it against `v1_usernames` before writing, so a rename
+   * cannot later detach a referral from the person who earned it.
+   *
+   * **Written once, by the client, at profile creation, and frozen from then
+   * on** — `firestore.rules` accepts it on a profile that carries none and
+   * refuses every write that moves it afterwards. That is what makes it worth
+   * paying for: an account cannot change its mind about where it came from,
+   * and nobody can attribute somebody else's account to themselves after the
+   * fact. The rules also check that the sponsor's profile exists and is not
+   * this account itself.
+   */
+  referred_by: string | null;
+  /**
+   * How many referrals this account has actually been **paid** for, shown on
+   * the Menu next to the newcomers it brought.
+   *
+   * Rewarded, not attributed: an account that named this one as its sponsor and
+   * never answered a single question never counts here, because it never paid
+   * out. Capped by `REFERRAL_MAX_REWARDED`. Backend-owned like the wallet it
+   * moves alongside.
+   */
+  referrals_count: number;
+  /**
+   * When this account's *own* referral was settled — the marker that makes the
+   * payout happen exactly once (docs/prd.md §4.9).
+   *
+   * Stamped in the same transaction that credits both sides, so a trigger
+   * delivered twice pays once. Stamped even when nothing could be credited (a
+   * sponsor whose account is gone, a sponsor past their cap): the question this
+   * field answers is "has this referral been settled", not "was it worth
+   * something".
+   *
+   * Null on every account that named nobody, and on one whose sponsor is named
+   * but who has not answered yet.
+   */
+  referral_rewarded_at: UniversalTimestamp | null;
 }
 
 export type UserData = ModelData<UserFirebaseData>;
@@ -133,6 +177,11 @@ export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (Ti
     statcoin_balance: data.statcoin_balance,
     statcoins_earned: data.statcoins_earned,
     statcoins_spent: data.statcoins_spent,
+    referred_by: data.referred_by ?? null,
+    referrals_count: data.referrals_count,
+    referral_rewarded_at: data.referral_rewarded_at
+      ? TimestampClass.fromDate(new Date(data.referral_rewarded_at))
+      : null,
   }),
   fromFirestore: (snap) => {
     const data = snap.data();
@@ -152,6 +201,11 @@ export const userConverter: FirestoreConverter<UserData, UserFirebaseData> = (Ti
       statcoin_balance: data.statcoin_balance ?? 0,
       statcoins_earned: data.statcoins_earned ?? 0,
       statcoins_spent: data.statcoins_spent ?? 0,
+      // Younger than the wallet above, so every profile written before the
+      // referral rail carries none — nobody brought them in, which is true.
+      referred_by: data.referred_by ?? null,
+      referrals_count: data.referrals_count ?? 0,
+      referral_rewarded_at: parseTimestamp(data.referral_rewarded_at ?? null),
     };
   },
 });

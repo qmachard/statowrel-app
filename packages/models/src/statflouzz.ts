@@ -78,3 +78,42 @@ export const streakStatflouzzReward = (previousStreak: number, nextStreak: numbe
 
   return crossed * STREAK_STATFLOUZZ_REWARD;
 };
+
+/**
+ * What bringing somebody new pays — docs/prd.md §4.9.
+ *
+ * **Paid to both sides, and paid late.** The sponsor gets
+ * `REFERRAL_STATFLOUZZ_REWARD`, the newcomer `REFERRAL_WELCOME_STATFLOUZZ_BONUS`
+ * on top of their opening balance, and neither is credited at sign-up: the
+ * payout waits for the newcomer's **first answer**. An address costs nothing to
+ * invent, so paying on a created account is paying for a created account; a day
+ * answered is the smallest thing a real user does and a fake one will not.
+ *
+ * Two-sided because a one-sided referral asks the newcomer to finish an
+ * onboarding for somebody else's benefit. Ten each is deliberately modest —
+ * a fifth of a question, half a joker — so the currency is not diluted by a
+ * mechanic that scales with a contact list.
+ */
+export const REFERRAL_STATFLOUZZ_REWARD = 10;
+
+/** What the newcomer gets, on top of `INITIAL_STATFLOUZZ_BALANCE`, once they have answered once. */
+export const REFERRAL_WELCOME_STATFLOUZZ_BONUS = 10;
+
+/**
+ * How many referrals one account is ever paid for.
+ *
+ * Not a fraud model, a ceiling. What makes farming unprofitable is the price of
+ * one fake referral — an address, an onboarding and a real day answered — set
+ * against what it yields, twenty StatFlouzz across two accounts, which is less
+ * than one joker. This is what keeps the total *bounded* anyway: an unbounded
+ * faucet is a currency design bug even while nobody is exploiting it.
+ *
+ * Twenty, so a sponsor's lifetime referral income tops out at two questions'
+ * worth. Raising it is one constant; it is set low deliberately, since a
+ * ceiling that has never been reached costs nothing and one that has been
+ * reached by a farm cannot be lowered retroactively.
+ *
+ * Past the cap the newcomer still collects their welcome bonus: they did
+ * nothing wrong, and the cap is the sponsor's.
+ */
+export const REFERRAL_MAX_REWARDED = 20;

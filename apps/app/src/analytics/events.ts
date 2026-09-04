@@ -24,7 +24,9 @@ export type AnalyticsEvent =
   | { name: 'joker_used'; params: { question_id: string } }
   | { name: 'question_proposed'; params: { options_count: number } }
   | { name: 'friend_invited'; params: { outcome: FriendInviteOutcome } }
-  | { name: 'friend_invitation_accepted'; params?: Record<string, never> };
+  | { name: 'friend_invitation_accepted'; params?: Record<string, never> }
+  | { name: 'referral_attributed'; params?: Record<string, never> }
+  | { name: 'invite_link_shared'; params?: Record<string, never> };
 
 /** The three doors of `src/auth/providers.ts`. `password` covers both sign-in and sign-up with e-mail. */
 export type SignInMethod = 'google' | 'apple' | 'password';

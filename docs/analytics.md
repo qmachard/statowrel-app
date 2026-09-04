@@ -132,6 +132,16 @@ Le report automatique du SDK est **désactivé**
 | `friend_invited`               | `outcome`           | enum      | `inviteFriend.ts` — succès ou échec                              | Une invitation d'ami tentée (résultat inclus, pour le funnel)   |
 |                                |                     |           |                                                                 | Valeurs : `sent` \| `not_found` \| `already_friends` \| `pending` \| `blocked` \| `error` |
 | `friend_invitation_accepted`   | —                   | —         | `friendships.ts.acceptFriendship()` — après batch commit         | Acceptation d'une invitation reçue                               |
+| `referral_attributed`          | —                   | —         | `profile.ts.createUserProfile()` — après écriture du profil       | Une inscription attribuée à un parrain. Docs/prd.md §4.9         |
+| `invite_link_shared`           | —                   | —         | `shareInvite.ts` — après `sharedAction` seulement                 | La share sheet a été menée à son terme (un `dismissedAction` ne compte pas : ce serait une invitation que personne n'a reçue) |
+
+**Le versement du parrainage n'est pas un événement GA4**, et c'est délibéré : il
+se produit dans `referrals-onReferredAnswerCreated`, côté backend, sans aucun
+appareil pour l'émettre. L'attribuer à l'app en la faisant réagir au passage de
+`referral_rewarded_at` mentirait sur qui a fait l'action. La conversion
+attribué → versé se lit dans Cloud Logging, sur le log structuré `Referral
+rewarded` (champs `user_id`, `sponsor_id`, `sponsor_reward`), dont une métrique
+loggée fait un compteur si on décide de la piloter.
 
 ### 6.3 Événements réservés pour plus tard
 
@@ -241,6 +251,8 @@ Checklist de recette :
 - [ ] `question_proposed` porte `options_count` cohérent avec le formulaire.
 - [ ] `friend_invited` fire avec `outcome: not_found` sur un handle inexistant.
 - [ ] `friend_invitation_accepted` fire chez les deux users après acceptation.
+- [ ] `referral_attributed` fire une fois, à l'inscription avec un pseudo de parrain valide, et jamais sur un champ laissé vide.
+- [ ] `invite_link_shared` ne fire pas quand on ferme la share sheet sans partager.
 - [ ] `setUserId` est bien l'UID Firebase Auth, jamais un handle ni un e-mail.
 
 ---

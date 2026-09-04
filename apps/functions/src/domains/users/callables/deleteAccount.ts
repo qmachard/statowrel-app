@@ -6,11 +6,13 @@ import {
   USER_DEVICE_COLLECTION,
   USERNAME_COLLECTION,
   USER_FRIEND_COLLECTION,
+  USER_REFERRAL_COLLECTION,
   dailyQuestionAnswerConverter,
   userCalendarMonthConverter,
   userConverter,
   userDeviceConverter,
   userFriendConverter,
+  userReferralConverter,
   usernameConverter,
 } from '@statowrel/models';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
@@ -90,7 +92,7 @@ export const deleteAccount = onCall<unknown, Promise<DeleteAccountResult>>(
     const userId = request.auth.uid;
     const userRef = getDocumentRef(USER_COLLECTION, userId, userConverter);
 
-    const [ profile, answers, months, devices, friendships ] = await Promise.all([
+    const [ profile, answers, months, devices, friendships, referrals ] = await Promise.all([
       userRef.get().then(parseData),
       // The collection group is scoped by the `user_id` field rather than by
       // the document id: a group query cannot filter on `__name__` across
@@ -107,6 +109,11 @@ export const deleteAccount = onCall<unknown, Promise<DeleteAccountResult>>(
       getSubCollectionRef(userRef, USER_CALENDAR_MONTH_COLLECTION, userCalendarMonthConverter).get(),
       getSubCollectionRef(userRef, USER_DEVICE_COLLECTION, userDeviceConverter).get(),
       getSubCollectionRef(userRef, USER_FRIEND_COLLECTION, userFriendConverter).get(),
+      // Who this account brought in (docs/prd.md §4.9). Its own list, so it
+      // goes with it — the newcomers keep their accounts and their wallets, and
+      // their `referred_by` is left pointing at a UID nobody holds any more,
+      // which is what it means: they did come from somebody who has since left.
+      getSubCollectionRef(userRef, USER_REFERRAL_COLLECTION, userReferralConverter).get(),
     ]);
 
     // Both halves of each friendship: the entry in this user's list, and the
@@ -122,11 +129,30 @@ export const deleteAccount = onCall<unknown, Promise<DeleteAccountResult>>(
       ),
     ]);
 
+    // The other side of this account's own referral: the row sitting in its
+    // sponsor's list. Left standing it would show a filleul nobody can open,
+    // and one whose handle is about to be free for somebody else to take.
+    //
+    // The sponsor's `referrals_count` is deliberately *not* decremented: they
+    // were paid for a referral that really happened, and rolling the counter
+    // back would both rewrite that and hand back cap room — a delete-and-resign
+    // loop past `REFERRAL_MAX_REWARDED`.
+    const sponsorReferralRefs = profile?.referred_by
+      ? [ getSubDocumentRef(
+        getDocumentRef(USER_COLLECTION, profile.referred_by, userConverter),
+        USER_REFERRAL_COLLECTION,
+        userId,
+        userReferralConverter,
+      ) ]
+      : [];
+
     await deleteAll([
       ...answers.docs.map((answer) => answer.ref),
       ...months.docs.map((month) => month.ref),
       ...devices.docs.map((device) => device.ref),
       ...friendshipRefs,
+      ...referrals.docs.map((referral) => referral.ref),
+      ...sponsorReferralRefs,
     ]);
 
     // The reservation is only this account's to free if it still points at it:

@@ -24,6 +24,22 @@ export class UsernameTakenError extends Error {
   }
 }
 
+/**
+ * Thrown when the handle typed under « Qui t'a fait venir ? » belongs to
+ * nobody (docs/prd.md §4.9).
+ *
+ * It has to be its own failure rather than a silently dropped attribution: a
+ * typo would otherwise cost the sponsor their 10§ without either side ever
+ * finding out, and there is no second chance — `referred_by` is written at
+ * profile creation and frozen from then on.
+ */
+export class ReferrerNotFoundError extends Error {
+  constructor(readonly username: string) {
+    super(`No account holds @${username}`);
+    this.name = 'ReferrerNotFoundError';
+  }
+}
+
 /** Which door the user came through — the same Firebase code means different things per provider. */
 export type SignInMethod = 'password' | 'google' | 'apple';
 

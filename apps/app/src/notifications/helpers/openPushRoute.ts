@@ -13,9 +13,10 @@ const READY_POLL_MS = 50;
 const READY_TIMEOUT_MS = 5000;
 
 const navigate = (route: PushRoute): void => {
-  if (route.type === 'friend_invite') {
-    // The invitation is answered from the friend list, which lives on the Menu
-    // (docs/prd.md §5.3) — there is no invitation screen of its own to open.
+  if (route.type === 'friend_invite' || route.type === 'referral_joined') {
+    // Both land on the Menu: the invitation is answered from the friend list
+    // (docs/prd.md §5.3), and « Mes filleuls » sits right under it (§4.9).
+    // Neither has a screen of its own to open.
     navigationRef.navigate('Menu');
 
     return;

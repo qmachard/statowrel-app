@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigation } from '@react-navigation/native';
+import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { InviteFriendOutcome, InviteFriendResult } from '@statowrel/models';
 import { X } from '@/components/icons';
 import { useState } from 'react';
@@ -14,6 +14,7 @@ import { inviteFriend } from '@/friends/data/inviteFriend';
 import { type InviteFailure, inviteFailure } from '@/friends/errors';
 import { type InviteFriendValues, inviteFriendSchema } from '@/friends/schemas';
 import { useSheetBottomInset } from '@/lib/useSheetBottomInset';
+import type { RootStackParamList } from '@/navigation/types';
 
 /** What the handle is asked for, said once above the field (docs/prd.md §4.1). */
 const HELP = 'Tape son nom d’utilisateur exact : il n’y a ni recherche, ni annuaire.';
@@ -98,6 +99,10 @@ const styles = StyleSheet.create({
  */
 export const InviteFriendScreen = () => {
   const navigation = useNavigation();
+  // What `statowrel://invite/lou` carries, when the app was already installed
+  // — a link tapped by somebody who has no account yet opens nothing, and their
+  // attribution is typed on the onboarding sheet instead (docs/prd.md §4.9).
+  const { params } = useRoute<RouteProp<RootStackParamList, 'InviteFriend'>>();
   const bottomInset = useSheetBottomInset();
   const [ failure, setFailure ] = useState<InviteFailure | null>(null);
   const [ result, setResult ] = useState<InviteFriendResult | null>(null);
@@ -108,7 +113,7 @@ export const InviteFriendScreen = () => {
     formState: { errors, isSubmitting },
   } = useForm<InviteFriendValues>({
     resolver: zodResolver(inviteFriendSchema),
-    defaultValues: { username: '' },
+    defaultValues: { username: params?.username ?? '' },
   });
 
   const onSubmit = handleSubmit(async ({ username }) => {

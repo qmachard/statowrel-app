@@ -17,6 +17,7 @@ import { NotificationsButton } from '@/notifications/components/NotificationsBut
 import { clearPendingDemoAnswer } from '@/onboarding/data/demoAnswerStore';
 import { resetOnboardingSeen } from '@/onboarding/data/useOnboardingSeen';
 import { MyQuestionsCard } from '@/questions/components/MyQuestionsCard';
+import { ReferralsCard } from '@/referrals/components/ReferralsCard';
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -134,6 +135,8 @@ export const MenuScreen = () => {
             §5.3, in the order that section states them. A drawn proposal opens
             its day the way a calendar cell does. */}
         <MyQuestionsCard onOpenDay={(date) => navigation.navigate('DailyQuestion', { date })} />
+
+        <ReferralsCard />
 
         <View style={styles.settings}>
           {/* Development only, and dropped from a release build by the `__DEV__`
