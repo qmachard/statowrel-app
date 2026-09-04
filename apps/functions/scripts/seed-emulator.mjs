@@ -493,39 +493,61 @@ for (const [ index, day ] of world.entries()) {
 // ---------------------------------------------------------------------------
 // Jokers — docs/prd.md §4.8.
 //
-// One friend passes today's question with a joker so the friend list on the
-// day's sheet lists someone as « done via joker », and the friend fan-out
-// counts them onto the main account's badge — same shape the callable
-// produces in production.
+// The main account jokers today by default (unless `--answer-today` was
+// passed, which means the run is about the answered result card, not the
+// joker one). That paints today's calendar cell in the joker colour, flips
+// the Stats banner to « PASSÉ AVEC UN JOKER », and — the whole point of the
+// mechanic — unlocks the friend list on the day sheet so the friend joker
+// below is visible.
 //
-// The main account jokers one of its own past holes, so the calendar shows
-// the fifth visual state on a day the user can see: a violet cell with the
-// playing-card spade, the streak now uninterrupted where it used to be
-// broken. That is what proves the seed exercises the whole joker path
-// end-to-end, calendar visual included.
+// One friend passes today's question with a joker so the friend list holds
+// someone as « done via joker », and the friend fan-out counts them onto the
+// main account's badge — the shape the callable produces in production.
+//
+// The main account also jokers one of its own past holes, so the calendar
+// shows the fifth visual state on a day and on today at the same time —
+// past + present, both worth looking at.
 // ---------------------------------------------------------------------------
 
-/** Today, a friend who did not already answer takes a joker rather than an answer. */
 const todaysDayForJoker = world.find((day) => day.date === today);
 
-if (todaysDayForJoker !== undefined && friendUsernames.length > 0) {
-  const answered = new Set(todaysDayForJoker.answers.map((answer) => answer.username));
-  const candidate = friendUsernames.find((username) => !answered.has(username));
+/** Main user jokers today by default. `--answer-today` overrides. */
+if (todaysDayForJoker !== undefined && !answerToday) {
+  const instant = answerInstantOf(today, { late: false });
 
-  if (candidate !== undefined) {
+  if (instant !== null) {
+    todaysDayForJoker.jokers.push({ username: MAIN_USERNAME, instant });
+  }
+}
+
+/**
+ * One friend also jokers today — forced rather than random. The last friend
+ * in the cast is picked (a deterministic choice, so the joker's author is
+ * predictable when hunting a bug), and any answer they may have written for
+ * today is dropped in favour of the joker: a friend joker on today's sheet
+ * is what the seed is *for*, so it must not depend on the answer roll
+ * missing one of them.
+ */
+if (todaysDayForJoker !== undefined && friendUsernames.length > 0) {
+  const jokerFriend = friendUsernames[friendUsernames.length - 1];
+  const jokered = new Set(todaysDayForJoker.jokers.map((joker) => joker.username));
+
+  if (!jokered.has(jokerFriend)) {
     const instant = answerInstantOf(today, { late: false });
 
     if (instant !== null) {
-      todaysDayForJoker.jokers.push({ username: candidate, instant });
+      // Drop the friend's own answer for today if the roll picked them —
+      // the same day cannot carry both an answer and a joker for one user.
+      todaysDayForJoker.answers = todaysDayForJoker.answers.filter((answer) => answer.username !== jokerFriend);
+      todaysDayForJoker.jokers.push({ username: jokerFriend, instant });
     }
   }
 }
 
 /**
  * A past hole in the main account's calendar becomes a joker, so the Stats
- * calendar renders the joker state on a day the main account owns. Picks the
- * *first* hole `world` still has — the trailing streak stays intact, and
- * `streak_best` benefits from the hole being covered.
+ * calendar carries a jokered cell in the past too — proving the fifth state
+ * on a day the trailing streak stays intact.
  */
 const holeIndexForMain = [ ...holes ].find((index) => {
   const day = world[index];
@@ -958,13 +980,18 @@ console.log(`  · ${answersTotal} answers, ${jokersTotal} jokers`);
 
 const main = profiles.get(MAIN_USERNAME);
 const todayAnswered = mainAnswered.has(today);
+const todayJokered = todaysDay?.jokers.some((joker) => joker.username === MAIN_USERNAME) ?? false;
 
 console.log('');
 console.log('✔ The emulator holds a StatOwrel.');
 console.log('');
 console.log(`  Sign in     ${email} / ${password}${' '.repeat(2)}(also admin — npm run dev:admin)`);
 console.log(`  Today       ${today} · « ${todaysDay?.label ?? '—'} »`);
-console.log(`  Answered    ${todayAnswered ? 'yes — the sheet opens on the result card' : 'no — the day is yours to answer'}`);
+console.log(`  Answered    ${todayAnswered
+  ? 'yes — the sheet opens on the result card'
+  : todayJokered
+    ? 'passed with a joker — the sheet opens on the joker result'
+    : 'no — the day is yours to answer'}`);
 console.log(`  Streak      ${main.streak_count} day(s), best ${main.streak_best}, ${main.answers_count} answered`);
 console.log(`  Wallet      ${main.statcoin_balance} StatFlouzz, ${main.statcoins_earned} earned`
   + `${statflouzz > 0 ? ` (${statflouzz} granted, ${main.statcoins_earned - statflouzz} from streaks)` : ''}`);
