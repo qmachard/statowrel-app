@@ -15,8 +15,8 @@ export interface CalendarDayStateInput {
    * (`v1_user_calendar_months.jokers`). A day never appears as both
    * `answered` and `jokered` (the callable that writes a joker refuses to
    * when a day has already been answered, and the answer path refuses when a
-   * joker has landed the same day), so `answered` wins here if the two ever
-   * disagreed.
+   * joker has landed the same day). Wins over every other state — today
+   * included — so a jokered cell always reads as the joker it is.
    */
   jokered: boolean;
 }
@@ -42,12 +42,17 @@ export interface CalendarDayStateInput {
  * only its colour differs (docs/prd.md §5.2).
  */
 export const getCalendarDayState = ({ day, today, published, answered, jokered }: CalendarDayStateInput): CalendarDayState => {
-  if (answered) {
-    return day === today ? 'today' : 'answered';
+  // A joker overrides today, on purpose: the whole point of the violet is
+  // that it says « passé avec un joker » at a glance, and letting today's
+  // accent red win over it would hide the very state the user just paid to
+  // reach. An answered today keeps its red — nothing to show about the day
+  // beyond « c'est aujourd'hui ».
+  if (jokered) {
+    return 'jokered';
   }
 
-  if (jokered) {
-    return day === today ? 'today' : 'jokered';
+  if (answered) {
+    return day === today ? 'today' : 'answered';
   }
 
   if (!published || day > today) {
