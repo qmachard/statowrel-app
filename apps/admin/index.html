@@ -64,7 +64,6 @@
         --radius: 12px;
         --radius-lg: 20px;
         --radius-xl: 24px;
-        --radius-2xl: 32px;
         --shadow: 4px 4px 0 0 var(--foreground);
         --shadow-lg: 6px 6px 0 0 var(--foreground);
         --font-head: 'Archivo Black', system-ui, sans-serif;
@@ -529,26 +528,6 @@
         background: var(--card);
       }
 
-      .mock-bell {
-        align-items: center;
-        background: var(--accent);
-        border: var(--border-width) solid var(--foreground);
-        border-radius: var(--radius-2xl);
-        box-shadow: var(--shadow-lg);
-        color: var(--accent-foreground);
-        display: flex;
-        height: 120px;
-        justify-content: center;
-        transform: rotate(-6deg);
-        width: 120px;
-      }
-
-      .mock-bell svg {
-        display: block;
-        height: 56px;
-        width: 56px;
-      }
-
       .mock-streak {
         background: var(--secondary);
         border: var(--border-width) solid var(--foreground);
@@ -674,8 +653,7 @@
         }
 
         .mock-stat,
-        .mock-banner,
-        .mock-bell {
+        .mock-banner {
           transform: none;
         }
       }
@@ -858,26 +836,6 @@
             <span class="face">LM</span>
             <span class="face">SA</span>
             <span class="face">NB</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="feature">
-        <div>
-          <h3>On te prévient.</h3>
-          <p>
-            La question du jour, un rappel le soir si tu l'as loupée, et quand un pote t'ajoute.
-            Rien de plus.
-          </p>
-        </div>
-        <div class="feature-visual" aria-hidden="true">
-          <div class="mock-bell">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M10.268 21a2 2 0 0 0 3.464 0" />
-              <path d="M22 8c0-2.3-.8-4.3-2-6" />
-              <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
-              <path d="M4 2C2.8 3.7 2 5.7 2 8" />
-            </svg>
           </div>
         </div>
       </section>
