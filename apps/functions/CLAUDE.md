@@ -184,6 +184,21 @@ client: the rules deny every client write that moves a wallet or a counter.
 nothing » and « already settled » read identically from the outside, and only the first is a problem.
 
 ```bash
+npm run render-instagram-card                          # yesterday, default project
+npm run render-instagram-card -- --date 2026-08-19
+npm run render-instagram-card -- --sample              # canned days, no Firestore at all
+npm run render-instagram-card -- --production --out ./preview
+```
+
+Draws the two slides of the morning Instagram post to disk, so the card can be judged by eye before anything is able to publish it. It reads and never writes.
+
+**It runs the same code the scheduler will**, which is the one thing that makes it worth having. The rest of this directory cannot: a `.mjs` does not import TypeScript, so `send-moderation-digest.mjs` duplicates the digest's filling and shares only the HTML file with the function that sends it. That trade is fine for a few string templates and wrong for a few hundred lines of canvas drawing — a card previewed by a second implementation says nothing about the card that gets posted. So `scripts/lib/load-src.mjs` bundles `src/domains/instagram/index.ts` with the deploy build's own esbuild settings into a gitignored `.script-bundle/`, copies the fonts and the brand mark beside it so `__dirname` resolves them exactly as it does in `dist/`, and requires it.
+
+`--sample` is the flag to reach for while iterating on the design: canned days at 2, 4 and 6 options — the bounds `QUESTION_MIN_OPTIONS` and `QUESTION_MAX_OPTIONS` set — with a long question and a long StatOwrel, which is the layout's worst case and the one a real database rarely offers on the day you need it. It touches no project and needs no credentials.
+
+Without it, the day defaults to **yesterday** in Paris: the question stops taking answers at Paris midnight, so yesterday is the most recent day whose percentages are final. Two ways to end with nothing, and the script names which one — no question ran that day, or it ran and nobody answered. Neither is a bug; both are mornings the scheduler will skip.
+
+```bash
 npm run send-test-notification -- --email moi@exemple.fr   # every device of that account
 npm run send-test-notification -- --uid <uid> --date 2026-08-19
 npm run send-test-notification -- --token 'ExponentPushToken[…]' --body 'Coucou'

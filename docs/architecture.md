@@ -390,6 +390,27 @@ The order is the design: answers, calendar months, push destinations, both halve
 
 **The questions' `answer_counts` are not decremented.** The PRD asks for exactly that: the answers stop belonging to anybody and keep counting in the aggregate. Since an answer's document id *is* its author's UID, deleting it is what anonymising means here — there is no field left to blank, and the collection group is queried on the `user_id` field rather than the id, a group query having no way to filter on `__name__` across parents. That query carries an index cost the calendar's composite one does not cover: automatic single-field indexes are `COLLECTION`-scoped, so the equality across the group needs the `COLLECTION_GROUP` override declared in `firestore.indexes.json` — deploying this function means deploying the indexes with it. The reservation is only freed when it still points at this account: a handle that has changed hands is somebody else's, and the copy carried on the profile is not the authority on who holds it.
 
+### `instagram`
+
+The morning recap the Instagram account posts about the day before — the acquisition channel `docs/prd.md` never covers, since the PRD is about the app and this is about reaching people who do not have it yet.
+
+**No Cloud Function yet.** This half draws the two slides and stops there; the Graph API call, the long-lived token and the scheduler that ties them together land next. It sits in the same shape `notifications` sits in for the same reason: a service exported as helpers, absent from `src/index.ts` until it registers something.
+
+| Helper | Role |
+|---|---|
+| `dailyRecapOf(date)` | The closed day as the card needs it — question, options sorted by share, the dominant one |
+| `renderRecapCarousel(recap)` | The two slides, as JPEG buffers in carousel order |
+
+**The card is drawn on a canvas, not rendered from HTML.** `@napi-rs/canvas` is one native module doing three jobs — the drawing, the font loading and the JPEG encoding — where the obvious alternatives need two or three: an SVG rasteriser still needs a JPEG encoder beside it, and a headless browser is a 300 MB dependency and a cold start for an image posted once a morning. JPEG because Instagram's `image_url` accepts nothing else, and 1080×1350 because a carousel crops every item to the **first** one's aspect ratio and 4:5 is the tallest the feed allows.
+
+**A canvas has no fonts, and neither does a Cloud Functions container.** Archivo Black and Space Grotesk are copied out of the `@expo-google-fonts` packages `apps/app` already loads them from (`scripts/lib/instagram-assets.mjs`) and land beside the bundle in `dist/assets/`, which `helpers/canvasFonts.ts` resolves against `__dirname`. Not committed as binaries: a font in git is a font that drifts from the one the app renders in, and the whole point of the card is that somebody who has seen the result screen recognises the post. The palette is copied rather than imported, though — `helpers/brand.ts` mirrors `apps/app/src/design/tokens.ts` the way `firestore.rules` mirrors `USERNAME_PATTERN`, since depending on `@statowrel/app` would drag Expo into a Cloud Function bundle. The geometry is not copied at all: the app's tokens are points on a phone, these are pixels at 1080.
+
+**The percentages are apportioned, not rounded one by one.** Four honest roundings give 44 / 32 / 20 / 5 and a column that adds up to 101 — the first thing somebody comments under a post about statistics. `wholePercents` hands out the floors and gives the leftover points to the largest fractional parts, and the headline reads the same whole number the leader's own bar does.
+
+**An ops script runs this very code** (`npm run render-instagram-card`), which is new: the rest of `scripts/` cannot import the TypeScript in `src/`, so `send-moderation-digest.mjs` duplicates the digest's filling and shares only the HTML file. That trade is right for a few string templates and wrong for a few hundred lines of drawing — a card previewed by a second implementation says nothing about the card that gets posted. `scripts/lib/load-src.mjs` bundles an entry point with the deploy build's own esbuild settings into a gitignored directory, copies the runtime assets beside it so `__dirname` resolves them as it does in `dist/`, and requires it. `--sample` renders canned days at 2, 4 and 6 options — the bounds `QUESTION_MIN_OPTIONS` and `QUESTION_MAX_OPTIONS` set, which is the layout's worst case and the one a real database rarely offers on the day you need it — touching no project and needing no credentials.
+
+**Where the access token will live, decided here because the answer is not obvious.** Not Firestore: `firestore.rules` opens with `match /{document=**} { allow read, write: if isAdmin() }`, rules are additive, and no `allow read: if false` on a collection revokes a grant made above it — so a token in Firestore is a token every moderation-console session can read. It goes in Secret Manager.
+
 ### Building the deployable artifact
 
 `firebase.json` points at `apps/functions/dist`, a **generated** directory — not at the workspace itself. `npm run build` (esbuild, `scripts/build.mjs`) writes it: `index.js` plus a manifest listing only the registry dependencies.
@@ -399,6 +420,8 @@ The indirection exists because `firebase deploy` uploads the functions source di
 That also makes `@statowrel/models` a *dev* dependency of `apps/functions` — it is consumed at build time and never at runtime. The emulator runs the same bundle as production, with `--enable-source-maps` so stack traces still point at `src/`.
 
 The client `firebase` SDK sits in that same *dev* slot, for the same reason: nothing in `src/` imports it, but `@statowrel/models`' declarations reference `firebase/firestore` for the client half of their universal types, so `tsc` needs it and the deployed manifest does not.
+
+**Not everything in `dist/` is JavaScript.** esbuild bundles code and nothing else, so the two font files and the brand mark the Instagram card is drawn with are copied next to the bundle by the same script, into `dist/assets/`. Anything the runtime reads from disk has to travel that way — the moderation digest's HTML template is the counter-example, small enough to be inlined into the bundle by the `text` loader and therefore read from nowhere.
 
 The runtime is **nodejs22**, pinned in two places that must stay in step: `engines.node` in `apps/functions/package.json` (copied verbatim into the generated manifest, which is what Cloud Functions reads to pick the runtime) and esbuild's `target` in `scripts/build.mjs`. Node 22 is a floor, not a preference — `firebase-admin` v14 declares `engines.node >= 22` and dropped Node 18/20 outright.
 
