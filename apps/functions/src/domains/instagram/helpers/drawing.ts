@@ -111,6 +111,12 @@ export interface FittedText {
  * fixed size: the same slide has to hold « Ton dentifrice, tu le presses… » and
  * a question three times as long. Falls back to `min` and lets the text overflow
  * its box rather than truncating — a cut question is a post nobody understands.
+ *
+ * **Both the line count and every line's width are checked**, and the second is
+ * not redundant: `wrapText` cannot break inside a word, so a single long one —
+ * « PERFECTIONNISTE », the whole of slide 1 — comes back as one line at every
+ * size, and counting lines alone would accept the largest and print it off both
+ * edges of the card.
  */
 export const fitText = (
   ctx: SKRSContext2D,
@@ -129,8 +135,9 @@ export const fitText = (
     ctx.font = font(family, size);
 
     const lines = wrapText(ctx, text, maxWidth);
+    const fits = lines.length <= maxLines && lines.every((line) => ctx.measureText(line).width <= maxWidth);
 
-    if (lines.length <= maxLines) {
+    if (fits) {
       return { lines, fontSize: size, lineHeight: Math.round(size * lineHeightRatio) };
     }
   }
@@ -196,3 +203,24 @@ export const ellipsize = (ctx: SKRSContext2D, text: string, family: string, size
 };
 
 export const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
+
+/**
+ * Draws inside a frame rotated around `(cx, cy)`, which becomes the origin.
+ *
+ * The cards of the recap are tilted a few degrees each — the collage look, and
+ * the one thing that keeps three flat rectangles from reading as a slideshow.
+ * Everything the callback draws is positioned **relative to the card's own
+ * centre**, so a surface is `{ x: -width / 2, y: -height / 2, … }` and its text
+ * rides the tilt with it rather than being rotated a second time.
+ */
+export const withRotation = (
+  ctx: SKRSContext2D,
+  { cx, cy, degrees }: { cx: number; cy: number; degrees: number },
+  draw: () => void,
+): void => {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((degrees * Math.PI) / 180);
+  draw();
+  ctx.restore();
+};

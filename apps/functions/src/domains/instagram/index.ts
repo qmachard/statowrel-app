@@ -2,7 +2,7 @@
  * Instagram — the daily recap the account posts every morning.
  *
  * The domain registers **no Cloud Function yet**, which is why it is absent
- * from `src/index.ts`: this half draws the two slides and nothing sends them.
+ * from `src/index.ts`: this half draws the three slides and nothing sends them.
  * `notifications` sits in the same shape for the same reason — a service the
  * rest of the backend goes through, exported as helpers rather than as
  * registrations.

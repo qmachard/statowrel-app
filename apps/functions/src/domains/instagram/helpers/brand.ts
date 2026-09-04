@@ -54,6 +54,8 @@ export const radius = {
   sm: 20,
   DEFAULT: 32,
   lg: 40,
+  /** What the app icon's own square is rounded to, so it reads as the icon a store shows. */
+  '2xl': 72,
   full: 9999,
 } as const;
 

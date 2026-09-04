@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// Renders the two slides of the morning Instagram post to disk, so the card can
+// Renders the three slides of the morning Instagram post to disk, so the card can
 // be judged by eye before anything is able to publish it.
 //
 //   npm run render-instagram-card                          # yesterday, default project

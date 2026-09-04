@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { type SKRSContext2D, createCanvas, loadImage } from '@napi-rs/canvas';
 
-import { DAILY_QUESTION_TIME_ZONE, PUBLICATION_HOUR } from '@statowrel/models';
+import { DAILY_QUESTION_TIME_ZONE } from '@statowrel/models';
 
 import {
   BASELINE,
@@ -11,13 +11,13 @@ import {
   CARD_PADDING,
   CARD_WIDTH,
   INSTAGRAM_HANDLE,
-  SHADOW_OFFSET,
   fonts,
   palette,
   radius,
 } from './brand';
 import { ASSETS_DIR, registerBrandFonts } from './canvasFonts';
 import {
+  type FittedText,
   type Rect,
   clamp,
   drawLines,
@@ -27,6 +27,7 @@ import {
   font,
   roundRectPath,
   textBlockHeight,
+  withRotation,
   wrapText,
 } from './drawing';
 import type { DailyRecap } from './recapData';
@@ -42,23 +43,37 @@ const CONTENT_WIDTH = CARD_WIDTH - CARD_PADDING * 2;
  */
 const JPEG_QUALITY = 92;
 
-/** « jeudi 3 septembre », for the day the recap is about. */
-const dayLabel = (date: string): string => new Intl.DateTimeFormat('fr-FR', {
-  timeZone: DAILY_QUESTION_TIME_ZONE,
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  // Read at noon UTC rather than at midnight: a `YYYY-MM-DD` parsed as UTC
-  // midnight is still the previous day in a timezone west of Greenwich, and
-  // Paris is east of it in winter only.
-}).format(new Date(`${date}T12:00:00Z`));
+/**
+ * How far each card leans, in degrees.
+ *
+ * Opposite ways and by different amounts on purpose: three rectangles at the
+ * same angle read as a template, two leaning against each other read as a
+ * collage. The third slide stays straight — it is the one asking for something,
+ * and a tilted button reads as decoration.
+ */
+const RESULT_TILT = -5;
+const QUESTION_TILT = 2.5;
+
+/** « Vendredi 21 août » — the day the recap is about, capitalised as a line of its own. */
+const dayLabel = (date: string): string => {
+  const label = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: DAILY_QUESTION_TIME_ZONE,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    // Read at noon UTC rather than at midnight: a `YYYY-MM-DD` parsed as UTC
+    // midnight is still the previous day in a timezone west of Greenwich, and
+    // Paris is east of it in winter only.
+  }).format(new Date(`${date}T12:00:00Z`));
+
+  return `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
+};
 
 /**
- * A percentage as the card writes it — « 72 % », never « 71,8 % ».
+ * A percentage as the card writes it — « 24 % », never « 23,8 % ».
  *
  * It is handed the whole number `recapData` apportioned rather than a share to
- * round here: the headline and the leader's own bar have to print the same
- * figure, and two roundings of one share is exactly how they stop doing that.
+ * round here, so nothing on the post can round the same share two ways.
  */
 const percentLabel = (percent: number): string => `${percent} %`;
 
@@ -67,62 +82,90 @@ const drawBackground = (ctx: SKRSContext2D, fill: string): void => {
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
 };
 
-/** The black pill the brand name sits in — the mark both slides open or close on. */
-const drawPill = (
+/**
+ * The two lines every slide is framed by: the day, top left, and what to do
+ * next, bottom right.
+ *
+ * They sit on the page rather than on the card, and they are the only things
+ * that do — which is what lets the card lean without taking the reading order
+ * with it. The bottom line always ends in an arrow, because the first two
+ * slides are asking for a swipe and the last one for a tap, and the gesture is
+ * the same shape either way.
+ */
+const drawFrame = (
   ctx: SKRSContext2D,
-  { x, y, label, fontSize, height }: { x: number; y: number; label: string; fontSize: number; height: number },
-): number => {
-  ctx.font = font(fonts.head, fontSize);
-
-  const width = Math.round(ctx.measureText(label).width) + height;
-
-  drawSurface(ctx, { x, y, width, height }, { fill: palette.foreground, radius: radius.full, shadow: false });
-
-  ctx.fillStyle = palette.card;
+  { date, action, color, actionColor }: { date: string; action: string; color: string; actionColor: string },
+): void => {
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, x + height / 2, y + height / 2 + 2);
-  ctx.textBaseline = 'alphabetic';
 
-  return width;
+  ctx.font = font(fonts.sansMedium, 34);
+  ctx.fillStyle = color;
+  ctx.fillText(dayLabel(date), CARD_PADDING, CARD_PADDING + 26);
+
+  ctx.font = font(fonts.sansMedium, 42);
+  ctx.fillStyle = actionColor;
+  ctx.textAlign = 'right';
+  ctx.fillText(`${action} →`, CARD_WIDTH - CARD_PADDING, CARD_HEIGHT - CARD_PADDING - 26);
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 };
 
 /**
- * The headline: the share, then « des gens sont », then the StatOwrel.
+ * Slide 1 — the number, and nothing else.
  *
- * It is handed a **box** rather than a position, and sizes itself inside it,
- * because it is the block that absorbs the layout's slack: the question above
- * it is between one and three lines and the bars below it between two and six
- * rows (`QUESTION_MIN_OPTIONS`/`QUESTION_MAX_OPTIONS`), so what is left for the
- * headline swings by a factor of two from one day to the next. Sizing it from
- * its box is what keeps the card from either overflowing on a six-option day or
- * leaving a hole on a two-option one.
+ * No question, no bars, no breakdown: the whole slide is « 24 % des gens sont
+ * PERFECTIONNISTE », which is the only thing that can be read from a feed at
+ * thumb speed. What people were answering is slide 2's job, and holding it back
+ * is what makes the carousel worth swiping — a post that says everything on its
+ * first image is a post nobody swipes, and Instagram counts the swipe.
  */
-const drawHeadline = (ctx: SKRSContext2D, box: Rect, recap: DailyRecap): void => {
-  drawSurface(ctx, box, { fill: palette.accent, radius: radius.DEFAULT });
+const renderResultSlide = (recap: DailyRecap): Buffer => {
+  const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
+  const ctx = canvas.getContext('2d');
 
-  const innerWidth = box.width - 140;
-  const centerX = box.x + box.width / 2;
-
-  const percentSize = clamp(Math.round(box.height * 0.40), 84, 190);
-  const percent = { lines: [ percentLabel(recap.top.percent) ], fontSize: percentSize, lineHeight: percentSize };
-
-  const leadSize = clamp(Math.round(percentSize * 0.26), 28, 46);
-  const lead = { lines: [ 'des gens sont' ], fontSize: leadSize, lineHeight: Math.round(leadSize * 1.3) };
-
-  const stat = fitText(ctx, recap.top.statLabel.toUpperCase(), {
-    family: fonts.head,
-    maxWidth: innerWidth,
-    maxLines: 2,
-    max: clamp(Math.round(percentSize * 0.64), 46, 108),
-    min: 36,
+  drawBackground(ctx, palette.background);
+  drawFrame(ctx, {
+    date: recap.date,
+    action: 'Découvre la StatOwrel',
+    color: palette['muted-foreground'],
+    actionColor: palette.foreground,
   });
 
-  const total = textBlockHeight(percent) + textBlockHeight(lead) + textBlockHeight(stat);
-  let y = box.y + Math.round((box.height - total) / 2);
+  const cardWidth = 940;
+  const cardHeight = 540;
+  const innerWidth = cardWidth - 80;
 
-  y = drawLines(ctx, percent, { x: centerX, y, family: fonts.head, color: palette.card, align: 'center' });
-  y = drawLines(ctx, lead, { x: centerX, y, family: fonts.sans, color: palette.card, align: 'center' });
-  drawLines(ctx, stat, { x: centerX, y, family: fonts.head, color: palette.primary, align: 'center' });
+  withRotation(ctx, { cx: CARD_WIDTH / 2, cy: 680, degrees: RESULT_TILT }, () => {
+    drawSurface(ctx, { x: -cardWidth / 2, y: -cardHeight / 2, width: cardWidth, height: cardHeight }, {
+      fill: palette.accent,
+      radius: radius.lg,
+    });
+
+    const percentSize = 190;
+    const percent = { lines: [ percentLabel(recap.top.percent) ], fontSize: percentSize, lineHeight: percentSize };
+    const lead = { lines: [ 'des gens sont' ], fontSize: 44, lineHeight: 58 };
+
+    // The StatOwrel is what the slide is *about*, so it takes every pixel the
+    // card can give it — a one-word « SAGE » lands at the ceiling, a
+    // 30-character one (`QUESTION_OPTION_STAT_LABEL_MAX_LENGTH`) walks down to
+    // two lines rather than being cut.
+    const stat = fitText(ctx, recap.top.statLabel.toUpperCase(), {
+      family: fonts.head,
+      maxWidth: innerWidth,
+      maxLines: 2,
+      max: 116,
+      min: 44,
+    });
+
+    let y = -(textBlockHeight(percent) + textBlockHeight(lead) + textBlockHeight(stat)) / 2;
+
+    y = drawLines(ctx, percent, { x: 0, y, family: fonts.head, color: palette.card, align: 'center' });
+    y = drawLines(ctx, lead, { x: 0, y, family: fonts.sans, color: palette.card, align: 'center' });
+    drawLines(ctx, stat, { x: 0, y, family: fonts.head, color: palette.card, align: 'center' });
+  });
+
+  return canvas.toBuffer('image/jpeg', JPEG_QUALITY);
 };
 
 /**
@@ -131,15 +174,16 @@ const drawHeadline = (ctx: SKRSContext2D, box: Rect, recap: DailyRecap): void =>
  *
  * The same anatomy as the app's `AnswerShareRow`, so somebody who has seen the
  * result screen recognises the post: the dominant answer takes `primary`, the
- * others `muted`, and the track underneath is the card white.
+ * others `muted`, and the track underneath is the card it sits on.
+ *
+ * Drawn with paths and a clip rather than two rectangles, so the fill keeps the
+ * pill's round end instead of squaring it off at 100 %.
  */
 const drawOptionRow = (
   ctx: SKRSContext2D,
   rect: Rect,
   { label, share, percent, dominant }: { label: string; share: number; percent: number; dominant: boolean },
 ): void => {
-  drawSurface(ctx, rect, { fill: palette.card, radius: radius.full, shadow: false });
-
   ctx.save();
   roundRectPath(ctx, rect, radius.full);
   ctx.clip();
@@ -150,12 +194,14 @@ const drawOptionRow = (
   ctx.fillRect(rect.x, rect.y, Math.max(rect.width * share, rect.height), rect.height);
   ctx.restore();
 
-  ctx.lineWidth = BORDER_WIDTH;
+  // Thinner than the card's own border: the surface around these rows already
+  // carries the full weight, and repeating it six times inside makes a grid.
+  ctx.lineWidth = BORDER_WIDTH / 2;
   ctx.strokeStyle = palette.foreground;
   roundRectPath(ctx, rect, radius.full);
   ctx.stroke();
 
-  const textSize = clamp(Math.round(rect.height * 0.36), 26, 40);
+  const textSize = clamp(Math.round(rect.height * 0.38), 24, 38);
   const inset = Math.round(rect.height * 0.42);
 
   ctx.textBaseline = 'middle';
@@ -170,7 +216,7 @@ const drawOptionRow = (
 
   ctx.textAlign = 'left';
   ctx.fillText(
-    ellipsize(ctx, label, fonts.sansMedium, textSize, rect.width - inset * 2 - percentWidth - 32),
+    ellipsize(ctx, label, fonts.sansMedium, textSize, rect.width - inset * 2 - percentWidth - 28),
     rect.x + inset,
     rect.y + rect.height / 2,
   );
@@ -179,135 +225,114 @@ const drawOptionRow = (
 };
 
 /**
- * How tall each bar is, and the gap between them, for `count` options.
+ * Slide 2 — the question, and what everybody answered.
  *
- * The rows are what the rest of the card is laid out around, so their height is
- * decided first and from the only thing that varies: a two-option day gets
- * generous bars, a six-option day gets the tightest ones that still take a
- * 26px label. The headline then takes whatever is left.
+ * Slide 1 gave one number; this is the column behind it, one bar per option
+ * with its own share as the width of its fill. It is the slide that earns a
+ * comment: « 24 % » is a fact, the gap between the second and the third answer
+ * is an argument.
  */
-const rowMetricsFor = (count: number): { height: number; gap: number } => {
-  if (count <= 3) return { height: 104, gap: 20 };
-  if (count === 4) return { height: 92, gap: 20 };
-  if (count === 5) return { height: 82, gap: 16 };
-
-  return { height: 70, gap: 12 };
-};
-
-const drawFooter = (ctx: SKRSContext2D, y: number): void => {
-  ctx.font = font(fonts.sans, 28);
-  ctx.fillStyle = palette['muted-foreground'];
-  ctx.textBaseline = 'middle';
-
-  ctx.fillText(INSTAGRAM_HANDLE, CARD_PADDING, y);
-
-  ctx.textAlign = 'right';
-  ctx.fillText(`une question par jour, à ${PUBLICATION_HOUR}h`, CARD_WIDTH - CARD_PADDING, y);
-  ctx.textAlign = 'left';
-
-  ctx.textBaseline = 'alphabetic';
-};
-
-/** Slide 1 — the day: its question, the share that won it, and every option's bar. */
-const renderResultSlide = (recap: DailyRecap): Buffer => {
+const renderQuestionSlide = (recap: DailyRecap): Buffer => {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
   const ctx = canvas.getContext('2d');
 
-  drawBackground(ctx, palette.background);
-
-  const headerHeight = 68;
-  const pillWidth = drawPill(ctx, {
-    x: CARD_PADDING,
-    y: CARD_PADDING,
-    label: 'STATOWREL',
-    fontSize: 30,
-    height: headerHeight,
+  drawBackground(ctx, palette.accent);
+  drawFrame(ctx, {
+    date: recap.date,
+    action: 'Télécharge StatOwrel',
+    // The date is a caption on this slide, not a title: white at full strength
+    // would compete with the question, which is the one thing on the page.
+    color: 'rgba(255, 255, 255, 0.72)',
+    actionColor: palette.foreground,
   });
 
-  ctx.font = font(fonts.sansMedium, 30);
-  ctx.fillStyle = palette['muted-foreground'];
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'right';
-  ctx.fillText(
-    ellipsize(ctx, dayLabel(recap.date), fonts.sansMedium, 30, CONTENT_WIDTH - pillWidth - 32),
-    CARD_WIDTH - CARD_PADDING,
-    CARD_PADDING + headerHeight / 2,
-  );
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
+  const cardWidth = 950;
+  const inset = 56;
+  // The rows are what the card is sized around: a two-option day gets generous
+  // bars, a six-option one the tightest that still takes a 24px label. The card
+  // then grows to whatever they need, rather than the rows being squeezed into
+  // a fixed one.
+  const rowHeight = clamp(Math.round(460 / recap.options.length), 62, 104);
+  const rowGap = recap.options.length <= 4 ? 24 : 18;
 
-  const question = fitText(ctx, recap.question, {
-    family: fonts.head,
-    maxWidth: CONTENT_WIDTH - 96,
-    maxLines: 3,
-    max: 58,
-    min: 38,
-  });
+  const question: FittedText = (() => {
+    ctx.font = font(fonts.head, 54);
 
-  const questionCard = {
-    x: CARD_PADDING,
-    y: CARD_PADDING + headerHeight + 44,
-    width: CONTENT_WIDTH,
-    height: textBlockHeight(question) + 80,
-  };
+    return fitText(ctx, recap.question, {
+      family: fonts.head,
+      maxWidth: cardWidth - inset * 2,
+      maxLines: 3,
+      max: 54,
+      min: 36,
+    });
+  })();
 
-  drawSurface(ctx, questionCard, { fill: palette.card, radius: radius.DEFAULT });
-  drawLines(ctx, question, {
-    x: questionCard.x + 48,
-    y: questionCard.y + 40,
-    family: fonts.head,
-    color: palette.foreground,
-  });
-
-  const { height: rowHeight, gap: rowGap } = rowMetricsFor(recap.options.length);
   const rowsHeight = recap.options.length * rowHeight + (recap.options.length - 1) * rowGap;
+  const cardHeight = inset * 2 + textBlockHeight(question) + 44 + rowsHeight;
 
-  const footerY = CARD_HEIGHT - CARD_PADDING - 22;
-  const rowsY = footerY - 62 - rowsHeight;
+  withRotation(ctx, { cx: CARD_WIDTH / 2, cy: CARD_HEIGHT / 2, degrees: QUESTION_TILT }, () => {
+    const top = -cardHeight / 2;
 
-  const headlineY = questionCard.y + questionCard.height + SHADOW_OFFSET + 36;
+    drawSurface(ctx, { x: -cardWidth / 2, y: top, width: cardWidth, height: cardHeight }, {
+      fill: palette.card,
+      radius: radius.lg,
+    });
 
-  drawHeadline(ctx, {
-    x: CARD_PADDING,
-    y: headlineY,
-    width: CONTENT_WIDTH,
-    height: rowsY - 36 - SHADOW_OFFSET - headlineY,
-  }, recap);
+    const y = drawLines(ctx, question, {
+      x: -cardWidth / 2 + inset,
+      y: top + inset,
+      family: fonts.head,
+      color: palette.foreground,
+    });
 
-  recap.options.forEach((option, index) => {
-    drawOptionRow(ctx, {
-      x: CARD_PADDING,
-      y: rowsY + index * (rowHeight + rowGap),
-      width: CONTENT_WIDTH,
-      height: rowHeight,
-    }, {
-      label: option.label,
-      share: option.share,
-      percent: option.percent,
-      dominant: option.id === recap.top.id,
+    recap.options.forEach((option, index) => {
+      drawOptionRow(ctx, {
+        x: -cardWidth / 2 + inset,
+        y: y + 44 + index * (rowHeight + rowGap),
+        width: cardWidth - inset * 2,
+        height: rowHeight,
+      }, {
+        label: option.label,
+        share: option.share,
+        percent: option.percent,
+        dominant: option.id === recap.top.id,
+      });
     });
   });
-
-  drawFooter(ctx, footerY);
 
   return canvas.toBuffer('image/jpeg', JPEG_QUALITY);
 };
 
-/** Slide 2 — the only thing the post asks for: install the app. */
+/** Slide 3 — the only thing the post asks for: install the app. */
 const renderCallToActionSlide = async (): Promise<Buffer> => {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
   const ctx = canvas.getContext('2d');
 
   drawBackground(ctx, palette.primary);
 
-  // The Android adaptive foreground, which is the only one of the three brand
-  // PNGs with a transparent ground — and it frames the star at 66% of its
-  // canvas, against the circle a launcher may mask it down to. So it is drawn
-  // large: two thirds of 520px is the star, the rest is that framing.
-  const star = await loadImage(path.join(ASSETS_DIR, 'star.png'));
-  const starSize = 520;
+  const iconSize = 340;
+  const iconX = (CARD_WIDTH - iconSize) / 2;
+  const iconY = 150;
+  const iconRect = { x: iconX, y: iconY, width: iconSize, height: iconSize };
 
-  ctx.drawImage(star, (CARD_WIDTH - starSize) / 2, 110, starSize, starSize);
+  // The icon as a store listing shows it — in its own rounded square, wearing
+  // this design system's border and shadow rather than the platform's mask. It
+  // is drawn on the frame the surface just laid down, then clipped to it, so
+  // the artwork cannot spill over the corners.
+  drawSurface(ctx, iconRect, { fill: palette.card, radius: radius['2xl'] });
+
+  const icon = await loadImage(path.join(ASSETS_DIR, 'icon.png'));
+
+  ctx.save();
+  roundRectPath(ctx, iconRect, radius['2xl']);
+  ctx.clip();
+  ctx.drawImage(icon, iconX, iconY, iconSize, iconSize);
+  ctx.restore();
+
+  ctx.lineWidth = BORDER_WIDTH;
+  ctx.strokeStyle = palette.foreground;
+  roundRectPath(ctx, iconRect, radius['2xl']);
+  ctx.stroke();
 
   const centerX = CARD_WIDTH / 2;
 
@@ -320,7 +345,7 @@ const renderCallToActionSlide = async (): Promise<Buffer> => {
     lineHeightRatio: 1.06,
   });
 
-  let y = drawLines(ctx, title, { x: centerX, y: 660, family: fonts.head, color: palette.foreground, align: 'center' });
+  let y = drawLines(ctx, title, { x: centerX, y: 600, family: fonts.head, color: palette.foreground, align: 'center' });
 
   ctx.font = font(fonts.sans, 36);
   const baseline = { lines: wrapText(ctx, BASELINE, CONTENT_WIDTH - 40), fontSize: 36, lineHeight: 50 };
@@ -338,18 +363,15 @@ const renderCallToActionSlide = async (): Promise<Buffer> => {
 
   ctx.font = font(fonts.head, 40);
   const buttonWidth = Math.round(ctx.measureText(buttonLabel).width) + 96;
-
-  const buttonY = y + 42;
+  const buttonY = y + 44;
 
   // White rather than black: the shadow under every neobrutalist surface *is*
   // black, so a black button on this yellow would print its own shadow as a
   // thicker edge and lose the offset that makes the style read.
-  drawSurface(ctx, {
-    x: centerX - buttonWidth / 2,
-    y: buttonY,
-    width: buttonWidth,
-    height: buttonHeight,
-  }, { fill: palette.card, radius: radius.full });
+  drawSurface(ctx, { x: centerX - buttonWidth / 2, y: buttonY, width: buttonWidth, height: buttonHeight }, {
+    fill: palette.card,
+    radius: radius.full,
+  });
 
   ctx.fillStyle = palette.foreground;
   ctx.textAlign = 'center';
@@ -357,7 +379,6 @@ const renderCallToActionSlide = async (): Promise<Buffer> => {
   ctx.fillText(buttonLabel, centerX, buttonY + buttonHeight / 2 + 2);
 
   ctx.font = font(fonts.sans, 30);
-  ctx.fillStyle = palette.foreground;
   ctx.fillText(INSTAGRAM_HANDLE, centerX, CARD_HEIGHT - CARD_PADDING - 22);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
@@ -366,14 +387,15 @@ const renderCallToActionSlide = async (): Promise<Buffer> => {
 };
 
 /**
- * The two slides of the morning post, in carousel order.
+ * The three slides of the morning post, in carousel order: the stat, the
+ * question it answers, the app.
  *
- * Both are drawn at the same size on purpose: Instagram crops every item of a
- * carousel to the **first** one's aspect ratio, so a second slide of another
+ * All three are drawn at the same size on purpose: Instagram crops every item
+ * of a carousel to the **first** one's aspect ratio, so a slide of another
  * shape would come back cut rather than letterboxed.
  */
 export const renderRecapCarousel = async (recap: DailyRecap): Promise<Buffer[]> => {
   registerBrandFonts();
 
-  return [ renderResultSlide(recap), await renderCallToActionSlide() ];
+  return [ renderResultSlide(recap), renderQuestionSlide(recap), await renderCallToActionSlide() ];
 };

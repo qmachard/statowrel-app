@@ -394,12 +394,14 @@ The order is the design: answers, calendar months, push destinations, both halve
 
 The morning recap the Instagram account posts about the day before — the acquisition channel `docs/prd.md` never covers, since the PRD is about the app and this is about reaching people who do not have it yet.
 
-**No Cloud Function yet.** This half draws the two slides and stops there; the Graph API call, the long-lived token and the scheduler that ties them together land next. It sits in the same shape `notifications` sits in for the same reason: a service exported as helpers, absent from `src/index.ts` until it registers something.
+**No Cloud Function yet.** This half draws the three slides and stops there; the Graph API call, the long-lived token and the scheduler that ties them together land next. It sits in the same shape `notifications` sits in for the same reason: a service exported as helpers, absent from `src/index.ts` until it registers something.
 
 | Helper | Role |
 |---|---|
 | `dailyRecapOf(date)` | The closed day as the card needs it — question, options sorted by share, the dominant one |
-| `renderRecapCarousel(recap)` | The two slides, as JPEG buffers in carousel order |
+| `renderRecapCarousel(recap)` | The three slides, as JPEG buffers in carousel order |
+
+**The carousel is three slides, and the order is the argument.** The stat alone — « 24 % des gens sont PERFECTIONNISTE » — is the only thing readable from a feed at thumb speed, so it goes first and carries nothing else. The question and every option's bar come second, which is where a post about statistics earns its comments: the number is a fact, the gap between the second and the third answer is an argument. The app is third, asking for the one thing the two before it have made somebody want. The first two cards lean a few degrees, opposite ways and by different amounts — three rectangles at the same angle read as a template — and the third stays straight, being the one that asks for something.
 
 **The card is drawn on a canvas, not rendered from HTML.** `@napi-rs/canvas` is one native module doing three jobs — the drawing, the font loading and the JPEG encoding — where the obvious alternatives need two or three: an SVG rasteriser still needs a JPEG encoder beside it, and a headless browser is a 300 MB dependency and a cold start for an image posted once a morning. JPEG because Instagram's `image_url` accepts nothing else, and 1080×1350 because a carousel crops every item to the **first** one's aspect ratio and 4:5 is the tallest the feed allows.
 

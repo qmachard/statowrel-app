@@ -36,8 +36,8 @@ const FONT_SPECIFIERS = [
   '@expo-google-fonts/space-grotesk/500Medium/SpaceGrotesk_500Medium.ttf',
 ];
 
-/** The brand mark on the call-to-action slide, committed because it is art rather than a dependency. */
-const IMAGE_FILES = [ 'src/domains/instagram/assets/star.png' ];
+/** The app icon, framed on the call-to-action slide — committed because it is art rather than a dependency. */
+const IMAGE_FILES = [ 'src/domains/instagram/assets/icon.png' ];
 
 /** Copies every runtime asset into `<bundleDir>/assets/`. Returns the directory it wrote to. */
 export const copyInstagramAssets = async (bundleDir) => {

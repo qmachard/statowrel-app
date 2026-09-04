@@ -190,7 +190,7 @@ npm run render-instagram-card -- --sample              # canned days, no Firesto
 npm run render-instagram-card -- --production --out ./preview
 ```
 
-Draws the two slides of the morning Instagram post to disk, so the card can be judged by eye before anything is able to publish it. It reads and never writes.
+Draws the three slides of the morning Instagram post to disk — the stat, the question with its bars, the app — so the card can be judged by eye before anything is able to publish it. It reads and never writes.
 
 **It runs the same code the scheduler will**, which is the one thing that makes it worth having. The rest of this directory cannot: a `.mjs` does not import TypeScript, so `send-moderation-digest.mjs` duplicates the digest's filling and shares only the HTML file with the function that sends it. That trade is fine for a few string templates and wrong for a few hundred lines of canvas drawing — a card previewed by a second implementation says nothing about the card that gets posted. So `scripts/lib/load-src.mjs` bundles `src/domains/instagram/index.ts` with the deploy build's own esbuild settings into a gitignored `.script-bundle/`, copies the fonts and the brand mark beside it so `__dirname` resolves them exactly as it does in `dist/`, and requires it.
 
