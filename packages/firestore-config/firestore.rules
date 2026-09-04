@@ -236,7 +236,46 @@ service cloud.firestore {
                && request.resource.data.get('streak_best', 0) == resource.data.get('streak_best', 0)
                && request.resource.data.get('answers_count', 0) == resource.data.get('answers_count', 0)
                && request.resource.data.get('streak_last_answered_on', null) == resource.data.get('streak_last_answered_on', null)
+               && keepsReferralCounters()
                && keepsWallet();
+      }
+
+      // The referral rail's own two backend fields (docs/prd.md §4.9), split
+      // out of the counters above only because they are read together with
+      // `keepsReferrer()` below: `referrals_count` is what the Menu shows for
+      // the newcomers this account brought, `referral_rewarded_at` is the
+      // marker that makes the payout happen exactly once. Both are written by
+      // `referrals-onReferredAnswerCreated`, admin-side, in the transaction
+      // that moves the wallet — so a client that could move either could pay
+      // itself twice.
+      function keepsReferralCounters() {
+        return request.resource.data.get('referrals_count', 0) == resource.data.get('referrals_count', 0)
+               && request.resource.data.get('referral_rewarded_at', null) == resource.data.get('referral_rewarded_at', null);
+      }
+
+      // Who brought this account in — set at `create` and never again.
+      //
+      // **Create-only on purpose, and this is the whole anti-fraud model.**
+      // Letting an update set it from null would let every account that has
+      // been using the app for a year suddenly name a friend as its sponsor
+      // and collect on the next answer — a retroactive faucet over the entire
+      // install base. A referral is a fact about how an account started, so it
+      // is written when the account starts or not at all.
+      function keepsReferrer() {
+        return request.resource.data.get('referred_by', null) == resource.data.get('referred_by', null);
+      }
+
+      // The sponsor named at creation has to be somebody, and somebody else.
+      //
+      // `exists()` costs a document read charged to the rules, which is why it
+      // only ever runs on a profile `create` — once per account, ever. Without
+      // it `referred_by` is a free-text field pointing at nothing, and the
+      // payout trigger would be the first thing to find out.
+      function hasValidReferrer() {
+        return request.resource.data.get('referred_by', null) == null
+               || (request.resource.data.referred_by is string
+                   && request.resource.data.referred_by != user_id
+                   && exists(/databases/$(database)/documents/v1_users/$(request.resource.data.referred_by)));
       }
 
       // The wallet (docs/prd.md §4.7) is the same deal as the counters above,
@@ -290,15 +329,26 @@ service cloud.firestore {
                && (request.resource.data.get('statcoin_balance', 0) == 50
                    || request.resource.data.get('statcoin_balance', 0) == 0)
                && request.resource.data.get('statcoins_earned', 0) == 0
-               && request.resource.data.get('statcoins_spent', 0) == 0;
+               && request.resource.data.get('statcoins_spent', 0) == 0
+               // Nobody has been brought in by an account that does not exist
+               // yet, and nothing has been settled on it. `referred_by` is the
+               // one referral field a create *may* carry — see
+               // `hasValidReferrer()`.
+               && request.resource.data.get('referrals_count', 0) == 0
+               && request.resource.data.get('referral_rewarded_at', null) == null;
       }
 
       allow read: if isAuthenticated();
-      allow create: if isOwner(user_id) && isValidProfile() && ownsUsername() && startsWithInitialBalance();
+      allow create: if isOwner(user_id)
+                    && isValidProfile()
+                    && ownsUsername()
+                    && startsWithInitialBalance()
+                    && hasValidReferrer();
       allow update: if isOwner(user_id)
                     && isValidProfile()
                     && ownsUsername()
                     && keepsBackendCounters()
+                    && keepsReferrer()
                     && request.resource.data.created_at == resource.data.created_at;
       allow delete: if false;
 
@@ -416,6 +466,25 @@ service cloud.firestore {
         // refused invitation leaves nothing behind, so the sender is never
         // shown a "declined" state and re-inviting later starts over.
         allow delete: if isPartOfPair();
+      }
+
+      // Who this account brought into the app, one document per newcomer that
+      // actually paid out (docs/prd.md §4.9).
+      //
+      // Private to its owner, unlike the profile above which every signed-in
+      // user reads: it names accounts that never agreed to appear on somebody
+      // else's list, and the sponsor is the only person the question "who did I
+      // bring" is asked by. It is also what replaces a query over `v1_users`
+      // filtered on `referred_by` — rules cannot scope a `list` to a filter, so
+      // that query would have been a directory read in everything but name.
+      //
+      // Written by `referrals-onReferredAnswerCreated` alone, admin-side
+      // through the wildcard at the top, in the transaction that credits both
+      // wallets. Never by a client: an entry here is a payout receipt, and a
+      // receipt its beneficiary can write is not one.
+      match /v1_user_referrals/{referred_user_id} {
+        allow read: if isOwner(user_id);
+        allow write: if false;
       }
     }
 

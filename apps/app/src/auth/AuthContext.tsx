@@ -36,7 +36,8 @@ export interface AuthContextValue {
   /** True while the session has no username yet: the onboarding sheet is what settles it. */
   needsOnboarding: boolean;
   /** Claims the chosen username and writes the profile, which is what opens the app up. */
-  completeOnboarding: (username: string) => Promise<void>;
+  /** `referrerUsername` is the sponsor's handle typed on the sheet — empty for everybody who arrived alone (docs/prd.md §4.9). */
+  completeOnboarding: (username: string, referrerUsername?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -99,7 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // `initializing` is what holds the splash screen until then.
   const needsOnboarding = current !== null && (current.profile === null || current.profile.username === '');
 
-  const completeOnboarding = useCallback(async (username: string) => {
+  const completeOnboarding = useCallback(async (username: string, referrerUsername = '') => {
     if (!user) {
       throw new Error('completeOnboarding requires a signed-in user.');
     }
@@ -107,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // The subscription above is what clears `needsOnboarding`: Firestore hands
     // a local write straight to its own listeners, so the sheet closes on the
     // write rather than on the round trip.
-    await createUserProfile(user, username, profile);
+    await createUserProfile(user, username, profile, referrerUsername);
   }, [ user, profile ]);
 
   const value = useMemo<AuthContextValue>(() => ({

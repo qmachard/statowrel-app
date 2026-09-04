@@ -48,6 +48,25 @@ export const onboardingSchema = z.object({
     .min(USERNAME_MIN_LENGTH, `Ton nom d'utilisateur doit faire au moins ${USERNAME_MIN_LENGTH} caractères.`)
     .max(USERNAME_MAX_LENGTH, `Ton nom d'utilisateur doit faire au plus ${USERNAME_MAX_LENGTH} caractères.`)
     .regex(USERNAME_PATTERN, 'Lettres, chiffres, point et tiret bas seulement, et il doit commencer et finir par une lettre ou un chiffre.'),
+  /**
+   * The sponsor's handle — docs/prd.md §4.9, and the *only* moment it can be
+   * given: `referred_by` is written with the profile and frozen afterwards, so
+   * there is no settings screen to come back and fill it in on.
+   *
+   * Optional, and an empty string is the way it is left empty rather than
+   * `undefined`: the field is always mounted, so `react-hook-form` always hands
+   * back a string. Shape-checked but not resolved here — whether anybody holds
+   * the handle is a Firestore read, and it belongs in `createUserProfile` with
+   * the write it guards.
+   */
+  referrer: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine(
+      (value) => value === '' || USERNAME_PATTERN.test(value),
+      'Ce nom d\'utilisateur n\'a pas la bonne forme.',
+    ),
 });
 
 export type OnboardingValues = z.infer<typeof onboardingSchema>;

@@ -13,10 +13,55 @@ import {
   usernameConverter,
 } from '@statowrel/models';
 
+import { track } from '@/analytics/analytics';
 import { isFirebaseError } from '@/lib/firebaseError';
 import { getDocumentRef } from '@/lib/firestore';
 
-import { UsernameTakenError } from './errors';
+import { ReferrerNotFoundError, UsernameTakenError } from './errors';
+
+/**
+ * Turns the handle typed under « Qui t'a fait venir ? » into the sponsor's UID
+ * — docs/prd.md §4.9.
+ *
+ * **Both documents are read, not just the reservation.** `firestore.rules`
+ * accepts `referred_by` on a profile `create` only if a profile exists at that
+ * UID, and a denied create is a user who cannot finish signing up at all. The
+ * window where a reservation exists without its profile is real: they are two
+ * sequential writes, in that order, a few milliseconds apart (see
+ * `createUserProfile` below). Reading both here turns a hard onboarding failure
+ * into « on ne connaît pas ce pseudo » under the field, which is recoverable.
+ *
+ * An empty field is nobody, and that is not an error — the sponsor is optional.
+ * One's own handle is dropped rather than refused: it can only be typed while
+ * completing a profile that already holds it, and nobody is their own sponsor.
+ */
+const resolveReferrer = async (userId: string, typed: string): Promise<string | null> => {
+  const handle = normalizeUsername(typed);
+
+  if (handle === '') {
+    return null;
+  }
+
+  const reservation = await getDoc(getDocumentRef(USERNAME_COLLECTION, handle, usernameConverter));
+
+  if (!reservation.exists()) {
+    throw new ReferrerNotFoundError(handle);
+  }
+
+  const sponsorId = reservation.data().user_id;
+
+  if (sponsorId === userId) {
+    return null;
+  }
+
+  const sponsor = await getDoc(getDocumentRef(USER_COLLECTION, sponsorId, userConverter));
+
+  if (!sponsor.exists()) {
+    throw new ReferrerNotFoundError(handle);
+  }
+
+  return sponsorId;
+};
 
 const authProvidersOf = (user: User): AuthProviderId[] => (
   Array.from(new Set(
@@ -112,8 +157,22 @@ export const createUserProfile = async (
   username: string,
   /** The profile being completed, when one already exists without a username. */
   current: UserData | null,
+  /**
+   * The sponsor's handle, as typed — docs/prd.md §4.9. Empty for everybody who
+   * arrived on their own.
+   *
+   * Ignored outright when `current` is not null: `referred_by` is only ever
+   * accepted on a `create`, and a profile that already exists is being
+   * completed. The sheet does not show the field in that case either, so
+   * nothing is silently dropped.
+   */
+  referrerUsername = '',
 ): Promise<UserData> => {
   const handle = normalizeUsername(username);
+  // Resolved before the reservation is claimed: an unknown sponsor has to fail
+  // while the handle is still free, otherwise a retry collides with the user's
+  // own half-finished attempt.
+  const referredBy = current === null ? await resolveReferrer(user.uid, referrerUsername) : null;
   const now = new Date().toISOString();
   const reservationRef = getDocumentRef(USERNAME_COLLECTION, handle, usernameConverter);
   const reservation = await getDoc(reservationRef);
@@ -168,9 +227,21 @@ export const createUserProfile = async (
     statcoin_balance: current?.statcoin_balance ?? INITIAL_STATFLOUZZ_BALANCE,
     statcoins_earned: current?.statcoins_earned ?? 0,
     statcoins_spent: current?.statcoins_spent ?? 0,
+    // The one field on this document a client may write and never rewrite
+    // (docs/prd.md §4.9). Carried over on the completion path rather than
+    // recomputed: the rules refuse an update that moves it, null included.
+    referred_by: current === null ? referredBy : (current.referred_by ?? null),
+    // Backend-owned from here on, like the wallet above: `users-onUserCreated`
+    // opens the referral, and the payout trigger is what ever moves these.
+    referrals_count: current?.referrals_count ?? 0,
+    referral_rewarded_at: current?.referral_rewarded_at ?? null,
   };
 
   await setDoc(getDocumentRef(USER_COLLECTION, user.uid, userConverter), profile);
+
+  if (referredBy !== null) {
+    track({ name: 'referral_attributed' });
+  }
 
   return profile;
 };

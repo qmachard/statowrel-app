@@ -3,17 +3,21 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { REFERRAL_STATFLOUZZ_REWARD } from '@statowrel/models';
+
 import { useAuth } from '@/auth/AuthContext';
-import { UsernameTakenError } from '@/auth/errors';
+import { ReferrerNotFoundError, UsernameTakenError } from '@/auth/errors';
 import { signOut } from '@/auth/providers';
 import { type OnboardingValues, onboardingSchema } from '@/auth/schemas';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
+import { amountLabel } from '@/lib/statflouzz';
 
 const SAVE_FAILED = 'Ton nom d\'utilisateur n\'a pas pu être enregistré. Vérifie ta connexion et réessaie.';
 const TAKEN = 'Ce nom d\'utilisateur est déjà pris.';
+const REFERRER_UNKNOWN = 'On ne connaît personne sous ce pseudo.';
 
 const styles = StyleSheet.create({
   keyboardAvoider: {
@@ -33,6 +37,16 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: spacing(4),
+  },
+  // The sponsor's field is a second question, not a second line of the first
+  // one, so it is spaced away from the handle and carries its own explanation.
+  referral: {
+    gap: spacing(2),
+  },
+  hint: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.sm,
+    color: colors['muted-foreground'],
   },
   error: {
     fontFamily: fonts.sans,
@@ -63,7 +77,11 @@ const styles = StyleSheet.create({
  * through, the session has no username to be known by.
  */
 export const OnboardingSheet = () => {
-  const { user, needsOnboarding, completeOnboarding } = useAuth();
+  const { user, profile, needsOnboarding, completeOnboarding } = useAuth();
+  // A profile that already exists is being *completed*, and `referred_by` is
+  // only ever accepted on a create (docs/prd.md §4.9) — so the question is not
+  // asked rather than asked and quietly ignored.
+  const canBeReferred = profile === null;
   const [ error, setError ] = useState<string | null>(null);
 
   const {
@@ -73,19 +91,29 @@ export const OnboardingSheet = () => {
     formState: { errors, isSubmitting },
   } = useForm<OnboardingValues>({
     resolver: zodResolver(onboardingSchema),
-    defaultValues: { username: '' },
+    defaultValues: { username: '', referrer: '' },
   });
 
-  const onSubmit = handleSubmit(async ({ username }) => {
+  const onSubmit = handleSubmit(async ({ username, referrer }) => {
     setError(null);
 
     try {
-      await completeOnboarding(username);
+      await completeOnboarding(username, canBeReferred ? referrer : '');
     } catch (caught) {
       // A taken handle belongs under the field — it is the answer that has to
       // change, not the connection.
       if (caught instanceof UsernameTakenError) {
         setFieldError('username', { message: TAKEN });
+
+        return;
+      }
+
+      // Same reasoning, under the other field. It has to be said rather than
+      // dropped: the handle is written once and frozen, so a typo silently
+      // ignored here costs the sponsor their StatFlouzz with nobody ever
+      // finding out.
+      if (caught instanceof ReferrerNotFoundError) {
+        setFieldError('referrer', { message: REFERRER_UNKNOWN });
 
         return;
       }
@@ -126,6 +154,34 @@ export const OnboardingSheet = () => {
                 />
               )}
             />
+
+            {canBeReferred ? (
+              <View style={styles.referral}>
+                <Controller
+                  control={control}
+                  name="referrer"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextField
+                      label="Qui t'a fait venir ? (facultatif)"
+                      prefix="@"
+                      placeholder="le pseudo de ton pote"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      returnKeyType="done"
+                      value={value}
+                      onBlur={onBlur}
+                      onChangeText={(next) => onChange(next.toLowerCase())}
+                      onSubmitEditing={onSubmit}
+                      error={errors.referrer?.message}
+                    />
+                  )}
+                />
+
+                <Text style={styles.hint}>
+                  Vous gagnez {amountLabel(REFERRAL_STATFLOUZZ_REWARD)} chacun dès ta première réponse.
+                </Text>
+              </View>
+            ) : null}
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
 

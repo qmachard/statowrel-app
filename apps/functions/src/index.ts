@@ -9,4 +9,5 @@
 export * as dailyQuestions from './domains/daily-questions';
 export * as friends from './domains/friends';
 export * as questions from './domains/questions';
+export * as referrals from './domains/referrals';
 export * as users from './domains/users';

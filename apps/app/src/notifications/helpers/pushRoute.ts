@@ -3,7 +3,8 @@ import { z } from 'zod';
 /**
  * The `data` block the backend attaches to a push — written by
  * `apps/functions/src/domains/daily-questions/tasks/notifyDailyQuestion.ts` and
- * `apps/functions/src/domains/friends/triggers/steps/onFriendshipCreated.ts`,
+ * `apps/functions/src/domains/friends/triggers/steps/onFriendshipCreated.ts`
+ * and `apps/functions/src/domains/referrals/triggers/steps/payReferralReward.ts`,
  * read here. It travels as JSON through APNs and FCM, so every value is a
  * string.
  *
@@ -20,6 +21,10 @@ const pushRouteSchema = z.discriminatedUnion('type', [
   // An invitation carries nothing to route on: the Menu screen lists it, and
   // the list is a live snapshot of `v1_user_friends` (docs/prd.md §5.3).
   z.object({ type: z.literal('friend_invite') }),
+  // A settled referral carries nothing to route on either: both sides of it are
+  // read from the Menu — the sponsor's « Mes filleuls », the newcomer's own
+  // wallet (docs/prd.md §4.9).
+  z.object({ type: z.literal('referral_joined') }),
 ]);
 
 export type PushRoute = z.infer<typeof pushRouteSchema>;
