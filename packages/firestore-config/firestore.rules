@@ -262,11 +262,21 @@ service cloud.firestore {
       // StatFlouzz tomorrow. Forging a score was vanity; forging it is now
       // counterfeiting.
       //
-      // The initial balance is `INITIAL_STATCOIN_BALANCE` (docs/prd.md §4.7),
+      // The initial balance is `INITIAL_STATFLOUZZ_BALANCE` (docs/prd.md §4.7),
       // hardcoded here since rules cannot import JavaScript — the two change
       // together. `statcoins_earned` stays 0 (the opening amount is a grant,
       // not something the user earned) so a future backfill can tell a fresh
       // account from one that never touched its wallet.
+      //
+      // **Two openings are accepted, 0 and 50, on purpose.** The 1.1.0 app
+      // shipped `statcoin_balance: 0` at create; tightening this rule to `== 50`
+      // straight away would lock every ≤1.1.0 install out of ever completing
+      // an onboarding, since the app is what writes the profile. The tolerance
+      // lets those clients through, and `users-onUserCreated` levels a legacy
+      // `0` up to `INITIAL_STATFLOUZZ_BALANCE` server-side in the same second.
+      // No fraud window: the wallet is closed to the client afterwards, so an
+      // old build cannot mint more than the trigger would grant anyway.
+      // Reserrer sur `== 50` uniquement quand la base ≤1.1.0 aura fondu.
       //
       // `create` only ever fires on a document that does not exist, so nothing
       // written before these fields can be caught by it — completing a profile
@@ -277,7 +287,8 @@ service cloud.firestore {
                && request.resource.data.get('streak_best', 0) == 0
                && request.resource.data.get('answers_count', 0) == 0
                && request.resource.data.get('streak_last_answered_on', null) == null
-               && request.resource.data.get('statcoin_balance', 0) == 50
+               && (request.resource.data.get('statcoin_balance', 0) == 50
+                   || request.resource.data.get('statcoin_balance', 0) == 0)
                && request.resource.data.get('statcoins_earned', 0) == 0
                && request.resource.data.get('statcoins_spent', 0) == 0;
       }
