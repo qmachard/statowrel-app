@@ -3,30 +3,70 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f0d4" />
     <meta
       name="description"
-      content="StatOwrel — une question par jour, la même pour tout le monde. Tu réponds, tu découvres ta stat et celles de tes potes."
+      content="StatOwrel — une question par jour, la même pour tout le monde. Tu réponds en deux taps, tu découvres ta stat et celles de tes potes. Gratuit sur iOS et Android."
     />
+    <link rel="canonical" href="https://statowrel-app.web.app/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:site_name" content="StatOwrel" />
+    <meta property="og:url" content="https://statowrel-app.web.app/" />
+    <meta
+      property="og:title"
+      content="StatOwrel — Les questions que personne ne pose."
+    />
+    <meta
+      property="og:description"
+      content="Une question par jour, la même pour tout le monde. Deux taps pour être honnête, et la stat s'ouvre — la tienne, celle de tout le monde, celle de tes potes."
+    />
+    <meta name="twitter:card" content="summary" />
+    <meta
+      name="twitter:title"
+      content="StatOwrel — Les questions que personne ne pose."
+    />
+    <meta
+      name="twitter:description"
+      content="Une question par jour, la même pour tout le monde. Deux taps pour être honnête, et la stat s'ouvre."
+    />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <title>StatOwrel</title>
+    <title>StatOwrel — Les questions que personne ne pose.</title>
     <style>
       /*
        * La page d'accueil porte sa propre copie des tokens, comme public/legal/ :
-       * elle n'a pas de bundle, juste du HTML servi à la racine du site.
+       * elle n'a pas de bundle, juste du HTML servi à la racine du site. Les
+       * valeurs viennent de apps/app/src/design/tokens.ts — toute divergence est
+       * un bug, la page marketing et l'app doivent montrer la même marque.
        */
       :root {
         --background: #f7f0d4;
         --foreground: #000000;
         --card: #ffffff;
+        --muted: #eae1bd;
         --muted-foreground: #6b6355;
         --primary: #ffdc59;
+        --primary-hover: #ffd12e;
+        --secondary: #000000;
+        --secondary-foreground: #ffffff;
+        --accent: #d04060;
+        --accent-foreground: #ffffff;
+        --notification: #ff7eb6;
         --border-width: 2px;
+        --radius-sm: 8px;
         --radius: 12px;
+        --radius-lg: 20px;
+        --radius-xl: 24px;
+        --radius-2xl: 32px;
+        --shadow: 4px 4px 0 0 var(--foreground);
+        --shadow-lg: 6px 6px 0 0 var(--foreground);
         --font-head: 'Archivo Black', system-ui, sans-serif;
         --font-sans: 'Space Grotesk', system-ui, sans-serif;
       }
@@ -37,7 +77,7 @@
 
       body {
         margin: 0;
-        padding: 48px 20px 64px;
+        padding: 32px 20px 64px;
         background: var(--background);
         color: var(--foreground);
         font-family: var(--font-sans);
@@ -46,9 +86,17 @@
       }
 
       main {
-        max-width: 720px;
+        max-width: 960px;
         margin: 0 auto;
       }
+
+      a:focus-visible,
+      .store-button:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      /* ---------------------------------------------------------------- topbar */
 
       .topbar {
         align-items: center;
@@ -58,15 +106,24 @@
       }
 
       .brand {
+        align-items: center;
+        display: flex;
         font-family: var(--font-head);
         font-size: 20px;
+        gap: 10px;
         letter-spacing: 0.02em;
+      }
+
+      .brand svg {
+        display: block;
+        height: 26px;
+        width: 26px;
       }
 
       .admin-link {
         background: var(--card);
         border: var(--border-width) solid var(--foreground);
-        border-radius: 8px;
+        border-radius: var(--radius-sm);
         box-shadow: 3px 3px 0 0 var(--foreground);
         color: var(--foreground);
         font-size: 14px;
@@ -79,60 +136,499 @@
         background: var(--primary);
       }
 
+      /* ------------------------------------------------------------------ hero */
+
+      .hero {
+        align-items: center;
+        display: grid;
+        gap: 40px;
+        grid-template-columns: 1fr;
+        margin-top: 48px;
+      }
+
       h1 {
         font-family: var(--font-head);
-        font-size: clamp(32px, 7vw, 48px);
-        line-height: 1.15;
-        margin: 16px 0 0;
+        font-size: clamp(32px, 6.4vw, 52px);
+        line-height: 1.12;
+        margin: 0;
       }
 
       .baseline {
         font-size: 18px;
         font-weight: 500;
-        margin: 16px 0 40px;
+        margin: 20px 0 0;
+        max-width: 34em;
       }
 
-      .cards {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      /* ---------------------------------------------------------- store buttons */
+
+      .stores {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 28px 0 0;
+        padding: 0;
+        list-style: none;
       }
 
-      .card {
-        background: var(--card);
+      .store-button {
+        align-items: center;
+        background: var(--secondary);
         border: var(--border-width) solid var(--foreground);
         border-radius: var(--radius);
-        box-shadow: 4px 4px 0 0 var(--foreground);
-        padding: 20px;
+        box-shadow: var(--shadow);
+        color: var(--secondary-foreground);
+        display: inline-flex;
+        gap: 12px;
+        padding: 10px 20px 10px 16px;
+        text-decoration: none;
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
       }
 
-      .card h2 {
-        font-family: var(--font-head);
-        font-size: 16px;
-        margin: 0 0 8px;
+      .store-button:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translate(-2px, -2px);
+      }
+
+      .store-button:active {
+        box-shadow: 0 0 0 0 var(--foreground);
+        transform: translate(4px, 4px);
+      }
+
+      .store-button svg {
+        display: block;
+        fill: currentColor;
+        flex-shrink: 0;
+        height: 28px;
+        width: 28px;
+      }
+
+      .store-button span {
+        display: block;
+        line-height: 1.2;
+      }
+
+      .store-kicker {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        opacity: 0.75;
         text-transform: uppercase;
       }
 
-      .card p {
+      .store-name {
+        font-family: var(--font-head);
+        font-size: 17px;
+      }
+
+      .price {
+        color: var(--muted-foreground);
+        font-size: 14px;
+        margin: 16px 0 0;
+      }
+
+      /* --------------------------------------------------------- hero mock-up */
+
+      .hero-visual {
+        display: grid;
+        justify-items: center;
+        padding: 8px 0 32px;
+        position: relative;
+      }
+
+      .mock-question {
+        background: var(--card);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-lg);
+        max-width: 340px;
+        padding: 20px;
+        width: 100%;
+      }
+
+      .mock-day {
+        align-items: center;
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .pill {
+        background: var(--accent);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: 999px;
+        color: var(--accent-foreground);
+        font-family: var(--font-head);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        padding: 3px 10px;
+        text-transform: uppercase;
+      }
+
+      .mock-question h3 {
+        font-family: var(--font-head);
+        font-size: 21px;
+        line-height: 1.2;
+        margin: 0 0 16px;
+      }
+
+      .option {
+        align-items: center;
+        background: var(--card);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius);
+        display: flex;
+        font-weight: 500;
+        gap: 10px;
+        justify-content: space-between;
+        margin-top: 10px;
+        padding: 10px 14px;
+      }
+
+      .option.is-picked {
+        background: var(--primary);
+        font-weight: 700;
+      }
+
+      .option .check {
+        font-family: var(--font-head);
+        font-size: 14px;
+      }
+
+      /* La carte du résultat, posée en biais sur la question — le geste d'un
+         sticker, ce qui l'empêche de se lire comme un vrai résultat déjà obtenu.
+         Reprend OnboardingVisual.tsx, slide « statowrel ». */
+      .mock-stat {
+        background: var(--primary);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        margin: -28px 0 0 auto;
+        max-width: 300px;
+        padding: 16px 18px;
+        transform: rotate(-3deg);
+        width: 92%;
+      }
+
+      .mock-stat p {
         margin: 0;
       }
 
-      .soon {
-        background: var(--primary);
+      .mock-stat strong {
+        font-family: var(--font-head);
+        font-weight: 400;
+      }
+
+      .mock-stat .label {
+        display: block;
+        font-family: var(--font-head);
+        font-size: 28px;
+        line-height: 1.1;
+        margin-top: 2px;
+        text-transform: uppercase;
+      }
+
+      /* ------------------------------------------------------------- comment ça marche */
+
+      .steps {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 1fr;
+        margin: 72px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .step {
+        background: var(--card);
         border: var(--border-width) solid var(--foreground);
         border-radius: var(--radius);
-        box-shadow: 4px 4px 0 0 var(--foreground);
-        font-family: var(--font-head);
-        margin: 40px 0 0;
+        box-shadow: var(--shadow);
         padding: 20px;
+      }
+
+      .step-number {
+        align-items: center;
+        background: var(--primary);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: 999px;
+        display: inline-flex;
+        font-family: var(--font-head);
+        height: 34px;
+        justify-content: center;
+        margin-bottom: 12px;
+        width: 34px;
+      }
+
+      .step h3 {
+        font-family: var(--font-head);
+        font-size: 16px;
+        margin: 0 0 6px;
+        text-transform: uppercase;
+      }
+
+      .step p {
+        margin: 0;
+      }
+
+      /* --------------------------------------------------------------- features */
+
+      h2.section-title {
+        font-family: var(--font-head);
+        font-size: clamp(26px, 4.6vw, 34px);
+        line-height: 1.15;
+        margin: 72px 0 8px;
+      }
+
+      .section-intro {
+        color: var(--muted-foreground);
+        margin: 0 0 8px;
+      }
+
+      .feature {
+        align-items: center;
+        border-top: var(--border-width) solid var(--foreground);
+        display: grid;
+        gap: 28px;
+        grid-template-columns: 1fr;
+        padding: 40px 0;
+      }
+
+      .feature h3 {
+        font-family: var(--font-head);
+        font-size: clamp(22px, 3.4vw, 28px);
+        line-height: 1.15;
+        margin: 0 0 10px;
+      }
+
+      .feature p {
+        margin: 0;
+        max-width: 32em;
+      }
+
+      .feature-visual {
+        display: flex;
+        justify-content: center;
+      }
+
+      /* Les cinq maquettes, reprises une à une des visuels du carrousel
+         (apps/app/src/onboarding/components/OnboardingVisual.tsx). */
+
+      .mock-banner {
+        background: var(--accent);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        color: var(--accent-foreground);
+        max-width: 320px;
+        padding: 18px 20px;
+        transform: rotate(-2deg);
+        width: 100%;
+      }
+
+      .mock-banner .kicker {
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        margin: 0 0 6px;
+        opacity: 0.9;
+        text-transform: uppercase;
+      }
+
+      .mock-banner .question {
+        font-family: var(--font-head);
+        font-size: 20px;
+        line-height: 1.2;
+        margin: 0;
+      }
+
+      .mock-bars {
+        background: var(--card);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        max-width: 320px;
+        padding: 18px;
+        width: 100%;
+      }
+
+      .bar-row {
+        align-items: center;
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .bar-row:first-child {
+        margin-top: 0;
+      }
+
+      /* Blanc et non `muted` : la barre de la réponse choisie est jaune, et le
+         jaune sur beige ne se lit plus en dessous de 20% de remplissage. */
+      .bar-track {
+        background: var(--card);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: 999px;
+        flex: 1;
+        height: 18px;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        background: var(--foreground);
+        display: block;
+        height: 100%;
+      }
+
+      .bar-row.is-mine .bar-fill {
+        background: var(--primary);
+      }
+
+      .bar-value {
+        font-family: var(--font-head);
+        font-size: 13px;
+        min-width: 40px;
+        text-align: right;
+      }
+
+      .bar-name {
+        font-size: 13px;
+        font-weight: 500;
+        min-width: 92px;
+      }
+
+      .mock-faces {
+        align-items: center;
+        display: flex;
+      }
+
+      .face {
+        align-items: center;
+        border: var(--border-width) solid var(--foreground);
+        border-radius: 999px;
+        box-shadow: var(--shadow);
+        display: flex;
+        font-family: var(--font-head);
+        font-size: 20px;
+        height: 68px;
+        justify-content: center;
+        width: 68px;
+      }
+
+      .face + .face {
+        margin-left: -14px;
+      }
+
+      .face:nth-child(1) {
+        background: var(--primary);
+      }
+
+      .face:nth-child(2) {
+        background: var(--notification);
+      }
+
+      .face:nth-child(3) {
+        background: var(--card);
+      }
+
+      .mock-bell {
+        align-items: center;
+        background: var(--accent);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius-2xl);
+        box-shadow: var(--shadow-lg);
+        color: var(--accent-foreground);
+        display: flex;
+        height: 120px;
+        justify-content: center;
+        transform: rotate(-6deg);
+        width: 120px;
+      }
+
+      .mock-bell svg {
+        display: block;
+        height: 56px;
+        width: 56px;
+      }
+
+      .mock-streak {
+        background: var(--secondary);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        color: var(--secondary-foreground);
+        max-width: 300px;
+        padding: 18px;
+        text-align: center;
+        width: 100%;
+      }
+
+      .streak-count {
+        display: block;
+        font-family: var(--font-head);
+        font-size: 56px;
+        line-height: 1;
+      }
+
+      .streak-unit {
+        display: block;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        margin-top: 4px;
+        text-transform: uppercase;
+      }
+
+      .streak-days {
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        margin-top: 16px;
+      }
+
+      .streak-days span {
+        border: var(--border-width) solid var(--secondary-foreground);
+        border-radius: 6px;
+        height: 20px;
+        width: 20px;
+      }
+
+      .streak-days span.is-done {
+        background: var(--primary);
+        border-color: var(--primary);
+      }
+
+      /* ------------------------------------------------------------------- CTA */
+
+      .cta {
+        background: var(--primary);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-lg);
+        margin: 48px 0 0;
+        padding: 36px 24px;
         text-align: center;
       }
+
+      .cta h2 {
+        font-family: var(--font-head);
+        font-size: clamp(26px, 4.6vw, 36px);
+        margin: 0 0 8px;
+      }
+
+      .cta p {
+        margin: 0 auto;
+        max-width: 30em;
+      }
+
+      .cta .stores {
+        justify-content: center;
+      }
+
+      /* ---------------------------------------------------------------- footer */
 
       footer {
         border-top: var(--border-width) solid var(--foreground);
         color: var(--muted-foreground);
         font-size: 14px;
-        margin-top: 48px;
+        margin-top: 56px;
         padding-top: 24px;
       }
 
@@ -143,51 +639,316 @@
       footer nav a + a::before {
         content: ' · ';
       }
+
+      /* ------------------------------------------------------------ responsive */
+
+      @media (min-width: 760px) {
+        body {
+          padding: 40px 24px 72px;
+        }
+
+        .hero {
+          grid-template-columns: 1.05fr 0.95fr;
+          gap: 48px;
+        }
+
+        .steps {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        .feature {
+          grid-template-columns: 1fr 1fr;
+          gap: 40px;
+        }
+
+        /* Une ligne sur deux inverse texte et maquette : le regard descend en
+           zigzag au lieu de longer une colonne. */
+        .feature:nth-child(even) .feature-visual {
+          order: -1;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .store-button {
+          transition: none;
+        }
+
+        .mock-stat,
+        .mock-banner,
+        .mock-bell {
+          transform: none;
+        }
+      }
     </style>
   </head>
   <body>
     <main>
       <header>
         <div class="topbar">
-          <span class="brand">StatOwrel</span>
+          <span class="brand">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 1.6l3.09 6.26 6.91 1-5 4.87 1.18 6.87L12 17.35l-6.18 3.25L7 13.73l-5-4.87 6.91-1L12 1.6z"
+                fill="#ffdc59"
+                stroke="#000"
+                stroke-width="1.6"
+                stroke-linejoin="round"
+              />
+            </svg>
+            StatOwrel
+          </span>
           <a class="admin-link" href="/admin/">Admin</a>
         </div>
-        <h1>Les questions que personne ne pose. Les réponses que tout le monde veut.</h1>
-        <p class="baseline">Une par jour. La même pour tout le monde.</p>
       </header>
 
-      <div class="cards">
-        <section class="card">
-          <h2>Une question par jour</h2>
-          <p>
-            Personnelle, absurde, celle que personne ne pense à poser. Tu as la journée pour y
-            répondre, et ça te prend dix secondes.
+      <div class="hero">
+        <div>
+          <h1>Les questions que personne ne pose. Les réponses que tout le monde veut.</h1>
+          <p class="baseline">
+            Une question par jour, la même pour tout le monde. Tu réponds en deux taps, et la stat
+            s'ouvre : la tienne, celle de tout le monde, celle de tes potes.
           </p>
-        </section>
-        <section class="card">
-          <h2>Ta StatOwrel</h2>
-          <p>
-            Ta réponse replacée dans la statistique de tous les autres. Plus elle est minoritaire,
-            plus le résultat est rare.
-          </p>
-        </section>
-        <section class="card">
-          <h2>Tes potes</h2>
-          <p>
-            Leurs réponses se débloquent seulement une fois que tu as répondu toi-même. Pas de
-            voyeurisme, pas de triche.
-          </p>
-        </section>
-        <section class="card">
-          <h2>Ta série</h2>
-          <p>
-            Réponds avant minuit et elle monte d'un jour. Rate une journée, elle repart à zéro — pas
-            de joker.
-          </p>
-        </section>
+
+          <ul class="stores">
+            <li>
+              <a
+                class="store-button"
+                href="https://apps.apple.com/fr/app/statowrel/id6803561031"
+                aria-label="Télécharger StatOwrel sur l'App Store"
+              >
+                <svg viewBox="0 0 384 512" aria-hidden="true">
+                  <path
+                    d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"
+                  />
+                </svg>
+                <span>
+                  <span class="store-kicker">Télécharger sur l'</span>
+                  <span class="store-name">App Store</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="store-button"
+                href="https://play.google.com/store/apps/details?id=fr.quentinmachard.statowrel&amp;hl=fr"
+                aria-label="Télécharger StatOwrel sur Google Play"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594zM1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087zm12.207 10.065l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179zm0 2.067l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54z"
+                  />
+                </svg>
+                <span>
+                  <span class="store-kicker">Disponible sur</span>
+                  <span class="store-name">Google Play</span>
+                </span>
+              </a>
+            </li>
+          </ul>
+
+          <p class="price">Gratuit. Pas de pub, pas de fil d'actualité.</p>
+        </div>
+
+        <div class="hero-visual" aria-hidden="true">
+          <div class="mock-question">
+            <div class="mock-day">
+              <span class="pill">7h · aujourd'hui</span>
+            </div>
+            <h3>Tu ranges ta vaisselle avant de te coucher ?</h3>
+            <div class="option is-picked">
+              Jamais de la vie
+              <span class="check">✓</span>
+            </div>
+            <div class="option">Toujours</div>
+          </div>
+
+          <div class="mock-stat">
+            <p>Comme <strong>12%</strong> des gens, tu es un.e</p>
+            <p class="label">Anarchiste</p>
+          </div>
+        </div>
       </div>
 
-      <p class="soon">Bientôt sur iOS et Android.</p>
+      <ol class="steps">
+        <li class="step">
+          <span class="step-number">1</span>
+          <h3>7h, ça tombe</h3>
+          <p>
+            Une question personnelle, absurde, celle que personne ne pense à poser. La même pour
+            tout le monde, ce jour-là.
+          </p>
+        </li>
+        <li class="step">
+          <span class="step-number">2</span>
+          <h3>Deux taps</h3>
+          <p>
+            Un tap choisit ta réponse, un deuxième la valide. Dix secondes, et c'est réglé pour la
+            journée.
+          </p>
+        </li>
+        <li class="step">
+          <span class="step-number">3</span>
+          <h3>La stat s'ouvre</h3>
+          <p>
+            Ta StatOwrel, la répartition de tous les autres, et ce que tes potes ont répondu. Pas
+            avant d'avoir répondu toi-même.
+          </p>
+        </li>
+      </ol>
+
+      <h2 class="section-title">Ce que tu y trouves</h2>
+      <p class="section-intro">Quatre choses, et rien d'autre.</p>
+
+      <section class="feature">
+        <div>
+          <h3>Une question que personne n'ose poser.</h3>
+          <p>
+            Tous les matins. Deux taps pour être honnête. Tu as la journée pour répondre, et ça te
+            prend dix secondes.
+          </p>
+        </div>
+        <div class="feature-visual" aria-hidden="true">
+          <div class="mock-banner">
+            <p class="kicker">Question du jour</p>
+            <p class="question">Tu réponds aux messages dans l'ordre où ils arrivent ?</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="feature">
+        <div>
+          <h3>La stat qui dit qui tu es.</h3>
+          <p>
+            Chaque réponse te donne ta StatOwrel. Rare ou banal, c'est écrit : plus ta réponse est
+            minoritaire, plus le résultat est rare.
+          </p>
+        </div>
+        <div class="feature-visual" aria-hidden="true">
+          <div class="mock-bars">
+            <div class="bar-row is-mine">
+              <span class="bar-name">Jamais</span>
+              <span class="bar-track"><span class="bar-fill" style="width: 12%"></span></span>
+              <span class="bar-value">12%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name">Parfois</span>
+              <span class="bar-track"><span class="bar-fill" style="width: 31%"></span></span>
+              <span class="bar-value">31%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name">Toujours</span>
+              <span class="bar-track"><span class="bar-fill" style="width: 57%"></span></span>
+              <span class="bar-value">57%</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="feature">
+        <div>
+          <h3>Tes potes vont te surprendre.</h3>
+          <p>
+            Vois ce qu'ils ont vraiment répondu. Sujet de conversation garanti. Leurs réponses se
+            débloquent seulement une fois que tu as répondu toi-même : pas de voyeurisme, pas de
+            triche.
+          </p>
+        </div>
+        <div class="feature-visual" aria-hidden="true">
+          <div class="mock-faces">
+            <span class="face">LM</span>
+            <span class="face">SA</span>
+            <span class="face">NB</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="feature">
+        <div>
+          <h3>On te prévient.</h3>
+          <p>
+            La question du jour, un rappel le soir si tu l'as loupée, et quand un pote t'ajoute.
+            Rien de plus.
+          </p>
+        </div>
+        <div class="feature-visual" aria-hidden="true">
+          <div class="mock-bell">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+              <path d="M22 8c0-2.3-.8-4.3-2-6" />
+              <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+              <path d="M4 2C2.8 3.7 2 5.7 2 8" />
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <section class="feature">
+        <div>
+          <h3>Et une série à ne pas casser.</h3>
+          <p>
+            Réponds avant minuit et elle monte d'un jour. Rate une journée, elle repart à zéro. Le
+            calendrier garde la trace de tout ce que tu as répondu.
+          </p>
+        </div>
+        <div class="feature-visual" aria-hidden="true">
+          <div class="mock-streak">
+            <span class="streak-count">14</span>
+            <span class="streak-unit">jours d'affilée</span>
+            <div class="streak-days">
+              <span class="is-done"></span>
+              <span class="is-done"></span>
+              <span class="is-done"></span>
+              <span class="is-done"></span>
+              <span class="is-done"></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta">
+        <h2>C'est parti.</h2>
+        <p>
+          Un tap choisit ta réponse, un deuxième la valide. La première question t'attend demain
+          matin à 7h.
+        </p>
+        <ul class="stores">
+          <li>
+            <a
+              class="store-button"
+              href="https://apps.apple.com/fr/app/statowrel/id6803561031"
+              aria-label="Télécharger StatOwrel sur l'App Store"
+            >
+              <svg viewBox="0 0 384 512" aria-hidden="true">
+                <path
+                  d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"
+                />
+              </svg>
+              <span>
+                <span class="store-kicker">Télécharger sur l'</span>
+                <span class="store-name">App Store</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a
+              class="store-button"
+              href="https://play.google.com/store/apps/details?id=fr.quentinmachard.statowrel&amp;hl=fr"
+              aria-label="Télécharger StatOwrel sur Google Play"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594zM1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087zm12.207 10.065l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179zm0 2.067l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54z"
+                />
+              </svg>
+              <span>
+                <span class="store-kicker">Disponible sur</span>
+                <span class="store-name">Google Play</span>
+              </span>
+            </a>
+          </li>
+        </ul>
+      </section>
 
       <footer>
         <nav>
