@@ -278,7 +278,12 @@ const renderQuestionSlide = (recap: DailyRecap): Buffer => {
     // The date is a caption on this slide, not a title: white at full strength
     // would compete with the question, which is the one thing on the page.
     color: 'rgba(255, 255, 255, 0.72)',
-    actionColor: palette.foreground,
+    // White, where slide 1's own line is black: this one sits on the accent red,
+    // and black on it lands at a contrast ratio of 3.1 — under the 4.5 the rest
+    // of the palette is built to (`apps/app/src/design/tokens.ts` gives `accent`
+    // white foreground for exactly this reason). It is also the line asking for
+    // the install, so it is the last thing that should be hard to read.
+    actionColor: palette.card,
   });
 
   const cardWidth = 950;
