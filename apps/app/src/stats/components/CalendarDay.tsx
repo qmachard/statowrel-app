@@ -172,11 +172,10 @@ export const CalendarDay = ({
           <>
             <View style={[ styles.cell, SURFACE[state], sunk ? PRESSED[state] : SHADOW[state] ]}>
               {state === 'jokered' && answered ? (
-                // Un jour joker : le pique universel des cartes à jouer,
-                // rempli plutôt que tracé — le calendrier lit à petite taille et
-                // une silhouette pleine se reconnaît d'un coup d'œil là où un
-                // contour se perd.
-                <Spade size={CHECK_SIZE} color={CHECK_COLOR[state]} fill={CHECK_COLOR[state]} strokeWidth={0} />
+                // Un jour joker : le pique universel des cartes à jouer, en
+                // contour seul — même graphie brute que le check qu'il
+                // remplace, épais comme lui, sur la même échelle.
+                <Spade size={CHECK_SIZE} color={CHECK_COLOR[state]} strokeWidth={CHECK_STROKE_WIDTH} />
               ) : answered ? (
                 <Check size={CHECK_SIZE} strokeWidth={CHECK_STROKE_WIDTH} color={CHECK_COLOR[state]} />
               ) : (
