@@ -17,14 +17,19 @@ import { colors } from '@/design/tokens';
  * matching foreground: on either coloured ground `muted-foreground` is
  * unreadable, and the palette has no muted token for one.
  */
-export type Surface = 'accent' | 'primary';
+export type Surface = 'accent' | 'primary' | 'joker';
 
 export const SURFACE = StyleSheet.create({
   accent: { backgroundColor: colors.accent },
   primary: { backgroundColor: colors.primary },
+  // A jokered day flips the sheet's own colour to the joker's violet
+  // (docs/prd.md §4.8) — the calendar cell already carries it, and the sheet
+  // matches so the two say the same thing about the day.
+  joker: { backgroundColor: colors.joker },
 }) satisfies Record<Surface, ViewStyle>;
 
 export const FOREGROUND = StyleSheet.create({
   accent: { color: colors['accent-foreground'] },
   primary: { color: colors['primary-foreground'] },
+  joker: { color: colors['joker-foreground'] },
 }) satisfies Record<Surface, TextStyle>;

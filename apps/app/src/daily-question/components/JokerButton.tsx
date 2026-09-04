@@ -7,11 +7,12 @@ import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
 /**
  * The « passer avec un joker » button — docs/prd.md §4.8.
  *
- * A ghost variant so it does not compete with the answer options above it (an
- * answer is the primary action, a joker is the way out), the price on its
- * `trailingLabel` slot the way `ProposeQuestionCard` prices its own button —
- * a price qualifies an action rather than naming it, and a symbol with two
- * homes is a symbol that drifts.
+ * The `joker` variant so the button wears the same violet the calendar cell,
+ * the banner and every other joker surface use: seeing that colour once trains
+ * the user to recognise it everywhere. The price rides on `trailingLabel` the
+ * way `ProposeQuestionCard` prices its own button — a price qualifies an
+ * action rather than naming it, and a symbol with two homes is a symbol that
+ * drifts.
  *
  * **Confirms before spending.** A native alert asks first because a joker is
  * irreversible on both directions: the day is passed and the StatFlouzz are
@@ -63,7 +64,7 @@ export const JokerButton = ({ balance, loading, onConfirm }: JokerButtonProps) =
         label="Passer avec un joker"
         description={description}
         trailingLabel={amountLabel(JOKER_STATFLOUZZ_COST)}
-        variant="ghost"
+        variant="joker"
         loading={loading}
         disabled={!affordable || loading}
         onPress={onPress}

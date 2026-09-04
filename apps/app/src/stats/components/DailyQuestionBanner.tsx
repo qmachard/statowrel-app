@@ -30,9 +30,11 @@ export interface DailyQuestionBannerProps {
 }
 
 const styles = StyleSheet.create({
-  // One surface whatever side of the answer one is on: the `accent` today wears
-  // in the calendar. The day keeps its colour once it is played — the calendar
-  // cell already does exactly that (docs/prd.md §5.2).
+  // `accent` for a normal day, `joker` for a day passed with a joker — the
+  // surface follows the calendar cell so the two say the same thing about the
+  // day (docs/prd.md §5.2, §4.8). The colour is composed at render time from
+  // `SURFACE`/`FOREGROUND` below, since a `StyleSheet` cannot switch on a
+  // prop.
   surface: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -40,7 +42,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth,
     borderColor: colors.border,
-    backgroundColor: colors.accent,
     padding: spacing(5),
   },
   copy: {
@@ -56,13 +57,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: fontSize.xs,
     textTransform: 'uppercase',
-    color: colors['accent-foreground'],
   },
   // The question while it is still the thing to do: as large as the banner goes.
   label: {
     fontFamily: fonts.head,
     fontSize: fontSize.lg,
-    color: colors['accent-foreground'],
   },
   // The lead-in, with the check on it — the check is the whole of what used to
   // be a caption line of its own.
@@ -74,7 +73,6 @@ const styles = StyleSheet.create({
   moodLeadText: {
     fontFamily: fonts.sans,
     fontSize: fontSize.base,
-    color: colors['accent-foreground'],
   },
   // The one thing the banner is now for — the result sheet's own treatment
   // (`StatOwrelHeadline`), a step down its scale: the sheet is the word's
@@ -84,7 +82,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
     lineHeight: fontSize.xl * 1.1,
     textTransform: 'uppercase',
-    color: colors['accent-foreground'],
   },
   // The promise of tomorrow, kept as a micro-line: it is the only place the app
   // says when the draw runs, and it is what brings anyone back in the morning.
@@ -93,9 +90,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: fontSize['2xs'],
     textTransform: 'uppercase',
-    color: colors['accent-foreground'],
   },
 });
+
+const SURFACE = StyleSheet.create({
+  accent: { backgroundColor: colors.accent },
+  joker: { backgroundColor: colors.joker },
+});
+
+const FG = {
+  accent: colors['accent-foreground'],
+  joker: colors['joker-foreground'],
+} as const;
 
 /** A pressed banner sinks by exactly its shadow offset — 4px, the offset of `shadows.md`. */
 const SUNK: ViewStyle = { transform: [ { translateX: spacing(1) }, { translateY: spacing(1) } ] };
@@ -143,44 +149,48 @@ export const DailyQuestionBanner = ({ label, statLabel, jokered = false, onPress
       ? 'Aujourd’hui passée avec un joker. Voir le résultat.'
       : `Question du jour : ${label ?? ''}`;
 
+  const tone: 'accent' | 'joker' = jokered && mood === null ? 'joker' : 'accent';
+  const fg = FG[tone];
+  const fgStyle = { color: fg };
+
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress}>
       {({ pressed }) => (
-        <View style={[ styles.surface, pressed ? SUNK : shadows.md ]}>
+        <View style={[ styles.surface, SURFACE[tone], pressed ? SUNK : shadows.md ]}>
           <View style={styles.copy}>
             {mood === null && jokered ? (
               <>
                 <View style={styles.moodLead}>
-                  <Check size={CHECK_SIZE} color={colors['accent-foreground']} />
-                  <Text style={styles.moodLeadText}>Aujourd’hui tu as</Text>
+                  <Check size={CHECK_SIZE} color={fg} />
+                  <Text style={[ styles.moodLeadText, fgStyle ]}>Aujourd’hui tu as</Text>
                 </View>
 
-                <Text style={styles.moodLabel} numberOfLines={2}>PASSÉ AVEC UN JOKER</Text>
+                <Text style={[ styles.moodLabel, fgStyle ]} numberOfLines={2}>PASSÉ AVEC UN JOKER</Text>
               </>
             ) : mood === null ? (
               <>
                 <View style={styles.heading}>
-                  <MessageCircleQuestionMark size={ICON_SIZE} color={colors['accent-foreground']} />
-                  <Text style={styles.caption}>Question du jour</Text>
+                  <MessageCircleQuestionMark size={ICON_SIZE} color={fg} />
+                  <Text style={[ styles.caption, fgStyle ]}>Question du jour</Text>
                 </View>
 
-                <Text style={styles.label} numberOfLines={3}>{label}</Text>
+                <Text style={[ styles.label, fgStyle ]} numberOfLines={3}>{label}</Text>
               </>
             ) : (
               <>
                 <View style={styles.moodLead}>
-                  <Check size={CHECK_SIZE} color={colors['accent-foreground']} />
-                  <Text style={styles.moodLeadText}>Aujourd’hui tu es un.e</Text>
+                  <Check size={CHECK_SIZE} color={fg} />
+                  <Text style={[ styles.moodLeadText, fgStyle ]}>Aujourd’hui tu es un.e</Text>
                 </View>
 
-                <Text style={styles.moodLabel} numberOfLines={2}>{mood}</Text>
+                <Text style={[ styles.moodLabel, fgStyle ]} numberOfLines={2}>{mood}</Text>
 
-                <Text style={styles.footnote}>{NEXT_DRAW}</Text>
+                <Text style={[ styles.footnote, fgStyle ]}>{NEXT_DRAW}</Text>
               </>
             )}
           </View>
 
-          <ChevronRight size={28} color={colors['accent-foreground']} />
+          <ChevronRight size={28} color={fg} />
         </View>
       )}
     </Pressable>

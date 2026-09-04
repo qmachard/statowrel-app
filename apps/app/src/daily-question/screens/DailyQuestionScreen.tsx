@@ -162,7 +162,10 @@ export const DailyQuestionScreen = () => {
   const isToday = date === toDateKey(new Date());
   const deadEnd = DEAD_END[status];
 
-  const surface: Surface = isToday ? 'accent' : 'primary';
+  // A jokered day owns the joker's violet — same colour as its calendar cell,
+  // so the sheet and the cell tell the same story. `isToday` gives the accent
+  // red while the day is still open, `primary` closes a past answered day.
+  const surface: Surface = jokered ? 'joker' : isToday ? 'accent' : 'primary';
 
   // The sheet's own background, behind the content this screen lays out. Set
   // here rather than in `RootNavigator` because the navigator has no way of
