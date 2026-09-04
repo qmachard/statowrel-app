@@ -1,14 +1,16 @@
 import {
   DAILY_QUESTION_ANSWER_COLLECTION,
+  DAILY_QUESTION_JOKER_COLLECTION,
   QUESTION_COLLECTION,
   dailyQuestionAnswerConverter,
+  dailyQuestionJokerConverter,
 } from '@statowrel/models';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useFriends } from '@/friends/data/useFriends';
 import { getFrozenDoc, getSubDocumentRef } from '@/lib/firestore';
 
-/** One accepted friend and what they answered that day — `null` while they haven't. */
+/** One accepted friend and what they did with the day — answered, jokered, or nothing yet. */
 export interface FriendAnswer {
   friendId: string;
   /** The friend's handle — what the row shows, and what seeds their generated avatar. */
@@ -16,6 +18,14 @@ export interface FriendAnswer {
   /** `QuestionOptionData.id` of what they picked, `null` for a friend who hasn't answered. */
   optionId: string | null;
   answeredAt: string | null;
+  /**
+   * Whether the friend passed the day with a joker (docs/prd.md §4.8). A joker
+   * counts as « done » — the row shows a joker chip rather than « n'a pas
+   * encore répondu ». Never true at the same time as `optionId !== null`: a
+   * day is answered or jokered, never both (`v1_daily_question_jokers` is
+   * refused when the answer document exists, and vice versa).
+   */
+  jokered: boolean;
 }
 
 export type FriendAnswersStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -26,8 +36,11 @@ export interface FriendAnswersView {
   friends: FriendAnswer[];
 }
 
-/** What one friend picked, or `null` for a friend who hasn't answered. */
-type Picked = Record<string, { optionId: string; answeredAt: string } | null>;
+/**
+ * What one friend did with the day: picked an option, spent a joker
+ * (`jokered: true`), or nothing yet (`null`). A friend never has both.
+ */
+type Picked = Record<string, { optionId: string; answeredAt: string } | { jokered: true } | null>;
 
 interface AnswersState {
   key: string;
@@ -84,21 +97,41 @@ export const useFriendAnswers = (questionId: string | null, enabled: boolean): F
     let cancelled = false;
 
     // `getFrozenDoc` rather than `getDoc`, and the distinction it draws is
-    // exactly the one this list needs: an answer that exists is immutable — the
-    // rules deny every update to one — so a friend already found to have
-    // answered is served from the SDK's disk cache, for good, across relaunches.
-    // A friend who has *not* answered reads as an absence, which `getFrozenDoc`
-    // never trusts, so they are re-read from the server every time. Reopening a
-    // spent day therefore converges on costing nothing, while today's sheet
-    // still picks up whoever answered since it was last opened.
-    Promise.all(friendIds.map((friendId) => getFrozenDoc(getSubDocumentRef(
-      QUESTION_COLLECTION,
-      questionId,
-      DAILY_QUESTION_ANSWER_COLLECTION,
-      friendId,
-      dailyQuestionAnswerConverter,
-    ))))
-      .then((snapshots) => {
+    // exactly the one this list needs: an answer or a joker that exists is
+    // immutable — the rules deny every update to either — so a friend already
+    // found to have done the day is served from the SDK's disk cache, for
+    // good, across relaunches. A friend who has *not* done anything reads as
+    // an absence, which `getFrozenDoc` never trusts, so they are re-read from
+    // the server every time. Reopening a spent day therefore converges on
+    // costing nothing, while today's sheet still picks up whoever acted since
+    // it was last opened.
+    //
+    // Two reads per friend now — the answer *and* the joker — because « done »
+    // is either one (docs/prd.md §4.8, « joker complet »). Fired in parallel,
+    // so the friend list still lands in one round trip. A friend cannot hold
+    // both at once by construction: the callable that writes a joker refuses
+    // when an answer exists, and vice versa.
+    Promise.all(friendIds.map(async (friendId) => {
+      const [ answerSnap, jokerSnap ] = await Promise.all([
+        getFrozenDoc(getSubDocumentRef(
+          QUESTION_COLLECTION,
+          questionId,
+          DAILY_QUESTION_ANSWER_COLLECTION,
+          friendId,
+          dailyQuestionAnswerConverter,
+        )),
+        getFrozenDoc(getSubDocumentRef(
+          QUESTION_COLLECTION,
+          questionId,
+          DAILY_QUESTION_JOKER_COLLECTION,
+          friendId,
+          dailyQuestionJokerConverter,
+        )),
+      ]);
+
+      return { answer: answerSnap.data() ?? null, joker: jokerSnap.data() ?? null };
+    }))
+      .then((results) => {
         if (cancelled) {
           return;
         }
@@ -106,11 +139,15 @@ export const useFriendAnswers = (questionId: string | null, enabled: boolean): F
         const picked: Picked = {};
 
         friendIds.forEach((friendId, index) => {
-          const answer = snapshots[index].data() ?? null;
+          const { answer, joker } = results[index];
 
-          picked[friendId] = answer === null
-            ? null
-            : { optionId: answer.option_id, answeredAt: answer.answered_at };
+          if (answer !== null) {
+            picked[friendId] = { optionId: answer.option_id, answeredAt: answer.answered_at };
+          } else if (joker !== null) {
+            picked[friendId] = { jokered: true };
+          } else {
+            picked[friendId] = null;
+          }
         });
 
         setState({ key, picked, failed: false });
@@ -134,13 +171,16 @@ export const useFriendAnswers = (questionId: string | null, enabled: boolean): F
   const current = state?.key === key ? state : null;
 
   const friends = useMemo(() => accepted.map((friendship) => {
-    const answer = current?.picked[friendship.friend_id] ?? null;
+    const state = current?.picked[friendship.friend_id] ?? null;
+    const jokered = state !== null && 'jokered' in state;
+    const answer = state !== null && !('jokered' in state) ? state : null;
 
     return {
       friendId: friendship.friend_id,
       username: friendship.friend_username,
       optionId: answer?.optionId ?? null,
       answeredAt: answer?.answeredAt ?? null,
+      jokered,
     };
   }), [ accepted, current ]);
 
