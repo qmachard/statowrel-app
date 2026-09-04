@@ -7,6 +7,9 @@ export default tseslint.config(
     ignores: [
       "dist/**",
       "node_modules/**",
+      // The throwaway bundle `scripts/lib/load-src.mjs` builds to run `src/`
+      // from an ops script — generated output, and already linted as source.
+      ".script-bundle/**",
     ],
   },
   js.configs.recommended,
