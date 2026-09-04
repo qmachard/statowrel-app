@@ -162,10 +162,10 @@ export const DailyQuestionBanner = ({ label, statLabel, jokered = false, onPress
               <>
                 <View style={styles.moodLead}>
                   <Check size={CHECK_SIZE} color={fg} />
-                  <Text style={[ styles.moodLeadText, fgStyle ]}>Aujourd’hui tu as</Text>
+                  <Text style={[ styles.moodLeadText, fgStyle ]}>Aujourd’hui tu as utilisé un</Text>
                 </View>
 
-                <Text style={[ styles.moodLabel, fgStyle ]} numberOfLines={2}>PASSÉ AVEC UN JOKER</Text>
+                <Text style={[ styles.moodLabel, fgStyle ]} numberOfLines={2}>JOKER</Text>
               </>
             ) : mood === null ? (
               <>
