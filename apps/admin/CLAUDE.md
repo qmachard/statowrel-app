@@ -200,10 +200,11 @@ les réécritures `/admin` et `/admin/**` → `/admin/index.html` sont ce qui fa
 un rechargement de page, et l'attrape-tout `**` → `/index.html` sert la **page de présentation** de
 la racine — `apps/admin/index.html`, une page statique sans bundle qui porte sa propre copie des
 tokens, comme celles de `public/legal/`. C'est la **page marketing** de l'app : sa copie est celle
-des cinq slides du carrousel d'onboarding (`apps/app/src/onboarding/copy.ts`) et ses maquettes
-reprennent en HTML/CSS les visuels de `OnboardingVisual.tsx` — la carte StatOwrel inclinée, la
-rangée d'avatars, la cloche rouge —, donc les deux se changent ensemble ou la promesse de la page et
-celle du premier lancement divergent. Les **deux URL de store** (`apps.apple.com/fr/app/statowrel/id6803561031`
+du carrousel d'onboarding (`apps/app/src/onboarding/copy.ts`) et ses maquettes reprennent en
+HTML/CSS les visuels de `OnboardingVisual.tsx` — la carte StatOwrel inclinée, la rangée d'avatars —,
+donc les deux se changent ensemble ou la promesse de la page et celle du premier lancement
+divergent. La slide « On te prévient » du carrousel n'a **pas** de section ici : demander la
+permission de notifier est une étape du premier lancement, pas un argument de téléchargement. Les **deux URL de store** (`apps.apple.com/fr/app/statowrel/id6803561031`
 et `play.google.com/store/apps/details?id=fr.quentinmachard.statowrel`) y sont écrites en dur, deux
 fois chacune — le CTA du haut et celui du bas. Vite bâtit les deux : `build.rollupOptions.input` déclare
 `index.html` (l'accueil) et `admin/index.html` (la console), d'où `dist/index.html` et
