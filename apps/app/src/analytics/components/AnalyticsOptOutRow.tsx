@@ -1,4 +1,4 @@
-import { BarChart3 } from '@/components/icons';
+import { ChartBar } from '@/components/icons';
 
 import { Button } from '@/components/Button';
 import { useAnalyticsOptOut } from '@/analytics/preferences';
@@ -31,7 +31,7 @@ export const AnalyticsOptOutRow = () => {
         ? 'On ne collecte plus rien depuis ce téléphone'
         : 'Anonymes, pas de pub, jamais partagées'}
       variant={optedOut ? 'secondary' : 'ghost'}
-      icon={BarChart3}
+      icon={ChartBar}
       onPress={() => setOptedOut(!optedOut)}
     />
   );
