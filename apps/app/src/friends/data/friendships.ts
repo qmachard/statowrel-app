@@ -1,6 +1,7 @@
 import { USER_COLLECTION, USER_FRIEND_COLLECTION, userFriendConverter } from '@statowrel/models';
 import { Timestamp, writeBatch } from '@react-native-firebase/firestore';
 
+import { track } from '@/analytics/analytics';
 import { db } from '@/lib/firebase';
 import { getSubDocumentRef } from '@/lib/firestore';
 
@@ -35,6 +36,10 @@ export const acceptFriendship = async (userId: string, friendId: string): Promis
   }
 
   await batch.commit();
+
+  // Fires on both devices — an acceptance is a mutual state change. `identify`
+  // has already scoped the event to whichever side ran this.
+  track({ name: 'friend_invitation_accepted' });
 };
 
 /**

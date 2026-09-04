@@ -9,6 +9,8 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { useAnalyticsIdentity } from '@/analytics/useAnalyticsIdentity';
+import { useScreenTracking } from '@/analytics/useScreenTracking';
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { OnboardingSheet } from '@/auth/OnboardingSheet';
 import { useDemoAnswerFlush } from '@/onboarding/data/useDemoAnswerFlush';
@@ -67,6 +69,9 @@ const SessionGate = () => {
   // The other half of the onboarding demo: the pick made before there was an
   // account, written once there is one.
   useDemoAnswerFlush();
+  // Analytics identity + user properties + consent — hangs off `useAuth()` for
+  // the same reason as the notifications hook. See `src/analytics/`.
+  useAnalyticsIdentity();
 
   useEffect(() => {
     if (ready) {
@@ -97,6 +102,9 @@ export default function App() {
     SpaceGrotesk_400Regular,
     SpaceGrotesk_500Medium,
   });
+  // `onStateChange` needs a stable identity to avoid re-subscribing the
+  // NavigationContainer on every render.
+  const onStateChange = useScreenTracking();
 
   if (!fontsLoaded) {
     return null;
@@ -105,7 +113,12 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <GestureHandlerRootView style={styles.root}>
-        <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking}>
+        <NavigationContainer
+          ref={navigationRef}
+          theme={navigationTheme}
+          linking={linking}
+          onStateChange={onStateChange}
+        >
           <StatusBar style="auto" />
           <AuthProvider>
             <SessionGate />

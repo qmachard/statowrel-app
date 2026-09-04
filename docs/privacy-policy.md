@@ -101,6 +101,35 @@ depuis les réglages de votre téléphone ; l'identifiant est par ailleurs suppr
 lorsqu'il devient invalide. *[`packages/models/src/v1_user_device.ts`,
 `apps/functions/src/domains/notifications/`]*
 
+### 3.8 Statistiques d'usage anonymes
+
+Pour comprendre comment l'application est utilisée (quels écrans sont vus, combien de personnes
+répondent chaque jour, où le parcours se casse), nous collectons un ensemble limité d'événements
+via **Firebase Analytics** (Google Analytics 4) — le service d'analyse d'usage intégré à la même
+plate-forme Firebase qui héberge le reste de l'app.
+
+**Ce que nous envoyons :** votre identifiant technique de compte (le même UID Firebase que le
+reste de l'app), les changements d'écran (par leur nom technique — Stats, DailyQuestion, Menu, etc.)
+et une poignée d'événements produits qui n'incluent que des identifiants techniques et des drapeaux
+booléens ou catégoriels. La liste exhaustive est publiée dans le
+[plan de taggage](https://github.com/qmachard/statowrel-app/blob/main/docs/analytics.md) et se
+limite aujourd'hui à : création de compte, connexion, déconnexion, envoi d'une réponse, usage d'un
+joker, proposition d'une question, invitation d'un ami, acceptation d'une invitation.
+
+**Ce que nous n'envoyons jamais :** votre e-mail, votre nom d'utilisateur, le contenu de vos
+réponses ou de vos questions, votre position, votre identifiant publicitaire (IDFA sur iOS, AdID
+sur Android — la collecte est explicitement désactivée dans `apps/app/firebase.json`), ni aucune
+donnée qui permette une personnalisation publicitaire (Google Signals désactivés).
+
+**Ce qu'il en est fait :** ces événements servent uniquement à mesurer et à améliorer le produit.
+Ils ne sont partagés avec **aucun** annonceur, aucun courtier en données, aucun réseau publicitaire.
+Ils ne sont pas recoupés avec des données extérieures à StatOwrel.
+
+**Comment vous en sortir :** un mécanisme de recueil de votre consentement sera mis en place
+dans une version ultérieure de l'application. Il permettra d'accepter ou de refuser la collecte
+directement depuis l'application. En attendant la mise en place de ce mécanisme, cette
+politique de confidentialité sera mise à jour dès qu'il sera en ligne.
+
 ## 4. Ce que nous ne collectons pas
 
 Position géographique, contacts, photos et vidéos de votre appareil, micro, appareil photo,
@@ -114,7 +143,7 @@ notre compte et uniquement pour faire fonctionner l'application :
 
 | Prestataire | Ce qu'il traite | Où |
 |---|---|---|
-| **Google (Firebase / Google Cloud)** | Hébergement, base de données, authentification, traitements serveur | Union européenne (`europe-west1`) |
+| **Google (Firebase / Google Cloud)** | Hébergement, base de données, authentification, traitements serveur, **statistiques d'usage anonymes (Firebase Analytics / GA4)** | Union européenne (`europe-west1`) |
 | **Expo (Expo Push)** | L'identifiant d'envoi de votre appareil et le texte de la notification, qu'il relaie vers Apple ou Google | États-Unis, clauses contractuelles types |
 | **Apple** | Uniquement si vous utilisez « Se connecter avec Apple » | Selon la politique d'Apple |
 | **Google Sign-In** | Uniquement si vous utilisez « Se connecter avec Google » | Selon la politique de Google |

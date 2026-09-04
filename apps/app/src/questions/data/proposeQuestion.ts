@@ -4,6 +4,7 @@ import {
   type ProposeQuestionResult,
 } from '@statowrel/models';
 
+import { track } from '@/analytics/analytics';
 import { callFunction } from '@/lib/functions';
 
 /**
@@ -20,6 +21,10 @@ import { callFunction } from '@/lib/functions';
  * Throws a `FirebaseError` carrying a `functions/*` code; translate it with
  * `proposalFailure` rather than surfacing it.
  */
-export const proposeQuestion = (payload: ProposeQuestionPayload): Promise<ProposeQuestionResult> => (
-  callFunction<ProposeQuestionPayload, ProposeQuestionResult>(PROPOSE_QUESTION_CALLABLE, payload)
-);
+export const proposeQuestion = async (payload: ProposeQuestionPayload): Promise<ProposeQuestionResult> => {
+  const result = await callFunction<ProposeQuestionPayload, ProposeQuestionResult>(PROPOSE_QUESTION_CALLABLE, payload);
+
+  track({ name: 'question_proposed', params: { options_count: payload.options.length } });
+
+  return result;
+};

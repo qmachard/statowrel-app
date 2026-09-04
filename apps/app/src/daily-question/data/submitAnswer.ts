@@ -7,6 +7,7 @@ import {
 } from '@statowrel/models';
 import { setDoc } from '@react-native-firebase/firestore';
 
+import { track } from '@/analytics/analytics';
 import { getSubDocumentRef } from '@/lib/firestore';
 
 export interface SubmitAnswerInput {
@@ -96,6 +97,18 @@ export const submitAnswer = async ({
     ),
     answer,
   );
+
+  // The Nord event of the daily loop. Emitted *after* the write, so a failed
+  // write is never counted as an answer. `question_id` and `option_id` are
+  // ULIDs, not PII; `late` splits on-time from catch-up answers.
+  track({
+    name: 'answer_submitted',
+    params: {
+      question_id: questionId,
+      option_id: optionId,
+      late: answer.late,
+    },
+  });
 
   return answer;
 };

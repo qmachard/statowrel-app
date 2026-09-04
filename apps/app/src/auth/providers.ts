@@ -10,6 +10,8 @@ import {
 } from '@react-native-firebase/auth';
 import { Platform } from 'react-native';
 
+import { track } from '@/analytics/analytics';
+import type { SignInMethod } from '@/analytics/events';
 import { auth } from '@/lib/firebase';
 import { firebaseErrorCode } from '@/lib/firebaseError';
 import { unregisterDeviceForPush } from '@/notifications/data/deviceRegistration';
@@ -95,6 +97,20 @@ const requireGoogleSignIn = () => {
  */
 const ANDROID_DEVELOPER_ERROR = '10';
 
+/**
+ * `sign_up_completed` fires the first time a credential lands on an account
+ * the backend has just created — Firebase Auth's `additionalUserInfo.isNewUser`
+ * carries that; `sign_in_completed` on every subsequent sign-in. Tagged
+ * per-provider (`method`) so the funnel can be split by door.
+ */
+const trackCredential = (credential: UserCredential, method: SignInMethod): UserCredential => {
+  const isNewUser = credential.additionalUserInfo?.isNewUser === true;
+
+  track(isNewUser ? { name: 'sign_up_completed', params: { method } } : { name: 'sign_in_completed', params: { method } });
+
+  return credential;
+};
+
 export const signInWithGoogle = async (): Promise<UserCredential> => {
   const { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } = requireGoogleSignIn();
 
@@ -113,7 +129,7 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
       throw new SignInUnavailableError('Google n\'a pas renvoyé de jeton d\'identité.');
     }
 
-    return await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+    return trackCredential(await signInWithCredential(auth, GoogleAuthProvider.credential(idToken)), 'google');
   } catch (error) {
     if (isErrorWithCode(error) && error.code === statusCodes.SIGN_IN_CANCELLED) {
       throw new SignInCancelledError();
@@ -199,9 +215,12 @@ export const signInWithApple = async (): Promise<UserCredential> => {
       throw new SignInUnavailableError('Apple n\'a pas renvoyé de jeton d\'identité.');
     }
 
-    return await signInWithCredential(
-      auth,
-      new OAuthProvider('apple.com').credential({ idToken: credential.identityToken, rawNonce }),
+    return trackCredential(
+      await signInWithCredential(
+        auth,
+        new OAuthProvider('apple.com').credential({ idToken: credential.identityToken, rawNonce }),
+      ),
+      'apple',
     );
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 'ERR_REQUEST_CANCELED') {
@@ -213,11 +232,11 @@ export const signInWithApple = async (): Promise<UserCredential> => {
 };
 
 export const signInWithEmail = async (email: string, password: string): Promise<UserCredential> => (
-  signInWithEmailAndPassword(auth, email, password)
+  trackCredential(await signInWithEmailAndPassword(auth, email, password), 'password')
 );
 
 export const signUpWithEmail = async (email: string, password: string): Promise<UserCredential> => (
-  createUserWithEmailAndPassword(auth, email, password)
+  trackCredential(await createUserWithEmailAndPassword(auth, email, password), 'password')
 );
 
 /**
@@ -257,6 +276,11 @@ export const signOut = async (): Promise<void> => {
   if (googleConfigured) {
     await loadGoogleSignIn()?.GoogleSignin.signOut().catch(() => undefined);
   }
+
+  // Emitted *before* Firebase clears the session so the event still carries the
+  // outgoing UID as its User-ID (identify(null) fires from `useAnalyticsIdentity`
+  // as soon as the auth state moves).
+  track({ name: 'sign_out' });
 
   await firebaseSignOut(auth);
 };
