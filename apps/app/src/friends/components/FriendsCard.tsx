@@ -12,6 +12,11 @@ import { removeFriendship } from '@/friends/data/friendships';
 import { useFriends } from '@/friends/data/useFriends';
 import { useFriendshipWrite } from '@/friends/data/useFriendshipWrite';
 
+export interface FriendsCardProps {
+  /** Opens a friend's own screen — their streak and the compatibility with them (docs/prd.md §5.3). Accepted friendships only. */
+  onOpenFriend: (friendId: string, friendUsername: string) => void;
+}
+
 const styles = StyleSheet.create({
   // The card *is* the list: no padding of its own, no gap between the rows —
   // the separators do that work, and they run the full width of the surface.
@@ -64,8 +69,11 @@ interface Line {
  * answer sitting under what it answers. The row's menu is left to the accepted
  * friendships, where « Retirer ce pote » is the only thing to do and nothing is
  * waiting: a `ghost` trigger, so it does not compete with those buttons.
+ *
+ * An accepted row is also the way into that friend's own screen (docs/prd.md
+ * §5.3) — the whole row takes the tap, the menu beside it keeping its own.
  */
-export const FriendsCard = () => {
+export const FriendsCard = ({ onOpenFriend }: FriendsCardProps) => {
   const { accepted, incoming, outgoing, loading } = useFriends();
   const { busy, running, failed, run } = useFriendshipWrite();
 
@@ -94,6 +102,13 @@ export const FriendsCard = () => {
           <FriendRow
             username={line.friendship.friend_username}
             note={line.kind === 'accepted' ? undefined : NOTES[line.kind]}
+            // Only an accepted friendship opens onto something: there is
+            // nothing to show about somebody who has not accepted yet, and a
+            // row already asking « Accepter » / « Refuser » would be a third
+            // target on top of the two it is waiting on.
+            onPress={line.kind === 'accepted'
+              ? () => onOpenFriend(line.friendship.friend_id, line.friendship.friend_username)
+              : undefined}
             action={line.kind === 'accepted' ? undefined : (
               <PendingActions
                 friendship={line.friendship}
