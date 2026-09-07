@@ -286,6 +286,17 @@ export const DailyQuestionScreen = () => {
   // read lands after.
   const friends = useFriendAnswers(questionId, answer !== null || jokered);
 
+  /**
+   * Opens a friend from the day's list (docs/prd.md §5.3).
+   *
+   * Pushed on top of this modal rather than replacing it: the day is what the
+   * friend was tapped from, and closing their screen has to land back on the
+   * answers one was reading — not on Stats.
+   */
+  const openFriend = (friendId: string, friendUsername: string) => {
+    navigation.navigate('Friend', { friendId, friendUsername });
+  };
+
   // Seeing them is what clears the day's badge on the calendar (docs/prd.md
   // §5.2) — the bead was pointing at this list, so listing it is the moment it
   // has been answered. `null` until the reads land: a badge must not fall on a
@@ -339,6 +350,7 @@ export const DailyQuestionScreen = () => {
               question={question}
               pickedOptionId={answer.option_id}
               surface={surface}
+              onOpenFriend={openFriend}
             />
           </>
         )}
@@ -378,6 +390,7 @@ export const DailyQuestionScreen = () => {
               question={question}
               pickedOptionId={null}
               surface={surface}
+              onOpenFriend={openFriend}
             />
           </>
         )}

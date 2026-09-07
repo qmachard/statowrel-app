@@ -129,12 +129,27 @@ export interface FriendAnswersProps {
   pickedOptionId: string | null;
   /** The sheet's own colour — the heading sits straight on it. */
   surface: Surface;
+  /**
+   * Opens that friend's own screen — their streak and the compatibility with
+   * them (docs/prd.md §5.3).
+   *
+   * Every row here is an accepted friendship (`useFriendAnswers` walks
+   * `useFriends`' accepted half), so every row opens, including the ones that
+   * have not answered yet: it is the same person, and a list where only some
+   * faces are tappable teaches nothing.
+   */
+  onOpenFriend: (friendId: string, friendUsername: string) => void;
 }
 
 /**
  * The friends' answers of docs/prd.md §4.5, under the recap: `@handle`, the
  * StatOwrel their answer earned them and the hour they picked it, the ones who
  * answered like me first, the ones who haven't yet at the end.
+ *
+ * A row opens that friend's screen (§5.3), exactly as it does in the Menu's
+ * list — same row component, same gesture, so « taper un pote » means one thing
+ * in the whole app. Seeing what somebody answered today is the likeliest moment
+ * to wonder how alike the two of you answer in general.
  *
  * It only ever renders on an answered day — the screen doesn't mount it before,
  * and `useFriendAnswers` reads nothing before either: unlocking your friends by
@@ -144,7 +159,7 @@ export interface FriendAnswersProps {
  * heading included: an account with no friends yet is the common case, and a
  * framed section holding one grey sentence looks like a section that broke.
  */
-export const FriendAnswers = ({ status, friends, question, pickedOptionId, surface }: FriendAnswersProps) => {
+export const FriendAnswers = ({ status, friends, question, pickedOptionId, surface, onOpenFriend }: FriendAnswersProps) => {
   const rows = useMemo(
     () => toRows(friends, question, pickedOptionId),
     [ friends, question, pickedOptionId ],
@@ -182,6 +197,7 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
             <FriendRow
               username={row.username}
               note={row.timeLabel ?? undefined}
+              onPress={() => onOpenFriend(row.friendId, row.username)}
             >
               {row.jokered ? (
                 <Text style={[ styles.chip, styles.chipJoker ]} numberOfLines={1}>Joker</Text>
