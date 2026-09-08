@@ -34,7 +34,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing(3),
   },
+  // Takes the width the two buttons leave, which is what pushes the invitation
+  // to the right edge without a spacer of its own.
   heading: {
+    flex: 1,
     fontFamily: fonts.head,
     fontSize: fontSize.xl,
     textTransform: 'uppercase',
@@ -57,20 +60,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors['muted-foreground'],
   },
-  // The tab row keeps the anatomy the friend list's own head had — a title on
-  // the left, the invitation button on its right — with the switch standing
-  // where that title was.
-  switcher: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing(4),
-  },
-  tabs: {
-    flex: 1,
-  },
   // The switch and the panel it drives are one block, tighter than the screen's
   // own rhythm: the two lists are read as what the tab above them selects.
   panel: {
+    gap: spacing(3),
+  },
+  // The friend list and the invitation under it, on the panel's own rhythm.
+  friends: {
     gap: spacing(3),
   },
   // The inactive list stays mounted and drops out of the layout instead of
@@ -102,6 +98,8 @@ export const MenuScreen = () => {
   const { user, profile } = useAuth();
   const [ deleting, setDeleting ] = useState(false);
   const [ tab, setTab ] = useState<MenuTab>('friends');
+
+  const openInvite = () => navigation.navigate('InviteFriend');
 
   const runDeletion = async () => {
     setDeleting(true);
@@ -145,6 +143,10 @@ export const MenuScreen = () => {
         <View style={styles.head}>
           <Button label="Retour" variant="outline" size="icon-sm" icon={ChevronLeft} onPress={() => navigation.goBack()} />
           <Text style={styles.heading}>Menu</Text>
+          {/* Top right of the screen rather than over the friend list: inviting
+              is the one thing on this screen somebody arrives already meaning
+              to do, so it is reachable whichever tab is up. */}
+          <Button label="Inviter un pote" icon={UserRoundPlus} size="icon-sm" onPress={openInvite} />
         </View>
 
         <View style={styles.identity}>
@@ -164,23 +166,16 @@ export const MenuScreen = () => {
             under the other: stacked, they made the screen an endless scroll that
             buried the settings under two lists that only grow. */}
         <View style={styles.panel}>
-          <View style={styles.switcher}>
-            <Tabs items={TABS} value={tab} onChange={setTab} style={styles.tabs} />
+          <Tabs items={TABS} value={tab} onChange={setTab} />
 
-            {/* Only over the list it acts on — inviting a pote above the
-                question list would answer nothing that list asks. */}
-            {tab === 'friends' ? (
-              <Button
-                label="Inviter un pote"
-                icon={UserRoundPlus}
-                size="icon-sm"
-                onPress={() => navigation.navigate('InviteFriend')}
-              />
-            ) : null}
-          </View>
-
-          <View style={tab === 'friends' ? null : styles.hidden}>
+          <View style={tab === 'friends' ? styles.friends : styles.hidden}>
             <FriendsCard />
+
+            {/* The list's own call to action, under what it is about — the
+                header's icon button is the shortcut, this is the sentence.
+                Full width, because at the bottom of a list there is nothing
+                left to share the line with. */}
+            <Button label="Inviter un pote" icon={UserRoundPlus} onPress={openInvite} />
           </View>
 
           {/* A drawn proposal opens its day the way a calendar cell does. */}
