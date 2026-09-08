@@ -27,7 +27,7 @@
  * publish the console or the legal pages.
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -90,17 +90,35 @@ for (const file of FILES) {
   }
 }
 
-// The second failure, and the expensive one: the files exist, they are filled
-// in, and the deploy drops them anyway. Only meaningful once a build has run.
-if (existsSync(join(ADMIN_DIR, 'dist'))) {
+/*
+ * The second failure, and the expensive one: the files exist, they are filled
+ * in, and the deploy drops them anyway.
+ *
+ * Only ever asked of a build that is newer than the sources — `dist/index.html`
+ * is the stamp of the last one. Run by hand on a checkout whose last build
+ * predates these files, the honest answer is « rebuild », not « you moved
+ * something »; the deploy never sees that case, its predeploy building first.
+ */
+const lastBuild = existsSync(join(ADMIN_DIR, 'dist', 'index.html'))
+  ? statSync(join(ADMIN_DIR, 'dist', 'index.html')).mtimeMs
+  : null;
+
+if (lastBuild !== null) {
   for (const file of FILES) {
-    if (!existsSync(join(DIST_DIR, file))) {
-      problems.push(
-        `${file} did not reach apps/admin/dist/well-known/ — Vite copies apps/admin/public/ verbatim, `
-        + 'so a missing file here means it was moved, renamed, or put back under a dot-directory '
-        + "that firebase.json's `ignore` drops.",
-      );
+    const source = join(PUBLIC_DIR, file);
+
+    if (existsSync(join(DIST_DIR, file)) || !existsSync(source)) {
+      continue;
     }
+
+    problems.push(
+      statSync(source).mtimeMs > lastBuild
+        ? `${file} is not in apps/admin/dist/well-known/ because the last build predates it. `
+          + 'Run `npm run build:admin` (or just `npm run deploy:admin`, whose predeploy builds first).'
+        : `${file} did not reach apps/admin/dist/well-known/ even though the build is up to date — `
+          + 'Vite copies apps/admin/public/ verbatim, so it was moved, renamed, or put back under a '
+          + "dot-directory that firebase.json's `ignore` drops.",
+    );
   }
 }
 
