@@ -330,7 +330,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'statowrel-app',
   owner: 'qmachard',
   scheme: 'statowrel',
-  version: '1.2.0',
+  version: '1.3.0',
   /*
    * Portrait, and nothing else — no screen here has a layout that turns.
    *
