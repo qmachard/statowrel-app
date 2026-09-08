@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft } from '@/components/icons';
+import { ChevronLeft, UserRoundPlus } from '@/components/icons';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { signOut } from '@/auth/providers';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { LegalLinks } from '@/components/LegalLinks';
+import { Tabs, type TabItem } from '@/components/Tabs';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendsCard } from '@/friends/components/FriendsCard';
 import { NotificationsButton } from '@/notifications/components/NotificationsButton';
@@ -56,6 +57,28 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors['muted-foreground'],
   },
+  // The tab row keeps the anatomy the friend list's own head had — a title on
+  // the left, the invitation button on its right — with the switch standing
+  // where that title was.
+  switcher: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(4),
+  },
+  tabs: {
+    flex: 1,
+  },
+  // The switch and the panel it drives are one block, tighter than the screen's
+  // own rhythm: the two lists are read as what the tab above them selects.
+  panel: {
+    gap: spacing(3),
+  },
+  // The inactive list stays mounted and drops out of the layout instead of
+  // unmounting: each card holds its own `onSnapshot`, and remounting on every
+  // toggle would re-read the collection each time.
+  hidden: {
+    display: 'none',
+  },
   // Signing out, deleting the account and the legal footer are one block at the
   // bottom of the screen, tighter than the screen's own rhythm: the three lines
   // belong together, and the gap above them is what separates them from the
@@ -66,10 +89,19 @@ const styles = StyleSheet.create({
   },
 });
 
+/** The two lists of docs/prd.md §5.3, as the switch that selects them names them. */
+type MenuTab = 'friends' | 'questions';
+
+const TABS: readonly TabItem<MenuTab>[] = [
+  { value: 'friends', label: 'Mes potes' },
+  { value: 'questions', label: 'Mes questions' },
+];
+
 export const MenuScreen = () => {
   const navigation = useNavigation();
   const { user, profile } = useAuth();
   const [ deleting, setDeleting ] = useState(false);
+  const [ tab, setTab ] = useState<MenuTab>('friends');
 
   const runDeletion = async () => {
     setDeleting(true);
@@ -128,12 +160,34 @@ export const MenuScreen = () => {
           <Text style={styles.email}>{profile?.email ?? user.email ?? '—'}</Text>
         </View>
 
-        <FriendsCard onInvite={() => navigation.navigate('InviteFriend')} />
+        {/* The two lists of docs/prd.md §5.3 sit behind a switch rather than one
+            under the other: stacked, they made the screen an endless scroll that
+            buried the settings under two lists that only grow. */}
+        <View style={styles.panel}>
+          <View style={styles.switcher}>
+            <Tabs items={TABS} value={tab} onChange={setTab} style={styles.tabs} />
 
-        {/* Under the friends and above the settings: the two lists of docs/prd.md
-            §5.3, in the order that section states them. A drawn proposal opens
-            its day the way a calendar cell does. */}
-        <MyQuestionsCard onOpenDay={(date) => navigation.navigate('DailyQuestion', { date })} />
+            {/* Only over the list it acts on — inviting a pote above the
+                question list would answer nothing that list asks. */}
+            {tab === 'friends' ? (
+              <Button
+                label="Inviter un pote"
+                icon={UserRoundPlus}
+                size="icon-sm"
+                onPress={() => navigation.navigate('InviteFriend')}
+              />
+            ) : null}
+          </View>
+
+          <View style={tab === 'friends' ? null : styles.hidden}>
+            <FriendsCard />
+          </View>
+
+          {/* A drawn proposal opens its day the way a calendar cell does. */}
+          <View style={tab === 'questions' ? null : styles.hidden}>
+            <MyQuestionsCard onOpenDay={(date) => navigation.navigate('DailyQuestion', { date })} />
+          </View>
+        </View>
 
         <View style={styles.settings}>
           {/* Development only, and dropped from a release build by the `__DEV__`

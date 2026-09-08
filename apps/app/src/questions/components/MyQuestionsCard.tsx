@@ -13,15 +13,6 @@ export interface MyQuestionsCardProps {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    gap: spacing(3),
-  },
-  title: {
-    fontFamily: fonts.head,
-    fontSize: fontSize.xl,
-    textTransform: 'uppercase',
-    color: colors.foreground,
-  },
   // Same anatomy as the friend list: the card *is* the list — no padding of its
   // own, no gap between the rows — and the separators run the full width.
   list: {
@@ -56,8 +47,10 @@ const styles = StyleSheet.create({
  *
  * It is deliberately the friend list's twin — one surface cut into rows by
  * separators, the same empty state in the list's own place, the same failure
- * line — because the two are read one under the other on the same screen, and a
- * second list shaped differently would read as a second app.
+ * line — because the two are the two panels of the same tab switch, and a second
+ * list shaped differently would read as a second app.
+ *
+ * It carries no heading of its own either: the tab it hangs off names it.
  *
  * It carries no « Poser une question » button, unlike the friend list's own
  * invitation icon. The door is on the Stats screen, beside the wallet that pays
@@ -69,44 +62,40 @@ export const MyQuestionsCard = ({ onOpenDay }: MyQuestionsCardProps) => {
   const { questions, loading, failed } = useMyQuestions();
 
   return (
-    <View style={styles.root}>
-      <Text style={styles.title}>Mes questions</Text>
+    <Card style={styles.list}>
+      {loading ? (
+        <View style={styles.state}>
+          <ActivityIndicator color={colors.foreground} />
+        </View>
+      ) : null}
 
-      <Card style={styles.list}>
-        {loading ? (
-          <View style={styles.state}>
-            <ActivityIndicator color={colors.foreground} />
+      {!loading && !failed && questions.length === 0 ? (
+        <View style={styles.state}>
+          <Text style={styles.empty}>{EMPTY}</Text>
+        </View>
+      ) : null}
+
+      {questions.map((question, index) => {
+        const status = proposalStatusOf(question);
+        // Pulled out of the object so the null check narrows the closure below.
+        const { broadcastOn } = status;
+
+        return (
+          <View key={question.id} style={index === 0 ? null : styles.separated}>
+            <MyQuestionRow
+              label={question.label}
+              status={status}
+              onPress={broadcastOn === null ? undefined : () => onOpenDay(broadcastOn)}
+            />
           </View>
-        ) : null}
+        );
+      })}
 
-        {!loading && !failed && questions.length === 0 ? (
-          <View style={styles.state}>
-            <Text style={styles.empty}>{EMPTY}</Text>
-          </View>
-        ) : null}
-
-        {questions.map((question, index) => {
-          const status = proposalStatusOf(question);
-          // Pulled out of the object so the null check narrows the closure below.
-          const { broadcastOn } = status;
-
-          return (
-            <View key={question.id} style={index === 0 ? null : styles.separated}>
-              <MyQuestionRow
-                label={question.label}
-                status={status}
-                onPress={broadcastOn === null ? undefined : () => onOpenDay(broadcastOn)}
-              />
-            </View>
-          );
-        })}
-
-        {failed ? (
-          <View style={styles.state}>
-            <Text style={styles.error}>{FAILURE}</Text>
-          </View>
-        ) : null}
-      </Card>
-    </View>
+      {failed ? (
+        <View style={styles.state}>
+          <Text style={styles.error}>{FAILURE}</Text>
+        </View>
+      ) : null}
+    </Card>
   );
 };
