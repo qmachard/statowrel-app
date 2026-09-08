@@ -154,7 +154,7 @@ export const MenuScreen = () => {
 
         <View style={styles.identity}>
           <Avatar
-            size="xl"
+            size="2xl"
             name={profile?.username ?? user.email ?? '?'}
             uri={user.photoURL}
           />

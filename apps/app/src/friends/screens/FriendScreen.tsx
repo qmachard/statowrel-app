@@ -151,7 +151,7 @@ export const FriendScreen = () => {
         </View>
 
         <View style={styles.identity}>
-          <Avatar size="xl" name={friendUsername} />
+          <Avatar size="2xl" name={friendUsername} />
           <Text style={styles.name} numberOfLines={1}>@{friendUsername}</Text>
         </View>
 

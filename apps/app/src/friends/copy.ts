@@ -34,10 +34,6 @@ export const FAILURE = 'Ça n’a pas marché. Vérifie ta connexion et réessai
 export const COMPATIBILITY = {
   /** The lead-in over the percentage — « vous », because this number is the only one in the app about two people. */
   lead: 'Vous êtes compatibles à',
-  /** The fine print under the verdict — what the number was computed from, so it can be believed. */
-  detail: (matching: number, common: number) => (
-    `${matching} réponse${matching > 1 ? 's' : ''} identique${matching > 1 ? 's' : ''} sur ${common} jour${common > 1 ? 's' : ''} en commun.`
-  ),
   /** Not enough shared days to say anything — the card counts down instead of showing a coincidence. */
   tooSoon: (missing: number) => (
     `Encore ${missing} jour${missing > 1 ? 's' : ''} répondu${missing > 1 ? 's' : ''} à deux et on vous dit tout.`

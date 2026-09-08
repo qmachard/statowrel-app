@@ -23,7 +23,7 @@ import { generatedAvatarUri } from '@/lib/avatars';
  * A picture that fails to load is dropped rather than retried, and reveals the
  * generated one under it.
  */
-export type AvatarSize = 'sm' | 'default' | 'lg' | 'xl';
+export type AvatarSize = 'sm' | 'default' | 'lg' | 'xl' | '2xl';
 
 export interface AvatarProps {
   /** Who this is — the handle or the display name. Seeds the generated avatar, and its initials are the offline fallback. */
@@ -39,15 +39,19 @@ const SIZE: Record<AvatarSize, number> = {
   sm: spacing(6),
   default: spacing(8),
   lg: spacing(10),
+  // Big enough to be a portrait rather than a marker, small enough for two of
+  // them to sit side by side — the compatibility card's pair (docs/prd.md §5.3).
+  xl: spacing(16),
   // The one the Menu screen leads with — a face, not a bullet point.
-  xl: spacing(24),
+  '2xl': spacing(24),
 };
 
 const LABEL_SIZE: Record<AvatarSize, number> = {
   sm: fontSize.xs,
   default: fontSize.sm,
   lg: fontSize.sm,
-  xl: fontSize['3xl'],
+  xl: fontSize.xl,
+  '2xl': fontSize['3xl'],
 };
 
 const styles = StyleSheet.create({

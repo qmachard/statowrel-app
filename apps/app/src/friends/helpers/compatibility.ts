@@ -7,7 +7,7 @@ import { COMPATIBILITY_VERDICTS } from '@/friends/copy';
  * the component renders one of them instead of re-deciding mid-JSX.
  */
 export type CompatibilityView =
-  | { kind: 'score'; score: number; verdict: string; matching: number; common: number }
+  | { kind: 'score'; score: number; verdict: string }
   | { kind: 'too-soon'; missing: number }
   | { kind: 'empty' };
 
@@ -38,7 +38,5 @@ export const compatibilityView = (compatibility: FriendCompatibilityResult): Com
     kind: 'score',
     score: compatibility.score,
     verdict: verdictOf(compatibility.score),
-    matching: compatibility.matching_days,
-    common: compatibility.common_days,
   };
 };

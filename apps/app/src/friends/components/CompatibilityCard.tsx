@@ -16,7 +16,7 @@ export interface CompatibilityCardProps {
 }
 
 /** How far the second face slides under the first — enough to read as a pair, not enough to hide one. */
-const AVATAR_OVERLAP = spacing(3);
+const AVATAR_OVERLAP = spacing(4);
 
 const styles = StyleSheet.create({
   content: {
@@ -43,19 +43,13 @@ const styles = StyleSheet.create({
   // screen exists for, and nothing beside it competes.
   score: {
     fontFamily: fonts.head,
-    fontSize: fontSize['7xl'],
-    lineHeight: fontSize['7xl'],
+    fontSize: fontSize['5xl'],
+    lineHeight: fontSize['5xl'],
     color: colors['notification-foreground'],
   },
   verdict: {
     fontFamily: fonts.sansMedium,
     fontSize: fontSize.base,
-    textAlign: 'center',
-    color: colors['notification-foreground'],
-  },
-  detail: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize.xs,
     textAlign: 'center',
     color: colors['notification-foreground'],
   },
@@ -80,8 +74,10 @@ const styles = StyleSheet.create({
  * both answered, jokers and the onboarding demo excluded. Not corrected for how
  * many options each question offered, on purpose — the number is meant to be
  * said out loud, and one nobody can explain is one nobody quotes
- * (`v1_friend_compatibility.ts`). The count under the verdict is what makes it
- * believable rather than arbitrary, which is why it survives in fine print.
+ * (`v1_friend_compatibility.ts`). How many days it was computed over is not
+ * shown: the score is a headline, and a card that shows its own arithmetic
+ * invites the arithmetic to be argued with rather than the number to be
+ * quoted. `COMPATIBILITY_MIN_COMMON_DAYS` is what keeps it honest instead.
  *
  * It is the loud surface of the screen, pink where the stats above it are
  * plain cards and where `primary` yellow already means « ta réponse » on the
@@ -105,8 +101,8 @@ export const CompatibilityCard = ({ friendId, friendUsername }: CompatibilityCar
         <View style={styles.faces}>
           {/* Own face first — « vous » read left to right starts with oneself,
               and it is the one that can carry a real picture. */}
-          <Avatar size="lg" name={profile?.username ?? user?.email ?? '?'} uri={user?.photoURL} />
-          <Avatar size="lg" name={friendUsername} style={styles.overlapped} />
+          <Avatar size="xl" name={profile?.username ?? user?.email ?? '?'} uri={user?.photoURL} />
+          <Avatar size="xl" name={friendUsername} style={styles.overlapped} />
         </View>
 
         {status === 'loading' ? <ActivityIndicator color={colors['notification-foreground']} /> : null}
@@ -118,7 +114,6 @@ export const CompatibilityCard = ({ friendId, friendUsername }: CompatibilityCar
             <Text style={styles.lead}>{COMPATIBILITY.lead}</Text>
             <Text style={styles.score}>{view.score}%</Text>
             <Text style={styles.verdict}>{view.verdict}</Text>
-            <Text style={styles.detail}>{COMPATIBILITY.detail(view.matching, view.common)}</Text>
           </>
         ) : null}
 
