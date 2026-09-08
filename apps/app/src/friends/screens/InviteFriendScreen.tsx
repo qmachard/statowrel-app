@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigation } from '@react-navigation/native';
-import type { InviteFriendOutcome, InviteFriendResult } from '@statowrel/models';
-import { X } from '@/components/icons';
+import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { REFERRAL_STATFLOUZZ_REWARD, type InviteFriendOutcome, type InviteFriendResult } from '@statowrel/models';
+import { Share2, X } from '@/components/icons';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, Text, View } from 'react-native';
@@ -9,11 +9,15 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { SuccessCheck } from '@/components/animations';
 import { TextField } from '@/components/TextField';
-import { colors, fontSize, fonts, spacing } from '@/design/tokens';
+import { borderWidth, colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { inviteFriend } from '@/friends/data/inviteFriend';
 import { type InviteFailure, inviteFailure } from '@/friends/errors';
 import { type InviteFriendValues, inviteFriendSchema } from '@/friends/schemas';
+import { useAuth } from '@/auth/AuthContext';
 import { useSheetBottomInset } from '@/lib/useSheetBottomInset';
+import type { RootStackParamList } from '@/navigation/types';
+import { SHARE_LABEL, shareHelp, spokenShareHelp } from '@/referrals/copy';
+import { shareInvite } from '@/referrals/data/shareInvite';
 
 /** What the handle is asked for, said once above the field (docs/prd.md §4.1). */
 const HELP = 'Tape son nom d’utilisateur exact : il n’y a ni recherche, ni annuaire.';
@@ -66,6 +70,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.destructive,
   },
+  // The second way in, cut off from the form by a rule: it answers a different
+  // question — « and if they have no account at all? » — and reads as an
+  // afterthought of the field otherwise.
+  share: {
+    gap: spacing(3),
+    paddingTop: spacing(5),
+    borderTopWidth: borderWidth,
+    borderTopColor: colors.border,
+  },
   outcome: {
     alignItems: 'center',
     gap: spacing(4),
@@ -98,9 +111,31 @@ const styles = StyleSheet.create({
  */
 export const InviteFriendScreen = () => {
   const navigation = useNavigation();
+  const { profile } = useAuth();
+  // What `statowrel://invite/lou` carries, when the app was already installed
+  // — a link tapped by somebody who has no account yet opens nothing, and their
+  // attribution is typed on the onboarding sheet instead (docs/prd.md §4.9).
+  const { params } = useRoute<RouteProp<RootStackParamList, 'InviteFriend'>>();
   const bottomInset = useSheetBottomInset();
   const [ failure, setFailure ] = useState<InviteFailure | null>(null);
   const [ result, setResult ] = useState<InviteFriendResult | null>(null);
+  const [ sharing, setSharing ] = useState(false);
+
+  const ownUsername = profile?.username ?? '';
+
+  const onShare = async () => {
+    setSharing(true);
+
+    try {
+      await shareInvite(ownUsername);
+    } catch (error: unknown) {
+      // A share sheet that will not open costs the share and nothing else: the
+      // handle is the whole invitation, and it is on the sheet either way.
+      console.warn('[referrals] could not open the share sheet', error);
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const {
     control,
@@ -108,7 +143,7 @@ export const InviteFriendScreen = () => {
     formState: { errors, isSubmitting },
   } = useForm<InviteFriendValues>({
     resolver: zodResolver(inviteFriendSchema),
-    defaultValues: { username: '' },
+    defaultValues: { username: params?.username ?? '' },
   });
 
   const onSubmit = handleSubmit(async ({ username }) => {
@@ -168,6 +203,22 @@ export const InviteFriendScreen = () => {
             {formError === null ? null : <Text style={styles.error}>{formError}</Text>}
 
             <Button label="Envoyer l’invitation" loading={isSubmitting} onPress={onSubmit} />
+          </View>
+
+          {/* The handle above only reaches somebody who already has the app.
+              This is the other half of docs/prd.md §4.1 — and the one door the
+              referral of §4.9 is sent through. */}
+          <View style={styles.share}>
+            <Text style={styles.help} accessibilityLabel={spokenShareHelp(REFERRAL_STATFLOUZZ_REWARD)}>
+              {shareHelp(REFERRAL_STATFLOUZZ_REWARD)}
+            </Text>
+            <Button
+              label={SHARE_LABEL}
+              variant="secondary"
+              icon={Share2}
+              disabled={sharing || ownUsername === ''}
+              onPress={() => void onShare()}
+            />
           </View>
         </>
       ) : (

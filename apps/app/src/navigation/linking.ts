@@ -12,7 +12,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       ForgotPassword: 'forgot-password',
       Stats: '',
       DailyQuestion: 'question/:date?',
-      InviteFriend: 'invite',
+      InviteFriend: 'invite/:username?',
       Menu: 'menu',
     },
   },
