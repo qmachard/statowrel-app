@@ -68,6 +68,10 @@ const holdBack = async (): Promise<void> => {
  * `referrals` registers nothing and exports its step, which this trigger calls.
  * The steps keep their own transactions: the referral does not widen the one
  * that moves the streak.
+ *
+ * The first step hands the second the author's profile it already read, so that
+ * arithmetic holds all the way down: settling a per-account event costs no
+ * per-answer read either.
  */
 export const onDailyQuestionAnswerCreated = onDocumentCreated({
   region: REGION_CLOUD,
@@ -81,7 +85,7 @@ export const onDailyQuestionAnswerCreated = onDocumentCreated({
 
   await holdBack();
 
-  await onAnswerCreated(parseSnapshotData(event.data, dailyQuestionAnswerConverter));
+  const { author } = await onAnswerCreated(parseSnapshotData(event.data, dailyQuestionAnswerConverter));
 
   // The onboarding carousel's pick lands on this very path the first moment a
   // session exists (`useDemoAnswerFlush`), so for a referred account it is
@@ -94,9 +98,18 @@ export const onDailyQuestionAnswerCreated = onDocumentCreated({
   }
 
   try {
-    // The document id is the author's UID, so whose answer it is, is the whole
-    // payload the referral needs.
-    await payReferralReward(event.params.user_id);
+    // The step above read this profile inside its own transaction, so the
+    // payout takes it rather than fetching the same document again: one
+    // Firestore read on *every* answer given in the app, to decide something
+    // that happens once per account, is the arithmetic that kept `referrals`
+    // from registering a trigger of its own in the first place.
+    //
+    // `author` is null on the paths that never got that far — a question that
+    // does not exist, an account with no profile document, both already logged
+    // as errors there. The payout then postpones rather than skips:
+    // `referral_rewarded_at` is still null, so the next answer settles it,
+    // which is the same retry the catch below relies on.
+    await payReferralReward(event.params.user_id, author);
   } catch (error) {
     // Swallowed rather than thrown, and that is not resignation: this trigger
     // is not configured to retry, so a throw would only lose the answer
