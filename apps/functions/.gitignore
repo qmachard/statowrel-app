@@ -11,3 +11,9 @@ firebase-debug.*.log
 .env.*
 !.env.example
 firebase-export-*
+
+# Throwaway bundle an ops script builds to run the TypeScript in src/ (scripts/lib/load-src.mjs).
+.script-bundle
+
+# Where `npm run render-instagram-card` drops the JPEGs it renders.
+.instagram-preview

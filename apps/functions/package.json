@@ -16,6 +16,7 @@
     "seed-daily-questions": "node scripts/seed-daily-questions.mjs",
     "send-test-notification": "node scripts/send-test-notification.mjs",
     "send-moderation-digest": "node scripts/send-moderation-digest.mjs",
+    "render-instagram-card": "node scripts/render-instagram-card.mjs",
     "seed-demo-question": "node scripts/seed-demo-question.mjs",
     "seed-emulator": "node scripts/seed-emulator.mjs",
     "dev": "npm run build && NODE_ENV=development NODE_OPTIONS=--enable-source-maps concurrently --kill-others \"npm run start:emulators\" \"npm run build:watch\""
@@ -24,6 +25,7 @@
     "node": "22"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.8",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "firebase-admin": "^14.3.0",
@@ -33,6 +35,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@expo-google-fonts/archivo-black": "^0.4.1",
+    "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@statowrel/models": "*",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",

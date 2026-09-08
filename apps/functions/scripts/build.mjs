@@ -19,6 +19,8 @@ import path from 'node:path';
 
 import * as esbuild from 'esbuild';
 
+import { copyInstagramAssets } from './lib/instagram-assets.mjs';
+
 const require = createRequire(import.meta.url);
 const manifest = require('../package.json');
 
@@ -60,6 +62,11 @@ const options = {
 };
 
 await writeArtifactManifest();
+// The Instagram card is drawn on a canvas, and a canvas has no fonts of its own
+// — a Cloud Functions container ships none either. The two families and the
+// brand mark are copied beside the bundle, which is what
+// `domains/instagram/helpers/canvasFonts.ts` resolves against `__dirname`.
+await copyInstagramAssets(outDir);
 
 if (process.argv.includes('--watch')) {
   const context = await esbuild.context(options);
