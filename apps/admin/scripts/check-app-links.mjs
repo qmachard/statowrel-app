@@ -22,6 +22,12 @@
  *    files live under `public/well-known/` and are served through a rewrite
  *    rather than under a real `.well-known/`; this half of the check is what
  *    would catch anybody moving them back.
+ * 3. **`appAssociation` left on its default** — Hosting *generates* an
+ *    `apple-app-site-association` of its own, a leftover of Dynamic Links, and
+ *    serves it **ahead of** any rewrite. The site then answers the right URL,
+ *    with the right content type, with an empty file naming no app at all —
+ *    and the emulator does not reproduce it, the generation being a production
+ *    feature. `"appAssociation": "NONE"` is what stands the rewrite back up.
  *
  * `SKIP_APP_LINKS_CHECK=1` is the way past it, for a deploy that only means to
  * publish the console or the legal pages.
@@ -62,6 +68,18 @@ if (process.env.SKIP_APP_LINKS_CHECK === '1') {
 
 const problems = [];
 const found = new Set();
+
+// Checked first, because it is the one failure that leaves the URL answering
+// 200 with valid JSON: nothing downstream can tell it apart from success.
+const firebaseConfig = JSON.parse(readFileSync(join(ADMIN_DIR, '..', '..', 'firebase.json'), 'utf8'));
+
+if (firebaseConfig.hosting?.appAssociation !== 'NONE') {
+  problems.push(
+    'firebase.json\'s hosting block does not set `"appAssociation": "NONE"`. Hosting then serves its '
+    + 'own generated apple-app-site-association — empty, naming no app — ahead of the rewrite, and iOS '
+    + 'reads that one.',
+  );
+}
 
 for (const file of FILES) {
   const path = join(PUBLIC_DIR, file);
