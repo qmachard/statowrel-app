@@ -5,6 +5,7 @@ import {
   type FriendCompatibilityResult,
   USER_COLLECTION,
   USER_FRIEND_COLLECTION,
+  compatibilityTotalsOf,
   dailyQuestionDateKey,
   friendCompatibilityConverter,
   friendCompatibilityId,
@@ -20,7 +21,7 @@ import {
   parseData,
 } from '@/libs/firebase-admin';
 
-import { compatibilityBetween } from '../helpers/compatibility';
+import { compatibilityDiffSince } from '../helpers/compatibility';
 
 const payloadSchema = z.object({
   friend_id: z.string().min(1),
@@ -49,8 +50,15 @@ const resultOf = (compatibility: Pick<FriendCompatibilityData, 'common_days' | '
  * answers, and everything in this app is grained by the day, so a document
  * computed today is served as it stands — whoever of the two opens the profile
  * first pays for it, and neither pays again until tomorrow. The cache is a
- * cache and nothing else: every field is recomputed from the answers, so
- * dropping the collection costs one recompute per pair and no data.
+ * cache and nothing else: every field is recomputed from the calendar months,
+ * so dropping the collection costs one recompute per pair and no data.
+ *
+ * **And the recompute itself is a diff.** The document carries its tally cut by
+ * calendar month plus the cursor it was last walked to, so a pass reads only
+ * the months that moved since — see `compatibilityDiffSince`. Two things made
+ * that worth doing: a pair was re-reading both accounts' whole histories, and
+ * one's own history was re-read once per friend opened in the day, which at a
+ * year of answers and ten friends would have been the app's first read post.
  *
  * The friendship is checked before anything is read. It has to be: the score is
  * about two named accounts, and without that check any signed-in user could ask
@@ -104,15 +112,28 @@ export const getFriendCompatibility = onCall<unknown, Promise<FriendCompatibilit
       return resultOf(cached);
     }
 
-    const tally = await compatibilityBetween(userId, friendId);
+    // Null on a pair never computed, and on one computed before the cursor
+    // existed — both ask for a full pass, which is the same read the callable
+    // used to make every single time.
+    const since = cached?.synced_at ?? null;
+    const diff = await compatibilityDiffSince(userId, friendId, since);
+
+    // A full pass speaks for every month there is, so it replaces the map
+    // rather than merging into it — a month it no longer sees is a month that
+    // no longer exists. A diff only speaks for the months it walked.
+    const months = since === null ? diff.months : { ...cached?.months, ...diff.months };
 
     const compatibility: FriendCompatibilityData = {
       // Sorted, like the id this document is written under — the rules read
       // membership off this field, a rule having no way to split that id.
       user_ids: [ userId, friendId ].sort(),
-      ...tally,
+      // The three displayed numbers and the month map they add up to, in one
+      // shot — a total and its parts cannot disagree if nothing computes them
+      // apart.
+      ...compatibilityTotalsOf(months),
       computed_on: today,
       computed_at: new Date().toISOString(),
+      synced_at: diff.synced_at,
     };
 
     // `set` rather than `update`: the document is rebuilt whole every time, and

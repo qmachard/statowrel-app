@@ -233,7 +233,11 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
         ? { jokers: { [monthDayKey]: { used_at: answer.answered_at } } }
         : { days: { [monthDayKey]: { option_id: optionId, stat_label: statLabel, late: answer.late } } }
       ),
-      updated_at: answer.answered_at,
+      // The server's clock and not the answer's `answered_at`, which a client
+      // stamps: `friends-getFriendCompatibility` walks this field to find the
+      // months that moved since its last pass, and a month stamped by a phone
+      // running ten minutes behind is a month that pass would step over.
+      updated_at: new Date().toISOString(),
     }, { merge: true });
 
     // A joker has no option to count against — the question's tally is left
