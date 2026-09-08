@@ -308,6 +308,7 @@ const {
   QUESTION_COLLECTION,
   QUESTION_MAX_OPTIONS,
   QUESTION_MIN_OPTIONS,
+  QUESTION_STATFLOUZZ_COST,
   questionConverter,
   streakStatflouzzReward,
   USER_CALENDAR_MONTH_COLLECTION,
@@ -450,6 +451,16 @@ const world = dates.map((date) => {
     jokers: [],
   };
 });
+
+// **Yesterday belongs to the main account.** The morning recap of docs/prd.md
+// §4.7 is sent to whoever wrote the question that closed the night before, so a
+// seeded world where nobody wrote yesterday's is a world where that
+// notification cannot be replayed at all — and it is the one of the four that
+// carries a real number. Today's is left to the draw above, so an account can
+// be both an author and an ordinary reader in the same run.
+if (world.length >= 2) {
+  world[world.length - 2].authorUsername = MAIN_USERNAME;
+}
 
 /** Who answered what, day by day — decided before anything is written, because the projections depend on all of it. */
 const mainAnswered = new Set();
@@ -711,6 +722,15 @@ for (const day of world) {
     author_id: day.authorUsername === null ? '' : uidOf(day.authorUsername),
     author_username: day.authorUsername,
     rejection_reason: null,
+    // A question with an author is a question somebody paid for: since
+    // docs/prd.md §4.7 priced proposing, `questions-proposeQuestion` is the only
+    // door an authored question comes through, and `statcoin_cost` is the stamp
+    // it leaves. It is also what decides who gets an author notification, so a
+    // credited day without it would seed a state the app can no longer produce.
+    statcoin_cost: day.authorUsername === null ? null : QUESTION_STATFLOUZZ_COST,
+    refunded_at: null,
+    approval_notified_at: null,
+    rejection_notified_at: null,
     broadcast_at: publishedAt,
     broadcast_on: day.date,
     closes_at: closingTimeOf(day.date).toISOString(),
@@ -744,6 +764,13 @@ for (const { entry, status } of pot) {
     author_id: uidOf(author),
     author_username: author,
     rejection_reason: status === 'rejected' ? REJECTION_REASON : null,
+    statcoin_cost: QUESTION_STATFLOUZZ_COST,
+    // A rejected proposal has already been handed its money back by
+    // `questions-onQuestionUpdated` — the stamp is what the « Mes questions »
+    // row reads to say so, and what stops the trigger paying twice.
+    refunded_at: status === 'rejected' ? nowIso : null,
+    approval_notified_at: null,
+    rejection_notified_at: null,
     broadcast_at: null,
     broadcast_on: null,
     closes_at: null,
@@ -767,6 +794,12 @@ for (const { entry, status } of pot) {
     author_id: '',
     author_username: null,
     rejection_reason: null,
+    // Nobody proposed the demo, so nobody is owed anything and nobody is
+    // notified about it.
+    statcoin_cost: null,
+    refunded_at: null,
+    approval_notified_at: null,
+    rejection_notified_at: null,
     // A demo is never a day: everything the daily cycle owns stays null.
     broadcast_at: null,
     broadcast_on: null,

@@ -128,6 +128,8 @@ export const proposeQuestion = onCall<unknown, Promise<ProposeQuestionResult>>(
         rejection_reason: null,
         statcoin_cost: QUESTION_STATFLOUZZ_COST,
         refunded_at: null,
+        approval_notified_at: null,
+        rejection_notified_at: null,
         broadcast_at: null,
         broadcast_on: null,
         closes_at: null,

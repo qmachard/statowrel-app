@@ -50,7 +50,7 @@ export const SLIDES: OnboardingSlideCopy[] = [
     // The point at the end of every title is the store captions' own
     // punctuation, kept on these two so the five read as one set.
     title: 'On te prévient.',
-    body: 'La question du jour, un rappel le soir si tu l’as loupée, et quand un pote t’ajoute. Rien de plus.',
+    body: 'La question du jour, un rappel le soir si tu l’as loupée, quand un pote t’ajoute, et ce que devient une question que tu as posée. Rien de plus.',
   },
   {
     key: 'start',

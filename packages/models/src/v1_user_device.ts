@@ -56,6 +56,22 @@ export const DAILY_QUESTION_CHANNEL_ID = 'daily-question';
 export const FRIEND_INVITE_CHANNEL_ID = 'friend-invite';
 
 /**
+ * Android notification channel everything an author hears about **their own
+ * proposal** is posted in — approved, rejected, and the tally the day after it
+ * ran (docs/prd.md §4.7).
+ *
+ * Its own channel for the reason the invitations have one: Android's settings
+ * are per channel, and somebody who has stopped caring about the verdicts must
+ * still be woken by the question of the day. Which is also why the fourth
+ * author notification — « ta question est tombée », sent at the 07:00 drop to
+ * whoever wrote the question being drawn — travels on `DAILY_QUESTION_CHANNEL_ID`
+ * instead: it is not news about a proposal, it *is* that morning's drop, worded
+ * for the one person it belongs to. Silencing this channel must never cost
+ * somebody the day.
+ */
+export const MY_QUESTION_CHANNEL_ID = 'my-question';
+
+/**
  * One push destination of one account — the device the day's question is
  * pushed to at 07:00 (docs/prd.md §4.2).
  *

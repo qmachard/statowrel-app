@@ -18,6 +18,8 @@
 //   npm run send-test-notification -- --email moi@exemple.fr --body 'Coucou'
 //   npm run send-test-notification -- --email moi@exemple.fr --nudge --friends 3   # the 18:00 nudge
 //   npm run send-test-notification -- --email moi@exemple.fr --friends 3 --answered  # ... to whoever answered
+//   npm run send-test-notification -- --email moi@exemple.fr --author approved       # the four author lines
+//   npm run send-test-notification -- --email moi@exemple.fr --author recap --date 2026-08-19
 //   npm run send-test-notification -- --all                     # every registered device
 //   npm run send-test-notification -- --dry-run
 //
@@ -42,7 +44,8 @@ import { GeoPoint, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { die, resolveProjectId } from './lib/firebase-project.mjs';
 
 const USAGE = 'Usage: npm run send-test-notification -- [--email <email> | --uid <uid> | --token <token> | --all] '
-  + '[--date <YYYY-MM-DD>] [--nudge] [--friends <n>] [--answered] [--title <text>] [--body <text>] [--no-receipts] '
+  + '[--date <YYYY-MM-DD>] [--nudge] [--friends <n>] [--answered] [--author <approved|rejected|drawn|recap>] '
+  + '[--title <text>] [--body <text>] [--no-receipts] '
   + '[--production | --project <id>] [--dry-run] [--force]';
 
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
@@ -89,6 +92,67 @@ const answeredBody = (friends) => (
 );
 
 /**
+ * The four lines an author gets about their own question — docs/prd.md §4.7,
+ * copied from `triggers/steps/onQuestionModerated.ts` and from
+ * `helpers/authorNotifications.ts` the way the nudge above is copied from its
+ * own task: a `.mjs` cannot import the TypeScript in `src/`, so the wording is
+ * duplicated and the two have to be changed together.
+ *
+ * Two of the four only ever fire at 07:00 and the other two behind a moderator's
+ * click, which is what makes this flag worth having: reading them on a lock
+ * screen otherwise means waiting for tomorrow morning.
+ *
+ * `--author recap` is the only one that reads anything real — the day's own
+ * tally, so the number on the banner is the number the question collected. The
+ * other three are drawn from the day's label alone.
+ */
+const AUTHOR_KINDS = [ 'approved', 'rejected', 'drawn', 'recap' ];
+
+const authorMessage = (kind, dateKey, label, tally) => {
+  const question = label ?? 'Ta question';
+
+  if (kind === 'approved') {
+    return {
+      title: 'Ta question est validée',
+      body: `« ${question} » rejoint le pot. Elle peut tomber n'importe quel matin.`,
+      channelId: MY_QUESTION_CHANNEL_ID,
+      data: { type: 'my_questions' },
+    };
+  }
+
+  if (kind === 'rejected') {
+    return {
+      title: 'Ta question n’a pas été retenue',
+      body: `« ${question} » : hors sujet. Tes ${QUESTION_STATFLOUZZ_COST}§ t'ont été rendus.`,
+      channelId: MY_QUESTION_CHANNEL_ID,
+      data: { type: 'my_questions' },
+    };
+  }
+
+  if (kind === 'drawn') {
+    return {
+      title: 'Ta question est tombée',
+      body: `« ${question} » — toute l'app y répond aujourd'hui.`,
+      channelId: DAILY_QUESTION_CHANNEL_ID,
+      data: { type: 'daily_question', date: dateKey },
+    };
+  }
+
+  if (tally === null) {
+    die(`Nobody answered the question of ${dateKey} — there is no recap to send. Pick a --date that collected answers.`);
+  }
+
+  return {
+    title: 'Ta question a fait parler',
+    body: tally.total === 1
+      ? `Une personne a répondu à ta question hier, et c'était « ${tally.label} ».`
+      : `${tally.total} personnes ont répondu à ta question hier. ${tally.share} % sont des « ${tally.label} ».`,
+    channelId: MY_QUESTION_CHANNEL_ID,
+    data: { type: 'daily_question', date: dateKey },
+  };
+};
+
+/**
  * How long Expo is given to turn a ticket into a receipt.
  *
  * A ticket only says "queued"; the receipt is what says APNs or FCM took it.
@@ -107,6 +171,7 @@ const parseArgs = (argv) => {
     nudge: false,
     friends: 0,
     answered: false,
+    author: null,
     title: null,
     body: null,
     receipts: true,
@@ -145,6 +210,12 @@ const parseArgs = (argv) => {
     } else if (arg === '--friends') {
       parsed.friends = Number(readValue(argv[i += 1], '--friends'));
       parsed.nudge = true;
+    } else if (arg === '--author') {
+      parsed.author = readValue(argv[i += 1], '--author');
+
+      if (!AUTHOR_KINDS.includes(parsed.author)) {
+        die(`--author takes one of ${AUTHOR_KINDS.join(', ')} (got "${parsed.author}").\n${USAGE}`);
+      }
     } else if (arg === '--date') {
       parsed.date = readValue(argv[i += 1], '--date');
     } else if (arg === '--title') {
@@ -181,6 +252,10 @@ const parseArgs = (argv) => {
     die(`--answered needs --friends 1 or more.\n${USAGE}`);
   }
 
+  if (parsed.author !== null && parsed.nudge) {
+    die(`--author and --nudge send two different notifications. Pick one.\n${USAGE}`);
+  }
+
   if (parsed.date !== null && !/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
     die(`--date takes a YYYY-MM-DD day (got "${parsed.date}").\n${USAGE}`);
   }
@@ -188,7 +263,7 @@ const parseArgs = (argv) => {
   return parsed;
 };
 
-const { email, uid, tokens, all, date, nudge, friends, answered, title, body, receipts, dryRun, force, ...selector } = parseArgs(process.argv.slice(2));
+const { email, uid, tokens, all, date, nudge, friends, answered, author, title, body, receipts, dryRun, force, ...selector } = parseArgs(process.argv.slice(2));
 const projectId = resolveProjectId(selector);
 const emulator = process.env.FIRESTORE_EMULATOR_HOST;
 
@@ -202,13 +277,20 @@ if (all && selector.alias === 'production' && !force) {
 const {
   DAILY_QUESTION_CHANNEL_ID,
   DAILY_QUESTION_MONTH_COLLECTION,
+  MY_QUESTION_CHANNEL_ID,
+  QUESTION_COLLECTION,
+  QUESTION_STATFLOUZZ_COST,
   USER_COLLECTION,
   USER_DEVICE_COLLECTION,
   dailyQuestionDateKey,
   dailyQuestionMonthConverter,
   isExpoPushToken,
+  leadingAnswer,
   monthDayKeyOf,
   monthKeyOf,
+  previousDateKey,
+  questionConverter,
+  statLabelOf,
   userDeviceConverter,
 } = await import('@statowrel/models').catch(() => (
   die('Could not load @statowrel/models — run `npm run build:models` first.')
@@ -297,9 +379,32 @@ if (sendable.length === 0) {
   die('Every token found is malformed — nothing to send.');
 }
 
-/** The day the notification points at, and the label the day's question was published under. */
+/**
+ * The tally a day's question collected, read exactly as the recap reads it —
+ * `leadingAnswer` is the shared helper, so the number and the option on the
+ * banner are the ones the 07:00 fan-out would put there.
+ */
+const resolveTally = async (questionId) => {
+  const question = await firestore
+    .collection(QUESTION_COLLECTION)
+    .doc(questionId)
+    .withConverter(questionConverter(Timestamp, GeoPoint))
+    .get();
+
+  const data = question.data();
+  const leader = data ? leadingAnswer(data) : null;
+
+  return leader === null
+    ? null
+    : { total: leader.total, share: Math.round((leader.count / leader.total) * 100), label: statLabelOf(leader.option) };
+};
+
+/** The day the notification points at, the label its question was published under, and its tally. */
 const resolveDay = async () => {
-  const dateKey = date ?? dailyQuestionDateKey(new Date());
+  // `--author recap` is about the day *before*: it is what the morning after a
+  // question ran carries, and its tally is only final once the day has closed.
+  const today = dailyQuestionDateKey(new Date());
+  const dateKey = date ?? (author === 'recap' ? previousDateKey(today) : today);
 
   const month = await firestore
     .collection(DAILY_QUESTION_MONTH_COLLECTION)
@@ -307,12 +412,20 @@ const resolveDay = async () => {
     .withConverter(dailyQuestionMonthConverter(Timestamp, GeoPoint))
     .get();
 
-  return { dateKey, label: month.data()?.days?.[monthDayKeyOf(dateKey)]?.label ?? null };
+  const day = month.data()?.days?.[monthDayKeyOf(dateKey)] ?? null;
+
+  return {
+    dateKey,
+    label: day?.label ?? null,
+    tally: day !== null && author === 'recap' ? await resolveTally(day.question_id) : null,
+  };
 };
 
-const { dateKey, label } = await resolveDay();
+const { dateKey, label, tally } = await resolveDay();
 
-if (label === null) {
+// The two moderation verdicts open the Menu rather than a day, so a day with no
+// question is only a dead end for the other three.
+if (label === null && author !== 'approved' && author !== 'rejected') {
   // Worth saying loudly: the notification will send and the tap will open a day
   // the app has nothing to show for, which reads as a broken tap listener.
   console.warn(`  ⚠ No question ran ${dateKey} — the tap will open a dead end.`);
@@ -323,14 +436,20 @@ const nudgeTitle = friends === 0 && !answered ? NUDGE_TITLE_ALONE : NUDGE_TITLE;
 
 const eveningBody = answered ? answeredBody(friends) : nudgeBody(friends);
 
-const message = {
-  // Both notifications point at the same day and travel on the same channel —
-  // only the lines differ, which is the whole of what there is to check here.
-  title: title ?? (nudge ? nudgeTitle : NOTIFICATION_TITLE),
-  body: body ?? (nudge ? eveningBody : label ?? FALLBACK_BODY),
+const dailyMessage = {
+  // The 07:00 drop and the 18:00 nudge point at the same day and travel on the
+  // same channel — only the lines differ.
+  title: nudge ? nudgeTitle : NOTIFICATION_TITLE,
+  body: nudge ? eveningBody : label ?? FALLBACK_BODY,
   data: { type: 'daily_question', date: dateKey },
   channelId: DAILY_QUESTION_CHANNEL_ID,
 };
+
+const base = author === null ? dailyMessage : authorMessage(author, dateKey, label, tally);
+
+// `--title` / `--body` still override whichever notification was picked: the
+// point of those two is to read an arbitrary line on a real lock screen.
+const message = { ...base, title: title ?? base.title, body: body ?? base.body };
 
 console.log(`→ ${dryRun ? 'Dry run on' : 'Sending on'} ${projectId}${emulator ? ` (tokens from emulator ${emulator})` : ''}`);
 console.log(`  « ${message.title} »`);

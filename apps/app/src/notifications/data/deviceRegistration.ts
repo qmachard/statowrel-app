@@ -6,6 +6,7 @@ import {
   DAILY_QUESTION_CHANNEL_ID,
   type DevicePlatform,
   FRIEND_INVITE_CHANNEL_ID,
+  MY_QUESTION_CHANNEL_ID,
   USER_COLLECTION,
   USER_DEVICE_COLLECTION,
   isExpoPushToken,
@@ -79,6 +80,18 @@ const ensureAndroidChannels = async (notifications: Notifications): Promise<void
     name: 'Invitations',
     // An invitation waits — it is answered from the Menu whenever its owner
     // gets there (docs/prd.md §5.3), so it earns the shade, not the screen.
+    importance: notifications.AndroidImportance.DEFAULT,
+    lightColor: colors.primary,
+  });
+
+  await notifications.setNotificationChannelAsync(MY_QUESTION_CHANNEL_ID, {
+    name: 'Mes questions',
+    // News about a proposal one paid for (docs/prd.md §4.7) — a verdict, and
+    // the tally the day after it ran. It waits like an invitation does: nothing
+    // is expected back, and the « Mes questions » list says the same thing
+    // whenever its author gets there. The morning a question is actually drawn
+    // is the exception, and it travels on the day's own channel instead — see
+    // `MY_QUESTION_CHANNEL_ID`.
     importance: notifications.AndroidImportance.DEFAULT,
     lightColor: colors.primary,
   });

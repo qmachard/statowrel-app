@@ -1,3 +1,6 @@
+/** The two panels of the Menu's switch (docs/prd.md §5.3), named as a route can carry them. */
+export type MenuTab = 'friends' | 'questions';
+
 export type RootStackParamList = {
   Stats: undefined;
   /** One day's question — omit `date` for today's (docs/prd.md §5.4). */
@@ -20,8 +23,16 @@ export type RootStackParamList = {
    * is the friend request rather than the attribution.
    */
   InviteFriend: { username?: string } | undefined;
-  /** Settings, friends, profile — everything that isn't the stats (docs/prd.md §5.1). */
-  Menu: undefined;
+  /**
+   * Settings, friends, profile — everything that isn't the stats (docs/prd.md §5.1).
+   *
+   * `tab` picks which of the two panels the switch opens on. It is a route
+   * param and not screen state alone because a notification has to be able to
+   * land on either: a moderation verdict is read on the row of the question it
+   * is about (§4.7), and dropping the reader on « Mes potes » would leave them
+   * to find the switch themselves.
+   */
+  Menu: { tab?: MenuTab } | undefined;
   /** Write a question and pay for it in StatFlouzz (docs/prd.md §4.7). */
   ProposeQuestion: undefined;
   SignIn: undefined;

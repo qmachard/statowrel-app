@@ -64,6 +64,8 @@ export const createQuestion = async (author: QuestionAuthor, values: QuestionVal
     // question that cost nothing has nothing to hand back when it is rejected.
     statcoin_cost: null,
     refunded_at: null,
+    approval_notified_at: null,
+    rejection_notified_at: null,
     broadcast_at: null,
     broadcast_on: null,
     closes_at: null,
