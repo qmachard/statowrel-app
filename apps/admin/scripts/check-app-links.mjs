@@ -22,12 +22,18 @@
  *    files live under `public/well-known/` and are served through a rewrite
  *    rather than under a real `.well-known/`; this half of the check is what
  *    would catch anybody moving them back.
+ * 3. **`appAssociation` left on its default** — Hosting *generates* an
+ *    `apple-app-site-association` of its own, a leftover of Dynamic Links, and
+ *    serves it **ahead of** any rewrite. The site then answers the right URL,
+ *    with the right content type, with an empty file naming no app at all —
+ *    and the emulator does not reproduce it, the generation being a production
+ *    feature. `"appAssociation": "NONE"` is what stands the rewrite back up.
  *
  * `SKIP_APP_LINKS_CHECK=1` is the way past it, for a deploy that only means to
  * publish the console or the legal pages.
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -63,6 +69,18 @@ if (process.env.SKIP_APP_LINKS_CHECK === '1') {
 const problems = [];
 const found = new Set();
 
+// Checked first, because it is the one failure that leaves the URL answering
+// 200 with valid JSON: nothing downstream can tell it apart from success.
+const firebaseConfig = JSON.parse(readFileSync(join(ADMIN_DIR, '..', '..', 'firebase.json'), 'utf8'));
+
+if (firebaseConfig.hosting?.appAssociation !== 'NONE') {
+  problems.push(
+    'firebase.json\'s hosting block does not set `"appAssociation": "NONE"`. Hosting then serves its '
+    + 'own generated apple-app-site-association — empty, naming no app — ahead of the rewrite, and iOS '
+    + 'reads that one.',
+  );
+}
+
 for (const file of FILES) {
   const path = join(PUBLIC_DIR, file);
 
@@ -90,17 +108,35 @@ for (const file of FILES) {
   }
 }
 
-// The second failure, and the expensive one: the files exist, they are filled
-// in, and the deploy drops them anyway. Only meaningful once a build has run.
-if (existsSync(join(ADMIN_DIR, 'dist'))) {
+/*
+ * The second failure, and the expensive one: the files exist, they are filled
+ * in, and the deploy drops them anyway.
+ *
+ * Only ever asked of a build that is newer than the sources — `dist/index.html`
+ * is the stamp of the last one. Run by hand on a checkout whose last build
+ * predates these files, the honest answer is « rebuild », not « you moved
+ * something »; the deploy never sees that case, its predeploy building first.
+ */
+const lastBuild = existsSync(join(ADMIN_DIR, 'dist', 'index.html'))
+  ? statSync(join(ADMIN_DIR, 'dist', 'index.html')).mtimeMs
+  : null;
+
+if (lastBuild !== null) {
   for (const file of FILES) {
-    if (!existsSync(join(DIST_DIR, file))) {
-      problems.push(
-        `${file} did not reach apps/admin/dist/well-known/ — Vite copies apps/admin/public/ verbatim, `
-        + 'so a missing file here means it was moved, renamed, or put back under a dot-directory '
-        + "that firebase.json's `ignore` drops.",
-      );
+    const source = join(PUBLIC_DIR, file);
+
+    if (existsSync(join(DIST_DIR, file)) || !existsSync(source)) {
+      continue;
     }
+
+    problems.push(
+      statSync(source).mtimeMs > lastBuild
+        ? `${file} is not in apps/admin/dist/well-known/ because the last build predates it. `
+          + 'Run `npm run build:admin` (or just `npm run deploy:admin`, whose predeploy builds first).'
+        : `${file} did not reach apps/admin/dist/well-known/ even though the build is up to date — `
+          + 'Vite copies apps/admin/public/ verbatim, so it was moved, renamed, or put back under a '
+          + "dot-directory that firebase.json's `ignore` drops.",
+    );
   }
 }
 

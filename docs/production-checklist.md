@@ -444,6 +444,9 @@ ou dans un log de build ne le dit, le seul symptôme est un lien qui ouvre le na
       celle de la clé d'upload EAS **et** celle de la clé de signature Play. Attention,
       `npm run check-google-signin` n'imprime que des SHA-**1** (c'est ce que porte
       `google-services.json`) — assetlinks veut du SHA-256, il ne peut pas venir de là
+- [ ] `firebase.json` porte `"appAssociation": "NONE"` dans son bloc `hosting` — sans quoi Hosting
+      sert son **propre** apple-app-site-association, vide, devant la réécriture : l'URL répond 200,
+      en `application/json`, et ne nomme aucune app. `check-app-links` le vérifie
 - [ ] `npm run check-app-links` vert, puis `npm run deploy:admin` — le `predeploy` le rejoue
 - [ ] Vérifier que les deux fichiers répondent en ligne :
       `curl -sI https://statowrel-app.web.app/.well-known/apple-app-site-association` doit rendre
