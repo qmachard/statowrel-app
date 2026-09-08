@@ -12,7 +12,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta
       name="description"
-      content="On t'a invité sur StatOwrel — une question par jour, la même pour tout le monde. Tu réponds en deux taps, tu découvres ta stat et celles de tes potes."
+      content="On t'invite sur StatOwrel — une question par jour, la même pour tout le monde."
     />
 
     <meta property="og:type" content="website" />
@@ -32,6 +32,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://api.dicebear.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
@@ -48,17 +49,14 @@
         --background: #f7f0d4;
         --foreground: #000000;
         --card: #ffffff;
-        --muted: #eae1bd;
         --muted-foreground: #6b6355;
         --primary: #ffdc59;
         --secondary: #000000;
         --secondary-foreground: #ffffff;
         --accent: #d04060;
-        --accent-foreground: #ffffff;
         --border-width: 2px;
         --radius-sm: 8px;
         --radius: 12px;
-        --radius-lg: 20px;
         --shadow: 4px 4px 0 0 var(--foreground);
         --shadow-lg: 6px 6px 0 0 var(--foreground);
         --font-head: 'Archivo Black', system-ui, sans-serif;
@@ -70,18 +68,23 @@
       }
 
       body {
-        margin: 0;
-        padding: 24px 20px 56px;
+        align-items: center;
         background: var(--background);
         color: var(--foreground);
+        display: flex;
         font-family: var(--font-sans);
         font-size: 16px;
-        line-height: 1.6;
+        justify-content: center;
+        line-height: 1.5;
+        margin: 0;
+        min-height: 100vh;
+        padding: 32px 20px;
       }
 
       main {
-        margin: 0 auto;
-        max-width: 560px;
+        max-width: 380px;
+        text-align: center;
+        width: 100%;
       }
 
       a:focus-visible,
@@ -90,82 +93,71 @@
         outline-offset: 3px;
       }
 
-      /* ---------------------------------------------------------------- brand */
-
       .brand {
         align-items: center;
         color: var(--foreground);
         display: inline-flex;
         font-family: var(--font-head);
-        font-size: 18px;
-        gap: 10px;
-        letter-spacing: 0.02em;
+        font-size: 16px;
+        gap: 8px;
+        margin-bottom: 40px;
         text-decoration: none;
       }
 
       .brand svg {
         display: block;
-        height: 24px;
-        width: 24px;
+        height: 20px;
+        width: 20px;
       }
 
-      /* ----------------------------------------------------------------- hero */
+      /*
+       * La même face que dans l'app : un « patchwork » DiceBear semé sur le
+       * handle, avec la palette de src/lib/avatars.ts. Semé et non stocké, donc
+       * l'URL se dérive du pseudo des deux côtés sans que rien ne soit copié.
+       * Décorative — `alt` vide — parce que le pseudo est écrit juste dessous :
+       * un texte de remplacement le dirait deux fois, et déborderait du cadre le
+       * jour où l'image ne charge pas. Le carré jaune est le repli, une forme
+       * plutôt qu'un trou.
+       */
+      .avatar {
+        background: var(--primary);
+        border: var(--border-width) solid var(--foreground);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        display: block;
+        height: 88px;
+        margin: 0 auto 20px;
+        object-fit: cover;
+        width: 88px;
+      }
 
       h1 {
         font-family: var(--font-head);
-        font-size: 34px;
-        line-height: 1.15;
-        margin: 28px 0 12px;
-        text-transform: uppercase;
-      }
-
-      .baseline {
-        color: var(--muted-foreground);
-        margin: 0 0 28px;
-      }
-
-      /* ---------------------------------------------------- la carte du pseudo */
-
-      /*
-       * Le pseudo est la seule chose de cette page qui doit survivre au détour
-       * par le store : Firebase Dynamic Links est mort depuis le 25 août 2025 et
-       * l'App Store ne transmet rien à une app fraîchement installée. Donc il est
-       * gros, il est seul dans son cadre, et il se copie d'un geste.
-       */
-      .handle-card {
-        background: var(--card);
-        border: var(--border-width) solid var(--foreground);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-lg);
-        padding: 20px 24px;
-      }
-
-      .handle-label {
-        color: var(--muted-foreground);
-        font-size: 13px;
-        letter-spacing: 0.06em;
-        margin: 0 0 6px;
-        text-transform: uppercase;
-      }
-
-      .handle-value {
-        display: block;
-        font-family: var(--font-head);
-        font-size: 30px;
+        font-size: 26px;
         line-height: 1.2;
+        margin: 0;
+        text-transform: uppercase;
+      }
+
+      /* Le pseudo n'est dit qu'une fois, ici, et c'est aussi ce qui se copie. */
+      .handle {
+        display: block;
         overflow-wrap: anywhere;
       }
 
-      .handle-actions {
-        align-items: center;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 16px;
+      p {
+        color: var(--muted-foreground);
+        margin: 16px 0 0;
+      }
+
+      .reward {
+        color: var(--foreground);
+        font-weight: 700;
+        white-space: nowrap;
       }
 
       .copy-button {
-        background: var(--primary);
+        background: var(--card);
         border: var(--border-width) solid var(--foreground);
         border-radius: var(--radius-sm);
         box-shadow: 3px 3px 0 0 var(--foreground);
@@ -174,7 +166,12 @@
         font-family: var(--font-sans);
         font-size: 14px;
         font-weight: 700;
+        margin-top: 16px;
         padding: 8px 16px;
+      }
+
+      .copy-button:hover {
+        background: var(--primary);
       }
 
       .copy-button:active {
@@ -182,33 +179,12 @@
         transform: translate(3px, 3px);
       }
 
-      .copy-feedback {
-        color: var(--muted-foreground);
-        font-size: 14px;
-      }
-
-      .handle-help {
-        margin: 16px 0 0;
-      }
-
-      .reward {
-        background: var(--primary);
-        border: var(--border-width) solid var(--foreground);
-        border-radius: var(--radius-sm);
-        display: inline-block;
-        font-weight: 700;
-        padding: 1px 8px;
-        white-space: nowrap;
-      }
-
-      /* ---------------------------------------------------------------- stores */
-
       .stores {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 12px;
         list-style: none;
-        margin: 32px 0 12px;
+        margin: 40px 0 0;
         padding: 0;
       }
 
@@ -219,9 +195,10 @@
         border-radius: var(--radius);
         box-shadow: var(--shadow);
         color: var(--secondary-foreground);
-        display: inline-flex;
+        display: flex;
         gap: 12px;
-        padding: 10px 20px 10px 16px;
+        justify-content: center;
+        padding: 10px 20px;
         text-decoration: none;
         transition: transform 0.1s ease, box-shadow 0.1s ease;
       }
@@ -240,62 +217,19 @@
         display: block;
         fill: currentColor;
         flex-shrink: 0;
-        height: 28px;
-        width: 28px;
-      }
-
-      .store-button span {
-        display: block;
-        line-height: 1.2;
-      }
-
-      .store-kicker {
-        font-size: 11px;
-        letter-spacing: 0.08em;
-        opacity: 0.75;
-        text-transform: uppercase;
+        height: 24px;
+        width: 24px;
       }
 
       .store-name {
         font-family: var(--font-head);
-        font-size: 17px;
-      }
-
-      .price {
-        color: var(--muted-foreground);
-        font-size: 14px;
-        margin: 0;
-      }
-
-      /* ------------------------------------------------------------------ how */
-
-      .how {
-        border-top: var(--border-width) solid var(--foreground);
-        margin-top: 40px;
-        padding-top: 24px;
-      }
-
-      h2 {
-        font-family: var(--font-head);
-        font-size: 18px;
-        margin: 0 0 12px;
-        text-transform: uppercase;
-      }
-
-      ol {
-        margin: 0;
-        padding-left: 20px;
-      }
-
-      li {
-        margin: 6px 0;
+        font-size: 16px;
       }
 
       footer {
         color: var(--muted-foreground);
         font-size: 13px;
         margin-top: 40px;
-        text-align: center;
       }
 
       footer a {
@@ -304,9 +238,9 @@
 
       /*
        * Deux pages en une, et c'est l'attribut sur <body> qui tranche : un lien
-       * peut arriver sans pseudo (/i tout court) ou avec un pseudo qui n'a pas la
-       * forme d'un handle. Nommer un parrain qui n'existe pas serait pire que ne
-       * nommer personne, donc la page tombe sur une invitation ordinaire.
+       * peut arriver sans pseudo (/i tout court) ou avec un pseudo qui n'a pas
+       * la forme d'un handle. Nommer un parrain qui n'existe pas serait pire que
+       * ne nommer personne, donc la page tombe sur une invitation ordinaire.
        */
       body:not([data-referrer='named']) .named-only {
         display: none;
@@ -314,16 +248,6 @@
 
       body[data-referrer='named'] .anonymous-only {
         display: none;
-      }
-
-      @media (max-width: 480px) {
-        h1 {
-          font-size: 27px;
-        }
-
-        .handle-value {
-          font-size: 25px;
-        }
       }
     </style>
   </head>
@@ -342,30 +266,25 @@
         StatOwrel
       </a>
 
+      <!-- alt vide : décorative, le pseudo est juste dessous. -->
+      <img class="avatar named-only" id="avatar" alt="" src="" />
+
       <h1>
-        <span class="named-only"><span id="headline-handle"></span> t'invite sur StatOwrel.</span>
-        <span class="anonymous-only">On t'invite sur StatOwrel.</span>
+        <span class="named-only">
+          <span class="handle" id="handle"></span>
+          t'invite sur StatOwrel
+        </span>
+        <span class="anonymous-only">On t'invite sur StatOwrel</span>
       </h1>
 
-      <p class="baseline">
-        Une question par jour, la même pour tout le monde. Tu réponds en deux taps, et la stat
-        s'ouvre : la tienne, celle de tout le monde, celle de tes potes.
+      <p class="named-only">
+        Mets son pseudo dans « Qui t'a fait venir ? » à l'inscription :
+        tu gagnes <span class="reward">10 StatFlouzz</span>.
       </p>
 
-      <section class="handle-card named-only" aria-labelledby="handle-label">
-        <p class="handle-label" id="handle-label">Ton parrain</p>
-        <strong class="handle-value" id="handle-value"></strong>
+      <p class="anonymous-only">Une question par jour, la même pour tout le monde.</p>
 
-        <div class="handle-actions">
-          <button class="copy-button" id="copy-button" type="button">Copier le pseudo</button>
-          <span class="copy-feedback" id="copy-feedback" role="status" aria-live="polite"></span>
-        </div>
-
-        <p class="handle-help">
-          Note-le : à l'inscription, l'app demande « Qui t'a fait venir ? ». Mets ce pseudo et tu
-          gagnes <span class="reward">10 StatFlouzz</span> dès ta première réponse.
-        </p>
-      </section>
+      <button class="copy-button named-only" id="copy-button" type="button">Copier le pseudo</button>
 
       <ul class="stores">
         <li>
@@ -379,10 +298,7 @@
                 d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"
               />
             </svg>
-            <span>
-              <span class="store-kicker">Télécharger sur l'</span>
-              <span class="store-name">App Store</span>
-            </span>
+            <span class="store-name">App Store</span>
           </a>
         </li>
         <li>
@@ -396,26 +312,10 @@
                 d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594zM1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087zm12.207 10.065l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179zm0 2.067l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54z"
               />
             </svg>
-            <span>
-              <span class="store-kicker">Disponible sur</span>
-              <span class="store-name">Google Play</span>
-            </span>
+            <span class="store-name">Google Play</span>
           </a>
         </li>
       </ul>
-
-      <p class="price">Gratuit. Pas de pub, pas de fil d'actualité.</p>
-
-      <section class="how">
-        <h2>Ce qui se passe ensuite</h2>
-        <ol>
-          <li>Tu télécharges l'app et tu choisis ton pseudo.</li>
-          <li class="named-only">
-            Tu mets <span id="steps-handle"></span> dans « Qui t'a fait venir ? ».
-          </li>
-          <li>Tu réponds à ta première question. Tes StatFlouzz tombent à ce moment-là.</li>
-        </ol>
-      </section>
 
       <footer>
         <a href="/legal/cgu">CGU</a> · <a href="/legal/confidentialite">Confidentialité</a> ·
@@ -432,6 +332,14 @@
          * l'inscription — elle décide seulement s'il y a un nom à afficher.
          */
         var PATTERN = /^[a-z0-9][a-z0-9._]{1,18}[a-z0-9]$/;
+
+        /* La palette et le style de apps/app/src/lib/avatars.ts, à l'identique. */
+        var AVATAR = 'https://api.dicebear.com/10.x/patchwork/svg'
+          + '?backgroundColor=F7F0D4'
+          + '&fabricAColor=69D3E8,7FBC8C'
+          + '&fabricBColor=E2A017,FF68B5'
+          + '&fabricCColor=FF68B5,9723C9'
+          + '&seed=';
 
         var raw = '';
 
@@ -454,13 +362,15 @@
          * extérieur. Le motif ci-dessus interdit déjà tout ce qui pourrait être
          * du balisage, mais c'est la règle qui protège, pas la validation.
          */
-        document.getElementById('handle-value').textContent = '@' + handle;
-        document.getElementById('headline-handle').textContent = '@' + handle;
-        document.getElementById('steps-handle').textContent = '@' + handle;
+        document.getElementById('handle').textContent = '@' + handle;
+
+        var avatar = document.getElementById('avatar');
+
+        avatar.src = AVATAR + encodeURIComponent(handle);
+
         document.body.setAttribute('data-referrer', 'named');
 
         var button = document.getElementById('copy-button');
-        var feedback = document.getElementById('copy-feedback');
 
         button.addEventListener('click', function () {
           /*
@@ -471,17 +381,17 @@
            * inscriptions pour servir celles qui viennent d'un lien.
            */
           if (!navigator.clipboard) {
-            feedback.textContent = 'Copie impossible ici — note @' + handle + '.';
+            button.textContent = 'Copie impossible ici';
 
             return;
           }
 
           navigator.clipboard.writeText(handle).then(
             function () {
-              feedback.textContent = 'Copié.';
+              button.textContent = 'Copié';
             },
             function () {
-              feedback.textContent = 'Copie impossible ici — note @' + handle + '.';
+              button.textContent = 'Copie impossible ici';
             },
           );
         });
