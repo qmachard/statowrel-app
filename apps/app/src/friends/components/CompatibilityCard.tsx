@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: fontSize.xs,
     textTransform: 'uppercase',
-    color: colors['primary-foreground'],
+    color: colors['notification-foreground'],
   },
   // The score at the streak count's own scale: it is the one number this
   // screen exists for, and nothing beside it competes.
@@ -28,25 +28,25 @@ const styles = StyleSheet.create({
     fontFamily: fonts.head,
     fontSize: fontSize['7xl'],
     lineHeight: fontSize['7xl'],
-    color: colors['primary-foreground'],
+    color: colors['notification-foreground'],
   },
   verdict: {
     fontFamily: fonts.sansMedium,
     fontSize: fontSize.base,
     textAlign: 'center',
-    color: colors['primary-foreground'],
+    color: colors['notification-foreground'],
   },
   detail: {
     fontFamily: fonts.sans,
     fontSize: fontSize.xs,
     textAlign: 'center',
-    color: colors['primary-foreground'],
+    color: colors['notification-foreground'],
   },
   state: {
     fontFamily: fonts.sans,
     fontSize: fontSize.sm,
     textAlign: 'center',
-    color: colors['primary-foreground'],
+    color: colors['notification-foreground'],
   },
 });
 
@@ -60,9 +60,11 @@ const styles = StyleSheet.create({
  * said out loud, and one nobody can explain is one nobody quotes
  * (`v1_friend_compatibility.ts`).
  *
- * It is the loud surface of the screen, `primary` where the stats above it are
- * plain cards: the streak is public information about somebody else, this is
- * about the two of you.
+ * It is the loud surface of the screen, pink where the stats above it are
+ * plain cards and where `primary` yellow already means « ta réponse » on the
+ * day sheet and « répondu » on the calendar: the counters above are public
+ * information about somebody else, this is the one number about the two of
+ * you, so it takes a colour nothing else in the app is built on.
  *
  * Nothing is shown below `COMPATIBILITY_MIN_COMMON_DAYS` shared days — see
  * `helpers/compatibility.ts`.
@@ -73,11 +75,11 @@ export const CompatibilityCard = ({ friendId }: CompatibilityCardProps) => {
   const view = compatibility === null ? null : compatibilityView(compatibility);
 
   return (
-    <Card variant="primary" shadow="md">
+    <Card variant="notification" shadow="md">
       <CardContent style={styles.content}>
         <Text style={styles.label}>{COMPATIBILITY.title}</Text>
 
-        {status === 'loading' ? <ActivityIndicator color={colors['primary-foreground']} /> : null}
+        {status === 'loading' ? <ActivityIndicator color={colors['notification-foreground']} /> : null}
 
         {status === 'error' ? <Text style={styles.state}>{COMPATIBILITY.failure}</Text> : null}
 

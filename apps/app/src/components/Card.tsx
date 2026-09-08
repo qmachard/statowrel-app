@@ -17,7 +17,7 @@ import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/
  * The surface and the shadow are props rather than `style` overrides, so a
  * caller can't half-override a variant: `style` is for layout only.
  */
-export type CardVariant = 'card' | 'primary' | 'muted' | 'accent';
+export type CardVariant = 'card' | 'primary' | 'muted' | 'accent' | 'notification';
 
 export type CardShadow = 'none' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -67,6 +67,7 @@ const SURFACE = StyleSheet.create({
   primary: { backgroundColor: colors.primary },
   muted: { backgroundColor: colors.muted },
   accent: { backgroundColor: colors.accent },
+  notification: { backgroundColor: colors.notification },
 }) satisfies Record<CardVariant, ViewStyle>;
 
 const SHADOW: Record<CardShadow, ViewStyle | undefined> = {
