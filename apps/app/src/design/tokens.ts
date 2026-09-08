@@ -65,17 +65,23 @@ export const colors = {
   ultra: '#6d4bd8',
   'ultra-foreground': '#ffffff',
   /**
-   * The « nouvelles réponses » bead of the Stats calendar (docs/prd.md §5.2).
+   * The « nouvelles réponses » bead of the Stats calendar (docs/prd.md §5.2),
+   * and the friend screen's compatibility card (§5.3).
    *
-   * A colour of its own because it has to be **the same on every cell**: the
-   * bead hangs off the corner and lands across two surfaces at once — the day's
+   * A colour of its own because the bead has to be **the same on every cell**:
+   * it hangs off the corner and lands across two surfaces at once — the day's
    * own, and the page behind it — so neither `primary` nor `accent` can carry
    * it without disappearing into one of the cells it sits on. Reading « il y a
    * du neuf » must not depend on which day it is.
    *
-   * Like `rare` and `ultra`, a mark and never a surface.
+   * Unlike `rare` and `ultra`, it **is** a surface as well as a mark: the
+   * compatibility card is built on it, which is what sets that card apart from
+   * the plain counters above it — a number about two people rather than about
+   * one. `notification-foreground` is black, the pink being light enough to
+   * clear 4.5 several times over.
    */
   notification: '#ff7eb6',
+  'notification-foreground': '#000000',
 };
 
 /**
@@ -128,6 +134,7 @@ export const fontSize = {
   '2xl': 24,
   '3xl': 30,
   '4xl': 36,
+  '5xl': 48,
   '7xl': 72,
 };
 

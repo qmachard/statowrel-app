@@ -1,5 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft } from '@/components/icons';
+import { QUESTION_STATFLOUZZ_COST } from '@statowrel/models';
+import { ChevronLeft, MessageCircleQuestionMark, UserRoundPlus } from '@/components/icons';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,8 +12,10 @@ import { signOut } from '@/auth/providers';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { LegalLinks } from '@/components/LegalLinks';
+import { Tabs, type TabItem } from '@/components/Tabs';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendsCard } from '@/friends/components/FriendsCard';
+import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
 import { NotificationsButton } from '@/notifications/components/NotificationsButton';
 import { clearPendingDemoAnswer } from '@/onboarding/data/demoAnswerStore';
 import { resetOnboardingSeen } from '@/onboarding/data/useOnboardingSeen';
@@ -33,7 +36,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing(3),
   },
+  // Takes the width the two buttons leave, which is what pushes the invitation
+  // to the right edge without a spacer of its own.
   heading: {
+    flex: 1,
     fontFamily: fonts.head,
     fontSize: fontSize.xl,
     textTransform: 'uppercase',
@@ -56,6 +62,22 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors['muted-foreground'],
   },
+  // The switch and the panel it drives are one block, tighter than the screen's
+  // own rhythm: the two lists are read as what the tab above them selects.
+  panel: {
+    gap: spacing(3),
+  },
+  // A list and the action it leads to, on the panel's own rhythm — the same
+  // block on either tab.
+  list: {
+    gap: spacing(3),
+  },
+  // The inactive list stays mounted and drops out of the layout instead of
+  // unmounting: each card holds its own `onSnapshot`, and remounting on every
+  // toggle would re-read the collection each time.
+  hidden: {
+    display: 'none',
+  },
   // Signing out, deleting the account and the legal footer are one block at the
   // bottom of the screen, tighter than the screen's own rhythm: the three lines
   // belong together, and the gap above them is what separates them from the
@@ -66,10 +88,21 @@ const styles = StyleSheet.create({
   },
 });
 
+/** The two lists of docs/prd.md §5.3, as the switch that selects them names them. */
+type MenuTab = 'friends' | 'questions';
+
+const TABS: readonly TabItem<MenuTab>[] = [
+  { value: 'friends', label: 'Mes potes' },
+  { value: 'questions', label: 'Mes questions' },
+];
+
 export const MenuScreen = () => {
   const navigation = useNavigation();
   const { user, profile } = useAuth();
   const [ deleting, setDeleting ] = useState(false);
+  const [ tab, setTab ] = useState<MenuTab>('friends');
+
+  const openInvite = () => navigation.navigate('InviteFriend');
 
   const runDeletion = async () => {
     setDeleting(true);
@@ -113,11 +146,15 @@ export const MenuScreen = () => {
         <View style={styles.head}>
           <Button label="Retour" variant="outline" size="icon-sm" icon={ChevronLeft} onPress={() => navigation.goBack()} />
           <Text style={styles.heading}>Menu</Text>
+          {/* Top right of the screen rather than over the friend list: inviting
+              is the one thing on this screen somebody arrives already meaning
+              to do, so it is reachable whichever tab is up. */}
+          <Button label="Inviter un pote" icon={UserRoundPlus} size="icon-sm" onPress={openInvite} />
         </View>
 
         <View style={styles.identity}>
           <Avatar
-            size="xl"
+            size="2xl"
             name={profile?.username ?? user.email ?? '?'}
             uri={user.photoURL}
           />
@@ -128,12 +165,43 @@ export const MenuScreen = () => {
           <Text style={styles.email}>{profile?.email ?? user.email ?? '—'}</Text>
         </View>
 
-        <FriendsCard onInvite={() => navigation.navigate('InviteFriend')} />
+        {/* The two lists of docs/prd.md §5.3 sit behind a switch rather than one
+            under the other: stacked, they made the screen an endless scroll that
+            buried the settings under two lists that only grow. */}
+        <View style={styles.panel}>
+          <Tabs items={TABS} value={tab} onChange={setTab} />
 
-        {/* Under the friends and above the settings: the two lists of docs/prd.md
-            §5.3, in the order that section states them. A drawn proposal opens
-            its day the way a calendar cell does. */}
-        <MyQuestionsCard onOpenDay={(date) => navigation.navigate('DailyQuestion', { date })} />
+          <View style={tab === 'friends' ? styles.list : styles.hidden}>
+            <FriendsCard
+              onOpenFriend={(friendId, friendUsername) => navigation.navigate('Friend', { friendId, friendUsername })}
+            />
+
+            {/* The list's own call to action, under what it is about — the
+                header's icon button is the shortcut, this is the sentence.
+                Full width, because at the bottom of a list there is nothing
+                left to share the line with. */}
+            <Button label="Inviter un pote" icon={UserRoundPlus} onPress={openInvite} />
+          </View>
+
+          {/* A drawn proposal opens its day the way a calendar cell does. */}
+          <View style={tab === 'questions' ? styles.list : styles.hidden}>
+            <MyQuestionsCard onOpenDay={(date) => navigation.navigate('DailyQuestion', { date })} />
+
+            {/* The invitation's twin under the other list. It carries the price
+                the Stats card carries, since a button that spends cannot stay
+                quiet about it — but not that card's under-price treatment: the
+                balance is shown there, beside what it pays for, and a price
+                argued next to no balance argues with nothing. An empty wallet
+                is refused by the callable, in its own sentence. */}
+            <Button
+              label="Poser une question"
+              icon={MessageCircleQuestionMark}
+              trailingLabel={amountLabel(QUESTION_STATFLOUZZ_COST)}
+              accessibilityLabel={`Poser une question, ${spokenAmountLabel(QUESTION_STATFLOUZZ_COST)}`}
+              onPress={() => navigation.navigate('ProposeQuestion')}
+            />
+          </View>
+        </View>
 
         <View style={styles.settings}>
           {/* Development only, and dropped from a release build by the `__DEV__`

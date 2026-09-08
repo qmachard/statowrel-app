@@ -157,3 +157,45 @@ export interface UseJokerResult {
   /** The wallet as the debit left it — same shape as `ProposeQuestionResult`, for the same reason. */
   statcoin_balance: number;
 }
+
+/**
+ * How alike a friend answered — docs/prd.md §5.3.
+ *
+ * **A callable, and the only door**, for a reason the other three do not share:
+ * it is not a price, it is a read a client is not allowed to make.
+ * `firestore.rules` scopes every collection-group query on
+ * `v1_daily_question_answers` to `isOwner(resource.data.user_id)`, on purpose —
+ * a friend's answer is readable one question at a time, so that reading a day
+ * never turns into reading a history. Comparing two histories is exactly the
+ * query that rule forbids, so it happens admin-side or not at all.
+ *
+ * It is also what makes the cache possible. The result is written to
+ * `v1_friend_compatibilities/{pair_id}` and recomputed at most once per pair
+ * per Paris day: the score can only move when one of the two answers, and a day
+ * is the grain the whole app already runs on.
+ */
+export const FRIEND_COMPATIBILITY_CALLABLE = 'friends-getFriendCompatibility';
+
+export interface FriendCompatibilityPayload {
+  /** Firebase Auth UID of the friend. Must be an `accepted` friendship — the callable refuses anything else. */
+  friend_id: string;
+}
+
+/**
+ * The score as the callable leaves it — the stored document minus the two UIDs,
+ * which the caller already knows and which are the only part of it that is not
+ * about the number.
+ *
+ * `common_days` is handed back beside the score rather than folded into it: it
+ * is what says whether the score means anything yet
+ * (`COMPATIBILITY_MIN_COMMON_DAYS`), and what the screen counts down from when
+ * it does not.
+ */
+export interface FriendCompatibilityResult {
+  common_days: number;
+  matching_days: number;
+  /** `matching_days / common_days` as a whole percentage. Zero when there is nothing in common yet. */
+  score: number;
+  /** `YYYY-MM-DD` Paris day this was computed on — served from cache when it is today's. */
+  computed_on: string;
+}

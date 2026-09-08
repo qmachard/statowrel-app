@@ -12,6 +12,12 @@ const styles = StyleSheet.create({
     // Bleeds back through the screen's padding so the strip runs edge to edge:
     // a card scrolling out is cut by the screen, not by an invisible gutter.
     marginHorizontal: -pagePadding,
+    // A horizontal strip never takes vertical flex. Inside a screen whose
+    // scroll content is `flexGrow: 1`, a `ScrollView` left to itself absorbs
+    // the free height and its cards, stretched by the `alignItems: 'stretch'`
+    // below, grow to the bottom of the page with it.
+    flexGrow: 0,
+    flexShrink: 0,
   },
   content: {
     flexDirection: 'row',

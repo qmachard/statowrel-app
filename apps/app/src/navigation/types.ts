@@ -2,6 +2,15 @@ export type RootStackParamList = {
   Stats: undefined;
   /** One day's question — omit `date` for today's (docs/prd.md §5.4). */
   DailyQuestion: { date?: string } | undefined;
+  /**
+   * One friend seen from the outside — their streak and the compatibility
+   * with them (docs/prd.md §5.3).
+   *
+   * The handle travels with the UID rather than being read on arrival: it is
+   * already on the friendship entry the list was tapped from, and it is what
+   * gives the screen its title and its face before anything is fetched.
+   */
+  Friend: { friendId: string; friendUsername: string };
   /** Invite a friend by their exact handle (docs/prd.md §4.1). */
   InviteFriend: undefined;
   /** Settings, friends, profile — everything that isn't the stats (docs/prd.md §5.1). */
