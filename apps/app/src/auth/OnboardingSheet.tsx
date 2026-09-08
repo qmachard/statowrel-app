@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -14,6 +14,8 @@ import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { amountLabel } from '@/lib/statflouzz';
+import { clearPendingReferrer } from '@/referrals/data/pendingReferrerStore';
+import { usePendingReferrer } from '@/referrals/data/usePendingReferrer';
 
 const SAVE_FAILED = 'Ton nom d\'utilisateur n\'a pas pu être enregistré. Vérifie ta connexion et réessaie.';
 const TAKEN = 'Ce nom d\'utilisateur est déjà pris.';
@@ -87,6 +89,8 @@ export const OnboardingSheet = () => {
   const {
     control,
     handleSubmit,
+    getValues,
+    setValue,
     setError: setFieldError,
     formState: { errors, isSubmitting },
   } = useForm<OnboardingValues>({
@@ -94,11 +98,30 @@ export const OnboardingSheet = () => {
     defaultValues: { username: '', referrer: '' },
   });
 
+  // What a `/i/{handle}` link left on the phone (docs/prd.md §4.9). Applied
+  // through an effect rather than as a default value: the form is mounted
+  // before AsyncStorage answers.
+  const pendingReferrer = usePendingReferrer(canBeReferred);
+
+  useEffect(() => {
+    // Never over what has been typed. The field is pre-filled as a suggestion,
+    // and somebody who has already corrected it has said something the link
+    // did not know.
+    if (pendingReferrer !== null && getValues('referrer') === '') {
+      setValue('referrer', pendingReferrer);
+    }
+  }, [ pendingReferrer, getValues, setValue ]);
+
   const onSubmit = handleSubmit(async ({ username, referrer }) => {
     setError(null);
 
     try {
       await completeOnboarding(username, canBeReferred ? referrer : '');
+
+      // The profile is written and `referred_by` is frozen with it: the stash
+      // has been spent, whatever it was spent on. Dropped after the write and
+      // never before, so a failed create leaves the suggestion for the retry.
+      await clearPendingReferrer();
     } catch (caught) {
       // A taken handle belongs under the field — it is the answer that has to
       // change, not the connection.

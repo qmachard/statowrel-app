@@ -134,6 +134,8 @@ Le report automatique du SDK est **désactivé**
 | `friend_invitation_accepted`   | —                   | —         | `friendships.ts.acceptFriendship()` — après batch commit         | Acceptation d'une invitation reçue                               |
 | `referral_attributed`          | —                   | —         | `profile.ts.createUserProfile()` — après écriture du profil       | Une inscription attribuée à un parrain. Docs/prd.md §4.9         |
 | `invite_link_shared`           | —                   | —         | `shareInvite.ts` — après `sharedAction` seulement                 | La share sheet a été menée à son terme (un `dismissedAction` ne compte pas : ce serait une invitation que personne n'a reçue) |
+| `referral_link_opened`         | `has_account`       | boolean   | `useReferrerCapture.ts` — lien `/i/{handle}` reconnu, avant tout stockage | Un lien de parrainage a ouvert l'app. Docs/prd.md §4.9. L'autre bout du funnel de `invite_link_shared` : partagé → ouvert → attribué (`referral_attributed`) |
+|                                |                     |           |                                                                 | `false` = pas encore de profil, donc l'attribution est possible ; `true` = compte existant, `referred_by` est figé et le lien n'ouvre qu'une invitation d'ami. Aucun handle en paramètre : ce serait de la PII |
 
 **Le versement du parrainage n'est pas un événement GA4**, et c'est délibéré : il
 se produit dans le trigger de réponse (`dailyQuestions-onDailyQuestionAnswerCreated`,

@@ -1,16 +1,19 @@
 import { Linking, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
+import { SITE_ORIGIN } from '@/lib/site';
 
 /**
  * The legal pages, served as static files by the same Firebase Hosting site as
  * the moderation console — `apps/admin/public/legal/`, reachable without its
  * SPA because Hosting serves a file before it applies a rewrite.
  *
- * Written out rather than derived from a Firebase config value: the pages are
- * public and the same for every build, where `EXPO_PUBLIC_FIREBASE_*` swings
- * with the variant. They are what the stores ask a listing to point at, so they
- * must not depend on which project the binary was built against.
+ * Built on `SITE_ORIGIN` rather than derived from a Firebase config value: the
+ * pages are public and the same for every build, where `EXPO_PUBLIC_FIREBASE_*`
+ * swings with the variant. They are what the stores ask a listing to point at,
+ * so they must not depend on which project the binary was built against — and
+ * the host is now the same one the referral link and the associated domain are
+ * sealed on, which is why it is one constant.
  *
  * `privacy` is the one Apple checks for from inside the app, not only on the
  * listing — hence its place in this footer rather than on the store page alone.
@@ -21,10 +24,10 @@ import { colors, fontSize, fonts, spacing } from '@/design/tokens';
  * alone.
  */
 export const LEGAL_URLS = {
-  terms: 'https://statowrel-app.web.app/legal/cgu',
-  privacy: 'https://statowrel-app.web.app/legal/confidentialite',
-  notice: 'https://statowrel-app.web.app/legal/mentions-legales',
-  childSafety: 'https://statowrel-app.web.app/legal/protection-des-enfants',
+  terms: `${SITE_ORIGIN}/legal/cgu`,
+  privacy: `${SITE_ORIGIN}/legal/confidentialite`,
+  notice: `${SITE_ORIGIN}/legal/mentions-legales`,
+  childSafety: `${SITE_ORIGIN}/legal/protection-des-enfants`,
 };
 
 const styles = StyleSheet.create({

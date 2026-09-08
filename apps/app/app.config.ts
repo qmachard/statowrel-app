@@ -130,6 +130,33 @@ const variant = VARIANT_CONFIG[variantName];
 const isDevelopment = variantName === 'development';
 
 /**
+ * The host the referral link of docs/prd.md §4.9 is served from — the same one
+ * `src/lib/site.ts` holds, written out again here for the reason `BRAND_YELLOW`
+ * above is: the Expo CLI reads this file outside Metro and cannot resolve an
+ * import of anything under `src/`.
+ */
+const APP_LINKS_DOMAIN = 'statowrel-app.web.app';
+
+/**
+ * Whether this build claims `https://statowrel-app.web.app/i/*` for itself.
+ *
+ * **Not `development`**, and that is the whole of the rule. Both platforms
+ * verify the claim against a file the site serves — `apple-app-site-association`
+ * and `assetlinks.json`, in `apps/admin/public/well-known/` — and both name the
+ * production identifier alone: Apple because an app ID is `<TeamID>.<bundle>`,
+ * Google because a fingerprint belongs to a signing key. Declaring it on the
+ * `.dev` variant would register a claim that can only ever fail verification,
+ * which on Android leaves a permanent failed entry in `pm get-app-links` and
+ * makes the real one harder to read.
+ *
+ * It costs nothing to test with: `preview` shares production's identifiers on
+ * purpose (see `VARIANT_CONFIG`), so it exercises the very association a store
+ * build will, and `statowrel://i/lou` still opens a dev client through the
+ * custom scheme.
+ */
+const supportsAppLinks = !isDevelopment;
+
+/**
  * Reversed Google OAuth iOS client id (`com.googleusercontent.apps.…`), taken
  * from the iOS OAuth client in the Firebase console. It has to be registered as
  * a URL scheme at build time, so it cannot be read at runtime like the other
@@ -321,6 +348,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: variant.iosBundleIdentifier,
     googleServicesFile: iosGoogleServicesFile,
     /*
+     * Universal links (docs/prd.md §4.9). `applinks:` is the whole declaration
+     * on this side; what the app is actually allowed to open is decided by the
+     * `components` block of the association file the domain serves, which names
+     * `/i/*` and nothing else — the legal pages must stay in the browser, they
+     * are what the store listings point at.
+     *
+     * It is an **entitlement**, so it takes a new native build. And it is only
+     * half of the handshake: iOS fetches the file at install time through
+     * Apple's CDN, so the site has to be serving it before the build is
+     * installed, not after.
+     */
+    ...(supportsAppLinks ? { associatedDomains: [ `applinks:${APP_LINKS_DOMAIN}` ] } : {}),
+    /*
      * iPhone only (device family `[1]`), and that is what makes the portrait
      * lock above hold on iOS.
      *
@@ -359,6 +399,32 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...config.android,
     package: variant.androidPackage,
     googleServicesFile: androidGoogleServicesFile,
+    /*
+     * Android App Links — the other half of the iOS block above.
+     *
+     * `autoVerify` is what turns a plain `https` intent filter into a link the
+     * system opens **without** the disambiguation dialog: at install time it
+     * fetches `/.well-known/assetlinks.json` and checks the signing certificate
+     * of this very binary against the fingerprints it lists. Which is why the
+     * file needs *two* of them — the EAS upload key and the Play app-signing
+     * key — since Play re-signs the AAB and a store install never presents the
+     * upload fingerprint.
+     *
+     * `pathPrefix` is the scoping Apple does inside its file: without it this
+     * filter would claim the legal pages too.
+     */
+    ...(supportsAppLinks
+      ? {
+        intentFilters: [
+          {
+            action: 'VIEW',
+            autoVerify: true,
+            data: [ { scheme: 'https', host: APP_LINKS_DOMAIN, pathPrefix: '/i' } ],
+            category: [ 'BROWSABLE', 'DEFAULT' ],
+          },
+        ],
+      }
+      : {}),
     /*
      * `AD_ID` is stripped out of the merged manifest, and it is a submission
      * blocker rather than a preference.

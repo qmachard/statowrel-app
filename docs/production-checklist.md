@@ -432,6 +432,29 @@ milliers de comptes, ou fausser les `answer_counts` qui font tout l'intérêt du
 - [ ] `version` reste `1.0.0` dans `app.config.ts` ; `autoIncrement` et
       `appVersionSource: "remote"` gèrent déjà le numéro de build
 
+### 4.2 bis 🟡 Liens universels et App Links (docs/prd.md §4.9)
+
+Le lien de parrainage `https://statowrel-app.web.app/i/{pseudo}` n'ouvre l'app que si les deux
+plateformes ont vérifié le domaine. Elles échouent **en silence** : rien dans l'app, dans Firebase
+ou dans un log de build ne le dit, le seul symptôme est un lien qui ouvre le navigateur.
+
+- [ ] Renseigner le **Team ID Apple** dans `apps/admin/public/well-known/apple-app-site-association.json`
+      (developer.apple.com → Membership, ou `APP_VARIANT=production npx eas credentials`)
+- [ ] Renseigner les **deux empreintes SHA-256** dans `apps/admin/public/well-known/assetlinks.json` :
+      celle de la clé d'upload EAS **et** celle de la clé de signature Play. Attention,
+      `npm run check-google-signin` n'imprime que des SHA-**1** (c'est ce que porte
+      `google-services.json`) — assetlinks veut du SHA-256, il ne peut pas venir de là
+- [ ] `npm run check-app-links` vert, puis `npm run deploy:admin` — le `predeploy` le rejoue
+- [ ] Vérifier que les deux fichiers répondent en ligne :
+      `curl -sI https://statowrel-app.web.app/.well-known/apple-app-site-association` doit rendre
+      `content-type: application/json`, et `/.well-known/assetlinks.json` doit rendre le tableau
+- [ ] **Déployer avant de builder** : iOS récupère l'association à l'installation, via le CDN
+      d'Apple, et ne la relit pas après coup
+- [ ] Nouveau build natif (`app.config.ts` a changé : entitlement iOS + intent filter Android)
+- [ ] Vérifier côté appareil — iOS : installer, ouvrir un `/i/{pseudo}` depuis Messages (pas depuis
+      Safari, qui ne suit pas un lien universel vers l'app depuis la même page) ; Android :
+      `adb shell pm get-app-links fr.quentinmachard.statowrel` doit afficher `verified`
+
 ### 4.3 Recette avant soumission
 
 À faire sur un build **`production`**, pas `preview` — même si les deux partagent l'identifiant,

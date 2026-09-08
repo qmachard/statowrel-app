@@ -16,6 +16,7 @@ import { OnboardingSheet } from '@/auth/OnboardingSheet';
 import { useDemoAnswerFlush } from '@/onboarding/data/useDemoAnswerFlush';
 import { useOnboardingSeen } from '@/onboarding/data/useOnboardingSeen';
 import { OnboardingCarousel } from '@/onboarding/screens/OnboardingCarousel';
+import { useReferrerCapture } from '@/referrals/data/useReferrerCapture';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { linking } from '@/navigation/linking';
 import { navigationRef } from '@/navigation/navigationRef';
@@ -69,6 +70,10 @@ const SessionGate = () => {
   // The other half of the onboarding demo: the pick made before there was an
   // account, written once there is one.
   useDemoAnswerFlush();
+  // The same arrangement for the referral link of docs/prd.md §4.9: the
+  // sponsor's handle, kept from a link tapped before there was an account to
+  // attribute, and offered on the username sheet.
+  useReferrerCapture();
   // Analytics identity + user properties + consent — hangs off `useAuth()` for
   // the same reason as the notifications hook. See `src/analytics/`.
   useAnalyticsIdentity();
