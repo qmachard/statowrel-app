@@ -7,6 +7,7 @@ import {
   REFERRAL_WELCOME_STATFLOUZZ_BONUS,
   USER_COLLECTION,
   USER_REFERRAL_COLLECTION,
+  type UserData,
   type UserFirebaseData,
   type UserReferralData,
   type UserReferralFirebaseData,
@@ -15,7 +16,7 @@ import {
 } from '@statowrel/models';
 
 import { sendPushToUser } from '@/domains/notifications';
-import { getDocumentRef, getSubDocumentRef, parseData, runTransaction } from '@/libs/firebase-admin';
+import { getDocumentRef, getSubDocumentRef, runTransaction } from '@/libs/firebase-admin';
 
 /** What the transaction settled, so the notifications below know what to say. */
 interface SettledReferral {
@@ -40,10 +41,14 @@ interface SettledReferral {
  * domain's — `referrals` registers no Cloud Function at all. A second
  * `onDocumentCreated` on the answers path would have been a second Eventarc
  * trigger, a second function and a second invocation on every answer given in
- * the app, to settle something that happens once per account, ever. What that
- * costs instead is the one profile read below, on a path that returns
- * immediately for almost everybody. The transaction here stays this step's own,
- * so the referral never widens the one that moves the streak.
+ * the app, to settle something that happens once per account, ever.
+ *
+ * **And it reads nothing to find that out.** The profile is handed in by the
+ * caller, which read it inside its own transaction a moment earlier — a
+ * Firestore read on every answer given in the app, to decide a per-account
+ * question, is the same arithmetic the second trigger was refused for. The
+ * transaction here stays this step's own, so the referral never widens the one
+ * that moves the streak.
  *
  * **Why the demo answer is not it.** The onboarding carousel's question is
  * answered before there is an account, and `useDemoAnswerFlush` writes that
@@ -67,23 +72,34 @@ interface SettledReferral {
  * checked they existed when `referred_by` was written; deleting afterwards is
  * always possible) and a sponsor already at `REFERRAL_MAX_REWARDED`.
  *
+ * The profile passed in is a pre-check and never the thing that pays: the
+ * transaction re-reads it, and staleness there cannot cost anything. Both
+ * fields it is read for move in one direction only — `referral_rewarded_at`
+ * from null to stamped, and `referred_by` not at all, `firestore.rules`
+ * freezing it at the profile's create — so a stale value can only make this
+ * return early, never pay twice.
+ *
  * The friendship the sponsor was sent at sign-up is deliberately not read: a
  * declined or ignored invitation does not withhold the money — see
  * `users/triggers/steps/recordReferral.ts`.
  */
-export const payReferralReward = async (userId: string): Promise<void> => {
-  const userRef = getDocumentRef(USER_COLLECTION, userId, userConverter);
-  const user = await userRef.get().then(parseData);
-
-  // The common case by far, and it costs one read: almost nobody answering
-  // today arrived through a referral, and nobody settles twice.
+export const payReferralReward = async (userId: string, user: UserData | null): Promise<void> => {
+  // The common case by far, and it now costs nothing at all: almost nobody
+  // answering today arrived through a referral, and nobody settles twice, so
+  // the path every answer takes returns here without touching Firestore.
   // Truthiness rather than `=== null`: `ModelData` widens every nullable field
   // to `T | null | undefined`, so only this narrows `referred_by` to a string.
+  //
+  // `null` is a postponement rather than a refusal — the caller returns it on
+  // the paths where it never read a profile — and postponing costs nothing:
+  // `referral_rewarded_at` is still null, so the next answer settles it, which
+  // is the retry this step is built on anyway.
   if (user === null || !user.referred_by || user.referral_rewarded_at) {
     return;
   }
 
   const sponsorId = user.referred_by;
+  const userRef = getDocumentRef(USER_COLLECTION, userId, userConverter);
   const sponsorRef = getDocumentRef(USER_COLLECTION, sponsorId, userConverter);
   const rowRef = getSubDocumentRef(sponsorRef, USER_REFERRAL_COLLECTION, userId, userReferralConverter);
 

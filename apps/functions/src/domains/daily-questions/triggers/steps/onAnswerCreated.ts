@@ -14,6 +14,7 @@ import {
   USER_CALENDAR_MONTH_COLLECTION,
   USER_COLLECTION,
   type QuestionData,
+  type UserData,
   type UserFirebaseData,
   userCalendarMonthConverter,
   userConverter,
@@ -96,6 +97,26 @@ const countDemoAnswer = async (answer: DailyQuestionAnswerData): Promise<void> =
 };
 
 /**
+ * What one answer left behind, for the trigger that called this step.
+ *
+ * `applied` says whether the writes actually happened — a redelivery bails out
+ * on the calendar entry and applies nothing — and it is what the friends'
+ * fan-out hangs off.
+ *
+ * `author` is the profile this step read **inside its own transaction**, handed
+ * up so the referral payout that runs next does not read the same document a
+ * second time (docs/prd.md §4.9). It is the pre-write state, which is exactly
+ * what that payout wants: neither `referred_by` nor `referral_rewarded_at` is
+ * touched here, and the payout re-reads both under the transaction that stamps
+ * them. `null` on the paths that never got as far as reading it — a question
+ * that does not exist, an account without a profile.
+ */
+interface AnswerApplication {
+  applied: boolean;
+  author: UserData | null;
+}
+
+/**
  * Everything one answer changes about the author and the question — docs/prd.md
  * §4.6 and §6.
  *
@@ -142,11 +163,13 @@ const countDemoAnswer = async (answer: DailyQuestionAnswerData): Promise<void> =
  * calendar entry itself: one answer per person per question is guaranteed by
  * the answer document's id, so a day already present in the month means this
  * answer was already applied, and the transaction bails out before writing.
- * What it returns says which of the two happened, and that is what the fan-out
- * below hangs off — a redelivery counts nothing onto anybody a second time,
- * without needing a marker of its own.
+ * `applied` says which of the two happened, and that is what the fan-out below
+ * hangs off — a redelivery counts nothing onto anybody a second time, without
+ * needing a marker of its own. It still carries the author back up: the
+ * referral has to keep settling on a redelivery, and the profile was read
+ * either way.
  */
-export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<void> => {
+export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<AnswerApplication> => {
   // `question_id`, `date` and `user_id` are denormalized on the answer and
   // pinned to the document path — or to the parent question — by
   // `firestore.rules`, so they can be read straight off it rather than from the
@@ -164,13 +187,13 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
   if (question === null) {
     logger.error('Answer on a question that does not exist', { date, question_id: questionId, option_id: optionId });
 
-    return;
+    return { applied: false, author: null };
   }
 
   if (question.status === 'demo') {
     await countDemoAnswer(answer);
 
-    return;
+    return { applied: false, author: null };
   }
 
   const isJoker = answer.is_joker;
@@ -181,7 +204,7 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
   const questionRef = getDocumentRef(QUESTION_COLLECTION, questionId, questionConverter);
   const answerRef = getSubDocumentRef(questionRef, DAILY_QUESTION_ANSWER_COLLECTION, userId, dailyQuestionAnswerConverter);
 
-  const applied = await runTransaction(async (transaction) => {
+  const application = await runTransaction<AnswerApplication>(async (transaction) => {
     // Every read first: a transaction refuses to read after it has written.
     const calendarMonth = (await transaction.get(calendarMonthRef)).data();
     const user = (await transaction.get(userRef)).data();
@@ -194,7 +217,10 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
     if (calendarMonth?.days[monthDayKey] !== undefined || calendarMonth?.jokers[monthDayKey] !== undefined) {
       logger.info('Answer already applied, nothing to do', { date, is_joker: isJoker, user_id: userId });
 
-      return false;
+      // The author still travels: a redelivery applies nothing, but the
+      // referral it may still owe is settled on its own marker, not on this
+      // one.
+      return { applied: false, author: user ?? null };
     }
 
     // A `set` with `merge` deep-merges maps, so writing one entry leaves the
@@ -230,7 +256,7 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
       // above, only the counters are skipped.
       logger.error('Answer from a user with no profile document', { date, user_id: userId });
 
-      return true;
+      return { applied: true, author: null };
     }
 
     // A joker preserves the streak (docs/prd.md §4.8): it advances exactly
@@ -271,12 +297,12 @@ export const onAnswerCreated = async (answer: DailyQuestionAnswerData): Promise<
       });
     }
 
-    return true;
+    return { applied: true, author: user };
   });
 
-  if (!applied) {
-    return;
+  if (application.applied) {
+    await fanOutFriendAnswerBadge(userRef, monthKey, monthDayKey, date);
   }
 
-  await fanOutFriendAnswerBadge(userRef, monthKey, monthDayKey, date);
+  return application;
 };
