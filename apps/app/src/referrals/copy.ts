@@ -1,4 +1,5 @@
 import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
+import { referralLink } from '@/referrals/links';
 
 /**
  * What the referral says on screen — docs/prd.md §4.9.
@@ -34,17 +35,25 @@ export const spokenShareHelp = (reward: number): string => (
 export const SHARE_LABEL = 'Partager mon lien';
 
 /**
- * The message the share sheet sends, built around the handle rather than a
- * link: until universal links ship, a `statowrel://` URL opens nothing on a
- * phone that has not installed the app — which is every phone this message is
- * for. So the site is the destination and the handle is the code, typed once at
- * sign-up.
+ * The message the share sheet sends — one link, and the handle is *in* it.
+ *
+ * It used to carry the site's address plus the handle to re-type, because a
+ * `statowrel://` URL opens nothing on a phone that has not installed the app,
+ * which is every phone this message is for. `https://statowrel-app.web.app/i/lou`
+ * is the fix: the app when it is there, the landing page when it is not, and
+ * the attribution pre-filled either way rather than dictated.
+ *
+ * The handle stays *readable* in the URL on purpose. Neither store hands a
+ * fresh install anything about the page it came from — Firebase Dynamic Links
+ * shut down on 25 August 2025 — so a newcomer who goes through the store still
+ * has to know the name, and a link that shows it is the only version of this
+ * message that survives that detour.
  *
  * It names the **newcomer's** bonus and never the sender's larger one: the
  * message is read by somebody being asked for a favour, and a favour that opens
  * by saying what it pays the asker is not an invitation.
  */
 export const shareMessage = (username: string, bonus: number): string => (
-  `Rejoins-moi sur StatOwrel : https://statowrel-app.web.app\n`
-  + `Mets @${username} dans « Qui t'a fait venir ? » à l'inscription, tu gagnes ${amountLabel(bonus)}.`
+  `Rejoins-moi sur StatOwrel : ${referralLink(username)}\n`
+  + `Tu gagnes ${amountLabel(bonus)} dès ta première réponse.`
 );

@@ -26,7 +26,8 @@ export type AnalyticsEvent =
   | { name: 'friend_invited'; params: { outcome: FriendInviteOutcome } }
   | { name: 'friend_invitation_accepted'; params?: Record<string, never> }
   | { name: 'referral_attributed'; params?: Record<string, never> }
-  | { name: 'invite_link_shared'; params?: Record<string, never> };
+  | { name: 'invite_link_shared'; params?: Record<string, never> }
+  | { name: 'referral_link_opened'; params: { has_account: boolean } };
 
 /** The three doors of `src/auth/providers.ts`. `password` covers both sign-in and sign-up with e-mail. */
 export type SignInMethod = 'google' | 'apple' | 'password';
