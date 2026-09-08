@@ -14,10 +14,12 @@
 // is the whole reason this script exists rather than a duplicated one.
 //
 // `--sample` is the flag to reach for while iterating on the design: it draws
-// canned days at 2, 4 and 6 options — the bounds `QUESTION_MIN_OPTIONS` and
-// `QUESTION_MAX_OPTIONS` set — with a long question and a long StatOwrel, which
-// is the layout's worst case and the one a real database rarely offers on the
-// day you need it. It touches no project and needs no credentials.
+// five canned days covering both things the card varies on — 2 to 6 options,
+// the bounds `QUESTION_MIN_OPTIONS` and `QUESTION_MAX_OPTIONS` set, and a
+// dominant share on every rung of the hedge ladder, from « peut-être » at 24 %
+// to « forcément » at 92 %. That is the layout's worst case and the copy's
+// whole range in one run, neither of which a real database offers on the day
+// you need it. It touches no project and needs no credentials.
 //
 // A real run authenticates with Application Default Credentials
 // (`gcloud auth application-default login`), or reads the emulator when
@@ -97,8 +99,28 @@ const sampleOption = (label, statLabel, count) => ({ id: label, label, statLabel
  * Two options with a short question is the roomiest card the layout ever draws,
  * six options with a 120-character question the tightest. Anything that reads on
  * both reads on a real day.
+ *
+ * They also cover **one dominant share per rung of `hedgeFor`'s ladder**, which
+ * is why there are five rather than three: the sentence on slide 1 changes with
+ * the percentage now, and a preview that can only show three of the five
+ * adverbs is a preview of most of the design. Each day carries its own date, so
+ * each also draws its own tilt.
  */
 const SAMPLE_DAYS = [
+  {
+    date: '2026-08-17',
+    question: 'Tu remets un rouleau quand tu finis le papier toilette ?',
+    options: [ sampleOption('Oui', 'civilisé·e', 3680), sampleOption('Non', 'monstre', 320) ],
+  },
+  {
+    date: '2026-08-18',
+    question: 'Ton café du matin, tu le bois…',
+    options: [
+      sampleOption('Debout, avant tout le reste', 'pressé·e', 1560),
+      sampleOption('Une heure après le réveil', 'posé·e', 280),
+      sampleOption('Je ne bois pas de café', 'inexplicable', 160),
+    ],
+  },
   {
     date: '2026-08-19',
     question: 'Ton dentifrice, tu le presses…',

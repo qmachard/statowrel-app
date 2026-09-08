@@ -169,6 +169,42 @@ const drawFrame = (
 };
 
 /**
+ * The hedge in « tu es (…) un.e PERFECTIONNISTE », and how sure it sounds.
+ *
+ * The percentage is the share of people who picked the day's dominant answer,
+ * which for somebody who has not answered *is* the odds they would pick it too
+ * — so the adverb can honestly follow it. A slide reading « Comme 92 % des
+ * gens, tu es (peut-être) … » undersells its own number, and « Comme 24 % des
+ * gens, tu es (forcément) … » is simply false.
+ *
+ * Read bottom-up, the first threshold the share clears. The bands are wide —
+ * fifteen points at least — because two adjacent rungs have to be tellable
+ * apart by somebody reading one card, never by somebody holding two.
+ *
+ * **« sans doute » sits below « probablement » on purpose, and it is the one
+ * rung worth arguing with.** French makes it look like the strong one and uses
+ * it as the soft one: Le Robert glosses it « probablement, vraisemblablement »,
+ * and the certainty everybody hears in it belongs to « sans aucun doute ». The
+ * two really are near-synonyms; what separates them here is register rather
+ * than strength, the spoken hedge under the written one.
+ *
+ * The parentheses stay whatever the rung, « (forcément) » included: they are
+ * the wink that keeps a statistic from reading as a verdict, and at the top of
+ * the ladder they are what turns the certainty into a joke.
+ */
+const HEDGES = [
+  { from: 90, adverb: 'forcément' },
+  { from: 75, adverb: 'certainement' },
+  { from: 55, adverb: 'probablement' },
+  { from: 35, adverb: 'sans doute' },
+  { from: 0, adverb: 'peut-être' },
+] as const;
+
+const hedgeFor = (percent: number): string => (
+  HEDGES.find(({ from }) => percent >= from)?.adverb ?? 'peut-être'
+);
+
+/**
  * Slide 1 — the number, and the sentence the app already says around it.
  *
  * No question, no bars, no breakdown: the whole slide is « Comme 24 % des gens,
@@ -186,8 +222,8 @@ const drawFrame = (
  * guessing French from a suffix (« banal » would come out « banaux ») on words
  * half of which are inclusive forms. Borrowing the result screen's own sentence
  * costs nothing and cannot be wrong, whatever anybody types into the proposal
- * form. « (peut-être) » is the wink that keeps a statistic from reading as a
- * verdict.
+ * form. The adverb inside the parentheses is `hedgeFor`'s, so the sentence
+ * sounds as sure as its own number.
  */
 const renderResultSlide = (recap: DailyRecap, tilt: number): Buffer => {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
@@ -209,7 +245,7 @@ const renderResultSlide = (recap: DailyRecap, tilt: number): Buffer => {
   const percent = { lines: [ percentLabel(recap.top.percent) ], fontSize: 180, lineHeight: 186 };
 
   ctx.font = font(fonts.sans, 44);
-  const closing = fitText(ctx, 'des gens, tu es (peut-être) un.e', {
+  const closing = fitText(ctx, `des gens, tu es (${hedgeFor(recap.top.percent)}) un.e`, {
     family: fonts.sans,
     maxWidth: innerWidth,
     maxLines: 2,
