@@ -1,13 +1,11 @@
 [
   {
-    "relation": [ "delegate_permission/common.handle_all_urls" ],
+    "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
       "package_name": "fr.quentinmachard.statowrel",
-      "sha256_cert_fingerprints": [
-        "REPLACE_WITH_SHA256_EAS_UPLOAD_KEY",
-        "REPLACE_WITH_SHA256_PLAY_APP_SIGNING_KEY"
-      ]
+      "sha256_cert_fingerprints":
+        ["B1:7B:30:3C:62:18:F7:1D:11:1F:11:C9:21:6C:C4:3B:D2:38:8C:65:05:BA:C3:9E:5F:EF:31:70:A7:F1:50:03"]
     }
   }
 ]
