@@ -154,7 +154,7 @@ export const MenuScreen = () => {
 
         <View style={styles.identity}>
           <Avatar
-            size="xl"
+            size="2xl"
             name={profile?.username ?? user.email ?? '?'}
             uri={user.photoURL}
           />
@@ -172,7 +172,9 @@ export const MenuScreen = () => {
           <Tabs items={TABS} value={tab} onChange={setTab} />
 
           <View style={tab === 'friends' ? styles.list : styles.hidden}>
-            <FriendsCard />
+            <FriendsCard
+              onOpenFriend={(friendId, friendUsername) => navigation.navigate('Friend', { friendId, friendUsername })}
+            />
 
             {/* The list's own call to action, under what it is about — the
                 header's icon button is the shortcut, this is the sentence.

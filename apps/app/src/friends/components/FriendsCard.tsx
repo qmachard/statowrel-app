@@ -1,16 +1,19 @@
 import type { UserFriendData } from '@statowrel/models';
-import { X } from '@/components/icons';
+import { ChevronRight } from '@/components/icons';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/Card';
-import { DropdownMenu } from '@/components/DropdownMenu';
 import { borderWidth, colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendRow } from '@/friends/components/FriendRow';
 import { PendingActions } from '@/friends/components/PendingActions';
-import { EMPTY, FAILURE, NOTES, REMOVE_LABEL } from '@/friends/copy';
-import { removeFriendship } from '@/friends/data/friendships';
+import { EMPTY, FAILURE, NOTES } from '@/friends/copy';
 import { useFriends } from '@/friends/data/useFriends';
 import { useFriendshipWrite } from '@/friends/data/useFriendshipWrite';
+
+export interface FriendsCardProps {
+  /** Opens a friend's own screen — their streak and the compatibility with them (docs/prd.md §5.3). Accepted friendships only. */
+  onOpenFriend: (friendId: string, friendUsername: string) => void;
+}
 
 const styles = StyleSheet.create({
   // The card *is* the list: no padding of its own, no gap between the rows —
@@ -61,11 +64,15 @@ interface Line {
  *
  * A pending invitation carries its two answers as buttons under the row's note
  * — « Accepter » / « Refuser » on one received, « Annuler » on one sent — the
- * answer sitting under what it answers. The row's menu is left to the accepted
- * friendships, where « Retirer ce pote » is the only thing to do and nothing is
- * waiting: a `ghost` trigger, so it does not compete with those buttons.
+ * answer sitting under what it answers.
+ *
+ * An accepted row carries a chevron instead, and the whole row takes the tap:
+ * it opens that friend's own screen (docs/prd.md §5.3). « Retirer ce pote »
+ * moved there, into the screen's own menu — a row that leads somewhere should
+ * not also hold a menu, and removing somebody belongs on the page about them
+ * rather than half an inch from the line that opens it.
  */
-export const FriendsCard = () => {
+export const FriendsCard = ({ onOpenFriend }: FriendsCardProps) => {
   const { accepted, incoming, outgoing, loading } = useFriends();
   const { busy, running, failed, run } = useFriendshipWrite();
 
@@ -94,6 +101,13 @@ export const FriendsCard = () => {
           <FriendRow
             username={line.friendship.friend_username}
             note={line.kind === 'accepted' ? undefined : NOTES[line.kind]}
+            // Only an accepted friendship opens onto something: there is
+            // nothing to show about somebody who has not accepted yet, and a
+            // row already asking « Accepter » / « Refuser » would be a third
+            // target on top of the two it is waiting on.
+            onPress={line.kind === 'accepted'
+              ? () => onOpenFriend(line.friendship.friend_id, line.friendship.friend_username)
+              : undefined}
             action={line.kind === 'accepted' ? undefined : (
               <PendingActions
                 friendship={line.friendship}
@@ -104,20 +118,13 @@ export const FriendsCard = () => {
               />
             )}
           >
+            {/* A chevron, not a menu. The row itself opens the friend's
+                screen now, and « Retirer ce pote » went with it — a menu
+                beside a row that is already pressable offers two targets for
+                a line that does one thing. The chevron is the affordance
+                instead: it says the row leads somewhere. */}
             {line.kind === 'accepted' ? (
-              <DropdownMenu
-                label={`Gérer @${line.friendship.friend_username}`}
-                variant="ghost"
-                disabled={busy === line.friendship.friend_id}
-                items={[
-                  {
-                    label: REMOVE_LABEL,
-                    icon: X,
-                    variant: 'destructive',
-                    onPress: () => run(line.friendship.friend_id, removeFriendship),
-                  },
-                ]}
-              />
+              <ChevronRight size={20} color={colors['muted-foreground']} />
             ) : null}
           </FriendRow>
         </View>

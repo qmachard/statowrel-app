@@ -6,6 +6,7 @@ import { SignInScreen } from '@/auth/screens/SignInScreen';
 import { SignUpScreen } from '@/auth/screens/SignUpScreen';
 import { DailyQuestionScreen } from '@/daily-question/screens/DailyQuestionScreen';
 import { colors } from '@/design/tokens';
+import { FriendScreen } from '@/friends/screens/FriendScreen';
 import { InviteFriendScreen } from '@/friends/screens/InviteFriendScreen';
 import { MenuScreen } from '@/menu/screens/MenuScreen';
 import { ProposeQuestionScreen } from '@/questions/screens/ProposeQuestionScreen';
@@ -80,6 +81,11 @@ export const RootNavigator = () => {
             options={{ presentation: 'fullScreenModal' }}
           />
           <Stack.Screen name="Menu" component={MenuScreen} />
+          {/* A friend opens from the list on the Menu, and stacks on top of it
+              rather than over Stats: it is read, scrolled and left the way the
+              Menu itself is, and the back gesture has to land back on the list
+              it was tapped from (docs/prd.md §5.3). */}
+          <Stack.Screen name="Friend" component={FriendScreen} />
         </>
       ) : (
         <>

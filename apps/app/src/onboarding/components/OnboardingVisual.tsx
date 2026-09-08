@@ -108,7 +108,7 @@ export const OnboardingVisual = ({ slideKey }: { slideKey: OnboardingSlideKey })
   return (
     <View style={styles.faces}>
       {SAMPLE_FRIENDS.map((name, index) => (
-        <Avatar key={name} name={name} size="xl" style={index === 0 ? undefined : styles.face} />
+        <Avatar key={name} name={name} size="2xl" style={index === 0 ? undefined : styles.face} />
       ))}
     </View>
   );

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
@@ -11,6 +11,14 @@ export interface FriendRowProps {
   note?: string;
   /** The line's own answer to its note — one or more buttons, rendered under it in the same column. */
   action?: ReactNode;
+  /**
+   * Opens what the row is about — the friend's own screen (docs/prd.md §5.3).
+   *
+   * Optional, and absent on a pending invitation: there is nothing to see about
+   * somebody who is not a friend yet, and a row already carrying « Accepter » /
+   * « Refuser » would be a third target on top of the two it asks for.
+   */
+  onPress?: () => void;
   /** The row's actions, pushed to the right — the row's menu. */
   children?: ReactNode;
 }
@@ -55,6 +63,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing(2),
   },
+  // The row has no surface of its own — the card around the list is the
+  // surface — so the press state tints the row rather than lifting it.
+  pressed: {
+    backgroundColor: colors.muted,
+  },
 });
 
 /**
@@ -68,8 +81,19 @@ const styles = StyleSheet.create({
  * It carries no surface of its own — the card around the list is the surface,
  * and the rows are cut out of it by separators.
  */
-export const FriendRow = ({ username, note, action, children }: FriendRowProps) => (
-  <View style={[ styles.root, action === undefined ? null : styles.stacked ]}>
+export const FriendRow = ({ username, note, action, onPress, children }: FriendRowProps) => (
+  // `Pressable` even when nothing is pressable, rather than two branches
+  // rendering the same tree: it lays out identically to the `View` it replaced
+  // and it is inert without an `onPress`.
+  <Pressable
+    disabled={onPress === undefined}
+    onPress={onPress}
+    style={({ pressed }) => [
+      styles.root,
+      action === undefined ? null : styles.stacked,
+      pressed ? styles.pressed : null,
+    ]}
+  >
     <Avatar size="lg" name={username} />
 
     <View style={styles.body}>
@@ -81,5 +105,5 @@ export const FriendRow = ({ username, note, action, children }: FriendRowProps) 
     </View>
 
     {children === undefined || children === null ? null : <View style={styles.actions}>{children}</View>}
-  </View>
+  </Pressable>
 );

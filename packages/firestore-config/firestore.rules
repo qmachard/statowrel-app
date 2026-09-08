@@ -433,6 +433,27 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // How alike two friends answered — docs/prd.md §5.3. One document per
+    // **pair**, keyed by the two UIDs sorted and joined
+    // (`friendCompatibilityId`), so both sides land on the same document
+    // without having to agree on an order first.
+    //
+    // Read by the two people it is about, and by nobody else: `user_ids` is
+    // carried as a field precisely because a rule cannot split the id it is
+    // built from. It holds no answer and no date — a count, a match count and
+    // a percentage — but it is still about two named accounts, so a third one
+    // has no business reading it.
+    //
+    // Written by `friends-getFriendCompatibility` alone, admin-side past this
+    // rule. Nothing here is a source: every field is recomputed from the
+    // answers, so the worst a lost document can do is cost one recompute.
+    // Which is also why the client may not write it — the cache would
+    // otherwise be a place to store a score nobody earned.
+    match /v1_friend_compatibilities/{pair_id} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.user_ids;
+      allow write: if false;
+    }
+
     // One document per taken username, keyed by the username itself
     // (docs/prd.md §4.1). Uniqueness is a property of the path rather than a
     // check to run: Firestore denies a `create` on a document that already

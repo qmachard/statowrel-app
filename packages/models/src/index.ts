@@ -17,6 +17,7 @@ export * from './statflouzz';
 // CLAUDE.md and in docs/architecture.md at the repo root.
 export * from './v1_daily_question_answer';
 export * from './v1_daily_question_month';
+export * from './v1_friend_compatibility';
 export * from './v1_question';
 export * from './v1_user';
 export * from './v1_user_calendar_month';
