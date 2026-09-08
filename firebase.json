@@ -19,7 +19,8 @@
   "hosting": {
     "public": "apps/admin/dist",
     "predeploy": [
-      "npm run build:admin"
+      "npm run build:admin",
+      "npm run check-app-links"
     ],
     "cleanUrls": true,
     "ignore": [
@@ -28,6 +29,18 @@
       "**/node_modules/**"
     ],
     "rewrites": [
+      {
+        "source": "/.well-known/apple-app-site-association",
+        "destination": "/well-known/apple-app-site-association.json"
+      },
+      {
+        "source": "/.well-known/assetlinks.json",
+        "destination": "/well-known/assetlinks.json"
+      },
+      {
+        "source": "/i/**",
+        "destination": "/i/index.html"
+      },
       {
         "source": "/legal/assistance",
         "destination": "/legal/assistance.html"
@@ -66,6 +79,15 @@
       }
     ],
     "headers": [
+      {
+        "source": "/.well-known/apple-app-site-association",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
       {
         "source": "/assets/**",
         "headers": [

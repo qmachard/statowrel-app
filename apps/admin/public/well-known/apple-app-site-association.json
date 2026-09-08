@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "REPLACE_WITH_APPLE_TEAM_ID.fr.quentinmachard.statowrel"
+        ],
+        "components": [
+          {
+            "/": "/i/*",
+            "comment": "Referral links only. Every other path on this host must stay in the browser: the legal pages are what the store listings point at, and an app that swallowed them would answer a reviewer's tap with nothing."
+          }
+        ]
+      }
+    ]
+  }
+}

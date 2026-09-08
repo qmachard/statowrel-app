@@ -31,6 +31,7 @@
     "backfill-initial-balance": "npm run build:models && node apps/functions/scripts/backfill-initial-balance.mjs",
     "render-instagram-card": "npm run build:models && node apps/functions/scripts/render-instagram-card.mjs",
     "check-google-signin": "node apps/app/scripts/check-google-signin.mjs",
+    "check-app-links": "node apps/admin/scripts/check-app-links.mjs",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
