@@ -167,7 +167,7 @@ export const FriendScreen = () => {
           </StatsStrip>
         )}
 
-        <CompatibilityCard friendId={friendId} />
+        <CompatibilityCard friendId={friendId} friendUsername={friendUsername} />
       </ScrollView>
     </SafeAreaView>
   );
