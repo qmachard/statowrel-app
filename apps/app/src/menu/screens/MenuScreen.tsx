@@ -1,5 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, UserRoundPlus } from '@/components/icons';
+import { QUESTION_STATFLOUZZ_COST } from '@statowrel/models';
+import { ChevronLeft, MessageCircleQuestionMark, UserRoundPlus } from '@/components/icons';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import { LegalLinks } from '@/components/LegalLinks';
 import { Tabs, type TabItem } from '@/components/Tabs';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
 import { FriendsCard } from '@/friends/components/FriendsCard';
+import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
 import { NotificationsButton } from '@/notifications/components/NotificationsButton';
 import { clearPendingDemoAnswer } from '@/onboarding/data/demoAnswerStore';
 import { resetOnboardingSeen } from '@/onboarding/data/useOnboardingSeen';
@@ -65,8 +67,9 @@ const styles = StyleSheet.create({
   panel: {
     gap: spacing(3),
   },
-  // The friend list and the invitation under it, on the panel's own rhythm.
-  friends: {
+  // A list and the action it leads to, on the panel's own rhythm — the same
+  // block on either tab.
+  list: {
     gap: spacing(3),
   },
   // The inactive list stays mounted and drops out of the layout instead of
@@ -168,7 +171,7 @@ export const MenuScreen = () => {
         <View style={styles.panel}>
           <Tabs items={TABS} value={tab} onChange={setTab} />
 
-          <View style={tab === 'friends' ? styles.friends : styles.hidden}>
+          <View style={tab === 'friends' ? styles.list : styles.hidden}>
             <FriendsCard />
 
             {/* The list's own call to action, under what it is about — the
@@ -179,8 +182,22 @@ export const MenuScreen = () => {
           </View>
 
           {/* A drawn proposal opens its day the way a calendar cell does. */}
-          <View style={tab === 'questions' ? null : styles.hidden}>
+          <View style={tab === 'questions' ? styles.list : styles.hidden}>
             <MyQuestionsCard onOpenDay={(date) => navigation.navigate('DailyQuestion', { date })} />
+
+            {/* The invitation's twin under the other list. It carries the price
+                the Stats card carries, since a button that spends cannot stay
+                quiet about it — but not that card's under-price treatment: the
+                balance is shown there, beside what it pays for, and a price
+                argued next to no balance argues with nothing. An empty wallet
+                is refused by the callable, in its own sentence. */}
+            <Button
+              label="Poser une question"
+              icon={MessageCircleQuestionMark}
+              trailingLabel={amountLabel(QUESTION_STATFLOUZZ_COST)}
+              accessibilityLabel={`Poser une question, ${spokenAmountLabel(QUESTION_STATFLOUZZ_COST)}`}
+              onPress={() => navigation.navigate('ProposeQuestion')}
+            />
           </View>
         </View>
 

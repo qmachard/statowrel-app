@@ -33,11 +33,9 @@ export const spokenRefunded = (amount: number) => `Tes ${spokenAmountLabel(amoun
 /**
  * The empty state takes the place of the list, like the friend list's own.
  *
- * It names where the door is, which the friend list does not have to: proposing
- * lives on the Stats screen, beside the wallet that pays for it (docs/prd.md
- * §5.2 point 6), so a card that only ever lists proposals would otherwise leave
- * somebody with nothing to do about it.
+ * It no longer says where the door is: the door is the button directly under
+ * this list, so naming another one would send somebody past it.
  */
-export const EMPTY = 'Aucune question proposée. Pose la tienne depuis l’écran Stats.';
+export const EMPTY = 'Aucune question proposée. Pose la tienne.';
 
 export const FAILURE = 'Impossible de charger tes questions. Vérifie ta connexion et réessaie.';

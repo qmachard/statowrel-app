@@ -52,14 +52,14 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.7,
   },
+  // Both segments take the full black, selected or not: dimmed, the inactive
+  // one reads as disabled rather than as unselected. The yellow fill is what
+  // says which is on, and it is loud enough to say it alone.
   label: {
     fontFamily: fonts.head,
     fontSize: fontSize.sm,
     textTransform: 'uppercase',
-    color: colors['muted-foreground'],
-  },
-  selectedLabel: {
-    color: colors['primary-foreground'],
+    color: colors.foreground,
   },
 });
 
@@ -89,7 +89,7 @@ export const Tabs = <T extends string>({ items, value, onChange, style }: TabsPr
             pressed && !selected ? styles.pressed : null,
           ]}
         >
-          <Text style={[ styles.label, selected ? styles.selectedLabel : null ]} numberOfLines={1}>
+          <Text style={styles.label} numberOfLines={1}>
             {item.label}
           </Text>
         </Pressable>

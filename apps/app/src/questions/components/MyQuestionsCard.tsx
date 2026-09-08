@@ -52,11 +52,11 @@ const styles = StyleSheet.create({
  *
  * It carries no heading of its own either: the tab it hangs off names it.
  *
- * It carries no « Poser une question » button, unlike the friend list's own
- * invitation icon. The door is on the Stats screen, beside the wallet that pays
- * for it: a price belongs next to the balance it is taken from, and duplicating
- * the entry point here would put it next to nothing. The empty state names that
- * instead.
+ * The « Poser une question » button under it belongs to the Menu screen rather
+ * than to this card, exactly as the invitation under the friend list does — the
+ * two panels of one switch end the same way. The Stats screen keeps the door
+ * that argues the price against the balance beside it (docs/prd.md §5.2 point
+ * 6); this one only carries what it costs.
  */
 export const MyQuestionsCard = ({ onOpenDay }: MyQuestionsCardProps) => {
   const { questions, loading, failed } = useMyQuestions();
