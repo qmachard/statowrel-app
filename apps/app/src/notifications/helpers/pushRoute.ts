@@ -3,6 +3,7 @@ import { z } from 'zod';
 /**
  * The `data` block the backend attaches to a push — written by
  * `apps/functions/src/domains/daily-questions/tasks/notifyDailyQuestion.ts` and
+ * `apps/functions/src/domains/daily-questions/helpers/streakReminder.ts` and
  * `apps/functions/src/domains/friends/triggers/steps/onFriendshipCreated.ts`
  * and `apps/functions/src/domains/referrals/triggers/steps/payReferralReward.ts`
  * and `apps/functions/src/domains/questions/triggers/steps/onQuestionModerated.ts`,
@@ -18,6 +19,22 @@ const pushRouteSchema = z.discriminatedUnion('type', [
     type: z.literal('daily_question'),
     /** `YYYY-MM-DD`, the day key `DailyQuestion`'s `date` param speaks. */
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    /**
+     * What the tap is *for*, when the day screen alone is not the answer.
+     *
+     * `joker` is the 21:00 streak reminder (docs/prd.md §4.6): the day screen
+     * already carries the joker button, but somebody woken at nine in the
+     * evening to be told their série is about to break should not then have to
+     * find it. So the confirmation opens on arrival, and saving a streak is a
+     * tap on the banner and a tap on « Passer ».
+     *
+     * Optional, and every other push omits it — the four notifications that
+     * already point at a day want the day and nothing more. A backend sending
+     * an intent this app does not know drops back to the plain day rather than
+     * failing the whole parse, which is why it is a union of literals and not a
+     * free string.
+     */
+    intent: z.literal('joker').optional().catch(undefined),
   }),
   // An invitation carries nothing to route on: the Menu screen lists it, and
   // the list is a live snapshot of `v1_user_friends` (docs/prd.md §5.3).

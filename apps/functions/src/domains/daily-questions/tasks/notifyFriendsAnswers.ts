@@ -22,13 +22,21 @@ const payloadSchema = z.object({
  * that reads as a bug. The singular is spelled out for the same reason: « 1 de
  * tes potes ont répondu » is what makes an app look unfinished on a lock screen.
  *
+ * **The zero case stays about the potes too**, and that is a change from what
+ * it used to say (« Ne perds pas ta série… »). Since docs/prd.md §4.6 the
+ * evening carries a second push, at 21:00, whose whole subject is the streak —
+ * and two notifications three hours apart making the same argument is how a
+ * useful reminder turns into the harcèlement §9 was worried about. So the two
+ * were given a territory each: 18:00 speaks of the friends, 21:00 of the
+ * série, and nobody hears the same sentence twice.
+ *
  * Nothing here is read from the question: the day's label already dropped at
  * 07:00, and repeating it in the evening would spoil it a second time to
  * somebody who is being asked to open the app precisely to discover it.
  */
 const nudgeBody = (friendsAnswered: number): string => {
   if (friendsAnswered === 0) {
-    return 'Ne perds pas ta série : tu as jusqu\'à minuit pour répondre.';
+    return 'Personne n\'a encore répondu. À toi d\'ouvrir le bal.';
   }
 
   if (friendsAnswered === 1) {

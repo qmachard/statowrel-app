@@ -135,3 +135,56 @@ export const sendPushToUsers = async (
     return resolved;
   }, []));
 };
+
+/**
+ * How many device reads are in flight at once — the same ceiling
+ * `friendsAnswersDigest` holds itself to, and for the same reason: a few
+ * hundred parallel reads exhaust the Admin SDK's connection pool long before
+ * Firestore complains.
+ */
+const READS_IN_FLIGHT = 20;
+
+/**
+ * Pushes a notification of its own to a **named** set of accounts — the 21:00
+ * streak reminder (docs/prd.md §4.6), whose recipients are the handful of
+ * people about to lose a streak rather than everybody holding a phone.
+ *
+ * The third shape rather than a flag on the second, because the cost is
+ * inverted. `sendPushToUsers` pays one collection-group read of every
+ * registered device to reach a majority, which is the right trade at 07:00 and
+ * at 18:00. Here the recipients are a minority the caller has already
+ * computed, and reading the whole device collection to discard most of it
+ * would make the reminder's cost grow with the install base instead of with
+ * the number of streaks actually at risk.
+ *
+ * So it reads one sub-collection per recipient, `READS_IN_FLIGHT` at a time,
+ * and hands the lot to the same `deliver` — one Expo batch, the same pruning
+ * of dead tokens, the same non-transactional guarantees.
+ */
+export const sendPushToSomeUsers = async (
+  userIds: string[],
+  notificationFor: (userId: string) => PushNotification | null,
+): Promise<PushDeliveryReport> => {
+  const deliveries: PushDelivery[] = [];
+
+  for (let index = 0; index < userIds.length; index += READS_IN_FLIGHT) {
+    const batch = userIds.slice(index, index + READS_IN_FLIGHT);
+
+    const resolved = await Promise.all(batch.map(async (userId) => ({
+      devices: await listUserDevices(userId),
+      notification: notificationFor(userId),
+    })));
+
+    for (const { devices, notification } of resolved) {
+      if (notification === null) {
+        continue;
+      }
+
+      for (const device of devices) {
+        deliveries.push({ device, notification });
+      }
+    }
+  }
+
+  return deliver(deliveries);
+};

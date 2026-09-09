@@ -50,7 +50,12 @@ export const SLIDES: OnboardingSlideCopy[] = [
     // The point at the end of every title is the store captions' own
     // punctuation, kept on these two so the five read as one set.
     title: 'On te prévient.',
-    body: 'La question du jour, un rappel le soir si tu l’as loupée, quand un pote t’ajoute, et ce que devient une question que tu as posée. Rien de plus.',
+    // The list is the app's only promise about what it sends, so it is the
+    // one place a new notification has to be declared. « Un dernier si ta
+    // série est en jeu » is the 21:00 reminder of docs/prd.md §4.6 — named
+    // by what triggers it rather than by its hour, an hour on a welcome
+    // screen reading as an alarm clock being set.
+    body: 'La question du jour, un rappel le soir, un dernier si ta série est en jeu, quand un pote t’ajoute, et ce que devient une question que tu as posée. Rien de plus.',
   },
   {
     key: 'start',

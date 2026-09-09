@@ -1,7 +1,7 @@
 import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { dailyQuestionDateKey, statLabelOf } from '@statowrel/models';
+import { JOKER_STATFLOUZZ_COST, dailyQuestionDateKey, statLabelOf } from '@statowrel/models';
 import { X } from '@/components/icons';
-import { type ReactNode, useEffect, useLayoutEffect, useState } from 'react';
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -24,6 +24,7 @@ import { useStreakMilestone } from '@/daily-question/data/useStreakMilestone';
 import { useFriendAnswers } from '@/daily-question/data/useFriendAnswers';
 import { spendJokerCallable } from '@/daily-question/data/spendJoker';
 import { buildStatOwrel } from '@/daily-question/helpers/statowrel';
+import { confirmJoker } from '@/daily-question/helpers/confirmJoker';
 import { useDoubleTapAnswer } from '@/daily-question/helpers/useDoubleTapAnswer';
 import { FOREGROUND, SURFACE, type Surface } from '@/daily-question/helpers/surface';
 import { useAuth } from '@/auth/AuthContext';
@@ -266,6 +267,34 @@ export const DailyQuestionScreen = () => {
   // checks mirror `answerable`.
   const jokerAvailable = isToday && status === 'ready' && user !== null && answer === null && !jokered;
 
+  /**
+   * The 21:00 reminder's shortcut (docs/prd.md §4.6): a tap on it opens this
+   * day *and* raises the joker confirmation, so saving a série from a lock
+   * screen is the notification and one « Passer ».
+   *
+   * Everything here is a re-check rather than a formality. The push is built
+   * on the wallet as it stood at 21:00 and only carries `intent` to somebody
+   * who could pay then, but the tap can land hours later, on another device,
+   * after the day was answered or the balance spent — so the day has to be
+   * open, undone, and payable *now*. Any of them false and the notification
+   * simply delivered the day, which is what the other four already do.
+   *
+   * Fired once per mount, through a ref rather than through state: the guard
+   * must not itself cause a render, and re-raising the dialog on every
+   * re-render of a screen that subscribes to the question's tally would be a
+   * modal nobody can dismiss. Closing the day and coming back from the
+   * notification is a new mount, and a new confirmation, which is right.
+   */
+  const jokerIntent = params?.intent === 'joker';
+  const jokerPayable = jokerAvailable && (profile?.statcoin_balance ?? 0) >= JOKER_STATFLOUZZ_COST;
+  const jokerIntentRaised = useRef(false);
+  // The alert's callback fires whenever the user presses « Passer », which can
+  // be several renders after it went up — so the spend is reached through a ref
+  // rather than captured. That also keeps the effect below off a function that
+  // is rebuilt on every render, which would otherwise re-run it on every tally
+  // update this screen is subscribed to.
+  const spendJokerRef = useRef(spendJoker);
+
   // A day that carries an answer with a real option — the answer result of
   // §5.5 — as opposed to a joker (which lives on the same document with
   // `is_joker: true`, docs/prd.md §4.8).
@@ -351,6 +380,19 @@ export const DailyQuestionScreen = () => {
       markFriendAnswersSeen(userId, date, listedFriendAnswers);
     }
   }, [ userId, listedFriendAnswers, date ]);
+
+  useEffect(() => {
+    spendJokerRef.current = spendJoker;
+  });
+
+  useEffect(() => {
+    if (!jokerIntent || !jokerPayable || jokerIntentRaised.current) {
+      return;
+    }
+
+    jokerIntentRaised.current = true;
+    confirmJoker(() => void spendJokerRef.current());
+  }, [ jokerIntent, jokerPayable ]);
 
   return (
     <View style={[ styles.screen, SURFACE[surface] ]}>

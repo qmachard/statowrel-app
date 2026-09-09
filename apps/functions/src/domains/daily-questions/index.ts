@@ -1,5 +1,5 @@
 /**
- * The daily cycle — the draw, the two notifications it fans out, and the
+ * The daily cycle — the draw, the three notifications it fans out, and the
  * trigger every answer lands on.
  *
  * `scheduledQuestionOf` is the one helper this domain exports rather than
@@ -12,6 +12,8 @@ export { scheduledQuestionOf } from './helpers/monthIndex';
 
 export { scheduleDailyQuestion } from './schedules/scheduleDailyQuestion';
 export { scheduleFriendsAnswersReminder } from './schedules/scheduleFriendsAnswersReminder';
+export { scheduleStreakReminder } from './schedules/scheduleStreakReminder';
 export { notifyDailyQuestion } from './tasks/notifyDailyQuestion';
 export { notifyFriendsAnswers } from './tasks/notifyFriendsAnswers';
+export { notifyStreakReminder } from './tasks/notifyStreakReminder';
 export { onDailyQuestionAnswerCreated } from './triggers/onDailyQuestionAnswerCreated';

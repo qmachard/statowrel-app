@@ -22,6 +22,7 @@
 export {
   type PushDeliveryReport,
   type PushNotification,
+  sendPushToSomeUsers,
   sendPushToUser,
   sendPushToUsers,
 } from './helpers/sendPush';

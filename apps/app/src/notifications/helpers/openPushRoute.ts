@@ -31,7 +31,10 @@ const navigate = (route: PushRoute): void => {
     return;
   }
 
-  navigationRef.navigate('DailyQuestion', { date: route.date });
+  // `intent` rides along: the 21:00 reminder points at the day *and* at the
+  // joker confirmation, and the screen is what decides whether opening it
+  // still makes sense by the time it mounts (docs/prd.md §4.6).
+  navigationRef.navigate('DailyQuestion', { date: route.date, intent: route.intent });
 };
 
 /**

@@ -11,9 +11,11 @@ export const NOTIFY_DAILY_QUESTION_FUNCTION = 'dailyQuestions-notifyDailyQuestio
 
 export const NOTIFY_FRIENDS_ANSWERS_FUNCTION = 'dailyQuestions-notifyFriendsAnswers';
 
+export const NOTIFY_STREAK_REMINDER_FUNCTION = 'dailyQuestions-notifyStreakReminder';
+
 const TASK_ALREADY_EXISTS = 'functions/task-already-exists';
 
-/** What both notification tasks are handed: the day, and the question that ran it. */
+/** What each of the three notification tasks is handed: the day, and the question that ran it. */
 export interface DailyQuestionNotificationPayload {
   /** `YYYY-MM-DD` Paris day the question is published on. */
   date: string;
@@ -78,4 +80,20 @@ export const enqueueFriendsAnswersNotification = async (
   payload: DailyQuestionNotificationPayload,
 ): Promise<void> => (
   enqueueNotification(NOTIFY_FRIENDS_ANSWERS_FUNCTION, `friends-answers-${payload.date}`, payload)
+);
+
+/**
+ * Queues the 21:00 last-chance reminder for a day's question — the streaks
+ * about to break tonight (docs/prd.md §4.6).
+ *
+ * Same reasoning as the nudge above, and the recomputation matters more here:
+ * three hours of the evening separate this from midnight, and somebody who
+ * answers between the enqueue and a retry must not be told their series is at
+ * risk. So the recipients are resolved inside the task, against the profiles
+ * as they stand at that instant.
+ */
+export const enqueueStreakReminderNotification = async (
+  payload: DailyQuestionNotificationPayload,
+): Promise<void> => (
+  enqueueNotification(NOTIFY_STREAK_REMINDER_FUNCTION, `streak-reminder-${payload.date}`, payload)
 );
