@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { QUESTION_STATFLOUZZ_COST } from '@statowrel/models';
 import { ChevronLeft, MessageCircleQuestionMark, UserRoundPlus } from '@/components/icons';
 import { useState } from 'react';
@@ -14,6 +14,7 @@ import { Button } from '@/components/Button';
 import { LegalLinks } from '@/components/LegalLinks';
 import { Tabs, type TabItem } from '@/components/Tabs';
 import { colors, fontSize, fonts, spacing } from '@/design/tokens';
+import type { MenuTab, RootStackParamList } from '@/navigation/types';
 import { FriendsCard } from '@/friends/components/FriendsCard';
 import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
 import { NotificationsButton } from '@/notifications/components/NotificationsButton';
@@ -88,9 +89,6 @@ const styles = StyleSheet.create({
   },
 });
 
-/** The two lists of docs/prd.md §5.3, as the switch that selects them names them. */
-type MenuTab = 'friends' | 'questions';
-
 const TABS: readonly TabItem<MenuTab>[] = [
   { value: 'friends', label: 'Mes potes' },
   { value: 'questions', label: 'Mes questions' },
@@ -98,9 +96,24 @@ const TABS: readonly TabItem<MenuTab>[] = [
 
 export const MenuScreen = () => {
   const navigation = useNavigation();
+  // The panel a notification asked for, if one did (docs/prd.md §4.7). « Mes
+  // potes » otherwise: it is what somebody who opened the Menu themselves came
+  // for, and the questions are the list one is *sent* to.
+  const { params } = useRoute<RouteProp<RootStackParamList, 'Menu'>>();
   const { user, profile } = useAuth();
   const [ deleting, setDeleting ] = useState(false);
-  const [ tab, setTab ] = useState<MenuTab>('friends');
+  // The selected panel carries the params it was chosen against, and the
+  // current one is derived from the two — rather than a `setTab` in an effect,
+  // which is an error here (see this app's CLAUDE.md). A fresh mount is not the
+  // only way to arrive: a notification tapped while the Menu is already on
+  // screen navigates to the same route with new params and remounts nothing, so
+  // params the user has not chosen against are params that win.
+  const [ selection, setSelection ] = useState<{ from: typeof params; tab: MenuTab }>(
+    () => ({ from: params, tab: params?.tab ?? 'friends' }),
+  );
+
+  const tab = selection.from === params ? selection.tab : params?.tab ?? selection.tab;
+  const setTab = (next: MenuTab) => setSelection({ from: params, tab: next });
 
   const openInvite = () => navigation.navigate('InviteFriend');
 

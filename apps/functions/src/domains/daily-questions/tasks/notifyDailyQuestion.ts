@@ -8,8 +8,10 @@ import {
   questionConverter,
 } from '@statowrel/models';
 
-import { sendPushToAllDevices } from '@/domains/notifications';
+import { type PushNotification, sendPushToUsers } from '@/domains/notifications';
 import { REGION_CLOUD, getDocumentRef, parseData } from '@/libs/firebase-admin';
+
+import { resolveAuthorNotifications } from '../helpers/authorNotifications';
 
 const payloadSchema = z.object({
   date: z.string(),
@@ -32,10 +34,19 @@ const FALLBACK_BODY = 'Tu as jusqu\'à minuit pour répondre.';
  * notification, on a generic body, because the drop matters more than the
  * teaser.
  *
+ * **Two accounts get a different line, and neither is a second push.** The
+ * author of the question being posed this morning is told it is theirs, and the
+ * author of yesterday's is told what it collected — docs/prd.md §4.7. Both take
+ * the slot the generic drop would have had, in the per-user fan-out that
+ * already exists for the 18:00 nudge, so the whole feature costs no scheduler,
+ * no trigger, no second function and no second banner
+ * (`helpers/authorNotifications.ts`).
+ *
  * Retried by Cloud Tasks, and the retry re-sends the whole fan-out rather than
  * resuming it: nothing tracks who already got the push, and a duplicate banner
- * is a smaller failure than a silent day. The task id is the day's, so the
- * *scheduler* can never enqueue this twice (`helpers/notificationQueue.ts`).
+ * is a smaller failure than a silent day. Which is also why the author lines
+ * need no marker of their own — the day's task id is the only idempotency there
+ * is here, and it is the *scheduler* it protects (`helpers/notificationQueue.ts`).
  */
 export const notifyDailyQuestion = onTaskDispatched({
   region: REGION_CLOUD,
@@ -60,7 +71,7 @@ export const notifyDailyQuestion = onTaskDispatched({
     logger.warn('Notifying a day whose question cannot be read', { date, question_id });
   }
 
-  const report = await sendPushToAllDevices({
+  const drop: PushNotification = {
     title: NOTIFICATION_TITLE,
     body: question?.label ?? FALLBACK_BODY,
     channelId: DAILY_QUESTION_CHANNEL_ID,
@@ -68,7 +79,13 @@ export const notifyDailyQuestion = onTaskDispatched({
     // (`DailyQuestion`'s `date` param), and an id it would have to resolve
     // first tells it nothing more.
     data: { type: 'daily_question', date },
-  });
+  };
 
-  logger.info('Daily question published', { date, question_id, ...report });
+  const authors = await resolveAuthorNotifications(date, question);
+
+  // One notification resolved per device, the way the 18:00 nudge does it: the
+  // map is empty on an ordinary morning, and everybody gets `drop`.
+  const report = await sendPushToUsers((userId) => authors.lines.get(userId) ?? drop);
+
+  logger.info('Daily question published', { date, question_id, ...authors.report, ...report });
 });

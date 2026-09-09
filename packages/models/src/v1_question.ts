@@ -166,6 +166,34 @@ export interface QuestionFirebaseData {
    */
   refunded_at: UniversalTimestamp | null;
   /**
+   * When its author was told the moderation had **approved** it — docs/prd.md
+   * §4.7, the first of the three moments a proposal is worth hearing about.
+   *
+   * Same shape and same reason as `refunded_at` above: `questions-onQuestionUpdated`
+   * is delivered at least once, a question sitting at `approved` offers nothing
+   * a redelivery could be told apart by, and stamping the marker is *itself* an
+   * update that fires the trigger again. So the marker is claimed inside a
+   * transaction and the push only goes out once that claim landed.
+   *
+   * Null on every question nobody proposed — the seeded catalogue, the
+   * onboarding demo, anything a moderator writes from the console — because
+   * nothing ever notifies those: `isPlayerProposal` below is what decides, and
+   * it decides on `statcoin_cost`.
+   */
+  approval_notified_at: UniversalTimestamp | null;
+  /**
+   * When its author was told the moderation had **rejected** it, and with what
+   * reason (docs/prd.md §4.7).
+   *
+   * Its own marker rather than `refunded_at`, which the refund already owns:
+   * the two do not cover the same set. A refund is *final* — a question
+   * refunded once is never refunded again, whatever the moderation does with it
+   * afterwards — while a second rejection is a second verdict its author has
+   * every reason to hear. Folding them would have made the money's rule decide
+   * what gets said.
+   */
+  rejection_notified_at: UniversalTimestamp | null;
+  /**
    * Instant the question is broadcast as the daily question — the day it was
    * drawn, at the 07:00 Paris drop time. Null until the question is drawn.
    */
@@ -247,6 +275,65 @@ export const findQuestionOption = (
 );
 
 /**
+ * Whether a question was **proposed by a player** — the one test that decides
+ * whether there is an author to notify at all (docs/prd.md §4.7).
+ *
+ * It reads `statcoin_cost` and not `author_id`, which every question carries:
+ * a seeded catalogue entry is credited to whoever `--author` named, the
+ * onboarding demo to somebody, and a question written from the moderation
+ * console to the moderator who typed it. None of those three people is waiting
+ * to hear that "their" question was approved, and two of them would be told
+ * about a question they never wrote.
+ *
+ * `statcoin_cost` is stamped by `questions-proposeQuestion` and by nothing
+ * else, so it *is* the record of the app's proposal door having been walked
+ * through. The same field the refund already trusts for the same reason — a
+ * question that cost nothing is owed nothing, and its author is owed no news.
+ *
+ * The empty `author_id` guard is for the question written before the field
+ * existed, and for a fixture: a push addressed to no account is a
+ * sub-collection read that can only come back empty.
+ */
+export const isPlayerProposal = (question: Pick<QuestionData, 'statcoin_cost' | 'author_id'>): boolean => (
+  question.statcoin_cost !== null && question.author_id !== ''
+);
+
+/**
+ * The option that came out on top, with what it took — what the author's recap
+ * of docs/prd.md §4.7 is built from, and the only reading of `answer_counts`
+ * that is worth a notification.
+ *
+ * Walked in **display order** rather than over the map, so a tie resolves the
+ * same way every run: the option shown first wins it. A recap is redrawn by
+ * every retry of the task that sends it, and two runs disagreeing on which
+ * answer led is the one failure a tally cannot afford.
+ *
+ * `null` when nobody answered — there is no leader, and the caller has nothing
+ * to say. An option removed since the day ran simply never leads: its answers
+ * still count in `total`, which is the honest number.
+ */
+export const leadingAnswer = (question: Pick<QuestionData, 'options' | 'answer_counts'>): {
+  option: QuestionOptionData;
+  count: number;
+  total: number;
+} | null => {
+  const total = Object.values(question.answer_counts).reduce((sum, count) => sum + count, 0);
+
+  if (total === 0) {
+    return null;
+  }
+
+  return question.options.reduce<{ option: QuestionOptionData; count: number; total: number } | null>(
+    (leader, option) => {
+      const count = question.answer_counts[option.id] ?? 0;
+
+      return leader === null || count > leader.count ? { option, count, total } : leader;
+    },
+    null,
+  );
+};
+
+/**
  * The StatOwrel an option earns — « efficace » — falling back to the option's
  * own label when it was posed without one.
  *
@@ -297,6 +384,8 @@ export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebas
     rejection_reason: data.rejection_reason ?? null,
     statcoin_cost: data.statcoin_cost ?? null,
     refunded_at: data.refunded_at ? TimestampClass.fromDate(new Date(data.refunded_at)) : null,
+    approval_notified_at: data.approval_notified_at ? TimestampClass.fromDate(new Date(data.approval_notified_at)) : null,
+    rejection_notified_at: data.rejection_notified_at ? TimestampClass.fromDate(new Date(data.rejection_notified_at)) : null,
     broadcast_at: data.broadcast_at ? TimestampClass.fromDate(new Date(data.broadcast_at)) : null,
     broadcast_on: data.broadcast_on ?? null,
     closes_at: data.closes_at ? TimestampClass.fromDate(new Date(data.closes_at)) : null,
@@ -316,6 +405,8 @@ export const questionConverter: FirestoreConverter<QuestionData, QuestionFirebas
       rejection_reason: data.rejection_reason ?? null,
       statcoin_cost: typeof data.statcoin_cost === 'number' ? data.statcoin_cost : null,
       refunded_at: parseTimestamp(data.refunded_at ?? null),
+      approval_notified_at: parseTimestamp(data.approval_notified_at ?? null),
+      rejection_notified_at: parseTimestamp(data.rejection_notified_at ?? null),
       broadcast_at: parseTimestamp(data.broadcast_at ?? null),
       broadcast_on: data.broadcast_on ?? null,
       closes_at: parseTimestamp(data.closes_at ?? null),

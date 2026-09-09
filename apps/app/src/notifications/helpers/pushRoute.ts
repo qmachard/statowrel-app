@@ -4,7 +4,8 @@ import { z } from 'zod';
  * The `data` block the backend attaches to a push — written by
  * `apps/functions/src/domains/daily-questions/tasks/notifyDailyQuestion.ts` and
  * `apps/functions/src/domains/friends/triggers/steps/onFriendshipCreated.ts`
- * and `apps/functions/src/domains/referrals/triggers/steps/payReferralReward.ts`,
+ * and `apps/functions/src/domains/referrals/triggers/steps/payReferralReward.ts`
+ * and `apps/functions/src/domains/questions/triggers/steps/onQuestionModerated.ts`,
  * read here. It travels as JSON through APNs and FCM, so every value is a
  * string.
  *
@@ -25,6 +26,12 @@ const pushRouteSchema = z.discriminatedUnion('type', [
   // whole thing — who arrived, what it paid (docs/prd.md §4.9) — and the wallet
   // it moved is on the Stats screen the Menu opens from.
   z.object({ type: z.literal('referral_joined') }),
+  // A moderation verdict carries nothing to route on either — the question's
+  // own row says its status and its reason (docs/prd.md §4.7), and the list is
+  // a live snapshot. What it does need is the *tab*: the Menu opens on « Mes
+  // potes » by default, and landing there after being told about a question
+  // would leave the reader to find the switch themselves.
+  z.object({ type: z.literal('my_questions') }),
 ]);
 
 export type PushRoute = z.infer<typeof pushRouteSchema>;

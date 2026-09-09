@@ -77,24 +77,6 @@ const sendPushToDevices = async (
 ): Promise<PushDeliveryReport> => deliver(devices.map((device) => ({ device, notification })));
 
 /**
- * Pushes one notification to every registered device — the fan-out behind the
- * day's question (docs/prd.md §4.2).
- *
- * Sending is not transactional and nothing tracks who got what: a push is a
- * hint, and the app reads the day from Firestore on launch either way. So a
- * partial fan-out is a partial fan-out, and the caller's retry sends the whole
- * thing again rather than resuming it — which is safe precisely because the
- * duplicate cost is one extra banner.
- *
- * The tokens Expo rejects as `DeviceNotRegistered` are deleted on the way out.
- * That is the only self-healing the system has: without it every uninstall
- * would stay in the batch for good.
- */
-export const sendPushToAllDevices = async (notification: PushNotification): Promise<PushDeliveryReport> => (
-  sendPushToDevices(await listRegisteredDevices(), notification)
-);
-
-/**
  * Pushes one notification to the devices of **one** account — a friend
  * invitation landing in somebody's list (docs/prd.md §4.1), as opposed to the
  * day's question, which goes to everyone.
@@ -111,18 +93,32 @@ export const sendPushToUser = async (
 );
 
 /**
- * Pushes a notification of its own to each user holding a device — the 18:00
- * nudge, whose body carries a count only that user's friend list makes true
- * (docs/prd.md §4.5).
+ * Pushes a notification of its own to each user holding a device — the whole
+ * fan-out, whatever it says to whom: the 07:00 drop, where almost everybody
+ * gets the same line and the two authors of docs/prd.md §4.7 get theirs, and
+ * the 18:00 nudge, whose body carries a count only that user's friend list
+ * makes true (docs/prd.md §4.5).
  *
  * `notificationFor` is asked once per registered device and answers `null` for
  * whoever is not concerned: the recipients of a per-user fan-out are decided by
  * the caller's data, never by who happens to own a phone, and a user with three
- * of them gets the same line on all three.
+ * of them gets the same line on all three. A fan-out that says the same thing
+ * to everyone is this one with a constant callback — there is no cheaper shape
+ * to have, since the collection-group read is the cost.
  *
- * One collection-group read rather than a `sendPushToUser` per recipient: an
- * evening's recipients are most of the database, and a read each would be a
- * query per account to send a batch that goes out in one request anyway.
+ * One collection-group read rather than a `sendPushToUser` per recipient: a
+ * morning's recipients are the whole database, and a read each would be a query
+ * per account to send a batch that goes out in one request anyway.
+ *
+ * Sending is not transactional and nothing tracks who got what: a push is a
+ * hint, and the app reads the day from Firestore on launch either way. So a
+ * partial fan-out is a partial fan-out, and the caller's retry sends the whole
+ * thing again rather than resuming it — which is safe precisely because the
+ * duplicate cost is one extra banner.
+ *
+ * The tokens Expo rejects as `DeviceNotRegistered` are deleted on the way out.
+ * That is the only self-healing the system has: without it every uninstall
+ * would stay in the batch for good.
  */
 export const sendPushToUsers = async (
   notificationFor: (userId: string) => PushNotification | null,

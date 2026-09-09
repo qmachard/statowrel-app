@@ -213,12 +213,15 @@ npm run send-test-notification -- --email moi@exemple.fr   # every device of tha
 npm run send-test-notification -- --uid <uid> --date 2026-08-19
 npm run send-test-notification -- --token 'ExponentPushToken[…]' --body 'Coucou'
 npm run send-test-notification -- --email moi@exemple.fr --nudge --friends 3
+npm run send-test-notification -- --email moi@exemple.fr --author recap
 npm run send-test-notification -- --all --dry-run
 ```
 
 Sends the day's notification by hand — the one part of the daily cycle no screen can show, since it leaves the backend and only comes back as a banner. It builds exactly what `notifyDailyQuestion` builds: the same title, the same body (the day's label, copied onto `v1_daily_question_months`), the same `DAILY_QUESTION_CHANNEL_ID` and the same `{ type: 'daily_question', date }` — so a tap routes through `apps/app/src/notifications/` the way the real one does, and a working test means a working 07:00.
 
 `--nudge` sends the 18:00 lines instead of the 07:00 one, with the count `--friends <n>` names rather than a real one: the point is to read the line on a lock screen, and counting for real would mean answering as somebody else first. Zero friends is a message of its own (« Ne perds pas ta série… »), so `--nudge` alone is worth sending too.
+
+`--author <approved|rejected|drawn|recap>` sends one of the four lines an author gets about their own question (docs/prd.md §4.7). Two of them only ever fire at 07:00 and the other two behind a moderator's click, which is what makes the flag worth having. `--author recap` is the only one that reads anything real — the day's own tally, through the same `leadingAnswer` the fan-out uses — and it defaults to **yesterday**, the day a recap is about; a day nobody answered is refused rather than sent as « 0 personne ».
 
 It then does the one thing the backend does not: it polls `/push/getReceipts`. An Expo ticket is an acceptance, not a delivery, and the difference is exactly what a test is for — `--no-receipts` skips the wait.
 

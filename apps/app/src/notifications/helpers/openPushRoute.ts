@@ -22,6 +22,15 @@ const navigate = (route: PushRoute): void => {
     return;
   }
 
+  if (route.type === 'my_questions') {
+    // The same screen, on its other panel: a moderation verdict is read on the
+    // row of the question it is about (docs/prd.md §4.7), and that row is
+    // behind the switch.
+    navigationRef.navigate('Menu', { tab: 'questions' });
+
+    return;
+  }
+
   navigationRef.navigate('DailyQuestion', { date: route.date });
 };
 
