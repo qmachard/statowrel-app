@@ -132,7 +132,7 @@ const authorMessage = (kind, dateKey, label, tally) => {
   if (kind === 'drawn') {
     return {
       title: 'Ta question est tombée',
-      body: `« ${question} » — toute l'app y répond aujourd'hui.`,
+      body: `« ${question} » — c'est la tienne. Tout le monde y répond aujourd'hui.`,
       channelId: DAILY_QUESTION_CHANNEL_ID,
       data: { type: 'daily_question', date: dateKey },
     };
