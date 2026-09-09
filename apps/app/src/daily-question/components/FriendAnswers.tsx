@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/Card';
+import { ChevronRight } from '@/components/icons';
 import type { FriendAnswer, FriendAnswersStatus } from '@/daily-question/data/useFriendAnswers';
 import { FOREGROUND, type Surface } from '@/daily-question/helpers/surface';
 import { borderWidth, colors, fontSize, fonts, radius, spacing } from '@/design/tokens';
@@ -208,6 +209,11 @@ export const FriendAnswers = ({ status, friends, question, pickedOptionId, surfa
                   {row.statLabel}
                 </Text>
               )}
+
+              {/* The same chevron the Menu's friend list carries: the row opens
+                  that friend's screen and its compatibility, and a chip alone
+                  looks like a label rather than a door. */}
+              <ChevronRight size={20} color={colors['muted-foreground']} />
             </FriendRow>
           </View>
         ))}
