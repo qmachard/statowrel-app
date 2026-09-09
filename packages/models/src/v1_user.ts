@@ -22,6 +22,24 @@ export const isAuthProviderId = (value: string): value is AuthProviderId => (
 );
 
 /**
+ * How long a streak has to be before the 21:00 reminder is worth a third push
+ * in one day — docs/prd.md §4.6.
+ *
+ * Seven, because a week is the shortest run anybody calls a streak: below it
+ * the number is a coincidence, and the same message would be a stranger
+ * telling you what you are about to lose when you have not started collecting
+ * yet. It is also the boundary the tagging plan already draws on its own
+ * (`streak_bucket`, docs/analytics.md — `1-6` against `7-29`), so the reminder
+ * and the analytics cut the population in the same place, and whoever reads
+ * the retention numbers is reading the cohort the push actually targeted.
+ *
+ * Nothing is lost under it: the 18:00 nudge already reaches everybody who has
+ * not answered, whatever their streak. This threshold buys the *third*
+ * interruption, and a two-day streak does not pay for one.
+ */
+export const STREAK_REMINDER_MIN_STREAK = 7;
+
+/**
  * Profile, answering stats and wallet of an app user — see docs/prd.md §2 and §6.
  *
  * The document id is the Firebase Auth UID, not a ULID: it is the key every

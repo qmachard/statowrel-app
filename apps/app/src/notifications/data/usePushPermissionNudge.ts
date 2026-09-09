@@ -23,7 +23,7 @@ const DELAY_MS = 1200;
 const COPY = {
   askable: {
     title: 'Tu vas rater la question du jour',
-    body: 'Une notification le matin quand la question tombe, un rappel le soir si tu ne l’as pas vue, et un mot quand un pote t’ajoute. Rien de plus.',
+    body: 'Une notification le matin quand la question tombe, un rappel le soir, un dernier si ta série est en jeu, et un mot quand un pote t’ajoute. Rien de plus.',
     action: 'Activer',
   },
   blocked: {

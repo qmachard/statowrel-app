@@ -72,6 +72,25 @@ export const FRIEND_INVITE_CHANNEL_ID = 'friend-invite';
 export const MY_QUESTION_CHANNEL_ID = 'my-question';
 
 /**
+ * Android notification channel the last-chance streak reminder is posted in —
+ * docs/prd.md §4.6.
+ *
+ * Its own channel for the reason the two above have one: Android's settings
+ * are per channel, so somebody who does not want to be chased in the evening
+ * silences this one and keeps the morning drop and their potes' invitations
+ * untouched. It is the only opt-out this reminder has, and it is why it does
+ * not ride `DAILY_QUESTION_CHANNEL_ID` even though it is about the day's
+ * question: sharing that channel would make « ne me relance pas le soir »
+ * cost somebody the question itself.
+ *
+ * **iOS has no equivalent.** `channelId` is ignored there, and Apple offers no
+ * per-category switch an app can declare, so an iPhone can only mute StatOwrel
+ * whole. Closing that gap takes a preference on the profile and a settings
+ * screen (docs/prd.md §5.3), neither of which exists yet.
+ */
+export const STREAK_REMINDER_CHANNEL_ID = 'streak-reminder';
+
+/**
  * One push destination of one account — the device the day's question is
  * pushed to at 07:00 (docs/prd.md §4.2).
  *

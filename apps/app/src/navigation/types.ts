@@ -3,8 +3,16 @@ export type MenuTab = 'friends' | 'questions';
 
 export type RootStackParamList = {
   Stats: undefined;
-  /** One day's question — omit `date` for today's (docs/prd.md §5.4). */
-  DailyQuestion: { date?: string } | undefined;
+  /**
+   * One day's question — omit `date` for today's (docs/prd.md §5.4).
+   *
+   * `intent: 'joker'` comes from the 21:00 streak reminder alone (§4.6) and
+   * asks the screen to open the joker confirmation on arrival, so that
+   * saving a série from a notification is two taps rather than a hunt. The
+   * screen still decides whether it makes sense by then — the day may have
+   * been answered on another device in the meantime.
+   */
+  DailyQuestion: { date?: string; intent?: 'joker' } | undefined;
   /**
    * One friend seen from the outside — their streak and the compatibility
    * with them (docs/prd.md §5.3).

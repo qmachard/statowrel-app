@@ -230,6 +230,47 @@ It then does the one thing the backend does not: it polls `/push/getReceipts`. A
 Two failures it names rather than leaves to be guessed: no device at all (the app was never launched signed-in on a real phone — a simulator never gets a token), and a `--date` no question ran, whose tap would open a dead end.
 
 ```bash
+npm run run-streak-reminder -- --dry-run                 # who would be reminded tonight, and who is spared
+npm run run-streak-reminder -- --date 2026-09-08 --dry-run
+npm run run-streak-reminder -- --send                    # ... and really push it
+npm run run-streak-reminder -- --send --production --force
+```
+
+Runs the 21:00 last-chance streak reminder on demand (docs/prd.md §4.6). It exists because the
+reminder's whole value is its **targeting**, and targeting is the one thing a notification cannot
+show you: the interesting cases are the people who get nothing. Waiting for nine in the evening to
+find out whether a two-day streak was spared is not a test loop.
+
+**It runs the same code the scheduler runs.** `scripts/lib/load-src.mjs` bundles
+`src/domains/daily-questions/helpers/streakReminder.ts` with the deploy build's own esbuild settings
+and requires it — the trick the Instagram preview already uses, and the reason the select *and* the
+send live in that helper rather than in the task on top of it. A rule checked against a copy of
+itself is not checked.
+
+`--dry-run` prints both halves, and the second one is why it is worth its lines: whoever is being
+reminded, with the real title, the real body, the real channel and whether the tap carries
+`intent: 'joker'` — and whoever was spared, by which rule. The short streaks come out of the
+production code itself (the difference between `streakReminderCandidates` and `streaksAtRisk` *is*
+the threshold); the accounts that have already done their day are read on the other side of the very
+equality the production query keys on, `streak_last_answered_on` holding **today**, which is what
+answering or spending a joker writes there. An exclusion nobody can see and a reminder that failed
+to send look identical from the outside, and only one of them is a bug.
+
+The loop it is built for is the emulator, where a seeded database gives every case at once — a long
+streak that has not answered, one too short for the threshold, one already answered, one already
+jokered, and one whose wallet cannot pay for a joker:
+
+```bash
+npm run dev:functions
+npm run seed-emulator -- --days 20 --friends 4
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8082 npm run run-streak-reminder -- --dry-run
+```
+
+**There is no emulator for Expo push**, exactly as for `send-test-notification`:
+`FIRESTORE_EMULATOR_HOST` decides where the profiles and the tokens are read from and nothing else.
+Hence `--send` is required rather than defaulted, and a real project needs `--force` on top.
+
+```bash
 npm run send-moderation-digest -- --dry-run              # reads the pot, sends nothing
 npm run send-moderation-digest -- --dry-run --html       # ... showing the HTML body instead
 npm run send-moderation-digest -- --to moi@exemple.fr    # really sends, to that address only

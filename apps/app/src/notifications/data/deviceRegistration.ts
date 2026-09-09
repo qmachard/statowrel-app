@@ -7,6 +7,7 @@ import {
   type DevicePlatform,
   FRIEND_INVITE_CHANNEL_ID,
   MY_QUESTION_CHANNEL_ID,
+  STREAK_REMINDER_CHANNEL_ID,
   USER_COLLECTION,
   USER_DEVICE_COLLECTION,
   isExpoPushToken,
@@ -81,6 +82,21 @@ const ensureAndroidChannels = async (notifications: Notifications): Promise<void
     // An invitation waits — it is answered from the Menu whenever its owner
     // gets there (docs/prd.md §5.3), so it earns the shade, not the screen.
     importance: notifications.AndroidImportance.DEFAULT,
+    lightColor: colors.primary,
+  });
+
+  await notifications.setNotificationChannelAsync(STREAK_REMINDER_CHANNEL_ID, {
+    name: 'Ma série en danger',
+    // The last-chance reminder (docs/prd.md §4.6) — a streak about to break at
+    // midnight, and the joker that saves it. HIGH like the drop, and for the
+    // same reason: a line buried in the shade at nine in the evening is a line
+    // read tomorrow, which is one day too late for the only thing it is about.
+    //
+    // Its own channel is the whole opt-out. Somebody who does not want to be
+    // chased in the evening silences this one from the Android settings and
+    // keeps the morning question and their potes' invitations — which is
+    // exactly what sharing the day's channel would have taken from them.
+    importance: notifications.AndroidImportance.HIGH,
     lightColor: colors.primary,
   });
 

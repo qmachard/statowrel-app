@@ -1,7 +1,8 @@
 import { JOKER_STATFLOUZZ_COST } from '@statowrel/models';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { confirmJoker } from '@/daily-question/helpers/confirmJoker';
 import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
 
 /**
@@ -14,11 +15,10 @@ import { amountLabel, spokenAmountLabel } from '@/lib/statflouzz';
  * action rather than naming it, and a symbol with two homes is a symbol that
  * drifts.
  *
- * **Confirms before spending.** A native alert asks first because a joker is
- * irreversible on both directions: the day is passed and the StatFlouzz are
- * spent, and neither can be got back on a mis-tap. The wording states the
- * three consequences that matter — day passed, série préservée, prix — in the
- * user's own frame of reference so the confirmation is not a mystery.
+ * **Confirms before spending**, through `confirmJoker` — the alert moved into
+ * a helper of its own when the 21:00 streak reminder became its second caller
+ * (docs/prd.md §4.6). A joker is irreversible on both directions, and the one
+ * dialog that says so has to say it the same way wherever it is raised from.
  *
  * Two disabled states: while a joker is in flight (`loading`), and when the
  * wallet is short of `JOKER_STATFLOUZZ_COST`. The wallet case still shows the
@@ -40,23 +40,11 @@ const styles = StyleSheet.create({
   },
 });
 
-const CONFIRM_TITLE = 'Passer cette journée ?';
-const CONFIRM_MESSAGE = `Ta journée sera comptée et ta série préservée. Tu dépenseras ${amountLabel(JOKER_STATFLOUZZ_COST)}. Cette action est irréversible.`;
-const CONFIRM_ACCEPT = 'Passer';
-const CONFIRM_CANCEL = 'Annuler';
-
 export const JokerButton = ({ balance, loading, onConfirm }: JokerButtonProps) => {
   const affordable = balance >= JOKER_STATFLOUZZ_COST;
   const description = affordable
     ? undefined
     : `Solde : ${amountLabel(balance)}. Il t’en manque pour un Joker.`;
-
-  const onPress = () => {
-    Alert.alert(CONFIRM_TITLE, CONFIRM_MESSAGE, [
-      { text: CONFIRM_CANCEL, style: 'cancel' },
-      { text: CONFIRM_ACCEPT, style: 'default', onPress: onConfirm },
-    ]);
-  };
 
   return (
     <View style={styles.wrapper}>
@@ -67,7 +55,7 @@ export const JokerButton = ({ balance, loading, onConfirm }: JokerButtonProps) =
         variant="joker"
         loading={loading}
         disabled={!affordable || loading}
-        onPress={onPress}
+        onPress={() => confirmJoker(onConfirm)}
         accessibilityLabel={`Passer avec un Joker, ${spokenAmountLabel(JOKER_STATFLOUZZ_COST)}`}
       />
     </View>

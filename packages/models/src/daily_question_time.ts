@@ -81,3 +81,14 @@ export const closingTimeOf = (dateKey: string): Date => parisTimeToInstant(dateK
  * the whole evening to answer before the day closes at midnight.
  */
 export const FRIENDS_ANSWERS_HOUR = 18;
+
+/**
+ * The last-chance reminder goes out at 21:00 Paris — docs/prd.md §4.6.
+ *
+ * Three hours after the nudge and three before the day closes: late enough
+ * that everybody who meant to answer today already has, so the message only
+ * reaches people who are genuinely about to lose something, and early enough
+ * that answering is still a decision rather than a race. Any later and the
+ * push becomes an obituary.
+ */
+export const STREAK_REMINDER_HOUR = 21;
