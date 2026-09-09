@@ -107,6 +107,14 @@ npm run check-google-signin -- --expect <SHA-1>  # ... and whether that one is a
 - **Forms**: use `react-hook-form` + `zod` (`@hookform/resolvers/zod`) — see `apps/app/src/auth/schemas.ts`. NEVER use raw `useState` for form state.
 - **Functions API handlers**: validate request bodies with a `zod` schema using `.safeParse()`. NEVER use `.parse()` (throw-based) or `as` type assertions for untrusted input.
 
+### Product Copy
+
+Everything the user reads — a notification, a button, a screen, an e-mail — is written in French, tutoiement, in the app's own voice.
+
+- **No em dash (`—`) in user-facing copy.** It reads as machine-written. Use a colon, a full stop, or recast the sentence. This applies to the strings only; the prose in code comments and documentation keeps it.
+- Say nothing twice: a notification's body never repeats what its title already said.
+- A number is the point of the sentence it sits in, or it does not belong there.
+
 ### Naming
 
 - **Screens/components**: PascalCase.

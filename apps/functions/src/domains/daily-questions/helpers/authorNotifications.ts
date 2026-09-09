@@ -52,9 +52,10 @@ export interface AuthorNotifications {
 const drawnLine = (date: string, question: QuestionData): PushNotification => ({
   title: 'Ta question est tombée',
   // The title has already said whose question it is, so the body says the one
-  // thing left — who is answering it. « Tout le monde » and not « toute l'app »:
-  // an author is looking for people, not for a product.
-  body: `« ${question.label} » — tout le monde y répond aujourd'hui.`,
+  // thing left: who is answering it. « Tout le monde » and not « toute l'app »,
+  // an author being after people rather than after a product. No em dash — see
+  // the copy rule in the repo's CLAUDE.md.
+  body: `Tout le monde répond à « ${question.label} » aujourd'hui.`,
   channelId: DAILY_QUESTION_CHANNEL_ID,
   data: { type: 'daily_question', date },
 });
