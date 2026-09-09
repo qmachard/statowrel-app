@@ -30,8 +30,10 @@ const styles = StyleSheet.create({
     lineHeight: fontSize['4xl'] * 1.1,
     color: colors['primary-foreground'],
   },
-  // The line that matters: a milestone is not a decoration, it is the right to
-  // write tomorrow's question.
+  // The line that matters: a milestone is not a decoration, it is the price of
+  // a question the whole app will answer. Which morning is not promised — a
+  // proposal goes through moderation and then through the draw — so the
+  // sentence says « un matin » and never « demain ».
   unlocked: {
     fontFamily: fonts.sans,
     fontSize: fontSize.base,
@@ -80,13 +82,19 @@ export const StreakMilestoneCard = ({ streak, reward, onPropose }: StreakMilesto
       </Text>
 
       <Text style={styles.unlocked}>
-        De quoi poser ta question. Écris celle que toute l’app lira demain.
+        De quoi poser ta question. Un matin, tout le monde y répondra.
       </Text>
     </CardContent>
 
     <CardContent>
       <View>
-        <Button label="Poser une question" variant="secondary" onPress={onPropose} />
+        {/*
+          « Ma » and not « une », unlike the Stats card and the Menu: those two
+          are a door standing there, this one is a thing that has just become
+          the reader's. The sentence above speaks to them (« ta question »), the
+          button is spoken by them.
+        */}
+        <Button label="Poser ma question" variant="secondary" onPress={onPropose} />
       </View>
     </CardContent>
   </Card>
