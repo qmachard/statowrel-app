@@ -13,11 +13,14 @@ import { JokerButton } from '@/daily-question/components/JokerButton';
 import { JokerHeadline } from '@/daily-question/components/JokerHeadline';
 import { QuestionOption, letterOf } from '@/daily-question/components/QuestionOption';
 import { StatOwrelHeadline } from '@/daily-question/components/StatOwrelHeadline';
+import { StreakMilestoneCard } from '@/daily-question/components/StreakMilestoneCard';
 import { rememberAnswer } from '@/daily-question/data/answerStore';
 import { rememberJoker } from '@/daily-question/data/jokerStore';
 import { jokerFailure } from '@/daily-question/data/jokerErrors';
+import { armMilestoneWatch } from '@/daily-question/data/milestoneStore';
 import { submitAnswer } from '@/daily-question/data/submitAnswer';
 import { type DailyQuestionStatus, useDailyQuestion } from '@/daily-question/data/useDailyQuestion';
+import { useStreakMilestone } from '@/daily-question/data/useStreakMilestone';
 import { useFriendAnswers } from '@/daily-question/data/useFriendAnswers';
 import { spendJokerCallable } from '@/daily-question/data/spendJoker';
 import { buildStatOwrel } from '@/daily-question/helpers/statowrel';
@@ -168,6 +171,26 @@ export const DailyQuestionScreen = () => {
     navigation.setOptions({ contentStyle: SURFACE[surface] });
   }, [ navigation, surface ]);
 
+  /**
+   * Freezes the streak and the wallet the milestone celebration will be decided
+   * against (docs/prd.md §4.6, §4.7) — see `milestoneStore`.
+   *
+   * Called **before** the write, on both paths. The answer trigger pays the
+   * milestone server-side and the emulator runs it in milliseconds, so a
+   * snapshot taken once the write has resolved may already carry the credit —
+   * and a « before » that already holds the reward is a celebration that never
+   * fires. No profile yet means no baseline and therefore no celebration, which
+   * is the safe half: nothing is announced that cannot be proved.
+   */
+  const armMilestone = () => {
+    if (user !== null && profile !== null) {
+      armMilestoneWatch(user.uid, date, {
+        streakBefore: profile.streak_count,
+        earnedBefore: profile.statcoins_earned,
+      });
+    }
+  };
+
   const validate = async (optionId: string) => {
     if (user === null || question === null || questionId === null) {
       return;
@@ -176,6 +199,7 @@ export const DailyQuestionScreen = () => {
     setSubmitting(true);
     setFailure(null);
     hapticValidation();
+    armMilestone();
 
     try {
       const written = await submitAnswer({ userId: user.uid, questionId, question, optionId });
@@ -214,6 +238,7 @@ export const DailyQuestionScreen = () => {
     setJokerLoading(true);
     setFailure(null);
     hapticValidation();
+    armMilestone();
 
     try {
       await spendJokerCallable({ question_id: questionId });
@@ -286,6 +311,12 @@ export const DailyQuestionScreen = () => {
   // read lands after.
   const friends = useFriendAnswers(questionId, answer !== null || jokered);
 
+  // The milestone this answer — or this joker — just crossed, docs/prd.md §4.6
+  // and §4.7. `null` until the answer trigger's payout shows on the profile,
+  // and `null` again on every later opening of the day: the celebration belongs
+  // to the moment the streak crosses, not to the day it crossed on.
+  const milestone = useStreakMilestone(date);
+
   /**
    * Opens a friend from the day's list (docs/prd.md §5.3).
    *
@@ -295,6 +326,15 @@ export const DailyQuestionScreen = () => {
    */
   const openFriend = (friendId: string, friendUsername: string) => {
     navigation.navigate('Friend', { friendId, friendUsername });
+  };
+
+  /**
+   * Where the milestone card leads (docs/prd.md §4.7) — the same full-screen
+   * proposal modal the Stats screen's own card opens, pushed on top of the day
+   * so closing it lands back on the result that announced it.
+   */
+  const openProposeQuestion = () => {
+    navigation.navigate('ProposeQuestion');
   };
 
   // Seeing them is what clears the day's badge on the calendar (docs/prd.md
@@ -342,6 +382,20 @@ export const DailyQuestionScreen = () => {
               dateLabel={formatDayLabel(fromDateKey(date))}
             />
 
+            {/*
+              Under the headline and never over it (docs/prd.md §4.6): the
+              StatOwrel stays what this screen is about, and the milestone is
+              what the day just bought. It lands a beat later, when the payout
+              shows on the profile — the result is never held for it.
+            */}
+            {milestone === null ? null : (
+              <StreakMilestoneCard
+                streak={milestone.streak}
+                reward={milestone.reward}
+                onPropose={openProposeQuestion}
+              />
+            )}
+
             <AnswerRecap questionLabel={question.label} statOwrel={statOwrel} />
 
             <FriendAnswers
@@ -365,6 +419,19 @@ export const DailyQuestionScreen = () => {
         {question === null || !showingJokerResult ? null : (
           <>
             <JokerHeadline surface={surface} dateLabel={formatDayLabel(fromDateKey(date))} />
+
+            {/*
+              A joker advances the streak and earns the milestone it crosses
+              (docs/prd.md §4.8), so the celebration belongs here too — with no
+              StatOwrel above it, the card is the only reward this sheet shows.
+            */}
+            {milestone === null ? null : (
+              <StreakMilestoneCard
+                streak={milestone.streak}
+                reward={milestone.reward}
+                onPropose={openProposeQuestion}
+              />
+            )}
 
             <AnswerRecap
               questionLabel={question.label}
