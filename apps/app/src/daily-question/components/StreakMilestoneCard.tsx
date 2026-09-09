@@ -12,13 +12,15 @@ const styles = StyleSheet.create({
   block: {
     gap: spacing(1),
   },
-  // The micro-line above the number, the shape the result's own date line
-  // wears — so the celebration reads as part of this sheet rather than as a
-  // banner dropped onto it. Its wording is `StreakCard`'s own unit line, so a
-  // streak reads identically wherever the app prints one.
+  // The card's title, in `CardTitle`'s own treatment a step up: what is being
+  // celebrated has to be readable before the amount is, or the number lands
+  // without an occasion. Its wording is `StreakCard`'s unit line, so a streak
+  // reads identically wherever the app prints one. It stays under the amount's
+  // scale — the StatFlouzz are the news, the streak is what earned them.
   streak: {
-    fontFamily: fonts.sans,
-    fontSize: fontSize['2xs'],
+    fontFamily: fonts.head,
+    fontSize: fontSize.lg,
+    lineHeight: fontSize.lg * 1.2,
     textTransform: 'uppercase',
     color: colors['primary-foreground'],
   },
