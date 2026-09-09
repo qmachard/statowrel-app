@@ -51,10 +51,10 @@ export interface AuthorNotifications {
  */
 const drawnLine = (date: string, question: QuestionData): PushNotification => ({
   title: 'Ta question est tombée',
-  // « c'est la tienne » before the number of people, because the news is the
-  // paternity and not the audience: « toute l'app » named a product where the
-  // author is looking for the faces of the people answering.
-  body: `« ${question.label} » — c'est la tienne. Tout le monde y répond aujourd'hui.`,
+  // The title has already said whose question it is, so the body says the one
+  // thing left — who is answering it. « Tout le monde » and not « toute l'app »:
+  // an author is looking for people, not for a product.
+  body: `« ${question.label} » — tout le monde y répond aujourd'hui.`,
   channelId: DAILY_QUESTION_CHANNEL_ID,
   data: { type: 'daily_question', date },
 });
